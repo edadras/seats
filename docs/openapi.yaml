@@ -56,6 +56,7 @@ security:
 paths:
   /auth/login:
     post:
+      operationId: login
       tags: [Auth]
       summary: Exchange credentials for a personal access token
       security: []
@@ -85,6 +86,7 @@ paths:
 
   /auth/logout:
     post:
+      operationId: logout
       tags: [Auth]
       summary: Revoke the current token
       responses:
@@ -92,6 +94,7 @@ paths:
 
   /venues:
     get:
+      operationId: listVenues
       tags: [Venues]
       summary: List venues
       parameters:
@@ -114,6 +117,7 @@ paths:
                         type: array
                         items: { $ref: "#/components/schemas/Venue" }
     post:
+      operationId: createVenue
       tags: [Venues]
       summary: Create a venue
       parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
@@ -133,6 +137,7 @@ paths:
   /venues/{venue}:
     parameters: [ { $ref: "#/components/parameters/VenueId" } ]
     get:
+      operationId: getVenue
       tags: [Venues]
       summary: Read a venue
       responses:
@@ -143,6 +148,7 @@ paths:
               schema: { $ref: "#/components/schemas/Venue" }
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
+      operationId: updateVenue
       tags: [Venues]
       summary: Update a venue
       requestBody:
@@ -157,6 +163,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Venue" }
     delete:
+      operationId: deleteVenue
       tags: [Venues]
       summary: Delete a venue that has no events
       responses:
@@ -165,6 +172,7 @@ paths:
 
   /seat-maps:
     get:
+      operationId: listSeatMaps
       tags: [Seat maps]
       summary: List seat maps
       parameters:
@@ -186,6 +194,7 @@ paths:
                         type: array
                         items: { $ref: "#/components/schemas/SeatMap" }
     post:
+      operationId: createSeatMap
       tags: [Seat maps]
       summary: Create a seat map (starts with an empty draft version)
       parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
@@ -199,7 +208,7 @@ paths:
               properties:
                 venue_id: { type: string, format: uuid }
                 name: { type: string, maxLength: 160 }
-                description: { type: string, nullable: true }
+                description: { type: [string, "null"] }
       responses:
         "201":
           description: Created
@@ -210,6 +219,7 @@ paths:
   /seat-maps/{map}:
     parameters: [ { $ref: "#/components/parameters/MapId" } ]
     get:
+      operationId: getSeatMap
       tags: [Seat maps]
       summary: Read a seat map with its versions
       responses:
@@ -219,6 +229,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/SeatMap" }
     patch:
+      operationId: updateSeatMap
       tags: [Seat maps]
       summary: Rename a seat map
       requestBody:
@@ -229,7 +240,7 @@ paths:
               type: object
               properties:
                 name: { type: string }
-                description: { type: string, nullable: true }
+                description: { type: [string, "null"] }
       responses:
         "200":
           description: OK
@@ -240,6 +251,7 @@ paths:
   /seat-maps/{map}/versions:
     parameters: [ { $ref: "#/components/parameters/MapId" } ]
     get:
+      operationId: listSeatMapVersions
       tags: [Seat maps]
       summary: List versions
       responses:
@@ -254,6 +266,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/SeatMapVersion" }
     post:
+      operationId: saveSeatMapDraft
       tags: [Seat maps]
       summary: Save the working draft geometry
       description: |
@@ -269,7 +282,7 @@ paths:
               required: [geometry]
               properties:
                 geometry: { $ref: "#/components/schemas/Geometry" }
-                notes: { type: string, nullable: true }
+                notes: { type: [string, "null"] }
       responses:
         "201":
           description: Draft saved
@@ -281,6 +294,7 @@ paths:
   /seat-maps/{map}/validate:
     parameters: [ { $ref: "#/components/parameters/MapId" } ]
     post:
+      operationId: validateSeatMap
       tags: [Seat maps]
       summary: Validate geometry without saving
       requestBody:
@@ -302,6 +316,7 @@ paths:
   /seat-maps/{map}/publish:
     parameters: [ { $ref: "#/components/parameters/MapId" } ]
     post:
+      operationId: publishSeatMap
       tags: [Seat maps]
       summary: Publish the draft as an immutable version
       description: |
@@ -320,6 +335,7 @@ paths:
 
   /events:
     get:
+      operationId: listEvents
       tags: [Events]
       summary: List events
       parameters:
@@ -341,6 +357,7 @@ paths:
                         type: array
                         items: { $ref: "#/components/schemas/Event" }
     post:
+      operationId: createEvent
       tags: [Events]
       summary: Create an event
       parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
@@ -359,6 +376,7 @@ paths:
   /events/{event}:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
+      operationId: getEvent
       tags: [Events]
       summary: Read an event
       responses:
@@ -368,6 +386,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
     patch:
+      operationId: updateEvent
       tags: [Events]
       summary: Update an event
       requestBody:
@@ -385,6 +404,7 @@ paths:
   /events/{event}/pricing:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     put:
+      operationId: replaceEventPricing
       tags: [Events]
       summary: Replace price zones and seat overrides
       requestBody:
@@ -412,6 +432,7 @@ paths:
   /events/{event}/stats:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
+      operationId: getEventStats
       tags: [Events]
       summary: Inventory, sales and check-in counters
       responses:
@@ -424,6 +445,7 @@ paths:
   /events/{event}/checkins:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
+      operationId: listEventCheckins
       tags: [Events]
       summary: Check-in log
       parameters:
@@ -445,6 +467,7 @@ paths:
   /embed/events/{public_id}:
     parameters: [ { $ref: "#/components/parameters/PublicId" } ]
     get:
+      operationId: getEmbedEvent
       tags: [Embed]
       summary: Public event descriptor for the widget
       security: []
@@ -459,6 +482,7 @@ paths:
   /embed/events/{public_id}/seat-map:
     parameters: [ { $ref: "#/components/parameters/PublicId" } ]
     get:
+      operationId: getEmbedSeatMap
       tags: [Embed]
       summary: Geometry of the event's published map version
       description: Cacheable and immutable; keyed by version id. Contains no availability data.
@@ -480,6 +504,7 @@ paths:
   /embed/events/{public_id}/availability:
     parameters: [ { $ref: "#/components/parameters/PublicId" } ]
     get:
+      operationId: getEmbedAvailability
       tags: [Embed]
       summary: Seat availability, optionally incremental
       security: []
@@ -498,6 +523,7 @@ paths:
   /embed/events/{public_id}/holds:
     parameters: [ { $ref: "#/components/parameters/PublicId" } ]
     post:
+      operationId: createHold
       tags: [Embed]
       summary: Hold seats for a bounded time
       security: []
@@ -534,6 +560,7 @@ paths:
   /embed/holds/{hold_token}:
     parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
     delete:
+      operationId: releaseHold
       tags: [Embed]
       summary: Release a hold
       security: []
@@ -544,6 +571,7 @@ paths:
   /embed/holds/{hold_token}/extend:
     parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
     patch:
+      operationId: extendHold
       tags: [Embed]
       summary: Extend a hold's TTL
       description: Bounded by `max_extends`; a hold cannot be extended after it has expired.
@@ -559,6 +587,7 @@ paths:
   /embed/holds/{hold_token}/validate:
     parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
     post:
+      operationId: validateHold
       tags: [Embed]
       summary: Re-check a hold before an order is created
       security: []
@@ -572,13 +601,13 @@ paths:
                 properties:
                   valid: { type: boolean }
                   reason:
-                    type: string
-                    nullable: true
+                    type: [string, "null"]
                     enum: [expired, released, converted, unknown, null]
                   hold: { $ref: "#/components/schemas/Hold" }
 
   /integrations/woocommerce/orders:
     post:
+      operationId: registerOrder
       tags: [WooCommerce]
       summary: Register a WooCommerce order against a hold
       security:
@@ -616,6 +645,7 @@ paths:
   /integrations/woocommerce/orders/{external_order_id}:
     parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
     get:
+      operationId: getOrder
       tags: [WooCommerce]
       summary: Read the SaaS view of an order (used by reconciliation)
       security:
@@ -632,6 +662,7 @@ paths:
   /integrations/woocommerce/orders/{external_order_id}/confirm:
     parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
     post:
+      operationId: confirmOrder
       tags: [WooCommerce]
       summary: Convert the hold into allocations and issue tickets
       description: |
@@ -664,6 +695,7 @@ paths:
   /integrations/woocommerce/orders/{external_order_id}/cancel:
     parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
     post:
+      operationId: cancelOrder
       tags: [WooCommerce]
       summary: Release the hold for a failed, cancelled or deleted order
       security:
@@ -687,6 +719,7 @@ paths:
   /integrations/woocommerce/orders/{external_order_id}/refund:
     parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
     post:
+      operationId: refundOrder
       tags: [WooCommerce]
       summary: Void tickets and apply the event's seat release policy
       security:
@@ -718,6 +751,7 @@ paths:
         required: true
         schema: { type: string, format: uuid }
     get:
+      operationId: getTicket
       tags: [Tickets]
       summary: Read a ticket
       responses:
@@ -730,6 +764,7 @@ paths:
 
   /checkin/auth/token:
     post:
+      operationId: pairCheckinDevice
       tags: [Check-in]
       summary: Exchange a device pairing code for a scoped scanner token
       security: []
@@ -759,6 +794,7 @@ paths:
 
   /checkin/events:
     get:
+      operationId: listCheckinEvents
       tags: [Check-in]
       summary: Events this device may scan
       responses:
@@ -775,6 +811,7 @@ paths:
 
   /checkin/scan:
     post:
+      operationId: scanTicket
       tags: [Check-in]
       summary: Scan one QR token, atomically
       parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
@@ -799,6 +836,7 @@ paths:
 
   /checkin/sync:
     post:
+      operationId: syncOfflineScans
       tags: [Check-in]
       summary: Upload a batch of offline scans
       description: |
@@ -838,6 +876,7 @@ paths:
   /checkin/events/{event}/stats:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
+      operationId: getCheckinStats
       tags: [Check-in]
       summary: Live door counters
       responses:
@@ -995,9 +1034,9 @@ components:
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
-        address: { type: string, nullable: true }
-        city: { type: string, nullable: true }
-        country: { type: string, nullable: true }
+        address: { type: [string, "null"] }
+        city: { type: [string, "null"] }
+        country: { type: [string, "null"] }
         timezone: { type: string }
         created_at: { type: string, format: date-time }
 
@@ -1006,9 +1045,9 @@ components:
       required: [name]
       properties:
         name: { type: string, maxLength: 160 }
-        address: { type: string, nullable: true }
-        city: { type: string, nullable: true }
-        country: { type: string, maxLength: 2, nullable: true }
+        address: { type: [string, "null"] }
+        city: { type: [string, "null"] }
+        country: { type: [string, "null"], maxLength: 2 }
         timezone: { type: string }
 
     SeatMap:
@@ -1017,7 +1056,7 @@ components:
         id: { type: string, format: uuid }
         venue_id: { type: string, format: uuid }
         name: { type: string }
-        description: { type: string, nullable: true }
+        description: { type: [string, "null"] }
         published_version:
           oneOf:
             - $ref: "#/components/schemas/SeatMapVersion"
@@ -1035,7 +1074,7 @@ components:
         version: { type: integer }
         status: { type: string, enum: [draft, published] }
         seat_count: { type: integer }
-        published_at: { type: string, format: date-time, nullable: true }
+        published_at: { type: [string, "null"], format: date-time }
         geometry: { $ref: "#/components/schemas/Geometry" }
 
     Geometry:
@@ -1049,7 +1088,7 @@ components:
           properties:
             width: { type: number, minimum: 100, maximum: 20000 }
             height: { type: number, minimum: 100, maximum: 20000 }
-            background: { type: string, nullable: true }
+            background: { type: [string, "null"] }
         sections:
           type: array
           items:
@@ -1058,7 +1097,7 @@ components:
             properties:
               key: { type: string, description: Stable within the map; used to carry seat ids forward. }
               name: { type: string }
-              color: { type: string, nullable: true }
+              color: { type: [string, "null"] }
               rows:
                 type: array
                 items:
@@ -1086,7 +1125,7 @@ components:
                           y: { type: number }
                           rotation: { type: number, default: 0 }
                           shape: { type: string, enum: [circle, square, chair], default: circle }
-                          zone_key: { type: string, nullable: true }
+                          zone_key: { type: [string, "null"] }
                           accessible: { type: boolean, default: false }
         shapes:
           type: array
@@ -1104,8 +1143,8 @@ components:
               points:
                 type: array
                 items: { type: number }
-              fill: { type: string, nullable: true }
-              label: { type: string, nullable: true }
+              fill: { type: [string, "null"] }
+              label: { type: [string, "null"] }
         texts:
           type: array
           items:
@@ -1116,7 +1155,7 @@ components:
               x: { type: number }
               y: { type: number }
               size: { type: number, default: 14 }
-              color: { type: string, nullable: true }
+              color: { type: [string, "null"] }
               rotation: { type: number, default: 0 }
 
     ValidationReport:
@@ -1149,11 +1188,11 @@ components:
         name: { type: string }
         status: { type: string, enum: [draft, published, closed, cancelled] }
         starts_at: { type: string, format: date-time }
-        ends_at: { type: string, format: date-time, nullable: true }
+        ends_at: { type: [string, "null"], format: date-time }
         timezone: { type: string }
         currency: { type: string }
         venue_id: { type: string, format: uuid }
-        seat_map_version_id: { type: string, format: uuid, nullable: true }
+        seat_map_version_id: { type: [string, "null"], format: uuid }
         hold_ttl_seconds: { type: integer }
         max_extends: { type: integer }
         refund_policy: { type: string, enum: [release, hold_back] }
@@ -1166,7 +1205,7 @@ components:
         venue_id: { type: string, format: uuid }
         seat_map_id: { type: string, format: uuid }
         starts_at: { type: string, format: date-time }
-        ends_at: { type: string, format: date-time, nullable: true }
+        ends_at: { type: [string, "null"], format: date-time }
         timezone: { type: string }
         currency: { type: string }
         status: { type: string, enum: [draft, published, closed, cancelled] }
@@ -1183,7 +1222,7 @@ components:
         amount:
           type: integer
           description: Minor units (e.g. cents) — never a float.
-        color: { type: string, nullable: true }
+        color: { type: [string, "null"] }
 
     SeatOverride:
       type: object
@@ -1191,9 +1230,9 @@ components:
       properties:
         seat_id: { type: string, format: uuid }
         blocked: { type: boolean, default: false }
-        amount: { type: integer, nullable: true }
-        zone_key: { type: string, nullable: true }
-        note: { type: string, nullable: true }
+        amount: { type: [integer, "null"] }
+        zone_key: { type: [string, "null"] }
+        note: { type: [string, "null"] }
 
     EmbedEvent:
       type: object
@@ -1225,8 +1264,8 @@ components:
             properties:
               seat_id: { type: string, format: uuid }
               state: { type: string, enum: [available, held, allocated, blocked] }
-              amount: { type: integer, nullable: true }
-              zone_key: { type: string, nullable: true }
+              amount: { type: [integer, "null"] }
+              zone_key: { type: [string, "null"] }
 
     Hold:
       type: object
@@ -1249,7 +1288,7 @@ components:
               row: { type: string }
               label: { type: string }
               amount: { type: integer }
-              zone_key: { type: string, nullable: true }
+              zone_key: { type: [string, "null"] }
         price_snapshot:
           type: object
           description: The signed payload the storefront must price the cart from.
@@ -1261,10 +1300,10 @@ components:
     Buyer:
       type: object
       properties:
-        name: { type: string, nullable: true }
-        email: { type: string, format: email, nullable: true }
-        phone: { type: string, nullable: true }
-        locale: { type: string, nullable: true }
+        name: { type: [string, "null"] }
+        email: { type: [string, "null"], format: email }
+        phone: { type: [string, "null"] }
+        locale: { type: [string, "null"] }
 
     ExternalOrder:
       type: object
@@ -1272,10 +1311,10 @@ components:
         external_order_id: { type: string }
         status: { type: string, enum: [pending, confirmed, cancelled, refunded, partially_refunded] }
         event_public_id: { type: string }
-        hold_token: { type: string, nullable: true }
+        hold_token: { type: [string, "null"] }
         currency: { type: string }
         total_amount: { type: integer }
-        confirmed_at: { type: string, format: date-time, nullable: true }
+        confirmed_at: { type: [string, "null"], format: date-time }
         allocations:
           type: array
           items: { $ref: "#/components/schemas/Allocation" }
@@ -1310,7 +1349,7 @@ components:
             row: { type: string }
             label: { type: string }
         issued_at: { type: string, format: date-time }
-        used_at: { type: string, format: date-time, nullable: true }
+        used_at: { type: [string, "null"], format: date-time }
 
     CheckinDevice:
       type: object
@@ -1328,8 +1367,8 @@ components:
         ticket_id: { type: string, format: uuid }
         result: { type: string }
         scanned_at: { type: string, format: date-time }
-        device: { type: string, nullable: true }
-        operator: { type: string, nullable: true }
+        device: { type: [string, "null"] }
+        operator: { type: [string, "null"] }
 
     ScanResult:
       type: object
@@ -1343,13 +1382,12 @@ components:
             - $ref: "#/components/schemas/Ticket"
             - type: "null"
         first_scan:
-          type: object
-          nullable: true
+          type: [object, "null"]
           description: Present when `result` is `already_used` — who admitted this ticket, and when.
           properties:
             scanned_at: { type: string, format: date-time }
-            device: { type: string, nullable: true }
-            operator: { type: string, nullable: true }
+            device: { type: [string, "null"] }
+            operator: { type: [string, "null"] }
 
     EventStats:
       type: object
@@ -1359,7 +1397,7 @@ components:
         held: { type: integer }
         allocated: { type: integer }
         blocked: { type: integer }
-        gross_amount: { type: integer, description: Indicative, from price snapshots. }
+        gross_amount: { type: integer, description: "Indicative, from price snapshots." }
         currency: { type: string }
         checked_in: { type: integer }
         checkin_rate: { type: number }

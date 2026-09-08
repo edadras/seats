@@ -10,6 +10,7 @@ use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\HoldItem;
 use App\Models\Ticket;
+use App\Domain\Webhooks\WebhookDispatcher;
 use App\Support\Audit\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -30,6 +31,7 @@ class OrderService
         private readonly TicketIssuer $tickets,
         private readonly AuditLogger $audit,
         private readonly TenantContext $tenantContext,
+        private readonly WebhookDispatcher $webhooks,
     ) {}
 
     /** Register an order against a hold — called as soon as WooCommerce creates the order. */
@@ -215,6 +217,14 @@ class OrderService
                 'total_amount' => $order->total_amount,
             ]);
 
+            $this->webhooks->dispatch($order->tenant_id, 'order.confirmed', [
+                'external_order_id' => $order->external_order_id,
+                'event_public_id' => $event->public_id,
+                'seats' => count($allocations),
+                'total_amount' => $order->total_amount,
+                'currency' => $order->currency,
+            ]);
+
             return $this->withIssuedTokens($order->fresh(['allocations.ticket']), $issuedTokens);
         });
     }
@@ -264,6 +274,11 @@ class OrderService
             $order->event?->bumpAvailabilityVersion();
 
             $this->audit->record('order.cancelled', $order, [
+                'external_order_id' => $order->external_order_id,
+                'reason' => $reason,
+            ]);
+
+            $this->webhooks->dispatch($order->tenant_id, 'order.cancelled', [
                 'external_order_id' => $order->external_order_id,
                 'reason' => $reason,
             ]);
@@ -341,6 +356,13 @@ class OrderService
                 'policy' => $policy,
                 'reason' => $reason,
                 'remaining_active' => $remaining,
+            ]);
+
+            $this->webhooks->dispatch($order->tenant_id, 'order.refunded', [
+                'external_order_id' => $order->external_order_id,
+                'seats' => $allocations->count(),
+                'policy' => $policy,
+                'fully_refunded' => $remaining === 0,
             ]);
 
             return $order->fresh(['allocations.ticket']);
