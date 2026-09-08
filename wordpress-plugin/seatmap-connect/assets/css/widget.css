@@ -1,0 +1,219 @@
+/**
+ * Seat picker styles.
+ *
+ * Written to inherit rather than impose: no font stack, no brand colour, and layout that adapts to
+ * the theme's container width. Logical properties throughout so RTL works without a second sheet.
+ */
+
+.seatmap-widget {
+	--seatmap-border: #d7dae0;
+	--seatmap-muted: #6b7280;
+	--seatmap-accent: #12263f;
+	--seatmap-surface: #ffffff;
+
+	margin-block: 1.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	.seatmap-widget {
+		--seatmap-border: #3a3f4b;
+		--seatmap-muted: #9aa1ad;
+		--seatmap-accent: #e7ecf3;
+		--seatmap-surface: #1c1f26;
+	}
+}
+
+.seatmap-widget--notice {
+	padding: 1rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 8px;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__title {
+	margin-block-end: 0.75rem;
+}
+
+.seatmap-widget__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.25rem;
+	margin: 0 0 1rem;
+	padding: 0;
+	list-style: none;
+	font-size: 0.9em;
+}
+
+.seatmap-widget__legend li {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.seatmap-widget__swatch {
+	inline-size: 0.9rem;
+	block-size: 0.9rem;
+	border-radius: 50%;
+	background: #2d6cdf;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.seatmap-widget__swatch--selected {
+	background: var(--seatmap-accent);
+}
+
+.seatmap-widget__swatch--unavailable {
+	background: #d3d6dc;
+}
+
+.seatmap-widget__stage {
+	position: relative;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 10px;
+	overflow: hidden;
+	background: var(--seatmap-surface);
+}
+
+.seatmap-widget__canvas {
+	display: block;
+	inline-size: 100%;
+	touch-action: none; /* the canvas handles its own pan and pinch */
+	cursor: grab;
+}
+
+.seatmap-widget__canvas:active {
+	cursor: grabbing;
+}
+
+.seatmap-widget__zoom {
+	position: absolute;
+	inset-block-start: 0.5rem;
+	inset-inline-end: 0.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.seatmap-widget__zoom button {
+	inline-size: 2rem;
+	block-size: 2rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 6px;
+	background: var(--seatmap-surface);
+	color: inherit;
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+/*
+ * The seat list is the accessible control, not a fallback: it is always in the document and always
+ * reachable by keyboard. It is visually compact rather than hidden, because "available to screen
+ * readers only" would leave keyboard users navigating an invisible grid.
+ */
+.seatmap-widget__seats {
+	margin-block-start: 1rem;
+	max-block-size: 22rem;
+	overflow: auto;
+	padding: 0.5rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 10px;
+}
+
+.seatmap-widget__section h4 {
+	margin: 0.75rem 0 0.4rem;
+	font-size: 0.95em;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-block-end: 0.3rem;
+}
+
+.seatmap-widget__row-label {
+	inline-size: 4rem;
+	flex: none;
+	font-size: 0.8em;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__seat {
+	min-inline-size: 2rem;
+	block-size: 2rem;
+	padding-inline: 0.35rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 6px;
+	background: var(--seatmap-surface);
+	color: inherit;
+	font-size: 0.8em;
+	cursor: pointer;
+}
+
+.seatmap-widget__seat.is-selected {
+	background: var(--seatmap-accent);
+	color: var(--seatmap-surface);
+	border-color: var(--seatmap-accent);
+}
+
+.seatmap-widget__seat:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	text-decoration: line-through;
+}
+
+.seatmap-widget__seat.is-accessible::after {
+	content: " ♿";
+}
+
+/* Never rely on the browser default alone — some themes remove it entirely. */
+.seatmap-widget__seat:focus-visible,
+.seatmap-widget__zoom button:focus-visible,
+.seatmap-widget__submit:focus-visible {
+	outline: 3px solid var(--seatmap-accent);
+	outline-offset: 2px;
+}
+
+.seatmap-widget__summary {
+	margin-block-start: 1.25rem;
+	padding: 1rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 10px;
+}
+
+.seatmap-widget__summary h3 {
+	margin-block-start: 0;
+}
+
+.seatmap-widget__selection {
+	margin: 0 0 0.75rem;
+	padding-inline-start: 1.1rem;
+}
+
+.seatmap-widget__total {
+	font-weight: 600;
+}
+
+.seatmap-widget__message:empty {
+	display: none;
+}
+
+.seatmap-widget__message {
+	margin-block: 0.5rem;
+	color: #b32d2e;
+}
+
+@media (max-width: 600px) {
+	.seatmap-widget__row-label {
+		inline-size: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.seatmap-widget * {
+		transition: none !important;
+	}
+}

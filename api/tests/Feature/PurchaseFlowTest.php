@@ -30,9 +30,17 @@ class PurchaseFlowTest extends TestCase
             ->assertJsonPath('public_id', $event->public_id)
             ->assertJsonPath('zones.0.amount', 2500);
 
-        $this->getJson("/v1/embed/events/{$event->public_id}/seat-map")
+        $map = $this->getJson("/v1/embed/events/{$event->public_id}/seat-map")
             ->assertOk()
             ->assertJsonPath('seat_map_version_id', $event->seat_map_version_id);
+
+        // Geometry carries each seat's stable id. Without it a client would have to pair geometry
+        // with availability by array position, and nothing guarantees the two share an order.
+        $geometrySeatIds = collect($map->json('geometry.sections.0.rows'))
+            ->flatMap(fn ($row) => array_column($row['seats'], 'seat_id'));
+
+        $this->assertCount(15, $geometrySeatIds);
+        $this->assertEqualsCanonicalizing($seats->pluck('id')->all(), $geometrySeatIds->all());
 
         $availability = $this->getJson("/v1/embed/events/{$event->public_id}/availability")->assertOk();
         $this->assertCount(15, $availability->json('seats'));

@@ -1074,6 +1074,13 @@ components:
                         required: [key, label, x, y]
                         properties:
                           key: { type: string }
+                          seat_id:
+                            type: [string, "null"]
+                            format: uuid
+                            description: |
+                              Present on the embed seat-map response only. The stable id to send
+                              when holding this seat, and the key to join availability on — never
+                              pair geometry with availability by position.
                           label: { type: string }
                           x: { type: number }
                           y: { type: number }

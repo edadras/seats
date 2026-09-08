@@ -1,0 +1,87 @@
+# Translation template for Seatmap Connect.
+# Copyright (C) 2026
+# This file is distributed under the same licence as the Seatmap Connect plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Seatmap Connect 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/edadras/seats/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: seatmap-connect\n"
+
+msgid "Select your seats"
+msgstr ""
+
+msgid "Your selection"
+msgstr ""
+
+msgid "No seats selected yet."
+msgstr ""
+
+msgid "Total"
+msgstr ""
+
+msgid "Reserve and add to cart"
+msgstr ""
+
+msgid "Reserving…"
+msgstr ""
+
+msgid "Sorry, one of those seats was just taken. It has been removed from your selection."
+msgstr ""
+
+msgid "Your seat reservation ran out and the seats were released. Please choose your seats again."
+msgstr ""
+
+#. translators: 1: section name, 2: row name, 3: seat label.
+msgid "%1$s, row %2$s, seat %3$s"
+msgstr ""
+
+#. translators: 1: section name, 2: row name, 3: seat label, 4: formatted price.
+msgid "%1$s, row %2$s, seat %3$s — %4$s"
+msgstr ""
+
+msgid "Available"
+msgstr ""
+
+msgid "Unavailable"
+msgstr ""
+
+msgid "Selected"
+msgstr ""
+
+msgid "Seat"
+msgstr ""
+
+msgid "Stage"
+msgstr ""
+
+msgid "Zoom in"
+msgstr ""
+
+msgid "Zoom out"
+msgstr ""
+
+msgid "Reset view"
+msgstr ""
+
+msgid "Seatmap Connect"
+msgstr ""
+
+msgid "Test connection"
+msgstr ""
+
+msgid "Connected. Credentials and clock are good."
+msgstr ""
+
+msgid "This server's clock is out of step with the API. Fix NTP on this host."
+msgstr ""
+
+msgid "Seatmap: seats allocated and tickets issued."
+msgstr ""
+
+msgid "Seatmap: could not confirm the seats yet. This will be retried automatically."
+msgstr ""

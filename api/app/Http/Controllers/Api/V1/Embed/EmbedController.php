@@ -11,6 +11,7 @@ use App\Models\Event;
 use App\Models\Hold;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The public surface the browser widget talks to.
@@ -59,6 +60,10 @@ class EmbedController extends Controller
     /**
      * Geometry is immutable per version, so it is safe to cache hard and to serve from a CDN.
      * The widget fetches this once and then only polls availability.
+     *
+     * Each seat is enriched with its stable `seat_id`. Without it the client would have to pair
+     * geometry with the availability list positionally, and nothing guarantees the two share an
+     * order — one reshuffle and every buyer would be selecting the wrong chair.
      */
     public function seatMap(string $publicId)
     {
@@ -73,10 +78,38 @@ class EmbedController extends Controller
         return response()
             ->json([
                 'seat_map_version_id' => $version->id,
-                'geometry' => $version->geometry,
+                'geometry' => $this->withSeatIds($version),
             ])
             ->setEtag($version->checksum ?? md5($version->id))
             ->header('Cache-Control', 'public, max-age=3600, immutable');
+    }
+
+    /** Inject each seat's UUID into the geometry, keyed by (section, row, seat). */
+    private function withSeatIds(\App\Models\SeatMapVersion $version): array
+    {
+        $geometry = $version->geometry;
+
+        $ids = DB::table('seat_placements as sp')
+            ->join('seats as s', 's.id', '=', 'sp.seat_id')
+            ->join('seat_rows as r', 'r.id', '=', 's.seat_row_id')
+            ->join('sections as sec', 'sec.id', '=', 's.section_id')
+            ->where('sp.seat_map_version_id', $version->id)
+            ->select('sp.seat_id', 'sec.key as section_key', 'r.key as row_key', 's.key as seat_key')
+            ->get()
+            ->keyBy(fn ($row) => $row->section_key.'/'.$row->row_key.'/'.$row->seat_key);
+
+        foreach ($geometry['sections'] ?? [] as $sIndex => $section) {
+            foreach ($section['rows'] ?? [] as $rIndex => $row) {
+                foreach ($row['seats'] ?? [] as $seatIndex => $seat) {
+                    $composite = $section['key'].'/'.$row['key'].'/'.$seat['key'];
+
+                    $geometry['sections'][$sIndex]['rows'][$rIndex]['seats'][$seatIndex]['seat_id']
+                        = $ids->get($composite)?->seat_id;
+                }
+            }
+        }
+
+        return $geometry;
     }
 
     public function availability(Request $request, string $publicId)
