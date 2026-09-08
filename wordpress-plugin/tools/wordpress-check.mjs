@@ -32,7 +32,7 @@ const args = Object.fromEntries(
 );
 
 const EVENT = args.event;
-const URL = ( args.url || 'http://127.0.0.1:8300' ).replace( /\/$/, '' );
+const SITE = ( args.url || 'http://127.0.0.1:8300' ).replace( /\/$/, '' );
 const DIR = args.dir || path.join( process.env.TMPDIR || '/tmp', 'seatmap-wordpress' );
 
 if ( ! EVENT ) {
@@ -115,11 +115,24 @@ const chosen = await page.evaluate( () =>
 check( 'both seats are in the summary', 2 === chosen.length, chosen.join( ' | ' ) );
 
 await page.click( '.seatmap-widget__submit' );
-await page.waitForURL( ( u ) => u.href !== pageUrl, { timeout: 30000 } );
-await page.waitForLoadState( 'networkidle' );
 
 // WooCommerce only builds the cart for ordinary page requests. A REST route that adds to it has
-// to load it first, or `WC()->cart` is null and this is a fatal error rather than a cart.
+// to load it first, or `WC()->cart` is null and reserving a seat is a 500 rather than a cart —
+// in which case the picker stays put and shows what went wrong.
+const reserved = await page.waitForURL( ( u ) => u.href !== pageUrl, { timeout: 30000 } )
+	.then( () => true ).catch( () => false );
+
+if ( ! reserved ) {
+	const message = await page.locator( '.seatmap-widget__message' ).innerText().catch( () => '' );
+
+	check( 'the seats reached the cart', false, message.replace( /\s+/g, ' ' ).trim() || 'no navigation' );
+	console.log( '\n1 CHECK(S) FAILED' );
+	await browser.close();
+	process.exit( 1 );
+}
+
+await page.waitForLoadState( 'networkidle' );
+
 const lines = await page.locator( '.wc-block-cart-items__row, .cart_item' ).count();
 check( 'the seats reached the cart', 2 === lines, `${ lines } lines` );
 // The seat is written on the cart line by the plugin, not by the product — the product is one
@@ -142,7 +155,7 @@ check( 'each line names its seat', 2 === named, `${ named } named lines` );
 
 console.log( 'Checking out' );
 
-await page.goto( URL + '/?page_id=' + wp( "echo (int) wc_get_page_id( 'checkout' );" ),
+await page.goto( SITE + '/?page_id=' + wp( "echo (int) wc_get_page_id( 'checkout' );" ),
 	{ waitUntil: 'networkidle' } );
 await page.waitForSelector( '#email', { timeout: 20000 } );
 await page.fill( '#email', 'buyer@example.test' );
@@ -157,14 +170,17 @@ await page.waitForURL( /order-received/, { timeout: 60000 } );
 
 check( 'the order went through', /order-received/.test( page.url() ) );
 
+// Identified from the thank-you URL, not "the most recent order": two runs in the same second
+// would otherwise inspect each other's.
+const orderId = Number( new URL( page.url() ).searchParams.get( 'order-received' ) );
+
 const state = JSON.parse( wp( `
-	$orders = wc_get_orders( array( 'limit' => 1, 'orderby' => 'date', 'order' => 'DESC' ) );
-	$order  = $orders[0];
+	$order = wc_get_order( ${ orderId } );
 	echo wp_json_encode( array(
 		'status'     => $order->get_status(),
 		'registered' => (bool) $order->get_meta( '_seatmap_registered' ),
 		'confirmed'  => 'yes' === $order->get_meta( '_seatmap_confirmed' ),
-		'tickets'    => count( (array) $order->get_meta( '_seatmap_tickets' ) ),
+		'tickets'    => count( array_filter( (array) $order->get_meta( '_seatmap_tickets' ) ) ),
 		'items'      => count( $order->get_items() ),
 	) );
 ` ) );

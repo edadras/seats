@@ -18,7 +18,9 @@
 
 set -euo pipefail
 
-PLUGIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../seatmap-connect" && pwd )"
+# Resolved before anything changes directory, since $0 may well be a relative path.
+TOOLS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PLUGIN_DIR="$( cd "$TOOLS_DIR/../seatmap-connect" && pwd )"
 
 API=""
 KEY=""
@@ -112,8 +114,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once ABSPATH . 'wp-settings.php';
 PHP
 
+# Two PHP runs, not one: WooCommerce only defines WC() on `plugins_loaded`, so nothing in the
+# process that activates it can use the API it provides.
 echo "Installing…"
-SEATMAP_API="$API" SEATMAP_KEY="$KEY" SEATMAP_SECRET="$SECRET" php -d error_reporting=E_ALL <<'PHP'
+php <<'PHP'
 <?php
 define( 'WP_INSTALLING', true );
 require getcwd() . '/wordpress/wp-load.php';
@@ -134,6 +138,15 @@ foreach ( array( 'woocommerce/woocommerce.php', 'seatmap-connect/seatmap-connect
 		exit( 1 );
 	}
 }
+
+echo "WordPress ", get_bloginfo( 'version' ), "\n";
+PHP
+
+echo "Configuring…"
+SEATMAP_API="$API" SEATMAP_KEY="$KEY" SEATMAP_SECRET="$SECRET" php <<'PHP'
+<?php
+require getcwd() . '/wordpress/wp-load.php';
+wp_set_current_user( 1 );
 
 update_option( 'seatmap_api_url', getenv( 'SEATMAP_API' ) );
 update_option( 'seatmap_api_key_id', getenv( 'SEATMAP_KEY' ) );
@@ -176,7 +189,7 @@ if ( ! $product ) {
 
 update_option( 'seatmap_seat_product_id', $product_id );
 
-echo "WordPress ", get_bloginfo( 'version' ), " | WooCommerce ", WC()->version, "\n";
+echo "WooCommerce ", WC()->version, " | seat product ", $product_id, "\n";
 echo "admin: ", admin_url(), " (admin / password)\n";
 PHP
 
@@ -184,4 +197,4 @@ echo
 echo "Ready. Start it with:"
 echo "  (cd $DIR/wordpress && php -S 127.0.0.1:$PORT &)"
 echo "Then point a page at an event:"
-echo "  node $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/wordpress-check.mjs --event evt_… --url http://127.0.0.1:$PORT --dir $DIR"
+echo "  node $TOOLS_DIR/wordpress-check.mjs --event evt_… --url http://127.0.0.1:$PORT --dir $DIR"
