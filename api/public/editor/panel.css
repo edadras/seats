@@ -44,7 +44,7 @@
 	block-size: 1.75rem;
 	border-radius: var(--r-sm);
 	background: var(--accent);
-	color: var(--text-inverse);
+	color: var(--on-accent);
 	box-shadow: var(--shadow-inset);
 }
 
@@ -446,7 +446,7 @@
 }
 
 .floor:hover { background: var(--surface-hover); color: var(--text); }
-.floor.is-active { background: var(--accent); color: var(--text-inverse); }
+.floor.is-active { background: var(--accent); color: var(--on-accent); }
 
 .designer__status {
 	display: flex;
@@ -619,7 +619,7 @@
 .ends__cap.is-on {
 	background: var(--accent);
 	border-color: var(--accent);
-	color: var(--text-inverse);
+	color: var(--on-accent);
 }
 
 .ends__track {

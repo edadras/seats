@@ -19,7 +19,7 @@
 
 	/* Text */
 	--seatmap-text: #1b2030;
-	--seatmap-muted: #6f7891;
+	--seatmap-muted: #626b83;
 
 	/* The one colour the picker asserts. A shop that wants its own sets this and nothing else. */
 	--seatmap-accent: #1b2030;

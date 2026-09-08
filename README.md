@@ -62,7 +62,7 @@ connected API client, and prints the credentials you need for the plugin.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 101 unit + feature tests
+./vendor/bin/phpunit                        # 102 unit + feature tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 ```
@@ -71,16 +71,22 @@ The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concu
 independent OS processes, because sharing a connection would not exercise what the guarantee
 actually rests on.
 
-Two further checks are run by hand against a live instance rather than in CI, since both need a
+Three further checks are run by hand against a live instance rather than in CI, since they need a
 server and a browser:
 
 ```bash
 php artisan migrate:fresh --seed --force
 php artisan serve --port=8123 &
+(cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
 node api/editor_smoke.mjs                                        # drives the designer in Chromium
+node api/a11y_check.mjs                                          # contrast and keyboard paths
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
+
+`a11y_check.mjs` measures the design tokens rather than any one screen: contrast is a property of
+the palette, so checking the pairs once in each theme covers every screen built from them. It also
+walks the panel by keyboard and chooses a seat in the picker without a mouse.
 
 ## What is covered
 

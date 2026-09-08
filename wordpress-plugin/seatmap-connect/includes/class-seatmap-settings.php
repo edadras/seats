@@ -173,30 +173,52 @@ class Seatmap_Settings {
 			<p><?php esc_html_e( 'Checks the credentials and the clock. Signed requests are rejected if this server\'s time is more than five minutes from the API\'s.', 'seatmap-connect' ); ?></p>
 			<p>
 				<button class="button button-secondary" id="seatmap-test-connection"><?php esc_html_e( 'Test connection', 'seatmap-connect' ); ?></button>
-				<span id="seatmap-test-result" style="margin-inline-start:12px"></span>
 			</p>
 
+			<!-- Rendered as a WordPress notice rather than coloured text: an admin screen should
+			     look like the rest of wp-admin, including in whatever admin colour scheme is set. -->
+			<div id="seatmap-test-result" class="notice inline" role="status" aria-live="polite" hidden><p></p></div>
+
 			<script>
-			document.getElementById( 'seatmap-test-connection' ).addEventListener( 'click', function ( event ) {
-				event.preventDefault();
+			( function () {
+				var button = document.getElementById( 'seatmap-test-connection' );
 				var out = document.getElementById( 'seatmap-test-result' );
-				out.textContent = <?php echo wp_json_encode( __( 'Testing…', 'seatmap-connect' ) ); ?>;
+				var idle = button.textContent;
 
-				var body = new FormData();
-				body.append( 'action', 'seatmap_test_connection' );
-				body.append( '_wpnonce', <?php echo wp_json_encode( wp_create_nonce( 'seatmap_test_connection' ) ); ?> );
+				function report( message, kind ) {
+					out.className = 'notice inline ' + kind;
+					out.querySelector( 'p' ).textContent = message;
+					out.hidden = false;
+				}
 
-				fetch( ajaxurl, { method: 'POST', body: body, credentials: 'same-origin' } )
-					.then( function ( r ) { return r.json(); } )
-					.then( function ( r ) {
-						out.textContent = r.data.message;
-						out.style.color = r.success ? '#1a7f37' : '#b32d2e';
-					} )
-					.catch( function () {
-						out.textContent = <?php echo wp_json_encode( __( 'The test request itself failed.', 'seatmap-connect' ) ); ?>;
-						out.style.color = '#b32d2e';
-					} );
-			} );
+				button.addEventListener( 'click', function ( event ) {
+					event.preventDefault();
+
+					button.disabled = true;
+					button.textContent = <?php echo wp_json_encode( __( 'Testing…', 'seatmap-connect' ) ); ?>;
+					out.hidden = true;
+
+					var body = new FormData();
+					body.append( 'action', 'seatmap_test_connection' );
+					body.append( '_wpnonce', <?php echo wp_json_encode( wp_create_nonce( 'seatmap_test_connection' ) ); ?> );
+
+					fetch( ajaxurl, { method: 'POST', body: body, credentials: 'same-origin' } )
+						.then( function ( r ) { return r.json(); } )
+						.then( function ( r ) {
+							report( r.data.message, r.success ? 'notice-success' : 'notice-error' );
+						} )
+						.catch( function () {
+							report(
+								<?php echo wp_json_encode( __( 'The test request itself failed.', 'seatmap-connect' ) ); ?>,
+								'notice-error'
+							);
+						} )
+						.then( function () {
+							button.disabled = false;
+							button.textContent = idle;
+						} );
+				} );
+			} )();
 			</script>
 		</div>
 		<?php

@@ -24,7 +24,7 @@
 	--n-200: #dfe3ea;
 	--n-300: #c7cddb;
 	--n-400: #9aa3b7;
-	--n-500: #6f7891;
+	--n-500: #626b83;
 	--n-600: #545c73;
 	--n-700: #3d4457;
 	--n-800: #2a3042;
@@ -74,6 +74,11 @@
 
 	--accent: var(--a-600);
 	--accent-hover: var(--a-700);
+	/*
+	 * Text on the accent is white in both themes. It cannot follow --text-inverse: the accent
+	 * stays indigo in the dark theme, and dark ink on indigo measures 3.46:1 — under AA.
+	 */
+	--on-accent: #ffffff;
 	--accent-soft: var(--a-50);
 	--accent-border: var(--a-200);
 
@@ -174,6 +179,7 @@
 
 	--accent: var(--a-500);
 	--accent-hover: var(--a-400);
+	--on-accent: #ffffff;
 	--accent-soft: rgba(91, 99, 240, 0.14);
 	--accent-border: rgba(91, 99, 240, 0.36);
 
@@ -340,7 +346,7 @@ code {
 .btn--primary {
 	background: var(--accent);
 	border-color: var(--accent);
-	color: var(--text-inverse);
+	color: var(--on-accent);
 	box-shadow: var(--shadow-xs), var(--shadow-inset);
 }
 
