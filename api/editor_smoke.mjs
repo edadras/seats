@@ -44,7 +44,7 @@ check( 'signed in', await page.locator( '.sidebar' ).isVisible() );
 check(
 	'sidebar lists every section',
 	JSON.stringify( await page.locator( '.nav-item' ).allInnerTexts() ) ===
-		JSON.stringify( [ 'Events', 'Tickets', 'Seat maps', 'Venues', 'Websites', 'Connections' ] )
+		JSON.stringify( [ 'Events', 'Tickets', 'Seat maps', 'Venues', 'Websites', 'Connections', 'Modules' ] )
 );
 
 console.log( 'Designer: open the chart' );

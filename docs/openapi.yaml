@@ -49,6 +49,7 @@ tags:
   - name: WooCommerce
   - name: Tickets
   - name: Sites
+  - name: Modules
   - name: Check-in
 
 security:
@@ -836,6 +837,105 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /modules:
+    get:
+      operationId: listModules
+      tags: [Modules]
+      summary: Every module installed on this server, and whether this organiser has it on
+      description: |
+        Two different questions, and the response answers both. What is **installed** is a property
+        of the deployment — an operator decides it by deploying. What is **enabled** is a property
+        of this organiser.
+
+        There is no install endpoint and there will not be one: an endpoint that changed which code
+        runs would be a remote-code-execution feature (ADR-0004).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Module" }
+                  points:
+                    type: array
+                    description: The extension points that exist. Adding one is a core change.
+                    items: { type: string, enum: [payments, messaging, reports, blocks, themes, panel, events] }
+
+  /modules/{key}:
+    parameters:
+      - $ref: "#/components/parameters/ModuleKey"
+    get:
+      operationId: getModule
+      tags: [Modules]
+      summary: One module, with its settings and its health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Module"
+                  - type: object
+                    properties:
+                      health: { $ref: "#/components/schemas/ModuleHealth" }
+        "404":
+          description: "`module_not_installed` — not installed on this server."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    patch:
+      operationId: updateModule
+      tags: [Modules]
+      summary: Turn a module on or off, and save what it needs
+      description: |
+        One endpoint rather than three, because these are one decision: an organiser filling in an
+        API key and switching a gateway on has done a single thing. Splitting it produces the state
+        nobody wants — enabled and unconfigured, taking bookings it cannot settle.
+
+        **Secrets.** A secret sent as the mask (`••••••••`) or as an empty string means "unchanged",
+        so saving a form that displays a stored key does not wipe it. A secret is never returned;
+        `values` reports the mask or null.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                settings:
+                  type: object
+                  additionalProperties: true
+                  description: Keys the module's manifest declared. Anything else is ignored.
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Module"
+                  - type: object
+                    properties:
+                      health: { $ref: "#/components/schemas/ModuleHealth" }
+        "422":
+          description: |
+            `module_not_configured` — the module says it is missing something it needs, so it was
+            left off rather than switched on and broken. `details.problems` says what.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: "`module_not_installed`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /site-themes:
     get:
       operationId: listSiteThemes
@@ -1437,6 +1537,12 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    ModuleKey:
+      name: key
+      in: path
+      required: true
+      description: The module key with its slash written as a dot — `seatmap.offline-payments`. A slash inside a path segment is a fight with every router and proxy in between.
+      schema: { type: string, pattern: "^[a-z0-9-]+\\.[a-z0-9-]+$" }
 
   responses:
     NotFound:
@@ -2015,6 +2121,65 @@ components:
             section: { type: [string, "null"] }
             row: { type: [string, "null"] }
             label: { type: [string, "null"] }
+
+    Module:
+      type: object
+      description: |
+        A module as this organiser sees it. `enabled` is their answer; the module existing at all is
+        the operator's.
+      properties:
+        key: { type: string, examples: ["seatmap/offline-payments"] }
+        vendor: { type: string }
+        version: { type: string }
+        first_party: { type: boolean }
+        name:
+          type: string
+          description: Already translated into the reader's language.
+        description: { type: string }
+        extends:
+          type: array
+          items: { type: string, enum: [payments, messaging, reports, blocks, themes, panel, events] }
+        enabled: { type: boolean }
+        auto_enabled:
+          type: boolean
+          description: On because it needs no configuration and this organiser has never said otherwise.
+        disabled_reason:
+          type: [string, "null"]
+          description: Set when the platform switched it off itself, e.g. `repeated_failures`.
+        settings:
+          type: array
+          items: { $ref: "#/components/schemas/ModuleSetting" }
+        values:
+          type: object
+          additionalProperties: true
+          description: |
+            Current values. A secret is reported as the mask when set and null when not — never as
+            itself. A gateway secret readable from a panel session is a gateway secret a stolen
+            session has.
+
+    ModuleSetting:
+      type: object
+      properties:
+        key: { type: string }
+        type: { type: string, enum: [string, secret, boolean, integer, url, select] }
+        required: { type: boolean }
+        label: { type: string }
+        hint: { type: [string, "null"] }
+        options:
+          type: array
+          description: Present for `select` only.
+          items: { type: string }
+        default: {}
+
+    ModuleHealth:
+      type: object
+      description: |
+        What has gone wrong lately. A module that throws is caught and skipped so a request survives;
+        this is where that stops being silent.
+      properties:
+        failures: { type: integer }
+        last_failure_at: { type: [string, "null"], format: date-time }
+        last_message: { type: [string, "null"] }
 
     SiteTheme:
       type: object

@@ -13,6 +13,7 @@
 	var Chart = window.SeatmapChart;
 	var Ops = window.SeatmapChartOps;
 	var icon = window.SeatmapIcon;
+	var i18n = window.SeatmapI18n;
 
 	var STORE = {
 		token: 'seatmap_token',
@@ -28,6 +29,7 @@
 		{ key: 'venues', label: 'Venues', icon: 'building' },
 		{ key: 'sites', label: 'Websites', icon: 'globe' },
 		{ key: 'connections', label: 'Connections', icon: 'plug' },
+		{ key: 'modules', label: 'Modules', icon: 'puzzle' },
 	];
 
 	var STATUS_TONE = {
@@ -100,6 +102,8 @@
 	};
 
 	App.init = function () {
+		var self = this;
+
 		this.root = document.getElementById( 'app' );
 		this.api = this.root.dataset.api;
 		this.token = window.sessionStorage.getItem( STORE.token );
@@ -107,7 +111,30 @@
 
 		Theme.apply( Theme.resolve() );
 
-		this.token ? this.showWorkspace() : this.showLogin();
+		// Nothing paints before the catalogue is in hand: t() is synchronous, and a render loop
+		// that had to await a string would either flash English or not render at all (ADR-0005).
+		// It resolves either way — a missing catalogue opens the panel in English rather than
+		// leaving somebody at a blank page.
+		i18n.load( this.api ).then( function () {
+			self.token ? self.showWorkspace() : self.showLogin();
+		} );
+	};
+
+	/** Short, because it appears once per label. */
+	App.t = function ( key, replace ) {
+		return i18n.t( key, replace );
+	};
+
+	App.money = function ( minorUnits, currency, decimals ) {
+		return i18n.money( minorUnits, currency, decimals );
+	};
+
+	App.number = function ( value ) {
+		return i18n.number( value );
+	};
+
+	App.date = function ( value, options ) {
+		return i18n.date( value, options );
 	};
 
 	/* ------------------------------------------------------------------------- transport */
@@ -115,6 +142,13 @@
 	App.request = function ( method, path, body ) {
 		var self = this;
 		var headers = { Accept: 'application/json' };
+
+		// The panel's language travels with every call, so a message the *server* composes — a
+		// module's name, a refusal — comes back in the language the panel is being read in.
+		// Without this, the chrome is Persian and everything the API said is English.
+		if ( i18n.locale ) {
+			headers[ 'X-Seatmap-Locale' ] = i18n.locale;
+		}
 
 		if ( body ) {
 			headers[ 'Content-Type' ] = 'application/json';
@@ -320,6 +354,7 @@
 			case 'maps': return this.renderMaps();
 			case 'connections': return this.renderConnections();
 			case 'sites': return window.SeatmapSites.renderList( this );
+			case 'modules': return window.SeatmapModules.render( this );
 			case 'tickets': return window.SeatmapTickets.render( this );
 			default: return this.renderEvents();
 		}

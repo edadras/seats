@@ -164,6 +164,27 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Every first-party module names its strings in the catalogue
+        run: |
+          # A module whose name renders as `modules.acme.thing.name` is a module nobody translated.
+          for manifest in modules/*/*/module.json; do
+            key=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['key'])" "$manifest")
+            path="modules.$(echo "$key" | tr '/-' '._')"
+            for field in name description; do
+              php -r '
+                $c = require "api/lang/en/modules.php";
+                $parts = explode(".", $argv[1]);
+                array_shift($parts);
+                $parts[] = $argv[2];
+                foreach ($parts as $part) {
+                    if (! is_array($c) || ! isset($c[$part])) { exit(1); }
+                    $c = $c[$part];
+                }
+              ' "$path" "$field" || { echo "::error::$key has no $field in api/lang/en/modules.php"; exit 1; }
+            done
+            echo "  named: $key"
+          done
+
       - name: No locale may fall behind English
         run: |
           # Missing keys, stale keys left by a rename, and placeholders that differ between
@@ -208,6 +229,12 @@ jobs:
       - name: Check designer JavaScript parses
         run: |
           for file in api/public/editor/js/*.js; do node --check "$file"; done
+
+      - name: Modules must parse on the oldest PHP the API supports
+        run: |
+          # A module is deployed by an operator, not installed by composer, so nothing else would
+          # catch a syntax error in one before it took a tenant's checkout down.
+          find modules -name '*.php' -print0 | xargs -0 -r -n1 php -l
 
       - name: The PHP and JavaScript seat maths must agree
         run: |

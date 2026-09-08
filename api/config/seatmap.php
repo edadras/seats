@@ -75,6 +75,22 @@ return [
         ],
     ],
 
+    /*
+     | Modules (ADR-0004).
+     |
+     | `path` is where installed modules live. What is installed is a property of the deployment —
+     | an operator decides it by deploying — so it is a path, not a table an admin panel could edit.
+     |
+     | `max_failures` is how many times a module may throw inside `failure_window_hours` before the
+     | platform switches it off for that tenant and says why. Failing silently forever is the one
+     | outcome worse than being off.
+     */
+    'modules' => [
+        'path' => env('SEATMAP_MODULES_PATH', base_path('../modules')),
+        'max_failures' => (int) env('SEATMAP_MODULE_MAX_FAILURES', 20),
+        'failure_window_hours' => (int) env('SEATMAP_MODULE_FAILURE_WINDOW', 24),
+    ],
+
     'checkin' => [
         'pairing_code_ttl_minutes' => 30,
         'max_batch_scans' => 500,

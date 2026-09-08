@@ -15,6 +15,7 @@ seats/
 ├── api/                 Laravel service: tenants, maps, events, holds, tickets, sites, check-in
 ├── wordpress-plugin/    WooCommerce plugin: widget, cart integration, order lifecycle
 ├── checkin-app/         Flutter web app: the scanner staff use at the door
+├── modules/             What the platform can be extended with, one directory each
 ├── shared/              The seat picker, shared verbatim by the plugin and the hosted sites
 └── docs/                Audit, ADRs, threat model, data model, OpenAPI contract
 ```
@@ -34,6 +35,7 @@ seats/
 | [`docs/openapi.yaml`](docs/openapi.yaml) | The full `/v1` contract |
 | [`docs/LEGACY_AUDIT.md`](docs/LEGACY_AUDIT.md) | What was found in the original source and what was reused |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Running it: requirements, secrets, monitoring, backups, incidents |
+| [`docs/MODULES.md`](docs/MODULES.md) | Writing a module: the manifest, the extension points, and what a module may never touch |
 | [`checkin-app/README.md`](checkin-app/README.md) | The door scanner: what it does, and the four CDNs it refuses to need |
 
 ## What the designer can draw
@@ -65,6 +67,27 @@ node tools/i18n-check.mjs     # runs in CI on every push
 It fails the build on a missing key, on a stale key left behind by a rename, and on a placeholder
 that appears in one translation of a string and not another — a translation that quietly drops
 `:max` tells a buyer they may select *up to seats*.
+
+## Modules
+
+Payment gateways, messaging channels, report sources, page blocks, themes and panel screens all
+arrive as modules — the offline gateway the platform ships with included. It is not privileged: if
+the module system could not express the gateway we wrote ourselves, it would not be good enough to
+offer to anybody else.
+
+Two questions that look like one and are not:
+
+- **installed** is a property of the deployment, discovered from `modules/`. An operator decides it
+  by deploying. There is no upload-and-run path, and there will not be one: a multi-tenant platform
+  that executes customer-supplied PHP has no tenant boundary left worth the name.
+- **enabled** is a property of an organiser, decided in the panel, with settings of their own.
+
+A module contributes through typed extension points and nothing else. It never touches `seats`,
+`holds`, `allocations` or `tickets` — `ModuleBoundaryTest` fails the build if a shipped module so
+much as names one. Secrets go in encrypted and never come back out; the panel is told "set" or "not
+set". A module that throws is caught, recorded, and shown as its own health, and one that keeps
+failing is switched off with a reason an organiser can read — because a messaging module that has
+quietly stopped sending tickets looks exactly like one that is working.
 
 ## Hosted event sites
 
@@ -130,7 +153,7 @@ connected API client, and prints the credentials you need for the plugin.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 125 unit + feature tests
+./vendor/bin/phpunit                        # 145 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -188,6 +211,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A second scan reports who got in, and when | `CheckinTest`, `checkin-app/test` |
 | A hosted site serves only its own tenant's events | `HostedSiteTest` |
 | A refusal is written in the language of whoever was refused | `LocalisationTest` |
+| A module cannot reach the seating inventory | `ModuleBoundaryTest` |
+| A module secret is never readable from the panel | `ModuleSystemTest` |
+| A broken module does not take a request with it, and does not fail silently | `ModuleSystemTest` |
 | A rial price is not divided by a hundred | `LocalisationTest` |
 | An Iranian reader gets the Persian calendar, an Arabic one does not | `LocalisationTest` |
 | A hosted purchase makes allocations, tickets and a server-priced order | `HostedSiteTest` |

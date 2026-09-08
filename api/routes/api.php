@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
+use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
@@ -64,6 +65,13 @@ Route::prefix('v1')->group(function () {
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);
         Route::post('tickets/{ticket}/release', [TicketController::class, 'release']);
+
+        // ---- Modules (ADR-0004) --------------------------------------------------------
+        // There is no install endpoint and there will not be one: what code runs on a server is
+        // an operator's decision, made by deploying.
+        Route::get('modules', [ModuleController::class, 'index']);
+        Route::get('modules/{key}', [ModuleController::class, 'show']);
+        Route::patch('modules/{key}', [ModuleController::class, 'update']);
 
         // ---- Hosted event sites (ADR-0003) ---------------------------------------------
         Route::get('site-themes', [SiteController::class, 'themes']);

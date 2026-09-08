@@ -18,6 +18,9 @@
 		map: '<path d="M4 6.5 9.5 4v13.5L4 20zM9.5 4 15 6.5v13.5L9.5 17.5zM15 6.5 20 4v13.5L15 20z"/>',
 		building: '<path d="M4 21V5.5A1.5 1.5 0 0 1 5.5 4h7A1.5 1.5 0 0 1 14 5.5V21M14 21V10h4.5A1.5 1.5 0 0 1 20 11.5V21M3 21h18"/><path d="M7 8h3M7 12h3M7 16h3"/>',
 		plug: '<path d="M9 3v6M15 3v6M6 9h12v3a6 6 0 0 1-12 0zM12 18v3"/>',
+		// A piece with one tab and one notch: enough to read as "fits into something" at 16px,
+		// where a four-lobed jigsaw piece turns into a blob.
+		puzzle: '<path d="M10.2 4.2a1.8 1.8 0 0 1 3.6 0V6h3.4a.8.8 0 0 1 .8.8v3.4h1.8a1.8 1.8 0 0 1 0 3.6H18v3.4a.8.8 0 0 1-.8.8h-3.4v-1.8a1.8 1.8 0 0 0-3.6 0V18H6.8a.8.8 0 0 1-.8-.8v-3.4H4.2a1.8 1.8 0 0 1 0-3.6H6V6.8A.8.8 0 0 1 6.8 6h3.4Z"/>',
 		logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h11"/>',
 		user: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
 		key: '<circle cx="8" cy="14" r="4"/><path d="M11 11l8-8M17 5l2 2M14.5 7.5l2 2"/>',

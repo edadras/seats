@@ -10,10 +10,18 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!--
+          A module's own tests live beside its code, so a module arrives with the evidence that it
+          works rather than only with the claim (ADR-0004, docs/MODULES.md).
+        -->
+        <testsuite name="Modules">
+            <directory>../modules/*/*/tests</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
             <directory>app</directory>
+            <directory>../modules</directory>
         </include>
     </source>
     <php>

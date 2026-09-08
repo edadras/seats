@@ -1117,3 +1117,142 @@
 .filters__event { flex: 0 1 18rem; }
 .filters__status { flex: 0 0 9.5rem; }
 .filters .input { flex: 1 1 14rem; min-inline-size: 0; }
+
+/* ============================================================================== modules
+ *
+ * A card per module, each carrying its own switch and its own settings. Deliberately not a table:
+ * these are decisions with consequences — a payment gateway, a way of reaching buyers — and a row
+ * in a grid invites the same glance as a list of seat maps.
+ */
+
+.modules {
+	display: grid;
+	gap: var(--s-4);
+	grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
+	align-items: start;
+}
+
+.module {
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+	padding: var(--s-4);
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-3);
+}
+
+/* An enabled module carries an accent edge on its leading side, which flips with the writing
+   direction because it means "this one is live", not "this one is on the left". */
+.module.is-on { border-inline-start: 3px solid var(--accent); }
+
+.module__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--s-3);
+}
+
+.module__identity { min-inline-size: 0; }
+.module__name { margin: 0 0 var(--s-1); font-size: var(--text-md); font-weight: 600; }
+
+.module__meta {
+	margin: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--s-1);
+	font-size: var(--text-xs);
+}
+
+.module__description {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--text-sm);
+	line-height: 1.55;
+}
+
+.module__settings {
+	border-block-start: 1px solid var(--border);
+	padding-block-start: var(--s-3);
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-3);
+}
+
+.badge--soft { background: var(--surface-hover); color: var(--text-muted); }
+.req { color: var(--danger); }
+.row--end { justify-content: flex-end; }
+
+.notice--warn {
+	margin: 0;
+	padding: var(--s-2) var(--s-3);
+	border-radius: var(--r-md);
+	background: var(--warn-soft);
+	color: var(--warn);
+	font-size: var(--text-sm);
+}
+
+/* --- switch ---------------------------------------------------------------------------
+ *
+ * A real checkbox, visually hidden rather than removed, so it keeps its keyboard behaviour and
+ * announces itself to a screen reader as what it is. The track and thumb are decoration over it.
+ */
+
+.switch {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--s-2);
+	cursor: pointer;
+	flex: none;
+	font-size: var(--text-xs);
+	color: var(--text-secondary);
+}
+
+.switch input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.switch__track {
+	inline-size: 2.4rem;
+	block-size: 1.35rem;
+	border-radius: 999px;
+	background: var(--n-300);
+	position: relative;
+	transition: background var(--speed) var(--ease);
+	flex: none;
+}
+
+.switch__thumb {
+	position: absolute;
+	inset-block-start: 0.175rem;
+	inset-inline-start: 0.175rem;
+	inline-size: 1rem;
+	block-size: 1rem;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: var(--shadow-sm);
+	transition: transform var(--speed) var(--ease);
+}
+
+.switch input:checked + .switch__track { background: var(--accent); }
+
+/* translate, not `inset-inline-start`, so the thumb slides the correct way in both directions
+   without a second rule: the logical axis already knows which way "forward" is. */
+.switch input:checked + .switch__track .switch__thumb { transform: translateX(1.05rem); }
+[dir="rtl"] .switch input:checked + .switch__track .switch__thumb { transform: translateX(-1.05rem); }
+
+.switch input:focus-visible + .switch__track {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.switch__track,
+	.switch__thumb { transition: none; }
+}

@@ -1,0 +1,19 @@
+{
+    "key": "seatmap/offline-payments",
+    "name": "Pay at the box office",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\OfflinePayments\\Provider",
+    "extends": [
+        "payments"
+    ],
+    "settings": [
+        {
+            "key": "instructions",
+            "type": "string",
+            "required": false,
+            "label_key": "modules.seatmap.offline_payments.settings.instructions",
+            "hint_key": "modules.seatmap.offline_payments.settings.instructions_hint"
+        }
+    ],
+    "auto_enable": true
+}
