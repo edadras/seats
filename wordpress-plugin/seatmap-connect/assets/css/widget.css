@@ -84,35 +84,34 @@
 }
 
 /*
- * On a wide container the summary parks beside the plan and stays put while the seat list scrolls,
- * so the price and the button are never somewhere you have to go looking for them.
+ * The plan and the summary, side by side when there is room for both.
+ *
+ * No media query: a theme routinely gives the picker a 40rem column on a 1600px screen, so the
+ * decision has to be made from the space the picker actually has. Two flex items with a stated
+ * ideal width do exactly that — they sit together when both fit and stack when they do not.
  */
-@media (min-width: 900px) {
-	.seatmap-widget:not(.seatmap-widget--notice) {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 19rem;
-		grid-template-areas:
-			"head    summary"
-			"legend  summary"
-			"stage   summary"
-			"areas   summary"
-			"seats   summary";
-		gap: 0 1.5rem;
-		align-items: start;
-	}
+.seatmap-widget__layout {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 1.25rem;
+}
 
-	.seatmap-widget__title { grid-area: head; }
-	.seatmap-widget__legend { grid-area: legend; }
-	.seatmap-widget__stage { grid-area: stage; }
-	.seatmap-widget__areas { grid-area: areas; }
-	.seatmap-widget__seats { grid-area: seats; }
+.seatmap-widget__main {
+	flex: 1 1 30rem;
+	min-inline-size: 0;
+}
 
-	.seatmap-widget__summary {
-		grid-area: summary;
-		position: sticky;
-		inset-block-start: 1rem;
-		margin-block-start: 0;
-	}
+.seatmap-widget__side {
+	flex: 1 1 17rem;
+	min-inline-size: 0;
+}
+
+/* Beside the plan it follows the seat list down; stacked underneath there is nothing to follow. */
+.seatmap-widget__side .seatmap-widget__summary {
+	position: sticky;
+	inset-block-start: 1rem;
+	margin-block-start: 0;
 }
 
 /* ============================================================================ the legend */

@@ -18,7 +18,11 @@ class Seatmap_Widget {
 	private function __construct() {
 		add_shortcode( 'seatmap_event', array( $this, 'render_shortcode' ) );
 		add_action( 'init', array( $this, 'register_block' ) );
-		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
+		// Registration goes on `init`, not `wp_enqueue_scripts`. A block theme renders the page's
+		// content before `wp_enqueue_scripts` fires, and `wp_add_inline_script` silently does
+		// nothing when its handle is not registered yet — which left the picker on every block
+		// theme with a script but no configuration to boot from.
+		add_action( 'init', array( $this, 'register_assets' ) );
 	}
 
 	public function register_assets(): void {
@@ -108,6 +112,11 @@ class Seatmap_Widget {
 		if ( is_wp_error( $map ) ) {
 			return $this->notice( __( 'The seating plan for this event is not published yet.', 'seatmap-connect' ) );
 		}
+
+		// Idempotent: wp_register_* leaves an existing handle alone. This is here because the
+		// inline configuration below is dropped without a word if the handle is not registered,
+		// and a page that renders its content unusually early must not lose it.
+		$this->register_assets();
 
 		wp_enqueue_style( 'seatmap-widget' );
 		wp_enqueue_script( 'seatmap-widget' );

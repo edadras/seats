@@ -23,6 +23,47 @@ class Seatmap_Cart {
 		add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'copy_to_order_item' ), 10, 4 );
 		add_action( 'woocommerce_check_cart_items', array( $this, 'revalidate_holds' ) );
 		add_action( 'woocommerce_cart_item_removed', array( $this, 'release_on_removal' ), 10, 2 );
+		add_filter( 'woocommerce_hidden_order_itemmeta', array( $this, 'hide_internal_meta' ) );
+	}
+
+	/**
+	 * Keep the integration's own keys out of the order screen.
+	 *
+	 * A leading underscore hides meta from the customer, not from wp-admin, so without this the
+	 * box office reads "Stalls, row C, seat 15" followed by three lines of identifiers — one of
+	 * which is the hold token.
+	 *
+	 * @param array $keys Meta keys WooCommerce already hides.
+	 * @return array
+	 */
+	public function hide_internal_meta( array $keys ): array {
+		return array_merge(
+			$keys,
+			array(
+				'_seatmap_seat_id',
+				'_seatmap_capacity_object_id',
+				'_seatmap_hold_token',
+				'_seatmap_event_public_id',
+			)
+		);
+	}
+
+	/**
+	 * Make sure the cart and the customer session exist.
+	 *
+	 * WooCommerce only sets them up while rendering an ordinary page. Our own REST routes are not
+	 * one, so `WC()->cart` is null there — and adding a seat to a null cart is a fatal error, on
+	 * every real store. `wc_load_cart()` is WooCommerce's own answer for exactly this case, and
+	 * doing nothing when the cart is already loaded makes it safe to call from anywhere.
+	 */
+	public static function ensure_loaded(): void {
+		if ( ! function_exists( 'WC' ) || ! function_exists( 'wc_load_cart' ) ) {
+			return;
+		}
+
+		if ( ! WC()->cart || ! WC()->session ) {
+			wc_load_cart();
+		}
 	}
 
 	/**
@@ -240,7 +281,8 @@ class Seatmap_Cart {
 			true
 		);
 
-		// Hidden keys (leading underscore) carry what the integration needs later.
+		// Internal keys: kept on the order for reconciliation and support, hidden from both the
+		// customer (the leading underscore) and the order screen (hide_internal_meta above).
 		$item->add_meta_data( '_seatmap_seat_id', $seat['seat_id'] ?? '', true );
 		$item->add_meta_data( '_seatmap_capacity_object_id', $seat['capacity_object_id'] ?? '', true );
 		$item->add_meta_data( '_seatmap_hold_token', $seat['hold_token'], true );

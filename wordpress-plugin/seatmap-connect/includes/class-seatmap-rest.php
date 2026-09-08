@@ -82,6 +82,10 @@ class Seatmap_Rest {
 	}
 
 	public function create_hold( WP_REST_Request $request ) {
+		// Before anything reads the session: the buyer's session id has to be their real one, or
+		// each request would look like a different browser to the API.
+		Seatmap_Cart::ensure_loaded();
+
 		$seat_ids = array_values( array_filter( array_map( 'sanitize_text_field', (array) $request->get_param( 'seat_ids' ) ) ) );
 		$areas    = array();
 
@@ -155,6 +159,8 @@ class Seatmap_Rest {
 	}
 
 	public function release_hold( WP_REST_Request $request ) {
+		Seatmap_Cart::ensure_loaded();
+
 		$token = sanitize_text_field( (string) $request->get_param( 'hold_token' ) );
 
 		if ( $token ) {

@@ -84,6 +84,18 @@ node api/a11y_check.mjs                                          # contrast and 
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 
+And one against a real WordPress, which stands itself up on SQLite and needs no database server:
+
+```bash
+wordpress-plugin/tools/wordpress-setup.sh --api http://127.0.0.1:8123 --key KEY --secret SECRET
+(cd /tmp/seatmap-wordpress/wordpress && php -S 127.0.0.1:8300 &)
+node wordpress-plugin/tools/wordpress-check.mjs --event evt_…
+```
+
+It buys a seat: picks two, reserves them, checks that they reach the cart with their labels, completes
+checkout, and confirms the order came back registered and confirmed with a ticket per seat. Nothing
+else covers the seam between the plugin and WordPress itself, and that is where its bugs have been.
+
 `a11y_check.mjs` measures the design tokens rather than any one screen: contrast is a property of
 the palette, so checking the pairs once in each theme covers every screen built from them. It also
 walks the panel by keyboard and chooses a seat in the picker without a mouse.

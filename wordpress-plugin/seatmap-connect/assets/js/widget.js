@@ -287,7 +287,24 @@
 		heading.textContent = this.i18n.selectSeats;
 		this.container.appendChild( heading );
 
-		this.container.appendChild( this.buildLegend() );
+		/*
+		 * Two columns that decide for themselves whether they fit.
+		 *
+		 * A media query would be wrong here: the picker is dropped into whatever column a theme
+		 * gives it, which is routinely 40rem wide on a 1600px screen. These are flex items with a
+		 * stated ideal width, so they sit side by side when there is room for both and stack when
+		 * there is not — measured against the space the picker actually has.
+		 */
+		var layout = document.createElement( 'div' );
+		layout.className = 'seatmap-widget__layout';
+
+		var main = document.createElement( 'div' );
+		main.className = 'seatmap-widget__main';
+
+		var side = document.createElement( 'div' );
+		side.className = 'seatmap-widget__side';
+
+		main.appendChild( this.buildLegend() );
 
 		var stage = document.createElement( 'div' );
 		stage.className = 'seatmap-widget__stage';
@@ -305,10 +322,14 @@
 			stage.appendChild( floors );
 		}
 
-		this.container.appendChild( stage );
-		this.container.appendChild( this.buildAreaList() );
-		this.container.appendChild( this.buildSeatList() );
-		this.container.appendChild( this.buildSummary() );
+		main.appendChild( stage );
+		main.appendChild( this.buildAreaList() );
+		main.appendChild( this.buildSeatList() );
+		side.appendChild( this.buildSummary() );
+
+		layout.appendChild( main );
+		layout.appendChild( side );
+		this.container.appendChild( layout );
 
 		this.bindCanvasEvents();
 		this.resize();
