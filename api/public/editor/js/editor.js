@@ -1,43 +1,43 @@
 /**
- * Canvas seat map editor.
+ * The seat map editor: rendering, hit testing and the tools.
  *
- * Splits into three concerns on purpose:
- *   - SeatmapGeometry (geometry.js) decides what a map is;
- *   - History records geometry snapshots for undo/redo;
- *   - Editor draws, hit-tests and translates gestures into geometry operations.
+ * Three deliberate choices shape this file.
  *
- * Rendering is redrawn wholesale on every change rather than diffed. At the sizes involved
- * (a few thousand seats) a full repaint is well under a frame, and a diffing layer would be a
- * large amount of state to keep correct for no visible gain.
+ * **Full repaint, no diffing.** Every change redraws the canvas. At the sizes involved a repaint is
+ * well under a frame, and a diffing layer would be a large amount of state to keep correct in
+ * exchange for nothing anyone can see.
+ *
+ * **Snapshot history.** Undo stores whole-chart JSON rather than inverse commands. A chart is small,
+ * and writing an inverse for each of the editor's many small mutations is a large surface to get
+ * subtly wrong.
+ *
+ * **Sections are places you go into.** At chart level a section draws as its outline with a
+ * schematic of its rows; you enter it to work on seats. That is what makes a 4,000-seat arena
+ * navigable instead of a wall of dots.
  */
 ( function ( global ) {
 	'use strict';
 
-	var Geometry = global.SeatmapGeometry;
+	var Chart = global.SeatmapChart;
+	var Ops = global.SeatmapChartOps;
 
-	var SEAT_RADIUS = 9;
+	var SEAT_R = Chart.SEAT_SIZE / 2;
 
-	/**
-	 * Undo/redo over whole-geometry snapshots.
-	 *
-	 * Snapshots, not commands: the editor mutates geometry in many small ways and an inverse for
-	 * every one of them is a large surface to get subtly wrong. A map's JSON is small enough that
-	 * keeping 50 copies costs less than the bugs would.
-	 */
 	function History( limit ) {
-		this.limit = limit || 50;
+		this.limit = limit || 60;
 		this.past = [];
 		this.future = [];
 	}
 
-	History.prototype.push = function ( geometry ) {
-		this.past.push( JSON.stringify( geometry ) );
+	History.prototype.push = function ( chart ) {
+		this.past.push( JSON.stringify( chart ) );
 
 		if ( this.past.length > this.limit ) {
 			this.past.shift();
 		}
 
-		// Any new edit invalidates a redo branch.
+		// A new edit invalidates the redo branch — redoing into work the user has since edited
+		// away from would silently discard it.
 		this.future = [];
 	};
 
@@ -61,95 +61,194 @@
 		return JSON.parse( this.future.pop() );
 	};
 
-	History.prototype.canUndo = function () {
-		return this.past.length > 0;
-	};
-
-	History.prototype.canRedo = function () {
-		return this.future.length > 0;
-	};
+	History.prototype.canUndo = function () { return this.past.length > 0; };
+	History.prototype.canRedo = function () { return this.future.length > 0; };
 
 	function Editor( canvas, options ) {
+		options = options || {};
+
 		this.canvas = canvas;
 		this.ctx = canvas.getContext( '2d' );
-		this.options = options || {};
-		this.geometry = this.options.geometry || Geometry.empty();
+		this.chart = options.chart || Chart.empty();
 		this.history = new History();
-		this.selection = [];
-		this.view = { scale: 1, x: 40, y: 40 };
+
+		this.floorKey = this.chart.floors[ 0 ].key;
+		/** When set, the designer is inside this section and only its contents are editable. */
+		this.sectionKey = null;
+
+		this.selection = [];       // object keys
+		this.seatSelection = [];   // "objectKey/seatKey" for individual chairs
+		this.layer = 'all';
+		this.tool = 'select';
+
+		this.view = { scale: 1, x: 60, y: 60 };
 		this.grid = 10;
 		this.snapToGrid = true;
-		this.clipboard = [];
-		this.zones = this.options.zones || [];
-		this.onChange = this.options.onChange || function () {};
-		// Selection is not geometry, but the panel shows a count of it, so it needs its own signal
-		// — otherwise selecting seats silently leaves the sidebar showing a stale number.
-		this.onSelectionChange = this.options.onSelectionChange || function () {};
+		this.showLabels = true;
+		this.locked = false;
+		this.clipboard = null;
+
 		this.marquee = null;
+		this.lasso = null;
 		this.drag = null;
+		this.draft = null;
+
+		this.onChange = options.onChange || function () {};
+		this.onSelectionChange = options.onSelectionChange || function () {};
+		this.onContextChange = options.onContextChange || function () {};
+		this.onStatus = options.onStatus || function () {};
 	}
 
 	Editor.prototype.init = function () {
 		this.bindPointer();
 		this.bindKeyboard();
 		this.resize();
-		this.draw();
 
 		return this;
 	};
 
-	Editor.prototype.setGeometry = function ( geometry, recordHistory ) {
-		if ( recordHistory !== false ) {
-			this.history.push( this.geometry );
-		}
+	/* ------------------------------------------------------------------------- context */
 
-		this.geometry = geometry;
-		this.selection = [];
-		this.onSelectionChange( this.selection );
-		this.draw();
-		this.onChange( this.geometry );
+	Editor.prototype.floor = function () {
+		var self = this;
+		var found = this.chart.floors[ 0 ];
+
+		this.chart.floors.forEach( function ( floor ) {
+			if ( floor.key === self.floorKey ) {
+				found = floor;
+			}
+		} );
+
+		return found;
 	};
 
-	/** Wrap a mutation so it is undoable and repaints exactly once. */
+	/** The container edits apply to: a section when inside one, otherwise the floor. */
+	Editor.prototype.container = function () {
+		if ( ! this.sectionKey ) {
+			return this.floor();
+		}
+
+		var found = Chart.findObject( this.chart, this.sectionKey );
+
+		return found ? found.object : this.floor();
+	};
+
+	Editor.prototype.enterSection = function ( key ) {
+		this.sectionKey = key;
+		this.selection = [];
+		this.seatSelection = [];
+		this.zoomToFit();
+		this.onContextChange();
+		this.onSelectionChange();
+	};
+
+	Editor.prototype.exitSection = function () {
+		this.sectionKey = null;
+		this.selection = [];
+		this.seatSelection = [];
+		this.zoomToFit();
+		this.onContextChange();
+		this.onSelectionChange();
+	};
+
+	Editor.prototype.setFloor = function ( key ) {
+		this.floorKey = key;
+		this.sectionKey = null;
+		this.selection = [];
+		this.seatSelection = [];
+		this.zoomToFit();
+		this.onContextChange();
+	};
+
+	Editor.prototype.selectedObjects = function () {
+		var self = this;
+		var objects = [];
+
+		Chart.eachObject( this.chart, function ( object ) {
+			if ( self.selection.indexOf( object.key ) !== -1 ) {
+				objects.push( object );
+			}
+		} );
+
+		return objects;
+	};
+
+	Editor.prototype.selectedSeats = function () {
+		var self = this;
+		var seats = [];
+
+		Chart.eachSeat( this.chart, function ( seat, owner ) {
+			if ( self.seatSelection.indexOf( owner.key + '/' + seat.key ) !== -1 ) {
+				seats.push( { seat: seat, owner: owner } );
+			}
+		} );
+
+		return seats;
+	};
+
+	/* ------------------------------------------------------------------------ mutation */
+
 	Editor.prototype.mutate = function ( callback ) {
-		this.history.push( this.geometry );
-		callback( this.geometry );
+		if ( this.locked ) {
+			this.onStatus( 'This chart is locked. Unlock it to make changes.' );
+
+			return;
+		}
+
+		this.history.push( this.chart );
+		callback( this.chart );
 		this.draw();
-		this.onChange( this.geometry );
+		this.onChange( this.chart );
 	};
 
 	Editor.prototype.undo = function () {
-		var previous = this.history.undo( this.geometry );
+		var previous = this.history.undo( this.chart );
 
 		if ( previous ) {
-			this.geometry = previous;
-			this.selection = [];
-			this.onSelectionChange( this.selection );
-			this.draw();
-			this.onChange( this.geometry );
+			this.applyRestored( previous );
 		}
 	};
 
 	Editor.prototype.redo = function () {
-		var next = this.history.redo( this.geometry );
+		var next = this.history.redo( this.chart );
 
 		if ( next ) {
-			this.geometry = next;
-			this.selection = [];
-			this.onSelectionChange( this.selection );
-			this.draw();
-			this.onChange( this.geometry );
+			this.applyRestored( next );
 		}
 	};
 
-	Editor.prototype.resize = function () {
-		var rect = this.canvas.parentNode.getBoundingClientRect();
-		var dpr = window.devicePixelRatio || 1;
+	Editor.prototype.applyRestored = function ( chart ) {
+		this.chart = chart;
+		this.selection = [];
+		this.seatSelection = [];
 
-		this.canvas.width = rect.width * dpr;
-		this.canvas.height = Math.max( 400, rect.height ) * dpr;
-		this.canvas.style.width = rect.width + 'px';
-		this.canvas.style.height = Math.max( 400, rect.height ) + 'px';
+		// The section or floor may not exist in the restored state — fall back rather than
+		// leaving the editor pointing at nothing.
+		if ( this.sectionKey && ! Chart.findObject( this.chart, this.sectionKey ) ) {
+			this.sectionKey = null;
+		}
+
+		if ( ! this.floor() ) {
+			this.floorKey = this.chart.floors[ 0 ].key;
+		}
+
+		this.onSelectionChange();
+		this.onContextChange();
+		this.draw();
+		this.onChange( this.chart );
+	};
+
+	/* ------------------------------------------------------------------------ rendering */
+
+	Editor.prototype.resize = function () {
+		var host = this.canvas.parentNode.getBoundingClientRect();
+		var dpr = window.devicePixelRatio || 1;
+		var height = Math.max( 380, host.height );
+
+		this.canvas.width = host.width * dpr;
+		this.canvas.height = height * dpr;
+		this.canvas.style.width = host.width + 'px';
+		this.canvas.style.height = height + 'px';
 		this.dpr = dpr;
 
 		this.draw();
@@ -166,159 +265,572 @@
 
 	Editor.prototype.draw = function () {
 		var ctx = this.ctx;
+		var floor = this.floor();
 
 		ctx.setTransform( this.dpr, 0, 0, this.dpr, 0, 0 );
 		ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
-
 		ctx.save();
 		ctx.translate( this.view.x, this.view.y );
 		ctx.scale( this.view.scale, this.view.scale );
 
-		this.drawGrid( ctx );
-		this.drawCanvasBounds( ctx );
-		this.drawShapes( ctx );
-		this.drawSeats( ctx );
-		this.drawTexts( ctx );
+		this.drawGrid( ctx, floor );
+		this.drawCanvasBounds( ctx, floor );
+
+		var self = this;
+		var inside = this.sectionKey;
+
+		// Paint back to front by layer so scenery never covers seats.
+		Chart.LAYERS.forEach( function ( layer ) {
+			( floor.objects || [] ).forEach( function ( object ) {
+				if ( ( object.layer || 'interactive' ) !== layer ) {
+					return;
+				}
+
+				// Everything outside the section being edited stays visible but recedes, so the
+				// designer keeps their bearings without being able to click the wrong thing.
+				var dimmed = inside && object.key !== inside;
+
+				self.drawObject( ctx, object, dimmed );
+			} );
+		} );
+
+		if ( inside ) {
+			var section = this.container();
+
+			if ( section && section.objects ) {
+				Chart.LAYERS.forEach( function ( layer ) {
+					section.objects.forEach( function ( object ) {
+						if ( ( object.layer || 'interactive' ) === layer ) {
+							self.drawObject( ctx, object, false );
+						}
+					} );
+				} );
+			}
+		}
+
+		this.drawFocalPoint( ctx );
+		this.drawDraft( ctx );
 		this.drawMarquee( ctx );
+		this.drawLasso( ctx );
 
 		ctx.restore();
 	};
 
-	Editor.prototype.drawGrid = function ( ctx ) {
-		if ( ! this.snapToGrid || this.view.scale < 0.4 ) {
-			return; // At small scales the grid is noise, not guidance.
+	Editor.prototype.drawGrid = function ( ctx, floor ) {
+		if ( ! this.snapToGrid || this.view.scale < 0.35 ) {
+			return; // At small scales the grid is noise rather than guidance.
 		}
-
-		var width = this.geometry.canvas.width;
-		var height = this.geometry.canvas.height;
 
 		ctx.save();
 		ctx.strokeStyle = 'rgba(0,0,0,0.06)';
 		ctx.lineWidth = 1 / this.view.scale;
 		ctx.beginPath();
 
-		for ( var x = 0; x <= width; x += this.grid * 5 ) {
+		for ( var x = 0; x <= floor.canvas.width; x += this.grid * 5 ) {
 			ctx.moveTo( x, 0 );
-			ctx.lineTo( x, height );
+			ctx.lineTo( x, floor.canvas.height );
 		}
 
-		for ( var y = 0; y <= height; y += this.grid * 5 ) {
+		for ( var y = 0; y <= floor.canvas.height; y += this.grid * 5 ) {
 			ctx.moveTo( 0, y );
-			ctx.lineTo( width, y );
+			ctx.lineTo( floor.canvas.width, y );
 		}
 
 		ctx.stroke();
 		ctx.restore();
 	};
 
-	Editor.prototype.drawCanvasBounds = function ( ctx ) {
+	Editor.prototype.drawCanvasBounds = function ( ctx, floor ) {
 		ctx.save();
 		ctx.strokeStyle = '#b6bcc7';
 		ctx.lineWidth = 1 / this.view.scale;
 		ctx.setLineDash( [ 6 / this.view.scale, 4 / this.view.scale ] );
-		ctx.strokeRect( 0, 0, this.geometry.canvas.width, this.geometry.canvas.height );
+		ctx.strokeRect( 0, 0, floor.canvas.width, floor.canvas.height );
 		ctx.restore();
 	};
 
-	Editor.prototype.drawShapes = function ( ctx ) {
-		var self = this;
+	Editor.prototype.drawObject = function ( ctx, object, dimmed ) {
+		ctx.save();
+		ctx.globalAlpha = dimmed ? 0.25 : 1;
 
-		( this.geometry.shapes || [] ).forEach( function ( shape, index ) {
-			ctx.save();
-			ctx.fillStyle = shape.fill || self.shapeColour( shape.kind );
-			ctx.fillRect( shape.x, shape.y, shape.width || 0, shape.height || 0 );
+		switch ( object.type ) {
+			case 'section': this.drawSection( ctx, object, dimmed ); break;
+			case 'row': this.drawRow( ctx, object ); break;
+			case 'area': this.drawArea( ctx, object ); break;
+			case 'table': this.drawTable( ctx, object ); break;
+			case 'booth': this.drawBooth( ctx, object ); break;
+			case 'shape': this.drawShape( ctx, object ); break;
+			case 'text': this.drawText( ctx, object ); break;
+			case 'icon': this.drawIcon( ctx, object ); break;
+			case 'image': this.drawImage( ctx, object ); break;
+		}
 
-			if ( self.selection.indexOf( 'shape:' + index ) !== -1 ) {
-				ctx.strokeStyle = '#12263f';
-				ctx.lineWidth = 2 / self.view.scale;
-				ctx.strokeRect( shape.x, shape.y, shape.width || 0, shape.height || 0 );
-			}
-
-			if ( shape.label ) {
-				ctx.fillStyle = '#ffffff';
-				ctx.font = '600 15px system-ui, sans-serif';
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.fillText(
-					shape.label,
-					shape.x + ( shape.width || 0 ) / 2,
-					shape.y + ( shape.height || 0 ) / 2
-				);
-			}
-
-			ctx.restore();
-		} );
+		ctx.restore();
 	};
 
-	Editor.prototype.shapeColour = function ( kind ) {
-		switch ( kind ) {
-			case 'stage':
-				return '#3a3f4b';
-			case 'entrance':
-				return '#3f9c6d';
-			case 'exit':
-				return '#b3543a';
-			case 'aisle':
-				return '#e8eaee';
-			case 'wall':
-				return '#8a8f99';
-			default:
-				return '#c8ccd4';
+	Editor.prototype.categoryColor = function ( key, fallback ) {
+		var category = key ? Chart.category( this.chart, key ) : null;
+
+		return category ? category.color : fallback || '#9aa1ad';
+	};
+
+	/**
+	 * A section at chart level: its outline, filled in its category colour, with a light schematic
+	 * of the rows inside so the shape reads as seating rather than as a blank polygon.
+	 */
+	Editor.prototype.drawSection = function ( ctx, section, dimmed ) {
+		var selected = this.selection.indexOf( section.key ) !== -1;
+		var color = section.color || this.categoryColor( section.categoryKey, '#2d6cdf' );
+
+		ctx.beginPath();
+		section.polygon.forEach( function ( point, index ) {
+			index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+		} );
+		ctx.closePath();
+
+		ctx.fillStyle = withAlpha( color, 0.18 );
+		ctx.fill();
+		ctx.strokeStyle = selected ? '#12263f' : color;
+		ctx.lineWidth = ( selected ? 3 : 1.5 ) / this.view.scale;
+		ctx.stroke();
+
+		if ( this.sectionKey !== section.key ) {
+			this.drawSectionSchematic( ctx, section, color );
+		}
+
+		var labeling = section.labeling || {};
+
+		if ( false !== labeling.visible && Chart.objectLabel( section ) ) {
+			var center = Chart.polygonCentroid( section.polygon );
+
+			ctx.save();
+			ctx.fillStyle = dimmed ? '#8a8f99' : shade( color, -0.45 );
+			ctx.font = '600 ' + ( labeling.fontSize || 16 ) + 'px system-ui, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText( Chart.objectLabel( section ), center.x, center.y );
+			ctx.restore();
 		}
 	};
 
-	Editor.prototype.drawSeats = function ( ctx ) {
-		var self = this;
+	/** Each row drawn as a single stroke — the "lines inside the polygon" look of a zoomed-out chart. */
+	Editor.prototype.drawSectionSchematic = function ( ctx, section, color ) {
+		ctx.save();
+		ctx.strokeStyle = withAlpha( color, 0.55 );
+		ctx.lineWidth = Math.max( 1.5, 3 / this.view.scale );
+		ctx.lineCap = 'round';
 
-		Geometry.eachSeat( this.geometry, function ( seat, row, section ) {
-			var key = section.key + '/' + row.key + '/' + seat.key;
-			var selected = self.selection.indexOf( key ) !== -1;
-
-			ctx.beginPath();
-			ctx.fillStyle = selected ? '#12263f' : self.zoneColour( seat.zone_key, section.color );
-			ctx.strokeStyle = selected ? '#12263f' : 'rgba(0,0,0,0.25)';
-			ctx.lineWidth = ( selected ? 2.5 : 1 ) / self.view.scale;
-
-			if ( 'square' === seat.shape ) {
-				ctx.rect( seat.x - SEAT_RADIUS, seat.y - SEAT_RADIUS, SEAT_RADIUS * 2, SEAT_RADIUS * 2 );
-			} else {
-				ctx.arc( seat.x, seat.y, SEAT_RADIUS, 0, Math.PI * 2 );
+		( section.objects || [] ).forEach( function ( object ) {
+			if ( 'row' !== object.type ) {
+				return;
 			}
 
+			var positions = Chart.rowSeatPositions( object );
+
+			if ( positions.length < 2 ) {
+				return;
+			}
+
+			ctx.beginPath();
+			positions.forEach( function ( point, index ) {
+				index === 0 ? ctx.moveTo( point.x, point.y ) : ctx.lineTo( point.x, point.y );
+			} );
+			ctx.stroke();
+		} );
+
+		ctx.restore();
+	};
+
+	Editor.prototype.drawRow = function ( ctx, row ) {
+		var self = this;
+		var positions = Chart.rowSeatPositions( row );
+		var rowSelected = this.selection.indexOf( row.key ) !== -1;
+
+		if ( rowSelected ) {
+			// A translucent capsule behind the row, so a selected row reads as one object rather
+			// than as a handful of separately highlighted circles.
+			this.drawRowHalo( ctx, positions );
+		}
+
+		positions.forEach( function ( point, index ) {
+			var seat = row.seats[ index ];
+
+			if ( ! seat ) {
+				return;
+			}
+
+			var seatKey = row.key + '/' + seat.key;
+			var selected = rowSelected || self.seatSelection.indexOf( seatKey ) !== -1;
+			var category = seat.categoryKey || row.categoryKey;
+
+			if ( 'empty' === seat.type ) {
+				ctx.save();
+				ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+				ctx.setLineDash( [ 2, 2 ] );
+				ctx.lineWidth = 1 / self.view.scale;
+				ctx.beginPath();
+				ctx.arc( point.x, point.y, SEAT_R, 0, Math.PI * 2 );
+				ctx.stroke();
+				ctx.restore();
+
+				return;
+			}
+
+			ctx.beginPath();
+			ctx.arc( point.x, point.y, SEAT_R, 0, Math.PI * 2 );
+			ctx.fillStyle = selected ? '#12263f' : withAlpha( self.categoryColor( category, '#c9ced6' ), 0.85 );
 			ctx.fill();
+			ctx.strokeStyle = selected ? '#12263f' : 'rgba(0,0,0,0.22)';
+			ctx.lineWidth = ( selected ? 2 : 1 ) / self.view.scale;
 			ctx.stroke();
 
-			// Labels only when there is room for them; otherwise they overlap into mush.
-			if ( self.view.scale > 1.1 ) {
+			if ( seat.accessible ) {
+				self.drawWheelchair( ctx, point.x, point.y, selected );
+			} else if ( self.showLabels && self.view.scale > 1 ) {
 				ctx.save();
-				ctx.fillStyle = selected ? '#ffffff' : 'rgba(0,0,0,0.65)';
-				ctx.font = ( 9 ) + 'px system-ui, sans-serif';
+				ctx.fillStyle = selected ? '#ffffff' : 'rgba(0,0,0,0.7)';
+				ctx.font = '9px system-ui, sans-serif';
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'middle';
-				ctx.fillText( seat.label, seat.x, seat.y );
+				ctx.fillText( seat.label, point.x, point.y );
 				ctx.restore();
 			}
 		} );
+
+		if ( this.showLabels && positions.length ) {
+			this.drawRowLabels( ctx, row, positions );
+		}
 	};
 
-	Editor.prototype.zoneColour = function ( zoneKey, fallback ) {
-		for ( var i = 0; i < this.zones.length; i++ ) {
-			if ( this.zones[ i ].key === zoneKey ) {
-				return this.zones[ i ].color || '#2d6cdf';
-			}
+	Editor.prototype.drawRowHalo = function ( ctx, positions ) {
+		ctx.save();
+		ctx.strokeStyle = 'rgba(18,38,63,0.28)';
+		ctx.lineWidth = ( Chart.SEAT_SIZE + 8 );
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.beginPath();
+		positions.forEach( function ( point, index ) {
+			index === 0 ? ctx.moveTo( point.x, point.y ) : ctx.lineTo( point.x, point.y );
+		} );
+
+		if ( positions.length === 1 ) {
+			ctx.arc( positions[ 0 ].x, positions[ 0 ].y, 1, 0, Math.PI * 2 );
 		}
 
-		return fallback || '#2d6cdf';
+		ctx.stroke();
+		ctx.restore();
 	};
 
-	Editor.prototype.drawTexts = function ( ctx ) {
-		( this.geometry.texts || [] ).forEach( function ( text ) {
+	/** Row labels at the ends the designer asked for — both, one, or neither. */
+	Editor.prototype.drawRowLabels = function ( ctx, row, positions ) {
+		var labeling = row.labeling || {};
+
+		if ( false === labeling.enabled ) {
+			return;
+		}
+
+		var text = Chart.displayedRowLabel( row );
+
+		if ( ! text ) {
+			return;
+		}
+
+		var position = labeling.position || 'both';
+
+		if ( 'none' === position ) {
+			return;
+		}
+
+		var pitch = Chart.SEAT_SIZE + ( Number( row.seatSpacing ) || 0 );
+		var first = positions[ 0 ];
+		var last = positions[ positions.length - 1 ];
+		var theta = ( ( Number( row.rotation ) || 0 ) * Math.PI ) / 180;
+
+		ctx.save();
+		ctx.fillStyle = 'rgba(0,0,0,0.55)';
+		ctx.font = '600 10px system-ui, sans-serif';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+
+		if ( 'both' === position || 'start' === position ) {
+			ctx.fillText( text, first.x - Math.cos( theta ) * pitch, first.y - Math.sin( theta ) * pitch );
+		}
+
+		if ( 'both' === position || 'end' === position ) {
+			ctx.fillText( text, last.x + Math.cos( theta ) * pitch, last.y + Math.sin( theta ) * pitch );
+		}
+
+		ctx.restore();
+	};
+
+	Editor.prototype.drawWheelchair = function ( ctx, x, y, selected ) {
+		ctx.save();
+		ctx.strokeStyle = selected ? '#ffffff' : '#1c4f8f';
+		ctx.lineWidth = 1.4;
+		ctx.beginPath();
+		ctx.arc( x, y - 3.2, 1.5, 0, Math.PI * 2 );   // head
+		ctx.moveTo( x - 1, y - 1.5 );
+		ctx.lineTo( x - 1, y + 1.5 );                  // back
+		ctx.moveTo( x - 1, y + 1.5 );
+		ctx.lineTo( x + 2.5, y + 1.5 );                // legs
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc( x - 0.5, y + 2.6, 2.6, 0, Math.PI * 2 ); // wheel
+		ctx.stroke();
+		ctx.restore();
+	};
+
+	Editor.prototype.drawArea = function ( ctx, area ) {
+		var selected = this.selection.indexOf( area.key ) !== -1;
+		var color = this.categoryColor( area.categoryKey, '#e0526a' );
+		var shape = area.shape;
+
+		ctx.save();
+		ctx.globalAlpha *= area.translucent ? 0.45 : 1;
+		ctx.fillStyle = withAlpha( color, 0.28 );
+		ctx.strokeStyle = selected ? '#12263f' : color;
+		ctx.lineWidth = ( selected ? 3 : 1.5 ) / this.view.scale;
+
+		this.tracePath( ctx, shape );
+		ctx.fill();
+		ctx.stroke();
+		ctx.restore();
+
+		var labeling = area.labeling || {};
+
+		if ( false !== labeling.visible && Chart.objectLabel( area ) ) {
+			var box = Ops.bounds( area );
+
 			ctx.save();
-			ctx.fillStyle = text.color || '#3a3f4b';
-			ctx.font = '500 ' + ( text.size || 14 ) + 'px system-ui, sans-serif';
-			ctx.fillText( text.text, text.x, text.y );
+			ctx.fillStyle = shade( color, -0.5 );
+			ctx.font = '600 ' + ( labeling.fontSize || 20 ) + 'px system-ui, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(
+				Chart.objectLabel( area ),
+				box.x + box.width / 2 + ( ( labeling.positionX || 0 ) / 100 ) * box.width,
+				box.y + box.height / 2 + ( ( labeling.positionY || 0 ) / 100 ) * box.height
+			);
 			ctx.restore();
+		}
+	};
+
+	Editor.prototype.drawBooth = function ( ctx, booth ) {
+		this.drawArea( ctx, booth );
+	};
+
+	Editor.prototype.drawTable = function ( ctx, table ) {
+		var self = this;
+		var selected = this.selection.indexOf( table.key ) !== -1;
+		var color = this.categoryColor( table.categoryKey, '#8a6f4b' );
+
+		ctx.save();
+		ctx.translate( table.x, table.y );
+		ctx.rotate( ( ( table.rotation || 0 ) * Math.PI ) / 180 );
+		ctx.fillStyle = withAlpha( color, 0.3 );
+		ctx.strokeStyle = selected ? '#12263f' : color;
+		ctx.lineWidth = ( selected ? 3 : 1.5 ) / this.view.scale;
+		ctx.beginPath();
+
+		if ( 'round' === table.shape ) {
+			ctx.ellipse( 0, 0, table.width / 2, table.height / 2, 0, 0, Math.PI * 2 );
+		} else {
+			ctx.rect( -table.width / 2, -table.height / 2, table.width, table.height );
+		}
+
+		ctx.fill();
+		ctx.stroke();
+
+		if ( ( table.labeling || {} ).visible !== false && Chart.objectLabel( table ) ) {
+			ctx.rotate( -( ( table.rotation || 0 ) * Math.PI ) / 180 );
+			ctx.fillStyle = shade( color, -0.5 );
+			ctx.font = '600 ' + ( ( table.labeling || {} ).fontSize || 14 ) + 'px system-ui, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText( Chart.objectLabel( table ), 0, 0 );
+		}
+
+		ctx.restore();
+
+		Chart.tableSeatPositions( table ).forEach( function ( point, index ) {
+			var seat = table.seats[ index ];
+			var seatSelected = selected || self.seatSelection.indexOf( table.key + '/' + seat.key ) !== -1;
+
+			ctx.beginPath();
+			ctx.arc( point.x, point.y, SEAT_R, 0, Math.PI * 2 );
+			ctx.fillStyle = seatSelected ? '#12263f' : withAlpha( self.categoryColor( seat.categoryKey || table.categoryKey, '#c9ced6' ), 0.85 );
+			ctx.fill();
+			ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+			ctx.lineWidth = 1 / self.view.scale;
+			ctx.stroke();
 		} );
+	};
+
+	Editor.prototype.drawShape = function ( ctx, shape ) {
+		var selected = this.selection.indexOf( shape.key ) !== -1;
+
+		ctx.save();
+		ctx.fillStyle = shape.fill || shapeColour( shape.kind );
+		ctx.strokeStyle = selected ? '#12263f' : 'rgba(0,0,0,0.2)';
+		ctx.lineWidth = ( selected ? 3 : 1 ) / this.view.scale;
+
+		if ( 'line' === shape.kind && shape.points ) {
+			ctx.beginPath();
+			shape.points.forEach( function ( point, index ) {
+				index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+			} );
+			ctx.strokeStyle = shape.fill || '#8a8f99';
+			ctx.lineWidth = 3 / this.view.scale;
+			ctx.stroke();
+			ctx.restore();
+
+			return;
+		}
+
+		this.tracePath( ctx, shape );
+		ctx.fill();
+
+		if ( selected ) {
+			ctx.stroke();
+		}
+
+		if ( shape.label ) {
+			ctx.fillStyle = '#ffffff';
+			ctx.font = '600 15px system-ui, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText( shape.label, shape.x + shape.width / 2, shape.y + shape.height / 2 );
+		}
+
+		ctx.restore();
+	};
+
+	Editor.prototype.tracePath = function ( ctx, shape ) {
+		ctx.beginPath();
+
+		if ( shape.points ) {
+			shape.points.forEach( function ( point, index ) {
+				index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+			} );
+			ctx.closePath();
+
+			return;
+		}
+
+		if ( 'ellipse' === shape.kind ) {
+			ctx.ellipse(
+				shape.x + shape.width / 2, shape.y + shape.height / 2,
+				shape.width / 2, shape.height / 2, 0, 0, Math.PI * 2
+			);
+
+			return;
+		}
+
+		var radius = Math.min( shape.cornerRadius || 0, shape.width / 2, shape.height / 2 );
+
+		if ( radius > 0 && ctx.roundRect ) {
+			ctx.roundRect( shape.x, shape.y, shape.width, shape.height, radius );
+		} else {
+			ctx.rect( shape.x, shape.y, shape.width, shape.height );
+		}
+	};
+
+	Editor.prototype.drawText = function ( ctx, text ) {
+		var selected = this.selection.indexOf( text.key ) !== -1;
+
+		ctx.save();
+		ctx.translate( text.x, text.y );
+		ctx.rotate( ( ( text.rotation || 0 ) * Math.PI ) / 180 );
+		ctx.fillStyle = text.color || '#3a3f4b';
+		ctx.font = '500 ' + ( text.fontSize || 16 ) + 'px system-ui, sans-serif';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillText( text.text, 0, 0 );
+
+		if ( selected ) {
+			var width = ctx.measureText( text.text ).width;
+			ctx.strokeStyle = '#12263f';
+			ctx.lineWidth = 1.5 / this.view.scale;
+			ctx.strokeRect( -2, -( text.fontSize || 16 ), width + 4, ( text.fontSize || 16 ) * 1.3 );
+		}
+
+		ctx.restore();
+	};
+
+	Editor.prototype.drawIcon = function ( ctx, icon ) {
+		var selected = this.selection.indexOf( icon.key ) !== -1;
+
+		ctx.save();
+		ctx.fillStyle = selected ? '#12263f' : '#4a5160';
+		ctx.strokeStyle = selected ? '#12263f' : '#4a5160';
+		ctx.lineWidth = 1.5;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.font = icon.size + 'px system-ui, sans-serif';
+		ctx.fillText( ICONS[ icon.name ] || '•', icon.x, icon.y );
+		ctx.restore();
+	};
+
+	var ICONS = {
+		wheelchair: '♿',
+		toilets: '🚻',
+		bar: '🍸',
+		food: '🍴',
+		entrance: '⇥',
+		exit: '⇤',
+		stairs: '⌁',
+		lift: '⇕',
+	};
+
+	Editor.prototype.drawImage = function ( ctx, object ) {
+		var cached = this.imageCache && this.imageCache[ object.key ];
+
+		if ( ! cached ) {
+			this.imageCache = this.imageCache || {};
+			var image = new window.Image();
+			var self = this;
+
+			image.onload = function () {
+				self.draw();
+			};
+
+			image.src = object.href;
+			this.imageCache[ object.key ] = image;
+
+			return;
+		}
+
+		if ( ! cached.complete ) {
+			return;
+		}
+
+		ctx.save();
+		ctx.globalAlpha *= object.opacity == null ? 1 : object.opacity;
+		ctx.drawImage( cached, object.x, object.y, object.width, object.height );
+		ctx.restore();
+	};
+
+	/** The focal point: a crosshair, drawn last so it is never hidden behind seating. */
+	Editor.prototype.drawFocalPoint = function ( ctx ) {
+		if ( ! this.chart.focalPoint ) {
+			return;
+		}
+
+		var point = this.chart.focalPoint;
+		var size = 12 / this.view.scale;
+
+		ctx.save();
+		ctx.strokeStyle = '#d1495b';
+		ctx.lineWidth = 2 / this.view.scale;
+		ctx.beginPath();
+		ctx.moveTo( point.x - size, point.y );
+		ctx.lineTo( point.x + size, point.y );
+		ctx.moveTo( point.x, point.y - size );
+		ctx.lineTo( point.x, point.y + size );
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc( point.x, point.y, size * 0.55, 0, Math.PI * 2 );
+		ctx.stroke();
+		ctx.restore();
 	};
 
 	Editor.prototype.drawMarquee = function ( ctx ) {
@@ -326,35 +838,111 @@
 			return;
 		}
 
+		var box = normalise( this.marquee );
+
 		ctx.save();
-		ctx.strokeStyle = '#12263f';
 		ctx.fillStyle = 'rgba(18,38,63,0.08)';
+		ctx.strokeStyle = '#12263f';
 		ctx.lineWidth = 1 / this.view.scale;
-
-		var x = Math.min( this.marquee.x1, this.marquee.x2 );
-		var y = Math.min( this.marquee.y1, this.marquee.y2 );
-		var w = Math.abs( this.marquee.x2 - this.marquee.x1 );
-		var h = Math.abs( this.marquee.y2 - this.marquee.y1 );
-
-		ctx.fillRect( x, y, w, h );
-		ctx.strokeRect( x, y, w, h );
+		ctx.fillRect( box.x, box.y, box.width, box.height );
+		ctx.strokeRect( box.x, box.y, box.width, box.height );
 		ctx.restore();
 	};
 
-	Editor.prototype.seatAt = function ( point ) {
-		var found = null;
-		var best = SEAT_RADIUS * 1.4;
+	Editor.prototype.drawLasso = function ( ctx ) {
+		if ( ! this.lasso || this.lasso.length < 2 ) {
+			return;
+		}
 
-		Geometry.eachSeat( this.geometry, function ( seat, row, section ) {
-			var distance = Math.hypot( seat.x - point.x, seat.y - point.y );
+		ctx.save();
+		ctx.fillStyle = 'rgba(18,38,63,0.08)';
+		ctx.strokeStyle = '#12263f';
+		ctx.lineWidth = 1 / this.view.scale;
+		ctx.beginPath();
+		this.lasso.forEach( function ( point, index ) {
+			index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+		} );
+		ctx.closePath();
+		ctx.fill();
+		ctx.stroke();
+		ctx.restore();
+	};
 
-			if ( distance < best ) {
-				best = distance;
-				found = { key: section.key + '/' + row.key + '/' + seat.key, seat: seat };
+	/** The object being drawn right now, before it is committed to the chart. */
+	Editor.prototype.drawDraft = function ( ctx ) {
+		if ( ! this.draft ) {
+			return;
+		}
+
+		ctx.save();
+		ctx.strokeStyle = '#12263f';
+		ctx.setLineDash( [ 5 / this.view.scale, 4 / this.view.scale ] );
+		ctx.lineWidth = 1.5 / this.view.scale;
+
+		if ( 'polygon' === this.draft.kind ) {
+			ctx.beginPath();
+			this.draft.points.forEach( function ( point, index ) {
+				index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+			} );
+			ctx.stroke();
+		} else {
+			var box = normalise( this.draft );
+			ctx.strokeRect( box.x, box.y, box.width, box.height );
+		}
+
+		ctx.restore();
+	};
+
+	/* ----------------------------------------------------------------------- hit testing */
+
+	Editor.prototype.objectAt = function ( point ) {
+		var container = this.container();
+		var candidates = [];
+
+		( container.objects || [] ).forEach( function ( object ) {
+			if ( Ops.hitTest( object, point ) ) {
+				candidates.push( object );
 			}
 		} );
 
-		return found;
+		// Last drawn is topmost, so the last match is the one under the cursor.
+		return candidates.length ? candidates[ candidates.length - 1 ] : null;
+	};
+
+	Editor.prototype.seatAt = function ( point ) {
+		return Ops.seatAt( this.container(), point );
+	};
+
+	/* ------------------------------------------------------------------------ interaction */
+
+	Editor.prototype.setTool = function ( tool ) {
+		this.tool = tool;
+		this.draft = null;
+		this.onStatus( STATUS[ tool ] || STATUS.select );
+		this.canvas.style.cursor = 'pan' === tool ? 'grab' : 'crosshair';
+
+		if ( 'select' === tool ) {
+			this.canvas.style.cursor = 'default';
+		}
+	};
+
+	var STATUS = {
+		select: 'Select — Shift + Click to add or remove objects from selection. Ctrl+D to deselect',
+		sameType: 'Select same type — Click select of the same type. Shift + Click to add or remove types from selection. Ctrl+D to deselect',
+		lasso: 'Lasso — drag around the seats you want',
+		pan: 'Pan — drag to move the view',
+		row: 'Row — drag to draw a straight row of seats',
+		curvedRow: 'Curved row — drag to draw, then set the curve in the panel',
+		section: 'Section — click each corner, then press Enter to close the shape',
+		area: 'Area — drag to draw a general admission area',
+		table: 'Table — click to place a table',
+		booth: 'Booth — drag to draw a booth',
+		shape: 'Shape — drag to draw',
+		line: 'Line — click each point, then press Enter',
+		text: 'Text — click to place a label',
+		image: 'Image — drag to place the floor plan you are tracing',
+		icon: 'Icon — click to place',
+		focalPoint: 'Focal point — click the spot the venue faces, usually the middle of the stage',
 	};
 
 	Editor.prototype.bindPointer = function () {
@@ -362,105 +950,27 @@
 
 		this.canvas.addEventListener( 'pointerdown', function ( event ) {
 			self.canvas.setPointerCapture( event.pointerId );
-			var point = self.toWorld( event.clientX, event.clientY );
-
-			// Space or middle button pans; everything else is selection or drag.
-			if ( 1 === event.button || self.spaceHeld ) {
-				self.drag = { mode: 'pan', lastX: event.clientX, lastY: event.clientY };
-
-				return;
-			}
-
-			var hit = self.seatAt( point );
-
-			if ( hit ) {
-				if ( event.shiftKey ) {
-					self.toggleSelection( hit.key );
-				} else if ( self.selection.indexOf( hit.key ) === -1 ) {
-					self.selection = [ hit.key ];
-					self.onSelectionChange( self.selection );
-				}
-
-				self.drag = {
-					mode: 'move',
-					startX: point.x,
-					startY: point.y,
-					lastX: point.x,
-					lastY: point.y,
-					moved: false,
-				};
-				self.draw();
-
-				return;
-			}
-
-			if ( ! event.shiftKey ) {
-				self.selection = [];
-				self.onSelectionChange( self.selection );
-			}
-
-			self.marquee = { x1: point.x, y1: point.y, x2: point.x, y2: point.y };
-			self.draw();
+			self.onPointerDown( event, self.toWorld( event.clientX, event.clientY ) );
 		} );
 
 		this.canvas.addEventListener( 'pointermove', function ( event ) {
-			var point = self.toWorld( event.clientX, event.clientY );
-
-			if ( self.drag && 'pan' === self.drag.mode ) {
-				self.view.x += event.clientX - self.drag.lastX;
-				self.view.y += event.clientY - self.drag.lastY;
-				self.drag.lastX = event.clientX;
-				self.drag.lastY = event.clientY;
-				self.draw();
-
-				return;
-			}
-
-			if ( self.drag && 'move' === self.drag.mode ) {
-				if ( ! self.drag.moved ) {
-					// Record history once per drag, not once per pointermove — otherwise a single
-					// drag would need thirty undos to reverse.
-					self.history.push( self.geometry );
-					self.drag.moved = true;
-				}
-
-				Geometry.moveSeats(
-					self.geometry,
-					self.selection,
-					point.x - self.drag.lastX,
-					point.y - self.drag.lastY
-				);
-
-				self.drag.lastX = point.x;
-				self.drag.lastY = point.y;
-				self.draw();
-
-				return;
-			}
-
-			if ( self.marquee ) {
-				self.marquee.x2 = point.x;
-				self.marquee.y2 = point.y;
-				self.draw();
-			}
+			self.onPointerMove( event, self.toWorld( event.clientX, event.clientY ) );
 		} );
 
-		this.canvas.addEventListener( 'pointerup', function () {
-			if ( self.drag && 'move' === self.drag.mode && self.drag.moved ) {
-				if ( self.snapToGrid ) {
-					self.snapSelection();
-				}
+		this.canvas.addEventListener( 'pointerup', function ( event ) {
+			self.onPointerUp( event, self.toWorld( event.clientX, event.clientY ) );
+		} );
 
-				self.onChange( self.geometry );
+		this.canvas.addEventListener( 'dblclick', function ( event ) {
+			var point = self.toWorld( event.clientX, event.clientY );
+			var object = self.objectAt( point );
+
+			// Double-click is how you go into a section, and how you come back out of one.
+			if ( object && 'section' === object.type && ! self.sectionKey ) {
+				self.enterSection( object.key );
+			} else if ( self.sectionKey && ! object ) {
+				self.exitSection();
 			}
-
-			if ( self.marquee ) {
-				self.selectWithin( self.marquee );
-				self.marquee = null;
-			}
-
-			self.drag = null;
-			self.draw();
 		} );
 
 		this.canvas.addEventListener(
@@ -468,13 +978,11 @@
 			function ( event ) {
 				event.preventDefault();
 
-				var factor = event.deltaY < 0 ? 1.1 : 0.9;
 				var before = self.toWorld( event.clientX, event.clientY );
+				self.view.scale = Math.min( 12, Math.max( 0.1, self.view.scale * ( event.deltaY < 0 ? 1.1 : 0.9 ) ) );
 
-				self.view.scale = Math.min( 8, Math.max( 0.2, self.view.scale * factor ) );
-
-				// Keep the point under the cursor fixed while zooming, which is what makes
-				// wheel-zoom feel like a map rather than a slider.
+				// Keep the point under the cursor pinned, which is what makes wheel-zoom feel like
+				// a map rather than a slider.
 				var after = self.toWorld( event.clientX, event.clientY );
 				self.view.x += ( after.x - before.x ) * self.view.scale;
 				self.view.y += ( after.y - before.y ) * self.view.scale;
@@ -485,68 +993,512 @@
 		);
 	};
 
+	Editor.prototype.onPointerDown = function ( event, point ) {
+		if ( 'pan' === this.tool || 1 === event.button || this.spaceHeld ) {
+			this.drag = { mode: 'pan', lastX: event.clientX, lastY: event.clientY };
+
+			return;
+		}
+
+		if ( 'focalPoint' === this.tool ) {
+			var self = this;
+			this.mutate( function ( chart ) {
+				Chart.setFocalPoint( chart, point.x, point.y );
+			} );
+			this.setTool( 'select' );
+
+			return;
+		}
+
+		if ( DRAW_TOOLS.indexOf( this.tool ) !== -1 ) {
+			this.startDraft( point );
+
+			return;
+		}
+
+		if ( 'lasso' === this.tool ) {
+			this.lasso = [ [ point.x, point.y ] ];
+
+			return;
+		}
+
+		this.startSelection( event, point );
+	};
+
+	var DRAW_TOOLS = [ 'row', 'curvedRow', 'section', 'area', 'booth', 'shape', 'line', 'table', 'text', 'icon', 'image' ];
+
+	Editor.prototype.startSelection = function ( event, point ) {
+		var seatHit = this.seatAt( point );
+		var objectHit = this.objectAt( point );
+
+		if ( 'sameType' === this.tool && objectHit ) {
+			this.selectSameType( objectHit.type, event.shiftKey );
+
+			return;
+		}
+
+		// Inside a section, clicking lands on individual chairs; at chart level it lands on whole
+		// objects, because that is the level the designer is working at.
+		if ( seatHit && this.sectionKey ) {
+			var seatKey = seatHit.object.key + '/' + seatHit.seat.key;
+
+			if ( event.shiftKey ) {
+				this.toggleSeat( seatKey );
+			} else if ( this.seatSelection.indexOf( seatKey ) === -1 ) {
+				this.seatSelection = [ seatKey ];
+				this.selection = [];
+			}
+
+			this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
+			this.onSelectionChange();
+			this.draw();
+
+			return;
+		}
+
+		if ( objectHit ) {
+			if ( event.shiftKey ) {
+				this.toggleObject( objectHit.key );
+			} else if ( this.selection.indexOf( objectHit.key ) === -1 ) {
+				this.selection = [ objectHit.key ];
+				this.seatSelection = [];
+			}
+
+			this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
+			this.onSelectionChange();
+			this.draw();
+
+			return;
+		}
+
+		if ( ! event.shiftKey ) {
+			this.selection = [];
+			this.seatSelection = [];
+			this.onSelectionChange();
+		}
+
+		this.marquee = { x1: point.x, y1: point.y, x2: point.x, y2: point.y };
+		this.draw();
+	};
+
+	Editor.prototype.onPointerMove = function ( event, point ) {
+		if ( this.drag && 'pan' === this.drag.mode ) {
+			this.view.x += event.clientX - this.drag.lastX;
+			this.view.y += event.clientY - this.drag.lastY;
+			this.drag.lastX = event.clientX;
+			this.drag.lastY = event.clientY;
+			this.draw();
+
+			return;
+		}
+
+		if ( this.drag && 'move' === this.drag.mode ) {
+			if ( ! this.drag.moved ) {
+				// One history entry per drag, not one per pointermove — otherwise reversing a
+				// single drag would take thirty undos.
+				this.history.push( this.chart );
+				this.drag.moved = true;
+			}
+
+			this.moveSelection( point.x - this.drag.lastX, point.y - this.drag.lastY );
+			this.drag.lastX = point.x;
+			this.drag.lastY = point.y;
+			this.draw();
+
+			return;
+		}
+
+		if ( this.draft && 'polygon' !== this.draft.kind ) {
+			this.draft.x2 = point.x;
+			this.draft.y2 = point.y;
+			this.draw();
+
+			return;
+		}
+
+		if ( this.lasso ) {
+			this.lasso.push( [ point.x, point.y ] );
+			this.draw();
+
+			return;
+		}
+
+		if ( this.marquee ) {
+			this.marquee.x2 = point.x;
+			this.marquee.y2 = point.y;
+			this.draw();
+		}
+	};
+
+	Editor.prototype.onPointerUp = function ( event, point ) {
+		if ( this.drag && 'move' === this.drag.mode && this.drag.moved ) {
+			if ( this.snapToGrid ) {
+				this.snapSelection();
+			}
+
+			this.onChange( this.chart );
+		}
+
+		if ( this.draft && 'polygon' !== this.draft.kind ) {
+			this.commitDraft();
+		}
+
+		if ( this.lasso ) {
+			this.selectInPolygon( this.lasso );
+			this.lasso = null;
+		}
+
+		if ( this.marquee ) {
+			var box = normalise( this.marquee );
+
+			this.selectInPolygon( [
+				[ box.x, box.y ],
+				[ box.x + box.width, box.y ],
+				[ box.x + box.width, box.y + box.height ],
+				[ box.x, box.y + box.height ],
+			] );
+
+			this.marquee = null;
+		}
+
+		this.drag = null;
+		this.draw();
+	};
+
+	Editor.prototype.moveSelection = function ( dx, dy ) {
+		var objects = this.selectedObjects();
+
+		if ( objects.length ) {
+			objects.forEach( function ( object ) {
+				Ops.move( object, dx, dy );
+			} );
+
+			return;
+		}
+
+		// Dragging chairs moves the row they belong to: a seat has no position of its own, since
+		// where it sits follows from the row's anchor, rotation and spacing.
+		var rows = {};
+
+		this.selectedSeats().forEach( function ( entry ) {
+			rows[ entry.owner.key ] = entry.owner;
+		} );
+
+		Object.keys( rows ).forEach( function ( key ) {
+			Ops.move( rows[ key ], dx, dy );
+		} );
+	};
+
 	Editor.prototype.snapSelection = function () {
 		var self = this;
 
-		Geometry.eachSeat( this.geometry, function ( seat, row, section ) {
-			if ( self.selection.indexOf( section.key + '/' + row.key + '/' + seat.key ) !== -1 ) {
-				seat.x = Geometry.snap( seat.x, self.grid );
-				seat.y = Geometry.snap( seat.y, self.grid );
+		this.selectedObjects().forEach( function ( object ) {
+			if ( 'row' === object.type || 'table' === object.type || 'text' === object.type || 'icon' === object.type ) {
+				object.x = Chart.snap( object.x, self.grid );
+				object.y = Chart.snap( object.y, self.grid );
 			}
 		} );
+	};
 
+	Editor.prototype.toggleObject = function ( key ) {
+		var index = this.selection.indexOf( key );
+
+		index === -1 ? this.selection.push( key ) : this.selection.splice( index, 1 );
+		this.onSelectionChange();
+	};
+
+	Editor.prototype.toggleSeat = function ( key ) {
+		var index = this.seatSelection.indexOf( key );
+
+		index === -1 ? this.seatSelection.push( key ) : this.seatSelection.splice( index, 1 );
+		this.onSelectionChange();
+	};
+
+	/** Select every object of one kind — the "select same type" tool. */
+	Editor.prototype.selectSameType = function ( type, additive ) {
+		var container = this.container();
+		var keys = ( container.objects || [] )
+			.filter( function ( object ) { return object.type === type; } )
+			.map( function ( object ) { return object.key; } );
+
+		this.selection = additive ? this.selection.concat( keys ) : keys;
+		this.seatSelection = [];
+		this.onSelectionChange();
 		this.draw();
 	};
 
-	Editor.prototype.toggleSelection = function ( key ) {
-		var index = this.selection.indexOf( key );
+	Editor.prototype.selectInPolygon = function ( polygon ) {
+		var self = this;
+		var container = this.container();
 
-		if ( index === -1 ) {
-			this.selection.push( key );
-		} else {
-			this.selection.splice( index, 1 );
+		if ( this.sectionKey ) {
+			// Inside a section the natural unit of selection is the chair.
+			( container.objects || [] ).forEach( function ( object ) {
+				if ( 'row' !== object.type && 'table' !== object.type ) {
+					return;
+				}
+
+				var positions = 'row' === object.type
+					? Chart.rowSeatPositions( object )
+					: Chart.tableSeatPositions( object );
+
+				positions.forEach( function ( position, index ) {
+					if ( ! Ops.pointInPolygon( position, polygon ) ) {
+						return;
+					}
+
+					var key = object.key + '/' + object.seats[ index ].key;
+
+					if ( self.seatSelection.indexOf( key ) === -1 ) {
+						self.seatSelection.push( key );
+					}
+				} );
+			} );
+
+			this.onSelectionChange();
+
+			return;
 		}
 
-		this.onSelectionChange( this.selection );
-	};
+		( container.objects || [] ).forEach( function ( object ) {
+			if ( 'all' !== self.layer && ( object.layer || 'interactive' ) !== self.layer ) {
+				return;
+			}
 
-	Editor.prototype.selectWithin = function ( box ) {
-		var minX = Math.min( box.x1, box.x2 );
-		var maxX = Math.max( box.x1, box.x2 );
-		var minY = Math.min( box.y1, box.y2 );
-		var maxY = Math.max( box.y1, box.y2 );
-		var self = this;
+			var center = Ops.center( object );
 
-		Geometry.eachSeat( this.geometry, function ( seat, row, section ) {
-			if ( seat.x >= minX && seat.x <= maxX && seat.y >= minY && seat.y <= maxY ) {
-				var key = section.key + '/' + row.key + '/' + seat.key;
-
-				if ( self.selection.indexOf( key ) === -1 ) {
-					self.selection.push( key );
-				}
+			if ( Ops.pointInPolygon( center, polygon ) && self.selection.indexOf( object.key ) === -1 ) {
+				self.selection.push( object.key );
 			}
 		} );
 
-		this.onSelectionChange( this.selection );
+		this.onSelectionChange();
 	};
 
 	Editor.prototype.selectAll = function () {
-		var keys = [];
+		var container = this.container();
+		var self = this;
 
-		Geometry.eachSeat( this.geometry, function ( seat, row, section ) {
-			keys.push( section.key + '/' + row.key + '/' + seat.key );
-		} );
+		this.selection = ( container.objects || [] )
+			.filter( function ( object ) {
+				return 'all' === self.layer || ( object.layer || 'interactive' ) === self.layer;
+			} )
+			.map( function ( object ) { return object.key; } );
 
-		this.selection = keys;
-		this.onSelectionChange( this.selection );
+		this.seatSelection = [];
+		this.onSelectionChange();
 		this.draw();
 	};
+
+	Editor.prototype.clearSelection = function () {
+		this.selection = [];
+		this.seatSelection = [];
+		this.onSelectionChange();
+		this.draw();
+	};
+
+	/* ------------------------------------------------------------------------- drawing tools */
+
+	Editor.prototype.startDraft = function ( point ) {
+		if ( 'section' === this.tool || 'line' === this.tool ) {
+			if ( this.draft && 'polygon' === this.draft.kind ) {
+				this.draft.points.push( [ point.x, point.y ] );
+			} else {
+				this.draft = { kind: 'polygon', points: [ [ point.x, point.y ] ] };
+			}
+
+			this.draw();
+
+			return;
+		}
+
+		if ( 'table' === this.tool || 'text' === this.tool || 'icon' === this.tool ) {
+			this.commitPointTool( point );
+
+			return;
+		}
+
+		this.draft = { kind: 'box', x1: point.x, y1: point.y, x2: point.x, y2: point.y };
+	};
+
+	Editor.prototype.commitPointTool = function ( point ) {
+		var self = this;
+		var container = this.container();
+
+		this.mutate( function ( chart ) {
+			var object;
+
+			if ( 'table' === self.tool ) {
+				object = Chart.newTable( chart, 'T' + ( countOfType( container, 'table' ) + 1 ), {
+					x: Chart.snap( point.x, self.grid ),
+					y: Chart.snap( point.y, self.grid ),
+				} );
+			} else if ( 'text' === self.tool ) {
+				var text = window.prompt( 'Text', 'Label' );
+
+				if ( ! text ) {
+					return;
+				}
+
+				object = Chart.newText( chart, text, { x: point.x, y: point.y } );
+			} else {
+				object = Chart.newIcon( chart, self.iconName || 'wheelchair', { x: point.x, y: point.y } );
+			}
+
+			container.objects.push( object );
+			self.selection = [ object.key ];
+		} );
+
+		this.setTool( 'select' );
+		this.onSelectionChange();
+	};
+
+	/** Close a polygon being drawn point by point. */
+	Editor.prototype.finishPolygon = function () {
+		if ( ! this.draft || 'polygon' !== this.draft.kind || this.draft.points.length < 2 ) {
+			this.draft = null;
+			this.draw();
+
+			return;
+		}
+
+		var self = this;
+		var points = this.draft.points;
+		var container = this.container();
+
+		this.mutate( function ( chart ) {
+			var object;
+
+			if ( 'section' === self.tool ) {
+				if ( points.length < 3 ) {
+					return;
+				}
+
+				var label = window.prompt( 'Section name', 'Section ' + ( countOfType( container, 'section' ) + 1 ) );
+
+				if ( ! label ) {
+					return;
+				}
+
+				object = Chart.newSection( chart, label, points );
+			} else {
+				object = Chart.newShape( chart, 'line', { points: points, layer: 'background' } );
+			}
+
+			container.objects.push( object );
+			self.selection = [ object.key ];
+		} );
+
+		this.draft = null;
+		this.setTool( 'select' );
+		this.onSelectionChange();
+	};
+
+	Editor.prototype.commitDraft = function () {
+		var box = normalise( this.draft );
+		// Keep the raw drag before discarding it: normalising loses the direction, and a row needs
+		// to know which way it was drawn to set its rotation.
+		var stroke = this.draft;
+		var self = this;
+		var container = this.container();
+
+		this.draft = null;
+
+		if ( box.width < 8 && box.height < 8 ) {
+			this.draw();
+
+			return; // A stray click, not a drawn object.
+		}
+
+		this.mutate( function ( chart ) {
+			var object;
+
+			switch ( self.tool ) {
+				case 'row':
+				case 'curvedRow':
+					object = self.rowFromStroke( chart, stroke );
+					break;
+
+				case 'area':
+					object = Chart.newArea( chart, 'Area ' + ( countOfType( container, 'area' ) + 1 ), {
+						x: box.x, y: box.y, width: box.width, height: box.height,
+						places: Math.max( 1, Math.round( ( box.width * box.height ) / 900 ) ),
+					} );
+					break;
+
+				case 'booth':
+					object = Chart.newBooth( chart, 'Booth ' + ( countOfType( container, 'booth' ) + 1 ), {
+						x: box.x, y: box.y, width: box.width, height: box.height,
+					} );
+					break;
+
+				case 'image':
+					var href = window.prompt( 'Image URL' );
+
+					if ( ! href ) {
+						return;
+					}
+
+					object = Chart.newImage( chart, href, {
+						x: box.x, y: box.y, width: box.width, height: box.height,
+					} );
+					break;
+
+				default:
+					object = Chart.newShape( chart, self.shapeKind || 'rect', {
+						x: box.x, y: box.y, width: box.width, height: box.height,
+						label: self.shapeKind === 'stage' ? 'Stage' : null,
+					} );
+			}
+
+			if ( object ) {
+				container.objects.push( object );
+				self.selection = [ object.key ];
+			}
+		} );
+
+		this.setTool( 'select' );
+		this.onSelectionChange();
+	};
+
+	/**
+	 * Turn a drag into a row.
+	 *
+	 * The stroke gives the row's direction and length, and the seat count follows from how many fit
+	 * at the current spacing — so drawing a row feels like drawing a line, not filling in a form.
+	 */
+	Editor.prototype.rowFromStroke = function ( chart, stroke ) {
+		var dx = stroke.x2 - stroke.x1;
+		var dy = stroke.y2 - stroke.y1;
+		var length = Math.hypot( dx, dy );
+		var spacing = 4;
+		var count = Math.max( 1, Math.round( length / ( Chart.SEAT_SIZE + spacing ) ) + 1 );
+		var container = this.container();
+
+		return Chart.newRow( chart, {
+			x: ( stroke.x1 + stroke.x2 ) / 2,
+			y: ( stroke.y1 + stroke.y2 ) / 2,
+			rotation: ( Math.atan2( dy, dx ) * 180 ) / Math.PI,
+			curve: 'curvedRow' === this.tool ? 15 : 0,
+			seatSpacing: spacing,
+			seats: count,
+			label: Chart.indexToLetters( countOfType( container, 'row' ) ),
+		} );
+	};
+
+	function countOfType( container, type ) {
+		return ( container.objects || [] ).filter( function ( object ) {
+			return object.type === type;
+		} ).length;
+	}
+
+	/* ------------------------------------------------------------------------- keyboard */
 
 	Editor.prototype.bindKeyboard = function () {
 		var self = this;
 
 		window.addEventListener( 'keydown', function ( event ) {
-			// Never hijack typing in a form field.
+			// Never hijack typing in the property panel.
 			if ( /^(INPUT|TEXTAREA|SELECT)$/.test( event.target.tagName ) ) {
 				return;
 			}
@@ -557,45 +1509,53 @@
 			}
 
 			var meta = event.ctrlKey || event.metaKey;
+			var key = event.key.toLowerCase();
 
-			if ( meta && 'z' === event.key.toLowerCase() ) {
+			if ( meta && 'z' === key ) {
 				event.preventDefault();
 				event.shiftKey ? self.redo() : self.undo();
 
 				return;
 			}
 
-			if ( meta && 'y' === event.key.toLowerCase() ) {
+			if ( meta && 'y' === key ) {
 				event.preventDefault();
 				self.redo();
 
 				return;
 			}
 
-			if ( meta && 'a' === event.key.toLowerCase() ) {
+			if ( meta && 'a' === key ) {
 				event.preventDefault();
 				self.selectAll();
 
 				return;
 			}
 
-			if ( meta && 'c' === event.key.toLowerCase() ) {
-				self.clipboard = self.selection.slice();
+			if ( meta && 'd' === key ) {
+				event.preventDefault();
+				// Ctrl+D deselects, matching the hint in the status bar.
+				self.clearSelection();
 
 				return;
 			}
 
-			if ( meta && 'v' === event.key.toLowerCase() ) {
+			if ( meta && 'c' === key ) {
+				self.copy();
+
+				return;
+			}
+
+			if ( meta && 'v' === key ) {
 				event.preventDefault();
 				self.paste();
 
 				return;
 			}
 
-			if ( meta && 'd' === event.key.toLowerCase() ) {
+			if ( 'Enter' === event.key && self.draft ) {
 				event.preventDefault();
-				self.clipboard = self.selection.slice();
-				self.paste();
+				self.finishPolygon();
 
 				return;
 			}
@@ -608,33 +1568,30 @@
 			}
 
 			if ( 'Escape' === event.key ) {
-				self.selection = [];
-				self.onSelectionChange( self.selection );
-				self.draw();
+				if ( self.draft ) {
+					self.draft = null;
+					self.draw();
+				} else if ( self.selection.length || self.seatSelection.length ) {
+					self.clearSelection();
+				} else if ( self.sectionKey ) {
+					self.exitSection();
+				}
 
 				return;
 			}
 
 			var nudges = {
-				ArrowLeft: [ -1, 0 ],
-				ArrowRight: [ 1, 0 ],
-				ArrowUp: [ 0, -1 ],
-				ArrowDown: [ 0, 1 ],
+				ArrowLeft: [ -1, 0 ], ArrowRight: [ 1, 0 ], ArrowUp: [ 0, -1 ], ArrowDown: [ 0, 1 ],
 			};
 
-			if ( nudges[ event.key ] && self.selection.length ) {
+			if ( nudges[ event.key ] && ( self.selection.length || self.seatSelection.length ) ) {
 				event.preventDefault();
 
-				// Shift nudges by a grid cell; a bare arrow moves one unit for fine work.
+				// Shift nudges a whole grid cell; a bare arrow moves one unit for fine work.
 				var step = event.shiftKey ? self.grid : 1;
 
-				self.mutate( function ( geometry ) {
-					Geometry.moveSeats(
-						geometry,
-						self.selection,
-						nudges[ event.key ][ 0 ] * step,
-						nudges[ event.key ][ 1 ] * step
-					);
+				self.mutate( function () {
+					self.moveSelection( nudges[ event.key ][ 0 ] * step, nudges[ event.key ][ 1 ] * step );
 				} );
 			}
 		} );
@@ -642,47 +1599,177 @@
 		window.addEventListener( 'keyup', function ( event ) {
 			if ( ' ' === event.key ) {
 				self.spaceHeld = false;
-				self.canvas.style.cursor = 'default';
+				self.canvas.style.cursor = 'select' === self.tool ? 'default' : 'crosshair';
 			}
 		} );
 	};
 
+	Editor.prototype.copy = function () {
+		this.clipboard = JSON.parse( JSON.stringify( this.selectedObjects() ) );
+	};
+
 	Editor.prototype.paste = function () {
-		if ( ! this.clipboard.length ) {
+		if ( ! this.clipboard || ! this.clipboard.length ) {
 			return;
 		}
 
 		var self = this;
+		var container = this.container();
 
-		this.mutate( function ( geometry ) {
-			// Offset by a grid cell so the copy is visibly distinct from its source.
-			self.selection = Geometry.duplicateSeats( geometry, self.clipboard, self.grid * 2, self.grid * 2 );
+		this.mutate( function ( chart ) {
+			// Offset by a couple of grid cells so the copy is visibly distinct from its source.
+			var copies = Ops.duplicate( chart, self.clipboard, self.grid * 2, self.grid * 2 );
+
+			copies.forEach( function ( copy ) {
+				container.objects.push( copy );
+			} );
+
+			self.selection = copies.map( function ( copy ) { return copy.key; } );
+			self.seatSelection = [];
 		} );
+
+		this.onSelectionChange();
+	};
+
+	Editor.prototype.duplicateSelection = function () {
+		this.copy();
+		this.paste();
 	};
 
 	Editor.prototype.deleteSelection = function () {
-		if ( ! this.selection.length ) {
+		var self = this;
+
+		if ( this.selection.length ) {
+			this.mutate( function () {
+				Ops.remove( self.container(), self.selection );
+				self.selection = [];
+			} );
+
+			this.onSelectionChange();
+
 			return;
 		}
 
+		if ( this.seatSelection.length ) {
+			this.mutate( function () {
+				self.selectedSeats().forEach( function ( entry ) {
+					entry.owner.seats = entry.owner.seats.filter( function ( seat ) {
+						return seat.key !== entry.seat.key;
+					} );
+				} );
+
+				self.seatSelection = [];
+			} );
+
+			this.onSelectionChange();
+		}
+	};
+
+	Editor.prototype.mirrorSelection = function ( axis ) {
 		var self = this;
 
-		this.mutate( function ( geometry ) {
-			Geometry.deleteSeats( geometry, self.selection );
-			self.selection = [];
+		this.mutate( function () {
+			Ops.mirror( self.selectedObjects(), axis );
 		} );
+	};
+
+	Editor.prototype.alignSelection = function ( edge ) {
+		var self = this;
+
+		this.mutate( function () {
+			Ops.align( self.selectedObjects(), edge );
+		} );
+	};
+
+	Editor.prototype.distributeSelection = function ( axis ) {
+		var self = this;
+
+		this.mutate( function () {
+			Ops.distribute( self.selectedObjects(), axis );
+		} );
+	};
+
+	/* ------------------------------------------------------------------------------ view */
+
+	Editor.prototype.zoomBy = function ( factor ) {
+		this.view.scale = Math.min( 12, Math.max( 0.1, this.view.scale * factor ) );
+		this.draw();
 	};
 
 	Editor.prototype.zoomToFit = function () {
 		var rect = this.canvas.getBoundingClientRect();
-		var scaleX = rect.width / ( this.geometry.canvas.width + 80 );
-		var scaleY = rect.height / ( this.geometry.canvas.height + 80 );
+		var target = this.sectionKey ? Ops.bounds( this.container() ) : null;
 
-		this.view.scale = Math.max( 0.2, Math.min( scaleX, scaleY ) );
-		this.view.x = 40;
-		this.view.y = 40;
+		var box = target || {
+			x: 0, y: 0,
+			width: this.floor().canvas.width,
+			height: this.floor().canvas.height,
+		};
+
+		var padding = 60;
+		var scale = Math.min(
+			( rect.width - padding * 2 ) / Math.max( 1, box.width ),
+			( rect.height - padding * 2 ) / Math.max( 1, box.height )
+		);
+
+		this.view.scale = Math.min( 12, Math.max( 0.1, scale ) );
+		this.view.x = padding - box.x * this.view.scale + ( rect.width - padding * 2 - box.width * this.view.scale ) / 2;
+		this.view.y = padding - box.y * this.view.scale + ( rect.height - padding * 2 - box.height * this.view.scale ) / 2;
+
 		this.draw();
 	};
+
+	/* ----------------------------------------------------------------------------- helpers */
+
+	function normalise( box ) {
+		return {
+			x: Math.min( box.x1, box.x2 ),
+			y: Math.min( box.y1, box.y2 ),
+			width: Math.abs( box.x2 - box.x1 ),
+			height: Math.abs( box.y2 - box.y1 ),
+		};
+	}
+
+	function shapeColour( kind ) {
+		switch ( kind ) {
+			case 'stage': return '#3a3f4b';
+			case 'entrance': return '#3f9c6d';
+			case 'exit': return '#b3543a';
+			case 'aisle': return '#e8eaee';
+			case 'wall': return '#8a8f99';
+			default: return '#c8ccd4';
+		}
+	}
+
+	function withAlpha( color, alpha ) {
+		var rgb = toRgb( color );
+
+		return 'rgba(' + rgb.join( ',' ) + ',' + alpha + ')';
+	}
+
+	function shade( color, amount ) {
+		var rgb = toRgb( color ).map( function ( channel ) {
+			return Math.max( 0, Math.min( 255, Math.round( channel + 255 * amount ) ) );
+		} );
+
+		return 'rgb(' + rgb.join( ',' ) + ')';
+	}
+
+	function toRgb( color ) {
+		var hex = String( color || '#2d6cdf' ).replace( '#', '' );
+
+		if ( 3 === hex.length ) {
+			hex = hex[ 0 ] + hex[ 0 ] + hex[ 1 ] + hex[ 1 ] + hex[ 2 ] + hex[ 2 ];
+		}
+
+		var value = parseInt( hex, 16 );
+
+		if ( isNaN( value ) ) {
+			return [ 45, 108, 223 ];
+		}
+
+		return [ ( value >> 16 ) & 255, ( value >> 8 ) & 255, value & 255 ];
+	}
 
 	global.SeatmapEditor = Editor;
 	global.SeatmapHistory = History;

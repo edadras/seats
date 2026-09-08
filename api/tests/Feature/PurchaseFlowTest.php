@@ -36,7 +36,10 @@ class PurchaseFlowTest extends TestCase
 
         // Geometry carries each seat's stable id. Without it a client would have to pair geometry
         // with availability by array position, and nothing guarantees the two share an order.
-        $geometrySeatIds = collect($map->json('geometry.sections.0.rows'))
+        $geometrySeatIds = collect($map->json('geometry.floors.0.objects'))
+            ->firstWhere('type', 'section')['objects'];
+
+        $geometrySeatIds = collect($geometrySeatIds)
             ->flatMap(fn ($row) => array_column($row['seats'], 'seat_id'));
 
         $this->assertCount(15, $geometrySeatIds);

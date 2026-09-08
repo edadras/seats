@@ -152,7 +152,7 @@ class OrderService
             }
 
             $event = $order->event;
-            $items = HoldItem::with(['seat.section', 'seat.row'])
+            $items = HoldItem::with(['seat.section', 'seat.row', 'capacityObject'])
                 ->where('hold_id', $hold->id)
                 ->whereNull('released_at')
                 ->get();
@@ -167,6 +167,8 @@ class OrderService
                 $allocations[] = Allocation::create([
                     'event_id' => $event->id,
                     'seat_id' => $item->seat_id,
+                    'capacity_object_id' => $item->capacity_object_id,
+                    'quantity' => $item->quantity,
                     'hold_id' => $hold->id,
                     'external_order_row_id' => $order->id,
                     'api_client_id' => $order->api_client_id,
@@ -175,9 +177,16 @@ class OrderService
                     'amount' => $item->amount,
                     'currency' => $order->currency,
                     'seat_map_version_id' => $hold->seat_map_version_id,
-                    'section_name' => $item->seat?->section?->name ?? '',
-                    'row_name' => $item->seat?->row?->name ?? '',
-                    'seat_label' => $item->seat?->label ?? '',
+                    // Denormalised at sale time so a ticket stays readable even if a later map
+                    // version renames the section. Standing room has no row or seat, so its area
+                    // name goes in the section column and the label says what it is.
+                    'section_name' => $item->isCapacity()
+                        ? ($item->capacityObject?->label ?? '')
+                        : ($item->seat?->section?->name ?? ''),
+                    'row_name' => $item->isCapacity() ? '' : ($item->seat?->row?->name ?? ''),
+                    'seat_label' => $item->isCapacity()
+                        ? ($item->quantity > 1 ? $item->quantity.' places' : 'General admission')
+                        : ($item->seat?->label ?? ''),
                     'allocated_at' => now(),
                 ]);
             }
@@ -331,13 +340,16 @@ class OrderService
 
                 $this->tickets->void($allocation);
 
-                if ($policy === 'hold_back') {
+                if ($policy === 'hold_back' && $allocation->seat_id) {
                     // Keep the seat out of sale by blocking it for this event.
                     \App\Models\EventSeatOverride::updateOrCreate(
                         ['event_id' => $order->event_id, 'seat_id' => $allocation->seat_id],
                         ['blocked' => true, 'note' => 'Held back after refund of order '.$order->external_order_id],
                     );
                 }
+
+                // A refunded standing place needs no block: releasing the allocation already
+                // returns its quantity to the area's running total.
             }
 
             $remaining = Allocation::where('external_order_row_id', $order->id)

@@ -39,7 +39,55 @@ class AvailabilityService
         ], $rows);
     }
 
-    /** Counters for the dashboard and the door, from the same definition as the seat list. */
+    /**
+     * Capacity objects, reported as a remaining count rather than a state.
+     *
+     * A general admission area is never simply "held" or "free" — it is partly taken, and what a
+     * buyer needs to know is how many places are left. Blocking one, or reducing the house for a
+     * night, shows up as zero remaining.
+     *
+     * @return list<array{capacity_object_id: string, label: string, kind: string, capacity_type: string,
+     *                    places: int, taken: int, held: int, allocated: int, remaining: int,
+     *                    amount: int|null, zone_key: string|null, blocked: bool}>
+     */
+    public function capacityForEvent(Event $event): array
+    {
+        if (! $event->seat_map_version_id) {
+            return [];
+        }
+
+        $rows = DB::select($this->capacitySql(), [
+            'version_id' => $event->seat_map_version_id,
+            'event_id' => $event->id,
+            'tenant_id' => $event->tenant_id,
+        ]);
+
+        return array_map(function ($row) {
+            $places = (int) ($row->places ?? 0);
+            $taken = (int) $row->taken;
+            $blocked = (bool) $row->blocked;
+
+            return [
+                'capacity_object_id' => $row->capacity_object_id,
+                'label' => $row->label,
+                'kind' => $row->kind,
+                'capacity_type' => $row->capacity_type,
+                'places' => $places,
+                'taken' => $taken,
+                'held' => (int) $row->held,
+                'allocated' => (int) $row->allocated,
+                'remaining' => $blocked ? 0 : max(0, $places - $taken),
+                'amount' => $row->amount === null ? null : (int) $row->amount,
+                'zone_key' => $row->zone_key,
+                'blocked' => $blocked,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Counters for the dashboard and the door, from the same definitions as the seat and capacity
+     * lists — so the numbers on the two screens can never disagree.
+     */
     public function summaryForEvent(Event $event): array
     {
         $summary = ['seats_total' => 0, 'available' => 0, 'held' => 0, 'allocated' => 0, 'blocked' => 0];
@@ -47,6 +95,21 @@ class AvailabilityService
         foreach ($this->forEvent($event) as $seat) {
             $summary['seats_total']++;
             $summary[$seat['state']]++;
+        }
+
+        // Standing room counts towards the house too, as places rather than as seats.
+        foreach ($this->capacityForEvent($event) as $area) {
+            $summary['seats_total'] += $area['places'];
+
+            if ($area['blocked']) {
+                $summary['blocked'] += $area['places'];
+
+                continue;
+            }
+
+            $summary['held'] += $area['held'];
+            $summary['allocated'] += $area['allocated'];
+            $summary['available'] += $area['remaining'];
         }
 
         return $summary;
@@ -65,6 +128,58 @@ class AvailabilityService
         }
 
         return null;
+    }
+
+    /**
+     * Taken is holds plus allocations. Held and sold are reported separately as well, because an
+     * organiser watching a fast on-sale needs to tell "in carts" from "paid for".
+     */
+    private function capacitySql(): string
+    {
+        return <<<'SQL'
+            SELECT
+                cp.capacity_object_id,
+                c.label,
+                c.kind,
+                c.capacity_type,
+                COALESCE(o.places, c.places) AS places,
+                COALESCE(o.blocked, false) AS blocked,
+                COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
+                COALESCE(o.zone_key, (cp.geometry->>'zone_key')) AS zone_key,
+                COALESCE(h.held, 0) + COALESCE(a.allocated, 0) AS taken,
+                COALESCE(h.held, 0) AS held,
+                COALESCE(a.allocated, 0) AS allocated
+            FROM capacity_placements cp
+            JOIN capacity_objects c ON c.id = cp.capacity_object_id
+            LEFT JOIN event_capacity_overrides o
+                ON o.event_id = :event_id AND o.capacity_object_id = cp.capacity_object_id
+            LEFT JOIN (
+                SELECT hi.capacity_object_id, SUM(hi.quantity) AS held
+                FROM hold_items hi
+                JOIN holds hd ON hd.id = hi.hold_id
+                WHERE hi.event_id = :event_id
+                  AND hi.released_at IS NULL
+                  AND hi.capacity_object_id IS NOT NULL
+                  AND hd.status = 'active'
+                  AND hd.expires_at > NOW()
+                GROUP BY hi.capacity_object_id
+            ) h ON h.capacity_object_id = cp.capacity_object_id
+            LEFT JOIN (
+                SELECT al.capacity_object_id, SUM(al.quantity) AS allocated
+                FROM allocations al
+                WHERE al.event_id = :event_id
+                  AND al.status = 'active'
+                  AND al.capacity_object_id IS NOT NULL
+                GROUP BY al.capacity_object_id
+            ) a ON a.capacity_object_id = cp.capacity_object_id
+            LEFT JOIN event_price_zones zone_override
+                ON zone_override.event_id = :event_id AND zone_override.key = o.zone_key
+            LEFT JOIN event_price_zones zone_placement
+                ON zone_placement.event_id = :event_id AND zone_placement.key = (cp.geometry->>'zone_key')
+            WHERE cp.seat_map_version_id = :version_id
+              AND cp.tenant_id = :tenant_id
+            ORDER BY c.label
+        SQL;
     }
 
     private function sql(): string

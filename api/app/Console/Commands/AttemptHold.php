@@ -20,7 +20,9 @@ class AttemptHold extends Command
 {
     protected $signature = 'seatmap:attempt-hold
         {event : Event id}
-        {seats : Comma-separated seat ids}
+        {seats : Comma-separated seat ids, or "-" for none}
+        {--area= : Capacity object id to take places from}
+        {--quantity=1 : How many places to take from that area}
         {--session=concurrency-probe}';
 
     protected $description = 'Try to hold seats and print the result as JSON (testing utility)';
@@ -46,10 +48,16 @@ class AttemptHold extends Command
         $tenantContext->set($event->tenant);
 
         try {
+            $seats = $this->argument('seats');
+            $area = $this->option('area');
+
             $hold = $holds->create(
                 $event,
-                explode(',', $this->argument('seats')),
+                $seats === '-' ? [] : explode(',', $seats),
                 (string) $this->option('session'),
+                null,
+                null,
+                $area ? [$area => (int) $this->option('quantity')] : [],
             );
 
             $this->line(json_encode(['ok' => true, 'token' => $hold->token]));

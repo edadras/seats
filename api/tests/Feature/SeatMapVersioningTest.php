@@ -32,7 +32,9 @@ class SeatMapVersioningTest extends TestCase
         // Publish again with a row added and an existing row renamed.
         $this->asTenant($ctx['tenant'], function () use ($ctx) {
             $geometry = $this->geometry(3, 3);
-            $geometry['sections'][0]['rows'][0]['name'] = 'Front row';
+            // Rename a row: its label changes, its key — and therefore every seat under it —
+            // must not.
+            $geometry['floors'][0]['objects'][0]['objects'][0]['labeling']['label'] = 'Front';
 
             $draft = SeatMapVersion::create([
                 'seat_map_id' => $ctx['map']->id,
@@ -80,7 +82,7 @@ class SeatMapVersioningTest extends TestCase
 
         $this->assertSame('confirmed', $order->json('status'));
         $this->assertCount(2, $order->json('allocations'));
-        $this->assertSame('Row A', $order->json('allocations.0.row'));
+        $this->assertSame('A', $order->json('allocations.0.row'));
 
         // And the sold seats still read as sold.
         $states = collect($this->getJson("/v1/embed/events/{$ctx['event']->public_id}/availability")->json('seats'))
@@ -100,7 +102,7 @@ class SeatMapVersioningTest extends TestCase
         // Republish a map that no longer contains row A at all.
         $this->asTenant($ctx['tenant'], function () use ($ctx) {
             $geometry = $this->geometry(3, 5);
-            array_shift($geometry['sections'][0]['rows']);
+            array_shift($geometry['floors'][0]['objects'][0]['objects']);
 
             $draft = SeatMapVersion::create([
                 'seat_map_id' => $ctx['map']->id,
@@ -128,7 +130,7 @@ class SeatMapVersioningTest extends TestCase
         // The order still reads correctly, with the seat named as it was sold.
         $order = $this->storefront('GET', '/v1/integrations/woocommerce/orders/wc_6002')->assertOk();
         $this->assertSame('1', $order->json('allocations.0.label'));
-        $this->assertSame('Row A', $order->json('allocations.0.row'));
+        $this->assertSame('A', $order->json('allocations.0.row'));
     }
 
     #[Test]
@@ -186,7 +188,8 @@ class SeatMapVersioningTest extends TestCase
         ])->assertOk()->json('token');
 
         $broken = $this->geometry(2, 2);
-        $broken['sections'][0]['rows'][0]['seats'][0]['x'] = 99999;
+        // Drag a row clean off the canvas.
+        $broken['floors'][0]['objects'][0]['objects'][0]['x'] = 99999;
 
         $saved = $this->withToken($token)
             ->postJson("/v1/seat-maps/{$ctx['map']->id}/versions", ['geometry' => $broken])

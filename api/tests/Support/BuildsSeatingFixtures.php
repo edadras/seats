@@ -57,43 +57,129 @@ trait BuildsSeatingFixtures
     }
 
     /**
-     * A rectangular block of seats: one section, `$rows` rows of `$perRow` seats, all in zone
-     * "standard".
+     * A v2 chart: one section holding `$rows` rows of `$perRow` seats, all in the "standard"
+     * category, plus a stage.
+     *
+     * Rows carry an anchor, rotation, curve and spacing rather than per-seat coordinates — seat
+     * positions are computed from those, on both the client and the server.
      */
     protected function geometry(int $rows = 3, int $perRow = 5, string $sectionKey = 'stalls'): array
     {
-        $rowList = [];
+        $rowObjects = [];
 
         for ($r = 0; $r < $rows; $r++) {
-            $seats = [];
             $rowName = chr(ord('A') + $r);
+            $seats = [];
 
             for ($s = 1; $s <= $perRow; $s++) {
                 $seats[] = [
-                    'key' => $rowName.$s,
+                    'type' => 'seat',
+                    'key' => $sectionKey.'-'.$rowName.'-'.$s,
                     'label' => (string) $s,
-                    'x' => 100 + ($s * 30),
-                    'y' => 100 + ($r * 30),
-                    'shape' => 'circle',
-                    'zone_key' => 'standard',
+                    'categoryKey' => null,
                     'accessible' => false,
+                    'entrance' => null,
                 ];
             }
 
-            $rowList[] = ['key' => $rowName, 'name' => 'Row '.$rowName, 'seats' => $seats];
+            $rowObjects[] = [
+                'type' => 'row',
+                'key' => $sectionKey.'-row-'.$rowName,
+                'layer' => 'interactive',
+                'x' => 400,
+                'y' => 300 + ($r * 34),
+                'rotation' => 0,
+                'curve' => 0,
+                'seatSpacing' => 4,
+                'categoryKey' => 'standard',
+                'entrance' => null,
+                'labeling' => [
+                    'enabled' => true,
+                    'label' => $rowName,
+                    'displayedLabel' => null,
+                    'position' => 'both',
+                    'displayedType' => 'Row',
+                    'locked' => false,
+                ],
+                'seatLabeling' => ['scheme' => 'numeric', 'displayedType' => 'Seat', 'locked' => false],
+                'seats' => $seats,
+            ];
         }
 
         return [
-            'canvas' => ['width' => 1200, 'height' => 800],
-            'sections' => [[
-                'key' => $sectionKey,
-                'name' => 'Stalls',
-                'color' => '#3366ff',
-                'rows' => $rowList,
+            'version' => 2,
+            'name' => 'Test chart',
+            'focalPoint' => ['x' => 400, 'y' => 100],
+            'categories' => [
+                ['key' => 'standard', 'label' => 'Standard', 'color' => '#2d6cdf', 'accessible' => false],
+            ],
+            'floors' => [[
+                'key' => '1',
+                'name' => 'Level 1',
+                'canvas' => ['width' => 1200, 'height' => 900, 'background' => null],
+                'objects' => [
+                    [
+                        'type' => 'section',
+                        'key' => $sectionKey,
+                        'layer' => 'interactive',
+                        'label' => 'Stalls',
+                        'labeling' => ['label' => 'Stalls', 'displayedLabel' => null, 'visible' => true, 'fontSize' => 16, 'locked' => false],
+                        'polygon' => [[300, 260], [900, 260], [900, 700], [300, 700]],
+                        'categoryKey' => null,
+                        'color' => '#3366ff',
+                        'entrance' => null,
+                        'objects' => $rowObjects,
+                    ],
+                    [
+                        'type' => 'shape',
+                        'key' => 'stage',
+                        'layer' => 'background',
+                        'kind' => 'stage',
+                        'x' => 450, 'y' => 120, 'width' => 300, 'height' => 50,
+                        'rotation' => 0, 'cornerRadius' => 4, 'points' => null,
+                        'fill' => null, 'label' => 'Stage',
+                    ],
+                ],
             ]],
-            'shapes' => [['kind' => 'stage', 'x' => 100, 'y' => 40, 'width' => 300, 'height' => 40, 'label' => 'Stage']],
-            'texts' => [],
         ];
+    }
+
+    /**
+     * The same chart with a general admission area added — standing room sold by quantity rather
+     * than by seat.
+     */
+    protected function geometryWithStandingArea(int $places = 100, int $rows = 3, int $perRow = 5): array
+    {
+        $chart = $this->geometry($rows, $perRow);
+
+        $chart['categories'][] = ['key' => 'standing', 'label' => 'Standing', 'color' => '#e0526a', 'accessible' => false];
+
+        $chart['floors'][0]['objects'][] = [
+            'type' => 'area',
+            'key' => 'pit',
+            'layer' => 'interactive',
+            'shape' => [
+                'kind' => 'rect',
+                'x' => 340, 'y' => 740, 'width' => 520, 'height' => 120,
+                'rotation' => 0, 'cornerRadius' => 12, 'points' => null,
+            ],
+            'translucent' => false,
+            'scale' => 1,
+            'categoryKey' => 'standing',
+            'entrance' => null,
+            'labeling' => [
+                'label' => 'Standing pit',
+                'displayedLabel' => null,
+                'visible' => true,
+                'fontSize' => 20,
+                'positionX' => 0,
+                'positionY' => 0,
+                'locked' => false,
+            ],
+            'capacity' => ['type' => 'generalAdmission', 'places' => $places],
+        ];
+
+        return $chart;
     }
 
     /**
@@ -104,10 +190,11 @@ trait BuildsSeatingFixtures
         int $rows = 3,
         int $perRow = 5,
         int $amount = 2500,
+        ?array $chart = null,
     ): array {
         $tenant ??= $this->makeTenant();
 
-        return app(TenantContext::class)->runAs($tenant, function () use ($tenant, $rows, $perRow, $amount) {
+        return app(TenantContext::class)->runAs($tenant, function () use ($tenant, $rows, $perRow, $amount, $chart) {
             $venue = Venue::factory()->create(['tenant_id' => $tenant->id]);
 
             $map = SeatMap::create([
@@ -119,7 +206,7 @@ trait BuildsSeatingFixtures
                 'seat_map_id' => $map->id,
                 'version' => 1,
                 'status' => 'draft',
-                'geometry' => $this->geometry($rows, $perRow),
+                'geometry' => $chart ?? $this->geometry($rows, $perRow),
             ]);
 
             app(SeatMapPublisher::class)->publish($map, $version);
@@ -144,12 +231,22 @@ trait BuildsSeatingFixtures
                 'amount' => $amount,
             ]);
 
+            // Priced even when the chart has no standing area, so a fixture that adds one later
+            // does not have to remember to price it.
+            EventPriceZone::create([
+                'event_id' => $event->id,
+                'key' => 'standing',
+                'name' => 'Standing',
+                'amount' => (int) round($amount / 2),
+            ]);
+
             return [
                 'tenant' => $tenant,
                 'venue' => $venue,
                 'map' => $map,
                 'event' => $event,
                 'seats' => \App\Models\Seat::where('seat_map_id', $map->id)->orderBy('key')->get(),
+                'areas' => \App\Models\CapacityObject::where('seat_map_id', $map->id)->orderBy('key')->get(),
             ];
         });
     }

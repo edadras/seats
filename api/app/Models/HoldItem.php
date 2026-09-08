@@ -17,9 +17,12 @@ class HoldItem extends Model
 {
     use BelongsToTenant, HasFactory, HasUuids;
 
-    protected $fillable = ['tenant_id', 'hold_id', 'event_id', 'seat_id', 'amount', 'zone_key', 'released_at'];
+    protected $fillable = [
+        'tenant_id', 'hold_id', 'event_id', 'seat_id', 'capacity_object_id',
+        'quantity', 'amount', 'zone_key', 'released_at',
+    ];
 
-    protected $casts = ['released_at' => 'datetime', 'amount' => 'integer'];
+    protected $casts = ['released_at' => 'datetime', 'amount' => 'integer', 'quantity' => 'integer'];
 
     public function hold()
     {
@@ -29,5 +32,16 @@ class HoldItem extends Model
     public function seat()
     {
         return $this->belongsTo(Seat::class);
+    }
+
+    public function capacityObject()
+    {
+        return $this->belongsTo(CapacityObject::class);
+    }
+
+    /** A hold item is either a named seat or a quantity of a capacity object, never both. */
+    public function isCapacity(): bool
+    {
+        return $this->capacity_object_id !== null;
     }
 }

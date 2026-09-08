@@ -8,8 +8,10 @@
 </head>
 <body>
     <div id="app" data-api="{{ url('/v1') }}"></div>
-    <script src="{{ asset('editor/js/geometry.js') }}"></script>
+    <script src="{{ asset('editor/js/chart.js') }}"></script>
+    <script src="{{ asset('editor/js/chart-ops.js') }}"></script>
     <script src="{{ asset('editor/js/editor.js') }}"></script>
+    <script src="{{ asset('editor/js/inspector.js') }}"></script>
     <script src="{{ asset('editor/js/panel.js') }}"></script>
 </body>
 </html>

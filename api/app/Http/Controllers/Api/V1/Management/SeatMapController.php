@@ -192,13 +192,20 @@ class SeatMapController extends Controller
         ], fn ($v) => $v !== null);
     }
 
+    /** A new map starts as one empty floor, ready for the designer to draw on. */
     private function emptyGeometry(): array
     {
         return [
-            'canvas' => ['width' => 1200, 'height' => 800, 'background' => null],
-            'sections' => [],
-            'shapes' => [],
-            'texts' => [],
+            'version' => 2,
+            'name' => 'Untitled chart',
+            'focalPoint' => null,
+            'categories' => [],
+            'floors' => [[
+                'key' => '1',
+                'name' => 'Level 1',
+                'canvas' => ['width' => 1200, 'height' => 900, 'background' => null],
+                'objects' => [],
+            ]],
         ];
     }
 }

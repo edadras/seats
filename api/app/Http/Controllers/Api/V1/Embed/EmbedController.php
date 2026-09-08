@@ -48,6 +48,7 @@ class EmbedController extends Controller
             'seat_map_version_id' => $event->seat_map_version_id,
             'hold_ttl_seconds' => $event->hold_ttl_seconds,
             'max_seats_per_order' => $event->max_seats_per_order,
+            'areas' => $this->availability->capacityForEvent($event),
             'zones' => $event->priceZones->map(fn ($zone) => [
                 'key' => $zone->key,
                 'name' => $zone->name,
@@ -84,28 +85,59 @@ class EmbedController extends Controller
             ->header('Cache-Control', 'public, max-age=3600, immutable');
     }
 
-    /** Inject each seat's UUID into the geometry, keyed by (section, row, seat). */
+    /**
+     * Inject each object's stable id into the geometry.
+     *
+     * Seats get `seat_id`, capacity objects get `capacity_object_id`, both keyed on the chart key.
+     * Without them a client would have to pair geometry with availability by array position, and
+     * nothing guarantees the two share an order — one reshuffle and every buyer selects the wrong
+     * chair.
+     */
     private function withSeatIds(\App\Models\SeatMapVersion $version): array
     {
         $geometry = $version->geometry;
 
-        $ids = DB::table('seat_placements as sp')
+        $seatIds = DB::table('seat_placements as sp')
             ->join('seats as s', 's.id', '=', 'sp.seat_id')
-            ->join('seat_rows as r', 'r.id', '=', 's.seat_row_id')
-            ->join('sections as sec', 'sec.id', '=', 's.section_id')
             ->where('sp.seat_map_version_id', $version->id)
-            ->select('sp.seat_id', 'sec.key as section_key', 'r.key as row_key', 's.key as seat_key')
-            ->get()
-            ->keyBy(fn ($row) => $row->section_key.'/'.$row->row_key.'/'.$row->seat_key);
+            ->pluck('sp.seat_id', 's.key');
 
-        foreach ($geometry['sections'] ?? [] as $sIndex => $section) {
-            foreach ($section['rows'] ?? [] as $rIndex => $row) {
-                foreach ($row['seats'] ?? [] as $seatIndex => $seat) {
-                    $composite = $section['key'].'/'.$row['key'].'/'.$seat['key'];
+        $capacityIds = DB::table('capacity_placements as cp')
+            ->join('capacity_objects as c', 'c.id', '=', 'cp.capacity_object_id')
+            ->where('cp.seat_map_version_id', $version->id)
+            ->pluck('cp.capacity_object_id', 'c.key');
 
-                    $geometry['sections'][$sIndex]['rows'][$rIndex]['seats'][$seatIndex]['seat_id']
-                        = $ids->get($composite)?->seat_id;
+        $annotate = function (array &$objects) use (&$annotate, $seatIds, $capacityIds) {
+            foreach ($objects as &$object) {
+                $type = $object['type'] ?? null;
+
+                if ($type === 'section') {
+                    if (isset($object['objects'])) {
+                        $annotate($object['objects']);
+                    }
+
+                    continue;
                 }
+
+                // Iterate the real offset, not `$object['seats'] ?? []` — the null-coalesce would
+                // hand the loop a temporary copy and the ids would be written to nothing.
+                if (($type === 'row' || $type === 'table') && isset($object['seats'])) {
+                    foreach ($object['seats'] as &$seat) {
+                        $seat['seat_id'] = $seatIds[$seat['key']] ?? null;
+                    }
+                    unset($seat);
+                }
+
+                if (in_array($type, ['area', 'booth', 'table'], true)) {
+                    $object['capacity_object_id'] = $capacityIds[$object['key']] ?? null;
+                }
+            }
+            unset($object);
+        };
+
+        foreach (($geometry['floors'] ?? []) as $index => $unusedFloor) {
+            if (isset($geometry['floors'][$index]['objects'])) {
+                $annotate($geometry['floors'][$index]['objects']);
             }
         }
 
@@ -129,6 +161,9 @@ class EmbedController extends Controller
             'cursor' => $current,
             'full' => true,
             'seats' => $this->availability->forEvent($event),
+            // Standing areas and whole tables report places remaining rather than a state, because
+            // "held" is not a useful answer about a pit that is half full.
+            'areas' => $this->availability->capacityForEvent($event),
         ]);
     }
 
@@ -137,17 +172,21 @@ class EmbedController extends Controller
         $event = $this->resolveEvent($publicId);
 
         $data = $request->validate([
-            'seat_ids' => ['required', 'array', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
+            'seat_ids' => ['sometimes', 'array', 'max:'.config('seatmap.hold.max_seats')],
             'seat_ids.*' => ['uuid'],
+            // Standing room is asked for by quantity: { "<capacity object id>": 3 }.
+            'areas' => ['sometimes', 'array', 'max:20'],
+            'areas.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
             'session_id' => ['required', 'string', 'max:100'],
         ]);
 
         $hold = $this->holds->create(
             $event,
-            $data['seat_ids'],
+            $data['seat_ids'] ?? [],
             $data['session_id'],
             null,
             $request->ip(),
+            $data['areas'] ?? [],
         );
 
         return response()->json(new HoldResource($hold->load('event')), 201);

@@ -118,6 +118,75 @@ class SeatConcurrencyTest extends TestCase
     }
 
     /**
+     * Standing room cannot be guarded by a unique index — its invariant is a sum against a limit,
+     * not one row per chair. It is serialised with an advisory lock instead, and this is the test
+     * that the lock actually holds: a hundred buyers reaching for a twenty-place pit must sell
+     * twenty places, not more.
+     */
+    #[Test]
+    public function a_general_admission_area_never_oversells(): void
+    {
+        $ctx = $this->makeSellableEvent(chart: $this->geometryWithStandingArea(20));
+        $areaId = $ctx['areas']->firstWhere('key', 'pit')->id;
+
+        $results = $this->raceCapacity(60, $ctx['event']->id, $areaId, 1);
+
+        $winners = array_filter($results, fn ($r) => ($r['ok'] ?? false) === true);
+
+        $this->assertCount(20, $winners, sprintf(
+            'Expected exactly 20 winners for 20 places, got %d. Codes: %s',
+            count($winners),
+            json_encode(array_count_values(array_column($results, 'code'))),
+        ));
+
+        $codes = array_unique(array_column(array_filter($results, fn ($r) => ($r['ok'] ?? false) === false), 'code'));
+        $this->assertEqualsCanonicalizing(['capacity_unavailable'], $codes, sprintf(
+            'Losers must be told the area is full; saw %s', json_encode($codes)
+        ));
+
+        // And the database agrees: the running total is exactly the capacity, never over it.
+        $this->asTenant($ctx['tenant'], function () use ($areaId) {
+            $held = HoldItem::where('capacity_object_id', $areaId)->whereNull('released_at')->sum('quantity');
+
+            $this->assertSame(20, (int) $held);
+        });
+    }
+
+    #[Test]
+    public function concurrent_requests_for_different_quantities_never_exceed_capacity(): void
+    {
+        // Mixed sizes are the harder case: a naive check-then-insert can let a large request slip
+        // in behind a small one and take the total past the limit.
+        $ctx = $this->makeSellableEvent(chart: $this->geometryWithStandingArea(30));
+        $areaId = $ctx['areas']->firstWhere('key', 'pit')->id;
+
+        $quantities = [];
+
+        for ($i = 0; $i < 40; $i++) {
+            $quantities[] = 1 + ($i % 5);
+        }
+
+        $results = $this->raceCapacityVarying($quantities, $ctx['event']->id, $areaId);
+
+        $sold = 0;
+
+        foreach ($results as $index => $result) {
+            if (($result['ok'] ?? false) === true) {
+                $sold += $quantities[$index];
+            }
+        }
+
+        $this->assertLessThanOrEqual(30, $sold, 'the area sold more places than it has');
+
+        $this->asTenant($ctx['tenant'], function () use ($areaId, $sold) {
+            $held = (int) HoldItem::where('capacity_object_id', $areaId)->whereNull('released_at')->sum('quantity');
+
+            $this->assertSame($sold, $held);
+            $this->assertLessThanOrEqual(30, $held);
+        });
+    }
+
+    /**
      * Launch N independent processes that all reach for the same seats at once.
      *
      * @return list<array>
@@ -127,24 +196,55 @@ class SeatConcurrencyTest extends TestCase
         return $this->raceVarying(array_fill(0, $count, $seatIds), $eventId);
     }
 
+    /** @return list<array> */
+    private function raceCapacity(int $count, string $eventId, string $areaId, int $quantity): array
+    {
+        return $this->raceCapacityVarying(array_fill(0, $count, $quantity), $eventId, $areaId);
+    }
+
+    /**
+     * @param  list<int>  $quantities
+     * @return list<array>
+     */
+    private function raceCapacityVarying(array $quantities, string $eventId, string $areaId): array
+    {
+        return $this->spawn(array_map(fn (int $quantity, int $index) => sprintf(
+            '%s artisan seatmap:attempt-hold %s - --area=%s --quantity=%d --session=ga-%d',
+            escapeshellarg(PHP_BINARY),
+            escapeshellarg($eventId),
+            escapeshellarg($areaId),
+            $quantity,
+            $index,
+        ), $quantities, array_keys($quantities)));
+    }
+
     /**
      * @param  list<list<string>>  $seatSets
      * @return list<array>
      */
     private function raceVarying(array $seatSets, string $eventId): array
     {
+        return $this->spawn(array_map(fn (array $seatIds, int $index) => sprintf(
+            '%s artisan seatmap:attempt-hold %s %s --session=probe-%d',
+            escapeshellarg(PHP_BINARY),
+            escapeshellarg($eventId),
+            escapeshellarg(implode(',', $seatIds)),
+            $index,
+        ), $seatSets, array_keys($seatSets)));
+    }
+
+    /**
+     * Run the given commands as simultaneous OS processes and collect their reported outcomes.
+     *
+     * @param  list<string>  $commands
+     * @return list<array>
+     */
+    private function spawn(array $commands): array
+    {
         $processes = [];
         $pipes = [];
 
-        foreach ($seatSets as $index => $seatIds) {
-            $command = sprintf(
-                '%s artisan seatmap:attempt-hold %s %s --session=probe-%d',
-                escapeshellarg(PHP_BINARY),
-                escapeshellarg($eventId),
-                escapeshellarg(implode(',', $seatIds)),
-                $index,
-            );
-
+        foreach ($commands as $index => $command) {
             $process = proc_open(
                 $command,
                 [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],

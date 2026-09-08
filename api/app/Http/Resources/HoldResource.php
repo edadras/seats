@@ -21,6 +21,7 @@ class HoldResource extends JsonResource
             'total_amount' => $this->total_amount,
             'seat_map_version_id' => $this->seat_map_version_id,
             'seats' => $decoded['seats'] ?? [],
+            'areas' => $decoded['areas'] ?? [],
             // The storefront prices its cart from this, and only from this (threat T3).
             'price_snapshot' => [
                 'payload' => $snapshot['payload'] ?? null,

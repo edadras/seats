@@ -39,6 +39,11 @@ class SeatMap extends Model
         return $this->hasMany(Seat::class);
     }
 
+    public function capacityObjects()
+    {
+        return $this->hasMany(CapacityObject::class);
+    }
+
     /** The version currently open for editing, if any. */
     public function draftVersion(): ?SeatMapVersion
     {

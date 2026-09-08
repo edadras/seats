@@ -6,6 +6,7 @@ use App\Exceptions\ApiException;
 use App\Models\Event;
 use App\Models\Hold;
 use App\Models\HoldItem;
+use App\Models\CapacityObject;
 use App\Models\Seat;
 use App\Support\Signing\PriceSigner;
 use App\Support\Tenancy\TenantContext;
@@ -39,7 +40,9 @@ class HoldService
     ) {}
 
     /**
-     * @param  list<string>  $seatIds
+     * @param  list<string>  $seatIds     Named seats.
+     * @param  array<string, int>  $capacity  Capacity object id => quantity, for standing areas
+     *                                        and whole tables.
      */
     public function create(
         Event $event,
@@ -47,20 +50,23 @@ class HoldService
         string $sessionId,
         ?string $apiClientId = null,
         ?string $ip = null,
+        array $capacity = [],
     ): Hold {
         if (! $event->isSellable()) {
             throw ApiException::conflict('event_not_sellable', 'This event is not currently on sale.');
         }
 
         $seatIds = array_values(array_unique($seatIds));
+        $capacity = array_filter($capacity, fn ($quantity) => (int) $quantity > 0);
 
-        if ($seatIds === []) {
-            throw ApiException::unprocessable('no_seats', 'At least one seat must be requested.');
+        if ($seatIds === [] && $capacity === []) {
+            throw ApiException::unprocessable('no_seats', 'At least one seat or place must be requested.');
         }
 
         $maxSeats = min((int) config('seatmap.hold.max_seats'), $event->max_seats_per_order);
+        $requested = count($seatIds) + array_sum(array_map('intval', $capacity));
 
-        if (count($seatIds) > $maxSeats) {
+        if ($requested > $maxSeats) {
             throw ApiException::unprocessable('too_many_seats', sprintf(
                 'At most %d seats may be held at once.', $maxSeats
             ), ['max_seats' => $maxSeats]);
@@ -72,19 +78,23 @@ class HoldService
         sort($seatIds);
 
         try {
-            return DB::transaction(function () use ($event, $seatIds, $sessionId, $apiClientId, $ip) {
-                $seats = $this->lockSeats($event, $seatIds);
+            return DB::transaction(function () use ($event, $seatIds, $capacity, $sessionId, $apiClientId, $ip) {
+                $seats = $seatIds === [] ? collect() : $this->lockSeats($event, $seatIds);
 
-                $this->reclaimExpiredItems($event, $seatIds);
+                if ($seatIds !== []) {
+                    $this->reclaimExpiredItems($event, $seatIds);
+                }
 
-                $prices = $this->priceSeats($event, $seatIds);
-                $unavailable = $this->findUnavailable($event, $seatIds, $prices);
+                $prices = $seatIds === [] ? [] : $this->priceSeats($event, $seatIds);
+                $unavailable = $seatIds === [] ? [] : $this->findUnavailable($event, $seatIds, $prices);
 
                 if ($unavailable !== []) {
                     throw ApiException::seatsUnavailable($unavailable);
                 }
 
-                $hold = $this->insertHold($event, $seats, $prices, $sessionId, $apiClientId, $ip);
+                $capacityLines = $this->reserveCapacity($event, $capacity);
+
+                $hold = $this->insertHold($event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines);
 
                 $event->bumpAvailabilityVersion();
 
@@ -202,6 +212,159 @@ class HoldService
         SQL, [$event->id, '{'.implode(',', $seatIds).'}']);
     }
 
+    /**
+     * Reserve a quantity of standing room or whole tables.
+     *
+     * Capacity cannot be guarded by a unique index the way a named seat is — the invariant is a sum
+     * against a limit, not one row per chair. So each object is serialised with a transaction-scoped
+     * advisory lock keyed on (event, object): concurrent buyers queue behind each other for the
+     * same area, the total is recomputed under the lock, and the lock is released when the
+     * transaction ends whether it commits or not.
+     *
+     * Locking per object rather than per event means a rush on the standing pit never blocks
+     * someone buying a booth.
+     *
+     * @param  array<string, int>  $requested  capacity object id => quantity
+     * @return list<array{object: CapacityObject, quantity: int, amount: int, zone_key: ?string}>
+     */
+    private function reserveCapacity(Event $event, array $requested): array
+    {
+        if ($requested === []) {
+            return [];
+        }
+
+        $objects = CapacityObject::whereIn('id', array_keys($requested))
+            ->where('seat_map_id', $event->seat_map_id)
+            ->orderBy('id')
+            ->get()
+            ->keyBy('id');
+
+        $unknown = array_values(array_diff(array_keys($requested), $objects->keys()->all()));
+
+        if ($unknown !== []) {
+            throw ApiException::unprocessable(
+                'unknown_capacity_objects',
+                'One or more of the requested areas do not belong to this event.',
+                ['unknown_capacity_object_ids' => $unknown],
+            );
+        }
+
+        $lines = [];
+        $unavailable = [];
+
+        // Sorted ids give every transaction the same lock order, so two overlapping multi-area
+        // requests queue instead of deadlocking.
+        foreach ($objects as $id => $object) {
+            $quantity = (int) $requested[$id];
+
+            DB::selectOne(
+                'SELECT pg_advisory_xact_lock(hashtextextended(?, 0))',
+                [$event->id.':'.$id],
+            );
+
+            $state = $this->capacityState($event, $object);
+
+            if ($state['blocked']) {
+                $unavailable[] = $id;
+
+                continue;
+            }
+
+            // A fixed-occupancy object — a booth, a table sold whole — goes in one piece or not
+            // at all; asking for part of it is meaningless.
+            if ($object->isSoldWhole() && $quantity !== $state['places']) {
+                $quantity = $state['places'];
+            }
+
+            if ($state['remaining'] < $quantity) {
+                $unavailable[] = $id;
+
+                continue;
+            }
+
+            $lines[] = [
+                'object' => $object,
+                'quantity' => $quantity,
+                'amount' => $state['amount'],
+                'zone_key' => $state['zone_key'],
+            ];
+        }
+
+        if ($unavailable !== []) {
+            throw ApiException::conflict(
+                'capacity_unavailable',
+                'There are not enough places left in one of the areas you selected.',
+                ['unavailable_capacity_object_ids' => $unavailable],
+            );
+        }
+
+        foreach ($lines as $line) {
+            if ($line['amount'] === null) {
+                throw ApiException::unprocessable(
+                    'area_not_priced',
+                    'One or more areas have no price for this event and cannot be sold.',
+                    ['unpriced_capacity_object_ids' => [$line['object']->id]],
+                );
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Current state of one capacity object for one event, read under the advisory lock.
+     *
+     * @return array{places: int, remaining: int, blocked: bool, amount: ?int, zone_key: ?string}
+     */
+    private function capacityState(Event $event, CapacityObject $object): array
+    {
+        $row = DB::selectOne(<<<'SQL'
+            SELECT
+                COALESCE(o.places, c.places) AS places,
+                COALESCE(o.blocked, false) AS blocked,
+                COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
+                COALESCE(o.zone_key, (cp.geometry->>'zone_key')) AS zone_key,
+                COALESCE((
+                    SELECT SUM(hi.quantity) FROM hold_items hi
+                    JOIN holds hd ON hd.id = hi.hold_id
+                    WHERE hi.event_id = :event_id AND hi.capacity_object_id = c.id
+                      AND hi.released_at IS NULL AND hd.status = 'active' AND hd.expires_at > NOW()
+                ), 0) + COALESCE((
+                    SELECT SUM(al.quantity) FROM allocations al
+                    WHERE al.event_id = :event_id AND al.capacity_object_id = c.id AND al.status = 'active'
+                ), 0) AS taken
+            FROM capacity_objects c
+            JOIN capacity_placements cp
+                ON cp.capacity_object_id = c.id AND cp.seat_map_version_id = :version_id
+            LEFT JOIN event_capacity_overrides o
+                ON o.event_id = :event_id AND o.capacity_object_id = c.id
+            LEFT JOIN event_price_zones zone_override
+                ON zone_override.event_id = :event_id AND zone_override.key = o.zone_key
+            LEFT JOIN event_price_zones zone_placement
+                ON zone_placement.event_id = :event_id AND zone_placement.key = (cp.geometry->>'zone_key')
+            WHERE c.id = :object_id
+        SQL, [
+            'event_id' => $event->id,
+            'object_id' => $object->id,
+            'version_id' => $event->seat_map_version_id,
+        ]);
+
+        if (! $row) {
+            // Present in the map but not placed in the version this event sells against.
+            return ['places' => 0, 'remaining' => 0, 'blocked' => true, 'amount' => null, 'zone_key' => null];
+        }
+
+        $places = (int) $row->places;
+
+        return [
+            'places' => $places,
+            'remaining' => max(0, $places - (int) $row->taken),
+            'blocked' => (bool) $row->blocked,
+            'amount' => $row->amount === null ? null : (int) $row->amount,
+            'zone_key' => $row->zone_key,
+        ];
+    }
+
     /** @return array<string, array{amount: int, zone_key: ?string, state: string}> */
     private function priceSeats(Event $event, array $seatIds): array
     {
@@ -291,11 +454,16 @@ class HoldService
         string $sessionId,
         ?string $apiClientId,
         ?string $ip,
+        array $capacityLines = [],
     ): Hold {
         $total = 0;
 
         foreach ($seats as $seat) {
             $total += $prices[$seat->id]['amount'];
+        }
+
+        foreach ($capacityLines as $line) {
+            $total += $line['amount'] * $line['quantity'];
         }
 
         $hold = Hold::create([
@@ -323,8 +491,26 @@ class HoldService
                 'hold_id' => $hold->id,
                 'event_id' => $event->id,
                 'seat_id' => $seat->id,
+                'capacity_object_id' => null,
+                'quantity' => 1,
                 'amount' => $prices[$seat->id]['amount'],
                 'zone_key' => $prices[$seat->id]['zone_key'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        foreach ($capacityLines as $line) {
+            $items[] = [
+                'id' => (string) Str::uuid(),
+                'tenant_id' => $this->tenantContext->idOrFail(),
+                'hold_id' => $hold->id,
+                'event_id' => $event->id,
+                'seat_id' => null,
+                'capacity_object_id' => $line['object']->id,
+                'quantity' => $line['quantity'],
+                'amount' => $line['amount'] * $line['quantity'],
+                'zone_key' => $line['zone_key'],
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -346,14 +532,28 @@ class HoldService
     {
         $hold->loadMissing(['items.seat.section', 'items.seat.row']);
 
-        $seats = $hold->items->map(fn (HoldItem $item) => [
-            'seat_id' => $item->seat_id,
-            'section' => $item->seat?->section?->name ?? '',
-            'row' => $item->seat?->row?->name ?? '',
-            'label' => $item->seat?->label ?? '',
-            'amount' => $item->amount,
-            'zone_key' => $item->zone_key,
-        ])->values()->all();
+        $hold->loadMissing('items.capacityObject');
+
+        $seats = $hold->items->reject(fn (HoldItem $item) => $item->isCapacity())
+            ->map(fn (HoldItem $item) => [
+                'seat_id' => $item->seat_id,
+                'section' => $item->seat?->section?->name ?? '',
+                'row' => $item->seat?->row?->name ?? '',
+                'label' => $item->seat?->label ?? '',
+                'amount' => $item->amount,
+                'zone_key' => $item->zone_key,
+            ])->values()->all();
+
+        // Standing room is described by how many places were taken, not by which ones.
+        $areas = $hold->items->filter(fn (HoldItem $item) => $item->isCapacity())
+            ->map(fn (HoldItem $item) => [
+                'capacity_object_id' => $item->capacity_object_id,
+                'label' => $item->capacityObject?->label ?? '',
+                'kind' => $item->capacityObject?->kind ?? 'area',
+                'quantity' => $item->quantity,
+                'amount' => $item->amount,
+                'zone_key' => $item->zone_key,
+            ])->values()->all();
 
         $payload = [
             'hold_token' => $hold->token,
@@ -363,6 +563,7 @@ class HoldService
             'total_amount' => $hold->total_amount,
             'expires_at' => $hold->expires_at->toIso8601String(),
             'seats' => $seats,
+            'areas' => $areas,
         ];
 
         return $this->signer->sign($payload) + ['decoded' => $payload];
