@@ -396,6 +396,8 @@ class SeatMapPublisher
                 continue;
             }
 
+            $shape = $this->shapeOf($object);
+
             $insert[] = [
                 'id' => (string) Str::uuid(),
                 'tenant_id' => $this->tenantContext->idOrFail(),
@@ -403,10 +405,10 @@ class SeatMapPublisher
                 'capacity_object_id' => $capacityIds[$object['key']],
                 'floor_key' => $entry['floor'],
                 'geometry' => json_encode([
-                    'shape' => $object['shape'] ?? null,
+                    'shape' => $shape,
                     'label' => $this->labelOf($object),
                     'zone_key' => $object['categoryKey'] ?? null,
-                    'bounds' => RowGeometry::shapeBounds($object['shape'] ?? $object),
+                    'bounds' => RowGeometry::shapeBounds($shape),
                 ]),
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -416,6 +418,34 @@ class SeatMapPublisher
         foreach (array_chunk($insert, 500) as $chunk) {
             CapacityPlacement::insert($chunk);
         }
+    }
+
+    /**
+     * The drawable shape of a capacity object.
+     *
+     * Areas and booths carry a shape object. A table does not — its `shape` is the word "round" or
+     * "rectangular", and its geometry is the width and height around its centre — so one is built
+     * for it here rather than letting a string reach code expecting a shape.
+     */
+    private function shapeOf(array $object): array
+    {
+        if (isset($object['shape']) && is_array($object['shape'])) {
+            return $object['shape'];
+        }
+
+        $width = (float) ($object['width'] ?? 0);
+        $height = (float) ($object['height'] ?? 0);
+
+        return [
+            'kind' => ($object['shape'] ?? 'round') === 'round' ? 'ellipse' : 'rect',
+            'x' => (float) ($object['x'] ?? 0) - $width / 2,
+            'y' => (float) ($object['y'] ?? 0) - $height / 2,
+            'width' => $width,
+            'height' => $height,
+            'rotation' => (float) ($object['rotation'] ?? 0),
+            'cornerRadius' => 4,
+            'points' => null,
+        ];
     }
 
     private function labelOf(array $object): ?string

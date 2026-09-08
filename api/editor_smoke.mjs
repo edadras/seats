@@ -1,10 +1,12 @@
 /**
- * Browser smoke test for the tenant panel and seat map editor.
+ * Browser smoke test for the tenant panel and seat map designer.
  *
- * Drives the real UI in Chromium: sign in, read stats, open a published map, add rows, undo, redo,
- * marquee-select, publish, and confirm the server refuses a map with an off-canvas seat.
+ * Drives the real UI in Chromium: sign in, open a published chart, read the validation checklist,
+ * inspect a row's properties, change its seat count and curve, go into a section and back out,
+ * draw a new row, undo, redo, publish, and confirm the server refuses a chart with a row dragged
+ * off the canvas.
  *
- * It edits and publishes the seeded map, so re-seed before each run:
+ * It edits and publishes the seeded chart, so re-seed before each run:
  *
  *   php artisan migrate:fresh --seed --force
  *   php artisan serve --port=8123 &
@@ -13,125 +15,203 @@
 import { chromium } from 'playwright';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
+
 let failures = 0;
-const check = (label, ok, detail = '') => {
-  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label}${detail ? ' — ' + detail : ''}`);
-  if (!ok) failures++;
+const check = ( label, ok, detail = '' ) => {
+	console.log( `  ${ ok ? 'ok  ' : 'FAIL' } ${ label }${ detail ? ' — ' + detail : '' }` );
+	if ( ! ok ) failures++;
 };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
-const page = await browser.newPage();
+const browser = await chromium.launch( {
+	executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+} );
+const page = await browser.newPage( { viewport: { width: 1600, height: 950 } } );
 const errors = [];
-page.on('pageerror', e => errors.push(e.message));
-page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+page.on( 'pageerror', ( e ) => errors.push( e.message ) );
+page.on( 'console', ( m ) => { if ( m.type() === 'error' ) errors.push( m.text() ); } );
 
-console.log('Panel: sign in');
-await page.goto(BASE, { waitUntil: 'networkidle' });
-check('login form rendered', await page.locator('#login').isVisible());
+console.log( 'Panel: sign in' );
+await page.goto( BASE, { waitUntil: 'networkidle' } );
+check( 'login form rendered', await page.locator( '#login' ).isVisible() );
 
-await page.fill('input[name=email]', 'owner@northgate.test');
-await page.fill('input[name=password]', 'password');
-await page.click('#login button[type=submit]');
-await page.waitForSelector('.topbar', { timeout: 10000 });
-check('signed in, workspace shown', await page.locator('.topbar').isVisible());
+await page.fill( 'input[name=email]', 'owner@northgate.test' );
+await page.fill( 'input[name=password]', 'password' );
+await page.click( '#login button[type=submit]' );
+await page.waitForSelector( '.topbar', { timeout: 10000 } );
+check( 'signed in', await page.locator( '.topbar' ).isVisible() );
 
-console.log('Panel: events list');
-await page.waitForSelector('table tbody tr');
-const eventRows = await page.locator('table tbody tr').count();
-check('events listed', eventRows >= 1, `${eventRows} row(s)`);
-const publicId = (await page.locator('table tbody tr code').first().textContent()) || '';
-check('public id shown for embedding', publicId.startsWith('evt_'), publicId);
+console.log( 'Designer: open the chart' );
+await page.click( 'nav button[data-view=maps]' );
+await page.waitForSelector( 'button[data-map]' );
+await page.click( 'button[data-map]' );
+await page.waitForSelector( '#dz-canvas' );
+await page.waitForTimeout( 800 );
 
-await page.click('table tbody button[data-stats]');
-await page.waitForSelector('#stats .stats li');
-const seatsTotal = await page.locator('#stats .stats li').first().innerText();
-check('stats load', /\d+/.test(seatsTotal), seatsTotal.replace('\n', ' '));
+check( 'canvas mounted', await page.locator( '#dz-canvas' ).isVisible() );
+check( 'tool palette rendered', ( await page.locator( '.dz-tool' ).count() ) >= 14,
+	`${ await page.locator( '.dz-tool' ).count() } tools` );
 
-console.log('Editor: open a map');
-await page.click('nav button[data-view=maps]');
-await page.waitForSelector('button[data-map]');
-await page.click('button[data-map]');
-await page.waitForSelector('#editor-canvas');
-check('editor canvas mounted', await page.locator('#editor-canvas').isVisible());
+const layers = await page.locator( '.dz-layer' ).allInnerTexts();
+check( 'selection layers listed', layers.length === 5, layers.map( ( l ) => l.split( '\n' )[ 0 ] ).join( ', ' ) );
 
-const seatCount = async () =>
-  parseInt(await page.locator('#editor-status .stats li span').first().innerText(), 10);
+const places = await page.locator( '.insp-places' ).first().innerText();
+check( 'places counted', /\d+ places/.test( places ), places );
 
-const initial = await seatCount();
-check('published geometry loaded into editor', initial > 100, `${initial} seats`);
-check('validation panel reports clean', (await page.locator('#editor-validation .ok').count()) === 1);
+const checks = await page.locator( '.insp-check' ).allInnerTexts();
+check( 'validation checklist shown', checks.length === 5, `${ checks.length } checks` );
+check( 'checklist matches the designer', checks.map( ( c ) => c.split( '\n' )[ 1 ] ).join( ' | ' ) ===
+	'No duplicate objects | All objects are labeled | All objects are categorized | One category per object type | Focal point is set' );
 
-console.log('Editor: add a section and rows');
-page.once('dialog', d => d.accept('Gallery'));
-await page.click('button[data-action=add-section]');
-await page.waitForTimeout(200);
+console.log( 'Designer: read-only until a draft exists' );
+check( 'published chart opens read only', await page.locator( '#dz-readonly' ).isVisible() );
 
-// Straight rows prompts for section, rows, seats-per-row and zone in sequence.
-const answers = ['Gallery', '4', '12', 'balcony'];
-let i = 0;
-page.on('dialog', d => d.accept(answers[i++] ?? ''));
-await page.click('button[data-action=add-rows]');
-await page.waitForTimeout(500);
+// Saving forks a draft from the published version, which is what makes it editable.
+await page.click( '#dz-save' );
+await page.waitForSelector( '.toast' );
+check( 'saving a draft unlocks editing', ! ( await page.locator( '#dz-readonly' ).isVisible() ) );
 
-const afterRows = await seatCount();
-check('48 seats added', afterRows === initial + 48, `${initial} -> ${afterRows}`);
+console.log( 'Designer: go into a section' );
+const box = await page.locator( '#dz-canvas' ).boundingBox();
+await page.mouse.dblclick( box.x + box.width / 2, box.y + box.height * 0.55 );
+await page.waitForTimeout( 600 );
 
-console.log('Editor: undo and redo');
-await page.click('button[data-action=undo]');
-await page.waitForTimeout(200);
-check('undo removed the rows', (await seatCount()) === initial, `${await seatCount()}`);
+check( 'exit-section control appears', await page.locator( '#dz-exit' ).isVisible() );
+const sectionTitle = await page.locator( '.insp-title' ).innerText();
+check( 'panel narrows to the section', /section/i.test( sectionTitle ), sectionTitle );
 
-await page.click('button[data-action=redo]');
-await page.waitForTimeout(200);
-check('redo restored them', (await seatCount()) === afterRows);
+console.log( 'Designer: inspect and edit a row' );
+await page.evaluate( () => {
+	const editor = window.__editor;
+	const row = editor.container().objects.find( ( o ) => o.type === 'row' );
+	editor.selection = [ row.key ];
+	editor.onSelectionChange();
+	editor.draw();
+} );
+await page.waitForTimeout( 300 );
 
-console.log('Editor: canvas interaction');
-const box = await page.locator('#editor-canvas').boundingBox();
-// Marquee-drag across part of the map to select seats.
-await page.mouse.move(box.x + 40, box.y + 40);
+const fields = await page.locator( '.insp-field label' ).allInnerTexts();
+check( 'row panel shows the designer fields',
+	[ 'Number of seats', 'Rotation', 'Curve', 'Seat spacing' ].every( ( f ) => fields.includes( f ) ),
+	fields.slice( 0, 8 ).join( ', ' ) );
+check( 'row labeling fields present',
+	[ 'Enabled', 'Label', 'Displayed label', 'Position', 'Displayed type' ].every( ( f ) => fields.includes( f ) ) );
+check( 'row label position control rendered', ( await page.locator( '.insp-position__end' ).count() ) === 2 );
+
+const seatsBefore = await page.evaluate( () =>
+	window.__editor.container().objects.find( ( o ) => o.type === 'row' ).seats.length );
+
+// Type into "Number of seats" — the row has to rearrange, which is only possible because seat
+// positions are computed rather than stored.
+const seatCountInput = page.locator( '.insp-stepper input' ).first();
+await seatCountInput.fill( '7' );
+await page.waitForTimeout( 400 );
+
+const seatsAfter = await page.evaluate( () =>
+	window.__editor.container().objects.find( ( o ) => o.type === 'row' ).seats.length );
+check( 'changing the seat count rebuilds the row', seatsAfter === 7, `${ seatsBefore } -> ${ seatsAfter }` );
+
+const curveInput = page.locator( '.insp-stepper input' ).nth( 2 );
+await curveInput.fill( '40' );
+await page.waitForTimeout( 400 );
+const curved = await page.evaluate( () => {
+	const row = window.__editor.container().objects.find( ( o ) => o.type === 'row' );
+	const p = window.SeatmapChart.rowSeatPositions( row );
+	return Math.abs( p[ Math.floor( p.length / 2 ) ].y - p[ 0 ].y );
+} );
+check( 'curve bows the row', curved > 10, `middle sits ${ curved.toFixed( 1 ) } units off the chord` );
+
+console.log( 'Designer: undo and redo' );
+await page.click( '#dz-undo' );
+await page.waitForTimeout( 300 );
+const afterUndo = await page.evaluate( () =>
+	window.__editor.container().objects.find( ( o ) => o.type === 'row' ).curve );
+check( 'undo reverts the curve', afterUndo !== 40, `curve now ${ afterUndo }` );
+
+await page.click( '#dz-redo' );
+await page.waitForTimeout( 300 );
+check( 'redo restores it', ( await page.evaluate( () =>
+	window.__editor.container().objects.find( ( o ) => o.type === 'row' ).curve ) ) === 40 );
+
+console.log( 'Designer: leave the section' );
+await page.click( '#dz-exit' );
+await page.waitForTimeout( 500 );
+check( 'back at chart level', ! ( await page.locator( '#dz-exit' ).isVisible() ) );
+
+console.log( 'Designer: categories' );
+await page.locator( '.insp-link', { hasText: 'Manage' } ).first().click();
+await page.waitForSelector( '.dz-modal' );
+check( 'category manager lists the chart categories', ( await page.locator( '.dz-cat' ).count() ) === 5 );
+await page.click( '#dz-cat-close' );
+
+console.log( 'Designer: draw a general admission area' );
+const areasBefore = await page.evaluate( () =>
+	window.__editor.floor().objects.filter( ( o ) => o.type === 'area' ).length );
+
+await page.click( '.dz-tool[data-tool=area]' );
+
+// Draw on clear canvas: the selection-layer panel floats over the top-left corner of the stage.
+const drawX = box.x + box.width - 320;
+const drawY = box.y + 120;
+
+await page.mouse.move( drawX, drawY );
 await page.mouse.down();
-await page.mouse.move(box.x + box.width - 40, box.y + box.height - 40, { steps: 12 });
+await page.mouse.move( drawX + 200, drawY + 90, { steps: 10 } );
 await page.mouse.up();
-await page.waitForTimeout(200);
+await page.waitForTimeout( 500 );
 
-const selected = parseInt(await page.locator('#editor-status .stats li span').nth(2).innerText(), 10);
-check('marquee selected seats', selected > 0, `${selected} selected`);
+const areasAfter = await page.evaluate( () =>
+	window.__editor.floor().objects.filter( ( o ) => o.type === 'area' ).length );
+check( 'area drawn', areasAfter === areasBefore + 1, `${ areasBefore } -> ${ areasAfter }` );
 
-console.log('Editor: publish');
-await page.click('button[data-action=publish]');
-await page.waitForSelector('.toast', { timeout: 15000 });
-const toast = await page.locator('.toast').innerText();
-check('publish succeeded', /Published version \d+ with \d+ seats/.test(toast), toast);
-check('published count includes the new rows', toast.includes(String(afterRows)), toast);
+const areaFields = await page.locator( '.insp-field label' ).allInnerTexts();
+check( 'area panel shows shape and capacity fields',
+	[ 'Width', 'Height', 'Rotation', 'Corner radius', 'Translucent', 'Scale', 'Type', 'Places' ]
+		.every( ( f ) => areaFields.includes( f ) ),
+	areaFields.join( ', ' ) );
+check( 'general admission explained in the panel',
+	( await page.locator( '.insp-hint' ).allInnerTexts() )
+		.some( ( t ) => /Multiple users can select places/.test( t ) ) );
 
-// From here on the test deliberately provokes a rejection, so the 422 that follows is the
-// expected outcome rather than a defect. Anything logged before this point is not.
+console.log( 'Designer: publish' );
+await page.click( '#dz-publish' );
+await page.waitForSelector( '.toast', { timeout: 15000 } );
+await page.waitForTimeout( 800 );
+const toast = await page.locator( '.toast' ).innerText();
+check( 'published', /Published version \d+ with \d+ places/.test( toast ), toast );
+
 const errorsBeforeIntentionalFailure = errors.length;
-check('no console errors during normal use', errorsBeforeIntentionalFailure === 0, errors.join(' | '));
+check( 'no console errors during normal use', errorsBeforeIntentionalFailure === 0, errors.join( ' | ' ) );
 
-console.log('Editor: validation blocks a broken publish');
-await page.evaluate(() => {
-  // Push a seat off the canvas, exactly as a mis-drag would.
-  const g = window.__editor.geometry;
-  g.sections[0].rows[0].seats[0].x = 99999;
-  window.__editor.onChange(g);
-  window.__editor.draw();
-});
-await page.waitForTimeout(200);
-check('error surfaced in the side panel', (await page.locator('.issue--error').count()) > 0);
+console.log( 'Designer: the server refuses a broken chart' );
+await page.evaluate( () => {
+	// Drag a row clean off the canvas, exactly as a mis-drag would.
+	const editor = window.__editor;
+	const section = editor.floor().objects.find( ( o ) => o.type === 'section' );
+	section.objects.find( ( o ) => o.type === 'row' ).x = 99999;
+	editor.onChange( editor.chart );
+	// The chart checklist is what the panel shows when nothing is selected, so clear the selection
+	// to see it — the same thing a designer does by clicking empty canvas.
+	editor.clearSelection();
+	editor.draw();
+} );
+await page.waitForTimeout( 400 );
 
-await page.click('button[data-action=publish]');
-await page.waitForTimeout(1500);
-const errToast = await page.locator('.toast').innerText();
-check('server refused the broken map', /outside the canvas|cannot be published|errors/i.test(errToast), errToast);
-check('the refusal is an error toast', (await page.locator('.toast--error').count()) === 1);
+check( 'client flags it immediately', ( await page.locator( '.insp-issue--error' ).count() ) > 0 );
+check( 'and the checklist is no longer clean',
+	( await page.locator( '.insp-check.is-bad' ).count() ) > 0 );
 
-const unexpected = errors.slice(0, errorsBeforeIntentionalFailure);
-console.log('\nUnexpected console errors: ' + (unexpected.length ? unexpected.join(' | ') : 'none'));
-if (unexpected.length) failures++;
+await page.click( '#dz-publish' );
+await page.waitForTimeout( 2000 );
+const refusal = await page.locator( '.toast' ).innerText();
+check( 'server refuses it', /outside the canvas|cannot be published/i.test( refusal ), refusal );
+check( 'shown as an error', ( await page.locator( '.toast--error' ).count() ) === 1 );
 
-await page.screenshot({ path: '/tmp/editor.png', fullPage: false });
+const unexpected = errors.slice( 0, errorsBeforeIntentionalFailure );
+console.log( '\nUnexpected console errors: ' + ( unexpected.length ? unexpected.join( ' | ' ) : 'none' ) );
+if ( unexpected.length ) failures++;
+
+await page.screenshot( { path: '/tmp/designer.png' } );
 await browser.close();
 
-console.log(failures === 0 ? '\nALL EDITOR CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+console.log( failures === 0 ? '\nALL DESIGNER CHECKS PASSED' : `\n${ failures } CHECK(S) FAILED` );
+process.exit( failures === 0 ? 0 : 1 );

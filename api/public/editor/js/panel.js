@@ -848,10 +848,14 @@
 					return;
 				}
 
+				var issues = ( error.details && error.details.errors ) || [];
 				var detail = '';
 
-				if ( error.details && error.details.errors ) {
-					detail = ' ' + error.details.errors.map( function ( issue ) { return issue.message; } ).join( ' ' );
+				// One example plus a count. Pasting every failing seat into a toast produces a
+				// paragraph nobody reads; the full list is in the panel beside it.
+				if ( issues.length ) {
+					detail = ' ' + issues[ 0 ].message +
+						( issues.length > 1 ? ' (and ' + ( issues.length - 1 ) + ' more)' : '' );
 				}
 
 				self.toast( error.message + detail, true );

@@ -27,6 +27,14 @@
 	box-sizing: border-box;
 }
 
+/*
+ * A class that sets `display` beats the user-agent rule for [hidden], so an element toggled with
+ * `el.hidden = true` would stay on screen. Making it explicit avoids that whole class of bug.
+ */
+[hidden] {
+	display: none !important;
+}
+
 body {
 	margin: 0;
 	font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -474,10 +482,12 @@ select {
 
 .insp-section:first-of-type { border-block-start: none; }
 
-.insp-section__head {
+.insp-section__head,
+.insp-row--head {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
+	gap: 0.5rem;
 	margin-block-end: 0.4rem;
 }
 

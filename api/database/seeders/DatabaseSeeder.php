@@ -149,10 +149,14 @@ class DatabaseSeeder extends Seeder
                 ],
             );
 
+            // One price zone per chart category, so every bookable object is priced the moment the
+            // event is created.
             foreach ([
                 ['premium', 'Premium', 6500, '#b8860b'],
                 ['standard', 'Standard', 3500, '#2d6cdf'],
                 ['balcony', 'Balcony', 1900, '#3f9c6d'],
+                ['standing', 'Standing', 2200, '#e0526a'],
+                ['accessible', 'Wheelchair space', 3500, '#7b5ea7'],
             ] as [$key, $zoneName, $amount, $color]) {
                 EventPriceZone::firstOrCreate(
                     ['event_id' => $event->id, 'key' => $key],
@@ -187,71 +191,178 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * A stalls block plus a smaller balcony, priced by zone, with a stage and two aisles — enough
-     * shape to exercise the editor and the widget rather than a bare grid.
+     * A chart with the shapes a real venue has: a curved stalls block inside a section, a straight
+     * balcony, a standing pit sold by quantity, cabaret tables sold whole, a stage, and the icons
+     * that tell people where the doors are.
+     *
+     * Rows carry an anchor, rotation, curve and spacing — seat positions follow from those.
      */
     private function auditorium(int $rows, int $seatsPerRow): array
     {
-        $sections = [];
-
-        $sections[] = [
-            'key' => 'stalls',
-            'name' => 'Stalls',
-            'color' => '#2d6cdf',
-            'rows' => $this->rowsFor($rows, $seatsPerRow, startY: 220, zoneFor: function (int $rowIndex) {
-                return $rowIndex < 3 ? 'premium' : 'standard';
-            }),
+        $categories = [
+            ['key' => 'premium', 'label' => 'Premium', 'color' => '#b8860b', 'accessible' => false],
+            ['key' => 'standard', 'label' => 'Standard', 'color' => '#2d6cdf', 'accessible' => false],
+            ['key' => 'balcony', 'label' => 'Balcony', 'color' => '#3f9c6d', 'accessible' => false],
+            ['key' => 'standing', 'label' => 'Standing', 'color' => '#e0526a', 'accessible' => false],
+            ['key' => 'accessible', 'label' => 'Wheelchair space', 'color' => '#7b5ea7', 'accessible' => true],
         ];
 
+        $stalls = $this->section('stalls', 'Stalls', [[300, 300], [900, 300], [960, 700], [240, 700]]);
+
+        for ($r = 0; $r < $rows; $r++) {
+            $stalls['objects'][] = $this->row(
+                key: 'stalls-'.$r,
+                label: $this->rowLetter($r),
+                seats: $seatsPerRow,
+                x: 600,
+                y: 340 + $r * 30,
+                // The front rows curve towards the stage and flatten as they go back, which is what
+                // a real auditorium does.
+                curve: max(0, 18 - $r * 1.5),
+                category: $r < 3 ? 'premium' : 'standard',
+                accessibleEnds: $r === 0,
+            );
+        }
+
+        $balcony = $this->section('balcony', 'Balcony', [[320, 760], [880, 760], [880, 900], [320, 900]]);
         $balconyRows = max(2, intdiv($rows, 3));
 
-        $sections[] = [
-            'key' => 'balcony',
-            'name' => 'Balcony',
-            'color' => '#3f9c6d',
-            'rows' => $this->rowsFor($balconyRows, max(4, $seatsPerRow - 4), startY: 220 + ($rows * 34) + 80, zoneFor: fn () => 'balcony'),
-        ];
+        for ($r = 0; $r < $balconyRows; $r++) {
+            $balcony['objects'][] = $this->row(
+                key: 'balcony-'.$r,
+                label: $this->rowLetter($r),
+                seats: max(4, $seatsPerRow - 4),
+                x: 600,
+                y: 800 + $r * 30,
+                curve: 0,
+                category: 'balcony',
+            );
+        }
 
         return [
-            'canvas' => ['width' => 1200, 'height' => 900, 'background' => null],
-            'sections' => $sections,
-            'shapes' => [
-                ['kind' => 'stage', 'x' => 380, 'y' => 80, 'width' => 440, 'height' => 70, 'label' => 'Stage'],
-                ['kind' => 'entrance', 'x' => 120, 'y' => 820, 'width' => 90, 'height' => 30, 'label' => 'Entrance'],
-                ['kind' => 'exit', 'x' => 990, 'y' => 820, 'width' => 90, 'height' => 30, 'label' => 'Exit'],
-            ],
-            'texts' => [
-                ['text' => 'Main auditorium', 'x' => 520, 'y' => 40, 'size' => 20],
-            ],
+            'version' => 2,
+            'name' => 'Main auditorium',
+            // The middle of the stage: what "best available" sorts towards.
+            'focalPoint' => ['x' => 600, 'y' => 170],
+            'categories' => $categories,
+            'floors' => [[
+                'key' => '1',
+                'name' => 'Level 1',
+                'canvas' => ['width' => 1200, 'height' => 1000, 'background' => null],
+                'objects' => [
+                    [
+                        'type' => 'shape', 'key' => 'stage', 'layer' => 'background', 'kind' => 'stage',
+                        'x' => 420, 'y' => 120, 'width' => 360, 'height' => 70, 'rotation' => 0,
+                        'cornerRadius' => 6, 'points' => null, 'fill' => null, 'label' => 'Stage',
+                    ],
+                    $stalls,
+                    $balcony,
+                    [
+                        'type' => 'area', 'key' => 'pit', 'layer' => 'interactive',
+                        'shape' => [
+                            'kind' => 'rect', 'x' => 300, 'y' => 210, 'width' => 600, 'height' => 70,
+                            'rotation' => 0, 'cornerRadius' => 24, 'points' => null,
+                        ],
+                        'translucent' => false, 'scale' => 1, 'categoryKey' => 'standing', 'entrance' => 'Door A',
+                        'labeling' => [
+                            'label' => 'Standing pit', 'displayedLabel' => null, 'visible' => true,
+                            'fontSize' => 22, 'positionX' => 0, 'positionY' => 0, 'locked' => false,
+                        ],
+                        'capacity' => ['type' => 'generalAdmission', 'places' => 250],
+                    ],
+                    $this->table('cabaret-1', 'Table 1', 180, 420),
+                    $this->table('cabaret-2', 'Table 2', 180, 560),
+                    $this->table('cabaret-3', 'Table 3', 1020, 420),
+                    $this->table('cabaret-4', 'Table 4', 1020, 560),
+                    ['type' => 'icon', 'key' => 'icon-entrance', 'layer' => 'foreground', 'name' => 'entrance', 'x' => 180, 'y' => 940, 'size' => 24, 'rotation' => 0],
+                    ['type' => 'icon', 'key' => 'icon-exit', 'layer' => 'foreground', 'name' => 'exit', 'x' => 1020, 'y' => 940, 'size' => 24, 'rotation' => 0],
+                    ['type' => 'icon', 'key' => 'icon-bar', 'layer' => 'foreground', 'name' => 'bar', 'x' => 600, 'y' => 950, 'size' => 24, 'rotation' => 0],
+                    [
+                        'type' => 'text', 'key' => 'text-title', 'layer' => 'foreground',
+                        'text' => 'Main auditorium', 'x' => 520, 'y' => 80,
+                        'fontSize' => 24, 'color' => null, 'rotation' => 0,
+                    ],
+                ],
+            ]],
         ];
     }
 
-    private function rowsFor(int $rows, int $seatsPerRow, int $startY, callable $zoneFor): array
+    private function section(string $key, string $label, array $polygon): array
     {
+        return [
+            'type' => 'section', 'key' => $key, 'layer' => 'interactive', 'label' => $label,
+            'labeling' => ['label' => $label, 'displayedLabel' => null, 'visible' => true, 'fontSize' => 18, 'locked' => false],
+            'polygon' => $polygon, 'categoryKey' => null, 'color' => null, 'entrance' => null,
+            'objects' => [],
+        ];
+    }
+
+    private function row(
+        string $key,
+        string $label,
+        int $seats,
+        float $x,
+        float $y,
+        float $curve,
+        string $category,
+        bool $accessibleEnds = false,
+    ): array {
         $list = [];
 
-        for ($r = 0; $r < $rows; $r++) {
-            $rowName = chr(ord('A') + $r);
-            $seats = [];
-
-            for ($s = 1; $s <= $seatsPerRow; $s++) {
-                // A gap in the middle stands in for the central aisle.
-                $aisleOffset = $s > intdiv($seatsPerRow, 2) ? 40 : 0;
-
-                $seats[] = [
-                    'key' => $rowName.'-'.$s,
-                    'label' => (string) $s,
-                    'x' => 300 + ($s * 34) + $aisleOffset,
-                    'y' => $startY + ($r * 34),
-                    'shape' => 'chair',
-                    'zone_key' => $zoneFor($r),
-                    'accessible' => $r === 0 && $s <= 2,
-                ];
-            }
-
-            $list[] = ['key' => $rowName, 'name' => 'Row '.$rowName, 'seats' => $seats];
+        for ($i = 1; $i <= $seats; $i++) {
+            $list[] = [
+                'type' => 'seat',
+                'key' => $key.'-'.$i,
+                'label' => (string) $i,
+                // Wheelchair spaces at the ends of the front row, where they belong.
+                'categoryKey' => $accessibleEnds && ($i === 1 || $i === $seats) ? 'accessible' : null,
+                'accessible' => $accessibleEnds && ($i === 1 || $i === $seats),
+                'entrance' => null,
+            ];
         }
 
-        return $list;
+        return [
+            'type' => 'row', 'key' => 'row-'.$key, 'layer' => 'interactive',
+            'x' => $x, 'y' => $y, 'rotation' => 0, 'curve' => $curve, 'seatSpacing' => 4,
+            'categoryKey' => $category, 'entrance' => null,
+            'labeling' => [
+                'enabled' => true, 'label' => $label, 'displayedLabel' => null,
+                'position' => 'both', 'displayedType' => 'Row', 'locked' => false,
+            ],
+            'seatLabeling' => ['scheme' => 'numeric', 'displayedType' => 'Seat', 'locked' => false],
+            'seats' => $list,
+        ];
+    }
+
+    /** A cabaret table: eight chairs, sold as one booking. */
+    private function table(string $key, string $label, float $x, float $y): array
+    {
+        $seats = [];
+
+        for ($i = 1; $i <= 8; $i++) {
+            $seats[] = ['type' => 'seat', 'key' => $key.'-'.$i, 'label' => (string) $i, 'categoryKey' => null, 'accessible' => false, 'entrance' => null];
+        }
+
+        return [
+            'type' => 'table', 'key' => $key, 'layer' => 'interactive', 'label' => $label,
+            'labeling' => ['label' => $label, 'displayedLabel' => null, 'visible' => true, 'fontSize' => 13, 'locked' => false],
+            'shape' => 'round', 'x' => $x, 'y' => $y, 'width' => 90, 'height' => 90, 'rotation' => 0,
+            'bookAs' => 'table', 'categoryKey' => 'premium', 'entrance' => null,
+            'seatLabeling' => ['scheme' => 'numeric', 'displayedType' => 'Seat', 'locked' => false],
+            'seats' => $seats,
+        ];
+    }
+
+    private function rowLetter(int $index): string
+    {
+        $name = '';
+        $index += 1;
+
+        while ($index > 0) {
+            $name = chr(65 + (($index - 1) % 26)).$name;
+            $index = intdiv($index - 1, 26);
+        }
+
+        return $name;
     }
 }
