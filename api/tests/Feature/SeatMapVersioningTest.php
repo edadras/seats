@@ -176,6 +176,34 @@ class SeatMapVersioningTest extends TestCase
     }
 
     #[Test]
+    public function listing_maps_does_not_lazy_load_their_versions(): void
+    {
+        // Presenting a page of maps used to query twice per map for its published and draft
+        // versions. In production that is an N+1; outside it, the lazy-load guard turns the whole
+        // listing into a 500 — which is how it was found.
+        $ctx = $this->makeSellableEvent();
+
+        $this->asTenant($ctx['tenant'], function () use ($ctx) {
+            \App\Models\SeatMap::create(['venue_id' => $ctx['venue']->id, 'name' => 'Second hall']);
+        });
+
+        $user = $this->makeUser($ctx['tenant']);
+        $token = $this->postJson('/v1/auth/login', [
+            'email' => $user->email, 'password' => 'password',
+        ])->assertOk()->json('token');
+
+        $response = $this->withToken($token)->getJson('/v1/seat-maps')->assertOk();
+
+        $this->assertCount(2, $response->json('data'));
+
+        $published = collect($response->json('data'))->firstWhere('name', 'Main hall');
+        $this->assertSame(15, $published['published_version']['seat_count']);
+
+        $unpublished = collect($response->json('data'))->firstWhere('name', 'Second hall');
+        $this->assertNull($unpublished['published_version'] ?? null);
+    }
+
+    #[Test]
     public function a_draft_with_errors_is_saved_but_refused_at_publish(): void
     {
         // Saving must stay permissive — an organiser mid-edit has a broken map by definition — while

@@ -24,6 +24,9 @@ class SeatMapController extends Controller
     public function index(Request $request)
     {
         $maps = SeatMap::query()
+            // Eager loaded, or presenting a page of maps would issue two queries per map — and
+            // outside production the lazy-load guard turns that into a 500 rather than a slow page.
+            ->with(['publishedVersion', 'versions'])
             ->when($request->query('venue_id'), fn ($q, $id) => $q->where('venue_id', $id))
             ->orderBy('name')
             ->paginate(min((int) $request->query('per_page', 25), 100));
@@ -65,11 +68,13 @@ class SeatMapController extends Controller
 
         $this->audit->record('seat_map.created', $map, ['name' => $map->name]);
 
-        return response()->json($this->present($map->fresh()), 201);
+        return response()->json($this->present($map->fresh(['publishedVersion', 'versions'])), 201);
     }
 
     public function show(SeatMap $map)
     {
+        $map->load(['publishedVersion', 'versions']);
+
         return response()->json($this->present($map));
     }
 
@@ -82,7 +87,7 @@ class SeatMapController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
         ]));
 
-        return response()->json($this->present($map->fresh()));
+        return response()->json($this->present($map->fresh(['publishedVersion', 'versions'])));
     }
 
     public function versions(SeatMap $map)
@@ -166,8 +171,11 @@ class SeatMapController extends Controller
 
     private function present(SeatMap $map, bool $withGeometry = true): array
     {
+        $map->loadMissing(['publishedVersion', 'versions']);
+
         $published = $map->publishedVersion;
-        $draft = $map->draftVersion();
+        // Read from the loaded collection rather than querying again, so a listing stays one query.
+        $draft = $map->versions->where('status', 'draft')->sortByDesc('version')->first();
 
         return [
             'id' => $map->id,

@@ -46,7 +46,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\ResolveTenantFromUser::class,
             'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,
             'device' => \App\Http\Middleware\ResolveCheckinDevice::class,
-            'embed.cors' => \App\Http\Middleware\EmbedCors::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

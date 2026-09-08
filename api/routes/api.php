@@ -61,7 +61,7 @@ Route::prefix('v1')->group(function () {
     // ---- Public widget ------------------------------------------------------------------
     // No authentication: the browser has no secret to hold. Rate limits are per IP, and hold
     // creation is limited harder than reads because it consumes inventory (threat T8).
-    Route::prefix('embed')->middleware('embed.cors')->group(function () {
+    Route::prefix('embed')->group(function () {
         Route::middleware('throttle:120,1')->group(function () {
             Route::get('events/{public_id}', [EmbedController::class, 'show']);
             Route::get('events/{public_id}/seat-map', [EmbedController::class, 'seatMap']);

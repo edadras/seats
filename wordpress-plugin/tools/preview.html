@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seat picker preview</title>
+
+<!--
+	Preview the seat picker without a WordPress install.
+
+	This loads the plugin's real widget.js and widget.css — not a copy — and points them at a live
+	Seatmap API. Only the two store-side REST routes are stood in for below, because those are the
+	part WordPress normally provides.
+
+	Usage: serve this directory over HTTP and open
+	  preview.html?api=http://127.0.0.1:8000&event=evt_xxxxxxxx
+
+	Holding seats here creates real holds against that event, so point it at a test tenant.
+-->
+
+<link rel="stylesheet" href="../seatmap-connect/assets/css/widget.css">
+<style>
+	body {
+		margin: 0;
+		font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+		background: #f5f6f8;
+		color: #1c2129;
+	}
+
+	.preview {
+		max-inline-size: 68rem;
+		margin: 0 auto;
+		padding: 1.5rem;
+	}
+
+	.preview__banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1rem;
+		align-items: baseline;
+		padding: 0.6rem 0.9rem;
+		margin-block-end: 1.25rem;
+		border: 1px solid #d7dae0;
+		border-inline-start: 4px solid #9a6a00;
+		border-radius: 8px;
+		background: #fff;
+		font-size: 0.9em;
+	}
+
+	.preview__banner strong { color: #9a6a00; }
+	.preview__banner code { background: #f5f6f8; padding: 0.1rem 0.3rem; border-radius: 4px; }
+
+	.preview__cart {
+		margin-block-start: 1.5rem;
+		padding: 1rem;
+		border: 1px solid #d7dae0;
+		border-radius: 10px;
+		background: #fff;
+	}
+
+	.preview__cart h2 { margin-block-start: 0; font-size: 1rem; }
+	.preview__cart pre { overflow: auto; font-size: 0.82em; margin: 0; }
+	.preview__cart[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div class="preview">
+	<div class="preview__banner">
+		<strong>Preview</strong>
+		<span>The plugin's own widget, running against <code id="api-label"></code>. WordPress's two
+		store routes are stood in for; everything else is the real thing.</span>
+	</div>
+
+	<!-- Same markup the plugin renders: the widget's CSS custom properties are defined on this class. -->
+	<div class="seatmap-widget" id="picker">Loading…</div>
+
+	<div class="preview__cart" id="cart" hidden>
+		<h2>What the store would put in the cart</h2>
+		<pre id="cart-json"></pre>
+	</div>
+</div>
+
+<script>
+( function () {
+	'use strict';
+
+	var params = new URLSearchParams( window.location.search );
+	var api = ( params.get( 'api' ) || 'http://127.0.0.1:8000' ).replace( /\/$/, '' );
+	var eventId = params.get( 'event' );
+
+	document.getElementById( 'api-label' ).textContent = api;
+
+	if ( ! eventId ) {
+		document.getElementById( 'picker' ).textContent =
+			'Add ?event=evt_xxxxxxxx to the URL (and ?api=… if the API is not on port 8000).';
+
+		return;
+	}
+
+	/*
+	 * Stand in for the two routes the plugin registers in WordPress.
+	 *
+	 * In a real store these live on the site: the browser talks to the store, and the store talks
+	 * to the API — which is what keeps prices server-side. Here they are translated straight to the
+	 * public embed endpoints so the widget can run with no WordPress at all.
+	 */
+	var STORE = 'https://preview.local/wp-json/seatmap/v1';
+	var nativeFetch = window.fetch.bind( window );
+
+	window.fetch = function ( input, init ) {
+		var url = String( input );
+
+		if ( 0 !== url.indexOf( STORE ) ) {
+			return nativeFetch( input, init );
+		}
+
+		var path = url.slice( STORE.length );
+
+		if ( 0 === path.indexOf( '/availability/' ) ) {
+			var since = path.indexOf( '?' ) === -1 ? '' : path.slice( path.indexOf( '?' ) );
+
+			return nativeFetch(
+				api + '/v1/embed/events/' + encodeURIComponent( eventId ) + '/availability' + since
+			);
+		}
+
+		if ( 0 === path.indexOf( '/hold' ) ) {
+			var body = JSON.parse( init.body );
+
+			return nativeFetch( api + '/v1/embed/events/' + encodeURIComponent( eventId ) + '/holds', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( {
+					seat_ids: body.seat_ids || [],
+					areas: body.areas || {},
+					session_id: sessionId(),
+				} ),
+			} ).then( function ( response ) {
+				return response.json().then( function ( data ) {
+					if ( ! response.ok ) {
+						// Reshape the API's error envelope into the one the widget expects from the
+						// store, so the "someone just took that seat" path is exercised too.
+						return jsonResponse( response.status, {
+							message: data.error && data.error.message,
+							data: {
+								unavailable_seat_ids: ( data.error.details || {} ).unavailable_seat_ids || [],
+								unavailable_capacity_object_ids:
+									( data.error.details || {} ).unavailable_capacity_object_ids || [],
+							},
+						} );
+					}
+
+					showCart( data );
+
+					// A real store redirects to its cart. Here the "cart" is the panel below, so
+					// hand back a fragment — assigning a full URL would reload the page and wipe it.
+					return jsonResponse( 200, {
+						hold_token: data.hold_token,
+						expires_at: data.expires_at,
+						total_amount: data.total_amount,
+						currency: data.currency,
+						seats: data.seats,
+						areas: data.areas,
+						cart_url: '#cart',
+					} );
+				} );
+			} );
+		}
+
+		return nativeFetch( input, init );
+	};
+
+	function jsonResponse( status, payload ) {
+		return new Response( JSON.stringify( payload ), {
+			status: status,
+			headers: { 'Content-Type': 'application/json' },
+		} );
+	}
+
+	function sessionId() {
+		var id = window.sessionStorage.getItem( 'seatmap_preview_session' );
+
+		if ( ! id ) {
+			id = 'preview-' + Math.random().toString( 36 ).slice( 2 );
+			window.sessionStorage.setItem( 'seatmap_preview_session', id );
+		}
+
+		return id;
+	}
+
+	function showCart( hold ) {
+		var lines = ( hold.seats || [] ).map( function ( seat ) {
+			return {
+				line: [ seat.section, 'row ' + seat.row, 'seat ' + seat.label ].filter( Boolean ).join( ', ' ),
+				quantity: 1,
+				amount: seat.amount,
+			};
+		} ).concat( ( hold.areas || [] ).map( function ( area ) {
+			return { line: area.quantity + ' places in ' + area.label, quantity: area.quantity, amount: area.amount };
+		} ) );
+
+		document.getElementById( 'cart-json' ).textContent = JSON.stringify( {
+			hold_token: hold.hold_token,
+			expires_at: hold.expires_at,
+			currency: hold.currency,
+			total_amount: hold.total_amount,
+			lines: lines,
+			// The signature is what stops a price edited in the browser from reaching the cart.
+			price_snapshot_signature: ( hold.price_snapshot || {} ).signature,
+		}, null, 2 );
+
+		document.getElementById( 'cart' ).hidden = false;
+	}
+
+	// Fetch what the plugin's PHP fetches server-side before it renders the widget.
+	Promise.all( [
+		nativeFetch( api + '/v1/embed/events/' + encodeURIComponent( eventId ) ).then( function ( r ) { return r.json(); } ),
+		nativeFetch( api + '/v1/embed/events/' + encodeURIComponent( eventId ) + '/seat-map' ).then( function ( r ) { return r.json(); } ),
+	] ).then( function ( results ) {
+		var event = results[ 0 ];
+		var map = results[ 1 ];
+
+		if ( event.error || map.error ) {
+			document.getElementById( 'picker' ).textContent =
+				( event.error || map.error ).message || 'That event could not be loaded.';
+
+			return;
+		}
+
+		window.seatmapBoot = window.seatmapBoot || [];
+		window.seatmapBoot.push( {
+			containerId: 'picker',
+			eventPublicId: eventId,
+			event: event,
+			geometry: map.geometry,
+			restUrl: STORE,
+			nonce: 'preview',
+			currency: { code: event.currency, symbol: symbolFor( event.currency ), decimals: 2, position: 'left' },
+			isRtl: document.documentElement.dir === 'rtl',
+			i18n: {
+				selectSeats: 'Select your seats',
+				available: 'Available',
+				unavailable: 'Unavailable',
+				selected: 'Selected',
+				yourSelection: 'Your selection',
+				noneSelected: 'No seats selected yet.',
+				total: 'Total',
+				addToCart: 'Reserve and add to cart',
+				working: 'Reserving…',
+				seatTaken: 'Sorry, one of those seats was just taken. It has been removed from your selection.',
+				genericError: 'Something went wrong. Please try again.',
+				maxSeats: 'You can select up to %d seats.',
+				seatLabel: '%1$s, row %2$s, seat %3$s — %4$s',
+				seatUnavailable: '%1$s, row %2$s, seat %3$s — unavailable',
+				zoomIn: 'Zoom in',
+				zoomOut: 'Zoom out',
+				resetView: 'Reset view',
+				held: 'Seats held until %s',
+				expired: 'Your reservation expired. Please choose your seats again.',
+				stage: 'Stage',
+				standingAreas: 'Standing and tables',
+				placesLeft: '%d left',
+				soldOut: 'Sold out',
+				addOne: 'Add one place in %s',
+				removeOne: 'Remove one place in %s',
+				areaFull: 'That area filled up while you were choosing. Please pick a different number of places.',
+			},
+		} );
+
+		var script = document.createElement( 'script' );
+		script.src = '../seatmap-connect/assets/js/widget.js';
+		document.body.appendChild( script );
+	} );
+
+	function symbolFor( code ) {
+		return { EUR: '€', GBP: '£', USD: '$' }[ code ] || ( code + ' ' );
+	}
+} )();
+</script>
+</body>
+</html>
