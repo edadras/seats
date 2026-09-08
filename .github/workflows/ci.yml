@@ -88,11 +88,22 @@ jobs:
           # the concurrency tests would still pass by luck on a quiet runner — so assert directly.
           for index in allocations_one_active_per_seat \
                        allocations_unique_per_external_order_seat \
-                       hold_items_one_active_per_seat; do
+                       hold_items_one_active_per_seat \
+                       hold_items_capacity_active \
+                       allocations_capacity_active; do
             psql -h 127.0.0.1 -U seatmap -d seatmap_test -tAc \
               "SELECT 1 FROM pg_indexes WHERE indexname = '$index'" | grep -q 1 \
               || { echo "::error::Missing integrity index $index"; exit 1; }
             echo "  present: $index"
+          done
+
+          # Capacity objects are guarded by a check constraint rather than a unique index: a hold
+          # or allocation must be a named seat or a quantity, never both and never neither.
+          for constraint in hold_items_seat_xor_capacity allocations_seat_xor_capacity; do
+            psql -h 127.0.0.1 -U seatmap -d seatmap_test -tAc \
+              "SELECT 1 FROM pg_constraint WHERE conname = '$constraint'" | grep -q 1 \
+              || { echo "::error::Missing integrity constraint $constraint"; exit 1; }
+            echo "  present: $constraint"
           done
 
       - name: Unit and feature tests
@@ -106,7 +117,7 @@ jobs:
         run: ./vendor/bin/phpunit
 
   editor:
-    name: Editor geometry
+    name: Chart model
     runs-on: ubuntu-latest
 
     defaults:
@@ -120,7 +131,7 @@ jobs:
         with:
           node-version: '22'
 
-      - run: node --test tests/js/geometry.test.cjs
+      - run: node --test tests/js/chart.test.cjs
 
   contract:
     name: OpenAPI contract
@@ -162,3 +173,15 @@ jobs:
         run: |
           node --check wordpress-plugin/seatmap-connect/assets/js/widget.js
           node --check wordpress-plugin/seatmap-connect/blocks/editor.js
+
+      - name: Check designer JavaScript parses
+        run: |
+          for file in api/public/editor/js/*.js; do node --check "$file"; done
+
+      - name: The PHP and JavaScript seat maths must agree
+        run: |
+          # Regenerate the golden fixture from the JavaScript and fail if it differs from the one
+          # committed — the PHP unit tests assert against that file, so a silent drift between the
+          # two implementations would otherwise go unnoticed until seats moved.
+          cd api && node tests/js/generate-golden.cjs
+          git diff --exit-code tests/Fixtures/row-geometry-golden.json

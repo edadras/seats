@@ -534,13 +534,19 @@ paths:
           application/json:
             schema:
               type: object
-              required: [seat_ids, session_id]
+              required: [session_id]
+              description: At least one of `seat_ids` or `areas` must be present.
               properties:
                 seat_ids:
                   type: array
-                  minItems: 1
                   maxItems: 20
                   items: { type: string, format: uuid }
+                areas:
+                  type: object
+                  description: |
+                    Standing room and whole tables, asked for by quantity: capacity object id to
+                    number of places. Counted against the same per-order limit as named seats.
+                  additionalProperties: { type: integer, minimum: 1 }
                 session_id:
                   type: string
                   description: Opaque per-browser identifier, used for rate limiting and re-hold.
@@ -551,7 +557,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Hold" }
         "409":
-          description: One or more seats are unavailable
+          description: One or more seats, or an area, are no longer available
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SeatUnavailableError" }
@@ -985,7 +991,7 @@ components:
             code:
               type: string
               description: Stable machine-readable identifier.
-              examples: [seat_unavailable, hold_expired, invalid_signature, tenant_limit_reached]
+              examples: [seat_unavailable, capacity_unavailable, hold_expired, invalid_signature, tenant_limit_reached]
             message: { type: string }
             details:
               type: object
@@ -1080,89 +1086,216 @@ components:
     Geometry:
       type: object
       description: |
-        Layout only. Contains no availability or sale state — that is derived (ADR-0002).
-      required: [canvas, sections]
+        A chart: what a venue looks like. It says nothing about any event — whether a seat is free
+        is derived per event from overrides, holds and allocations (ADR-0002).
+
+        **A row does not store seat coordinates.** It stores an anchor, a rotation, a curve and a
+        seat spacing, and positions follow from those. That is what makes "Number of seats",
+        "Rotation", "Curve" and "Seat spacing" editable fields in the designer rather than
+        read-outs. `curve` is the sagitta as a percentage of the row's chord, so the number means
+        the same on a six-seat row and a sixty-seat one, and seats are spread evenly along the arc
+        rather than by equal angle.
+
+        **Keys are identity; labels are presentation.** Renumbering a row or renaming a section
+        changes what is printed and never what a sold ticket points at.
+      required: [version, floors]
       properties:
-        canvas:
-          type: object
+        version: { type: integer, const: 2 }
+        name: { type: string }
+        focalPoint:
+          type: [object, "null"]
+          description: The spot the venue faces, usually the middle of the stage. What "best available" sorts towards.
           properties:
-            width: { type: number, minimum: 100, maximum: 20000 }
-            height: { type: number, minimum: 100, maximum: 20000 }
-            background: { type: [string, "null"] }
-        sections:
+            x: { type: number }
+            y: { type: number }
+        categories:
           type: array
+          description: Price tiers. Every bookable object needs one before an event can be priced.
           items:
             type: object
-            required: [key, name, rows]
+            required: [key, label]
             properties:
-              key: { type: string, description: Stable within the map; used to carry seat ids forward. }
+              key: { type: string }
+              label: { type: string }
+              color: { type: string }
+              accessible: { type: boolean, default: false }
+        floors:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [key, canvas, objects]
+            properties:
+              key: { type: string }
               name: { type: string }
-              color: { type: [string, "null"] }
-              rows:
+              canvas:
+                type: object
+                properties:
+                  width: { type: number, minimum: 100, maximum: 20000 }
+                  height: { type: number, minimum: 100, maximum: 20000 }
+                  background: { type: [string, "null"] }
+              objects:
                 type: array
-                items:
-                  type: object
-                  required: [key, name, seats]
-                  properties:
-                    key: { type: string }
-                    name: { type: string }
-                    seats:
-                      type: array
-                      items:
-                        type: object
-                        required: [key, label, x, y]
-                        properties:
-                          key: { type: string }
-                          seat_id:
-                            type: [string, "null"]
-                            format: uuid
-                            description: |
-                              Present on the embed seat-map response only. The stable id to send
-                              when holding this seat, and the key to join availability on — never
-                              pair geometry with availability by position.
-                          label: { type: string }
-                          x: { type: number }
-                          y: { type: number }
-                          rotation: { type: number, default: 0 }
-                          shape: { type: string, enum: [circle, square, chair], default: circle }
-                          zone_key: { type: [string, "null"] }
-                          accessible: { type: boolean, default: false }
-        shapes:
+                description: Ordered; the array order is the paint order.
+                items: { $ref: "#/components/schemas/ChartObject" }
+
+    ChartObject:
+      type: object
+      description: |
+        One object on a floor, or inside a section. `type` decides which fields apply.
+
+        `row`, `section`, `area`, `table` and `booth` carry bookable places. `shape`, `text`,
+        `image` and `icon` are scenery and are placed on one of four layers.
+      required: [type, key]
+      properties:
+        type:
+          type: string
+          enum: [row, section, area, table, booth, shape, text, image, icon]
+        key:
+          type: string
+          description: Stable for the life of the map. Never reused — a sold seat points at it.
+        layer:
+          type: string
+          enum: [surroundings, background, interactive, foreground]
+          default: interactive
+        categoryKey: { type: [string, "null"] }
+        entrance: { type: [string, "null"] }
+        labeling:
+          type: object
+          description: |
+            How the object is labelled. `displayedLabel` overrides what a buyer sees; leave it null
+            to show `label` itself. `locked` means the label comes from an automatic scheme.
+          properties:
+            enabled: { type: boolean }
+            label: { type: string }
+            displayedLabel: { type: [string, "null"] }
+            position:
+              type: string
+              enum: [both, start, end, none]
+              description: Which ends of a row show its label.
+            displayedType: { type: string }
+            visible: { type: boolean }
+            fontSize: { type: number }
+            positionX: { type: number }
+            positionY: { type: number }
+            locked: { type: boolean }
+        x: { type: number, description: "row, table, text, icon: the anchor." }
+        y: { type: number }
+        rotation: { type: number }
+        curve:
+          type: number
+          description: "row: the sagitta as a percentage of the chord. 0 is straight; the sign chooses the direction."
+        seatSpacing:
+          type: number
+          description: "row: the gap between chairs, so the distance between centres is 18 + this."
+        seats:
           type: array
-          description: Stage, aisles, walls, entrances and exits.
+          description: "row, table: the chairs, in order along the row or around the table."
           items:
             type: object
-            required: [kind, x, y]
+            required: [key, label]
             properties:
-              kind: { type: string, enum: [stage, aisle, wall, entrance, exit, rect, ellipse, polygon] }
-              x: { type: number }
-              y: { type: number }
-              width: { type: number }
-              height: { type: number }
-              rotation: { type: number }
-              points:
-                type: array
-                items: { type: number }
-              fill: { type: [string, "null"] }
-              label: { type: [string, "null"] }
-        texts:
+              key: { type: string }
+              label: { type: string }
+              type:
+                type: string
+                enum: [seat, empty]
+                default: seat
+                description: An `empty` placeholder holds a gap — a pillar, a camera position — without shifting the seats after it.
+              categoryKey: { type: [string, "null"] }
+              accessible: { type: boolean }
+              entrance: { type: [string, "null"] }
+              seat_id:
+                type: [string, "null"]
+                format: uuid
+                description: |
+                  Present on the embed seat-map response only. The stable id to send when holding
+                  this seat, and the key to join availability on — never pair geometry with
+                  availability by position.
+        polygon:
           type: array
+          description: "section: its outline. May be concave."
           items:
-            type: object
-            required: [text, x, y]
-            properties:
-              text: { type: string }
-              x: { type: number }
-              y: { type: number }
-              size: { type: number, default: 14 }
-              color: { type: [string, "null"] }
-              rotation: { type: number, default: 0 }
+            type: array
+            items: { type: number }
+        objects:
+          type: array
+          description: "section: what is inside it."
+          items: { $ref: "#/components/schemas/ChartObject" }
+        shape:
+          description: "area, booth: the drawn shape. On a table this is instead the word `round` or `rectangular`."
+          oneOf:
+            - type: string
+              enum: [round, rectangular]
+            - type: object
+              properties:
+                kind: { type: string, enum: [rect, ellipse, polygon] }
+                x: { type: number }
+                y: { type: number }
+                width: { type: number }
+                height: { type: number }
+                rotation: { type: number }
+                cornerRadius: { type: number }
+                points:
+                  type: [array, "null"]
+                  items:
+                    type: array
+                    items: { type: number }
+        capacity:
+          type: object
+          description: "area, booth: how many people it holds and whether they choose a spot."
+          properties:
+            type:
+              type: string
+              enum: [generalAdmission, fixed]
+              description: General admission sells any quantity up to `places`; fixed sells the whole object at once.
+            places: { type: integer, minimum: 1 }
+        bookAs:
+          type: string
+          enum: [seat, table]
+          description: "table: whether a buyer takes one chair or the whole table."
+        capacity_object_id:
+          type: [string, "null"]
+          format: uuid
+          description: Present on the embed seat-map response only, for areas, booths and whole tables.
+        width: { type: number }
+        height: { type: number }
+        translucent: { type: boolean }
+        scale: { type: number }
+        kind: { type: string, description: "shape: stage, aisle, wall, entrance, exit, rect, ellipse, polygon or line." }
+        fill: { type: [string, "null"] }
+        label: { type: [string, "null"] }
+        text: { type: string, description: "text: the words." }
+        fontSize: { type: number }
+        color: { type: [string, "null"] }
+        href: { type: string, description: "image: usually a scanned floor plan being traced over." }
+        opacity: { type: number }
+        name: { type: string, description: "icon: wheelchair, toilets, bar, food, entrance, exit, stairs or lift." }
+        size: { type: number }
 
     ValidationReport:
       type: object
       properties:
-        valid: { type: boolean }
-        seat_count: { type: integer }
+        valid:
+          type: boolean
+          description: False when there are errors. Warnings never make a chart invalid.
+        seat_count:
+          type: integer
+          description: Named seats only — what the plan limit measures.
+        places:
+          type: integer
+          description: Everything sellable, so seats plus the capacity of every area, booth and whole table.
+        checks:
+          type: array
+          description: The checklist shown in the designer's chart panel.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                enum: [no_duplicate_objects, all_labeled, all_categorized, one_category_per_type, focal_point]
+              label: { type: string }
+              ok: { type: boolean }
         errors:
           type: array
           items:
