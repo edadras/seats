@@ -1,0 +1,335 @@
+/* Tenant panel and seat map editor. */
+
+:root {
+	--surface: #ffffff;
+	--surface-alt: #f5f6f8;
+	--border: #d7dae0;
+	--text: #1c2129;
+	--muted: #6b7280;
+	--accent: #12263f;
+	--error: #b32d2e;
+	--warning: #9a6a00;
+	--ok: #1a7f37;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--surface: #1c1f26;
+		--surface-alt: #14171d;
+		--border: #333944;
+		--text: #e7ecf3;
+		--muted: #9aa1ad;
+		--accent: #7aa7ff;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+	background: var(--surface-alt);
+	color: var(--text);
+}
+
+/* Logical properties throughout, so the RTL locales work without a mirrored stylesheet. */
+.topbar {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.75rem 1.25rem;
+	background: var(--surface);
+	border-block-end: 1px solid var(--border);
+}
+
+.topbar nav {
+	display: flex;
+	gap: 0.25rem;
+	flex: 1;
+}
+
+button {
+	font: inherit;
+	padding: 0.45rem 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--surface);
+	color: inherit;
+	cursor: pointer;
+}
+
+button:hover {
+	border-color: var(--accent);
+}
+
+button.primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: #ffffff;
+}
+
+button.ghost {
+	border-color: transparent;
+	color: var(--muted);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+	outline: 3px solid var(--accent);
+	outline-offset: 2px;
+}
+
+main {
+	padding: 1.5rem;
+}
+
+h2 {
+	margin-block-start: 0;
+}
+
+table {
+	inline-size: 100%;
+	border-collapse: collapse;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+th,
+td {
+	text-align: start;
+	padding: 0.6rem 0.8rem;
+	border-block-end: 1px solid var(--border);
+}
+
+th {
+	background: var(--surface-alt);
+	font-size: 0.85em;
+	color: var(--muted);
+}
+
+code {
+	font-size: 0.9em;
+	background: var(--surface-alt);
+	padding: 0.1rem 0.3rem;
+	border-radius: 4px;
+}
+
+form.inline {
+	display: flex;
+	gap: 0.5rem;
+	margin-block-end: 1rem;
+	flex-wrap: wrap;
+}
+
+input,
+select {
+	font: inherit;
+	padding: 0.45rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--surface);
+	color: inherit;
+}
+
+.auth {
+	max-inline-size: 22rem;
+	margin: 12vh auto;
+	padding: 2rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+}
+
+.auth label {
+	display: block;
+	margin-block-end: 1rem;
+}
+
+.auth input {
+	inline-size: 100%;
+	margin-block-start: 0.3rem;
+}
+
+.auth button {
+	inline-size: 100%;
+}
+
+.error {
+	color: var(--error);
+}
+
+.error:empty {
+	display: none;
+}
+
+.hint {
+	color: var(--muted);
+	font-size: 0.92em;
+}
+
+.stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	list-style: none;
+	padding: 0;
+}
+
+.stats li {
+	display: flex;
+	flex-direction: column;
+	font-size: 0.85em;
+	color: var(--muted);
+	min-inline-size: 5rem;
+}
+
+.stats span {
+	font-size: 1.6rem;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.credentials {
+	margin-block-start: 1.5rem;
+	padding: 1rem;
+	border: 1px solid var(--warning);
+	border-radius: 8px;
+	background: var(--surface);
+}
+
+.warn {
+	color: var(--warning);
+}
+
+/* --- Editor ------------------------------------------------------------------ */
+
+.editor {
+	display: grid;
+	grid-template-areas: "toolbar toolbar" "canvas side";
+	grid-template-columns: 1fr 18rem;
+	grid-template-rows: auto 1fr;
+	gap: 1rem;
+	block-size: calc(100vh - 8rem);
+}
+
+.editor__toolbar {
+	grid-area: toolbar;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.6rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+}
+
+.editor__toolbar .sep {
+	inline-size: 1px;
+	block-size: 1.5rem;
+	background: var(--border);
+	margin-inline: 0.35rem;
+}
+
+.editor__toolbar .spacer {
+	flex: 1;
+}
+
+.editor__toolbar .toggle {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.9em;
+	color: var(--muted);
+}
+
+.editor__canvas {
+	grid-area: canvas;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+	min-block-size: 400px;
+}
+
+.editor__canvas canvas {
+	display: block;
+	touch-action: none; /* the editor owns pan and zoom */
+}
+
+.editor__side {
+	grid-area: side;
+	padding: 1rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: auto;
+}
+
+.editor__side h3 {
+	margin-block: 0 0.5rem;
+	font-size: 0.9em;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.issues {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 1rem;
+	font-size: 0.9em;
+}
+
+.issue {
+	padding: 0.4rem 0.5rem;
+	border-inline-start: 3px solid;
+	margin-block-end: 0.35rem;
+	background: var(--surface-alt);
+	border-radius: 0 4px 4px 0;
+}
+
+/* Errors block publishing; warnings never do. The colour difference has to carry that meaning. */
+.issue--error {
+	border-color: var(--error);
+}
+
+.issue--warning {
+	border-color: var(--warning);
+}
+
+.ok {
+	color: var(--ok);
+	font-size: 0.9em;
+}
+
+.toast {
+	position: fixed;
+	inset-block-end: 1.5rem;
+	inset-inline-start: 50%;
+	transform: translateX(-50%);
+	padding: 0.7rem 1.1rem;
+	background: var(--accent);
+	color: #ffffff;
+	border-radius: 8px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+	max-inline-size: min(90vw, 40rem);
+}
+
+.toast--error {
+	background: var(--error);
+}
+
+@media (max-width: 900px) {
+	.editor {
+		grid-template-areas: "toolbar" "canvas" "side";
+		grid-template-columns: 1fr;
+		grid-template-rows: auto 60vh auto;
+		block-size: auto;
+	}
+}
