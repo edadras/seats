@@ -1,0 +1,1353 @@
+openapi: 3.1.0
+info:
+  title: Seatmap SaaS API
+  version: "1.0.0"
+  summary: Multi-tenant seating inventory, holds, allocations, ticketing and check-in.
+  description: |
+    The API owns venue seating inventory. It does **not** own carts, payments, tax or refunds —
+    those stay in the tenant's own storefront (see `docs/adr/0001-saas-woocommerce-boundary.md`).
+
+    ## Authentication
+    Three separate schemes, deliberately not interchangeable:
+
+    | Audience | Scheme | Notes |
+    | --- | --- | --- |
+    | Tenant panel / management API | `bearerAuth` (personal access token) | Scoped to the caller's tenant and role. |
+    | Server-to-server (WordPress plugin) | `apiKeyAuth` + `hmacSignature` | All four `X-Seatmap-*` headers required. |
+    | Embed widget (browser) | none | Public event id only; never carries a secret. |
+    | Check-in device | `bearerAuth` (device token) | Scoped to named events. |
+
+    ## HMAC signing
+    `signature = hex(hmac_sha256(secret, METHOD + "\n" + PATH + "\n" + timestamp + "\n" + nonce + "\n" + hex(sha256(raw_body))))`
+
+    Timestamps must be within ±300 s of server time; nonces may not repeat inside that window.
+
+    ## Idempotency
+    Every mutating endpoint accepts `Idempotency-Key`. The first request for a key is executed and
+    its response stored; retries with the same key and the same body replay the stored response.
+    A different body under the same key is rejected with `409 idempotency_key_reuse`.
+
+    ## Errors
+    All errors share one envelope with a stable machine-readable `code`.
+servers:
+  - url: https://api.seatmap.example/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local
+
+tags:
+  - name: Auth
+  - name: Venues
+  - name: Seat maps
+  - name: Events
+  - name: Embed
+  - name: WooCommerce
+  - name: Tickets
+  - name: Check-in
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Exchange credentials for a personal access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                device_name: { type: string, default: api }
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  tenant: { $ref: "#/components/schemas/Tenant" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the current token
+      responses:
+        "204": { description: Revoked }
+
+  /venues:
+    get:
+      tags: [Venues]
+      summary: List venues
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Venue" }
+    post:
+      tags: [Venues]
+      summary: Create a venue
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VenueInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Venue" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /venues/{venue}:
+    parameters: [ { $ref: "#/components/parameters/VenueId" } ]
+    get:
+      tags: [Venues]
+      summary: Read a venue
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Venue" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Venues]
+      summary: Update a venue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VenueInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Venue" }
+    delete:
+      tags: [Venues]
+      summary: Delete a venue that has no events
+      responses:
+        "204": { description: Deleted }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /seat-maps:
+    get:
+      tags: [Seat maps]
+      summary: List seat maps
+      parameters:
+        - name: venue_id
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/SeatMap" }
+    post:
+      tags: [Seat maps]
+      summary: Create a seat map (starts with an empty draft version)
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [venue_id, name]
+              properties:
+                venue_id: { type: string, format: uuid }
+                name: { type: string, maxLength: 160 }
+                description: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeatMap" }
+
+  /seat-maps/{map}:
+    parameters: [ { $ref: "#/components/parameters/MapId" } ]
+    get:
+      tags: [Seat maps]
+      summary: Read a seat map with its versions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeatMap" }
+    patch:
+      tags: [Seat maps]
+      summary: Rename a seat map
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string, nullable: true }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeatMap" }
+
+  /seat-maps/{map}/versions:
+    parameters: [ { $ref: "#/components/parameters/MapId" } ]
+    get:
+      tags: [Seat maps]
+      summary: List versions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SeatMapVersion" }
+    post:
+      tags: [Seat maps]
+      summary: Save the working draft geometry
+      description: |
+        Replaces the current draft's geometry. If the latest version is published, a new draft is
+        forked from it. Published versions are immutable and are never modified by this call.
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geometry]
+              properties:
+                geometry: { $ref: "#/components/schemas/Geometry" }
+                notes: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Draft saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeatMapVersion" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /seat-maps/{map}/validate:
+    parameters: [ { $ref: "#/components/parameters/MapId" } ]
+    post:
+      tags: [Seat maps]
+      summary: Validate geometry without saving
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geometry]
+              properties:
+                geometry: { $ref: "#/components/schemas/Geometry" }
+      responses:
+        "200":
+          description: Validation report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationReport" }
+
+  /seat-maps/{map}/publish:
+    parameters: [ { $ref: "#/components/parameters/MapId" } ]
+    post:
+      tags: [Seat maps]
+      summary: Publish the draft as an immutable version
+      description: |
+        Explodes geometry into normalised sections/rows/seats. Seat UUIDs are carried forward from
+        the previous published version by `(section_key, row_key, seat_key)` so existing sales stay
+        valid. Fails if validation reports errors, or if plan seat limits would be exceeded.
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeatMapVersion" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /events:
+    get:
+      tags: [Events]
+      summary: List events
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, published, closed, cancelled] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Event" }
+    post:
+      tags: [Events]
+      summary: Create an event
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+
+  /events/{event}:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      tags: [Events]
+      summary: Read an event
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+    patch:
+      tags: [Events]
+      summary: Update an event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+
+  /events/{event}/pricing:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    put:
+      tags: [Events]
+      summary: Replace price zones and seat overrides
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currency, zones]
+              properties:
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                zones:
+                  type: array
+                  items: { $ref: "#/components/schemas/PriceZone" }
+                overrides:
+                  type: array
+                  items: { $ref: "#/components/schemas/SeatOverride" }
+      responses:
+        "200":
+          description: Pricing replaced
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+
+  /events/{event}/stats:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      tags: [Events]
+      summary: Inventory, sales and check-in counters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventStats" }
+
+  /events/{event}/checkins:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      tags: [Events]
+      summary: Check-in log
+      parameters:
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Checkin" }
+
+  /embed/events/{public_id}:
+    parameters: [ { $ref: "#/components/parameters/PublicId" } ]
+    get:
+      tags: [Embed]
+      summary: Public event descriptor for the widget
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EmbedEvent" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /embed/events/{public_id}/seat-map:
+    parameters: [ { $ref: "#/components/parameters/PublicId" } ]
+    get:
+      tags: [Embed]
+      summary: Geometry of the event's published map version
+      description: Cacheable and immutable; keyed by version id. Contains no availability data.
+      security: []
+      responses:
+        "200":
+          description: OK
+          headers:
+            ETag: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seat_map_version_id: { type: string, format: uuid }
+                  geometry: { $ref: "#/components/schemas/Geometry" }
+
+  /embed/events/{public_id}/availability:
+    parameters: [ { $ref: "#/components/parameters/PublicId" } ]
+    get:
+      tags: [Embed]
+      summary: Seat availability, optionally incremental
+      security: []
+      parameters:
+        - name: since
+          in: query
+          description: Cursor from a previous response; returns only seats changed since then.
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Availability" }
+
+  /embed/events/{public_id}/holds:
+    parameters: [ { $ref: "#/components/parameters/PublicId" } ]
+    post:
+      tags: [Embed]
+      summary: Hold seats for a bounded time
+      security: []
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seat_ids, session_id]
+              properties:
+                seat_ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { type: string, format: uuid }
+                session_id:
+                  type: string
+                  description: Opaque per-browser identifier, used for rate limiting and re-hold.
+      responses:
+        "201":
+          description: Held
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Hold" }
+        "409":
+          description: One or more seats are unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeatUnavailableError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /embed/holds/{hold_token}:
+    parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
+    delete:
+      tags: [Embed]
+      summary: Release a hold
+      security: []
+      responses:
+        "204": { description: Released }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /embed/holds/{hold_token}/extend:
+    parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
+    patch:
+      tags: [Embed]
+      summary: Extend a hold's TTL
+      description: Bounded by `max_extends`; a hold cannot be extended after it has expired.
+      security: []
+      responses:
+        "200":
+          description: Extended
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Hold" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /embed/holds/{hold_token}/validate:
+    parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
+    post:
+      tags: [Embed]
+      summary: Re-check a hold before an order is created
+      security: []
+      responses:
+        "200":
+          description: Hold state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean }
+                  reason:
+                    type: string
+                    nullable: true
+                    enum: [expired, released, converted, unknown, null]
+                  hold: { $ref: "#/components/schemas/Hold" }
+
+  /integrations/woocommerce/orders:
+    post:
+      tags: [WooCommerce]
+      summary: Register a WooCommerce order against a hold
+      security:
+        - apiKeyAuth: []
+          hmacSignature: []
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [external_order_id, hold_token]
+              properties:
+                external_order_id: { type: string, maxLength: 100 }
+                hold_token: { type: string }
+                buyer:
+                  $ref: "#/components/schemas/Buyer"
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Already registered (idempotent replay)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExternalOrder" }
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExternalOrder" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /integrations/woocommerce/orders/{external_order_id}:
+    parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
+    get:
+      tags: [WooCommerce]
+      summary: Read the SaaS view of an order (used by reconciliation)
+      security:
+        - apiKeyAuth: []
+          hmacSignature: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExternalOrder" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /integrations/woocommerce/orders/{external_order_id}/confirm:
+    parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
+    post:
+      tags: [WooCommerce]
+      summary: Convert the hold into allocations and issue tickets
+      description: |
+        Exactly-once. Retrying with the same `Idempotency-Key` — or simply calling again for an
+        order already confirmed — returns the same allocations and tickets and creates nothing new.
+      security:
+        - apiKeyAuth: []
+          hmacSignature: []
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paid_at: { type: string, format: date-time }
+                buyer: { $ref: "#/components/schemas/Buyer" }
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExternalOrder" }
+        "409":
+          description: Hold expired, or the order is in a state that cannot be confirmed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /integrations/woocommerce/orders/{external_order_id}/cancel:
+    parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
+    post:
+      tags: [WooCommerce]
+      summary: Release the hold for a failed, cancelled or deleted order
+      security:
+        - apiKeyAuth: []
+          hmacSignature: []
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, enum: [failed, cancelled, deleted, expired] }
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExternalOrder" }
+
+  /integrations/woocommerce/orders/{external_order_id}/refund:
+    parameters: [ { $ref: "#/components/parameters/ExternalOrderId" } ]
+    post:
+      tags: [WooCommerce]
+      summary: Void tickets and apply the event's seat release policy
+      security:
+        - apiKeyAuth: []
+          hmacSignature: []
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                seat_ids:
+                  type: array
+                  description: Omit for a full refund.
+                  items: { type: string, format: uuid }
+                reason: { type: string }
+      responses:
+        "200":
+          description: Refunded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExternalOrder" }
+
+  /tickets/{ticket}:
+    parameters:
+      - name: ticket
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Tickets]
+      summary: Read a ticket
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /checkin/auth/token:
+    post:
+      tags: [Check-in]
+      summary: Exchange a device pairing code for a scoped scanner token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pairing_code, device_name]
+              properties:
+                pairing_code: { type: string }
+                device_name: { type: string }
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  device: { $ref: "#/components/schemas/CheckinDevice" }
+                  events:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmbedEvent" }
+
+  /checkin/events:
+    get:
+      tags: [Check-in]
+      summary: Events this device may scan
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmbedEvent" }
+
+  /checkin/scan:
+    post:
+      tags: [Check-in]
+      summary: Scan one QR token, atomically
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, event_id]
+              properties:
+                token: { type: string }
+                event_id: { type: string, format: uuid }
+                scanned_at: { type: string, format: date-time }
+                client_scan_id: { type: string }
+      responses:
+        "200":
+          description: Scan result — the HTTP status is 200 for every outcome; read `result`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScanResult" }
+
+  /checkin/sync:
+    post:
+      tags: [Check-in]
+      summary: Upload a batch of offline scans
+      description: |
+        Idempotent per `(ticket, device, client_scan_id)`. Conflicts resolve to the earliest
+        `scanned_at`; later scans of the same ticket come back as `already_used` with the winner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scans]
+              properties:
+                scans:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [token, event_id, scanned_at, client_scan_id]
+                    properties:
+                      token: { type: string }
+                      event_id: { type: string, format: uuid }
+                      scanned_at: { type: string, format: date-time }
+                      client_scan_id: { type: string }
+      responses:
+        "200":
+          description: Per-scan results in request order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: "#/components/schemas/ScanResult" }
+
+  /checkin/events/{event}/stats:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      tags: [Check-in]
+      summary: Live door counters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventStats" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Seatmap-Key
+      description: Public key id of an API key. Never the secret.
+    hmacSignature:
+      type: apiKey
+      in: header
+      name: X-Seatmap-Signature
+      description: |
+        Requires `X-Seatmap-Timestamp` (unix seconds, ±300 s) and `X-Seatmap-Nonce`
+        (unique within the window) alongside.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 255 }
+    VenueId:
+      name: venue
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MapId:
+      name: map
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EventId:
+      name: event
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PublicId:
+      name: public_id
+      in: path
+      required: true
+      schema: { type: string }
+    HoldToken:
+      name: hold_token
+      in: path
+      required: true
+      schema: { type: string }
+    ExternalOrderId:
+      name: external_order_id
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    NotFound:
+      description: Not found, or not visible to this tenant
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: The request contradicts current state
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Invalid payload
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable machine-readable identifier.
+              examples: [seat_unavailable, hold_expired, invalid_signature, tenant_limit_reached]
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+            request_id: { type: string }
+
+    SeatUnavailableError:
+      allOf:
+        - $ref: "#/components/schemas/Error"
+        - type: object
+          properties:
+            error:
+              type: object
+              properties:
+                details:
+                  type: object
+                  properties:
+                    unavailable_seat_ids:
+                      type: array
+                      items: { type: string, format: uuid }
+
+    Paginated:
+      type: object
+      properties:
+        data: { type: array, items: {} }
+        meta:
+          type: object
+          properties:
+            page: { type: integer }
+            per_page: { type: integer }
+            total: { type: integer }
+            last_page: { type: integer }
+
+    Tenant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [active, suspended, cancelled] }
+        timezone: { type: string }
+        locale: { type: string }
+
+    Venue:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        address: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        country: { type: string, nullable: true }
+        timezone: { type: string }
+        created_at: { type: string, format: date-time }
+
+    VenueInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 160 }
+        address: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        country: { type: string, maxLength: 2, nullable: true }
+        timezone: { type: string }
+
+    SeatMap:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        venue_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        published_version:
+          oneOf:
+            - $ref: "#/components/schemas/SeatMapVersion"
+            - type: "null"
+        draft_version:
+          oneOf:
+            - $ref: "#/components/schemas/SeatMapVersion"
+            - type: "null"
+
+    SeatMapVersion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        seat_map_id: { type: string, format: uuid }
+        version: { type: integer }
+        status: { type: string, enum: [draft, published] }
+        seat_count: { type: integer }
+        published_at: { type: string, format: date-time, nullable: true }
+        geometry: { $ref: "#/components/schemas/Geometry" }
+
+    Geometry:
+      type: object
+      description: |
+        Layout only. Contains no availability or sale state — that is derived (ADR-0002).
+      required: [canvas, sections]
+      properties:
+        canvas:
+          type: object
+          properties:
+            width: { type: number, minimum: 100, maximum: 20000 }
+            height: { type: number, minimum: 100, maximum: 20000 }
+            background: { type: string, nullable: true }
+        sections:
+          type: array
+          items:
+            type: object
+            required: [key, name, rows]
+            properties:
+              key: { type: string, description: Stable within the map; used to carry seat ids forward. }
+              name: { type: string }
+              color: { type: string, nullable: true }
+              rows:
+                type: array
+                items:
+                  type: object
+                  required: [key, name, seats]
+                  properties:
+                    key: { type: string }
+                    name: { type: string }
+                    seats:
+                      type: array
+                      items:
+                        type: object
+                        required: [key, label, x, y]
+                        properties:
+                          key: { type: string }
+                          label: { type: string }
+                          x: { type: number }
+                          y: { type: number }
+                          rotation: { type: number, default: 0 }
+                          shape: { type: string, enum: [circle, square, chair], default: circle }
+                          zone_key: { type: string, nullable: true }
+                          accessible: { type: boolean, default: false }
+        shapes:
+          type: array
+          description: Stage, aisles, walls, entrances and exits.
+          items:
+            type: object
+            required: [kind, x, y]
+            properties:
+              kind: { type: string, enum: [stage, aisle, wall, entrance, exit, rect, ellipse, polygon] }
+              x: { type: number }
+              y: { type: number }
+              width: { type: number }
+              height: { type: number }
+              rotation: { type: number }
+              points:
+                type: array
+                items: { type: number }
+              fill: { type: string, nullable: true }
+              label: { type: string, nullable: true }
+        texts:
+          type: array
+          items:
+            type: object
+            required: [text, x, y]
+            properties:
+              text: { type: string }
+              x: { type: number }
+              y: { type: number }
+              size: { type: number, default: 14 }
+              color: { type: string, nullable: true }
+              rotation: { type: number, default: 0 }
+
+    ValidationReport:
+      type: object
+      properties:
+        valid: { type: boolean }
+        seat_count: { type: integer }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+              path: { type: string }
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+              path: { type: string }
+
+    Event:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        public_id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [draft, published, closed, cancelled] }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time, nullable: true }
+        timezone: { type: string }
+        currency: { type: string }
+        venue_id: { type: string, format: uuid }
+        seat_map_version_id: { type: string, format: uuid, nullable: true }
+        hold_ttl_seconds: { type: integer }
+        max_extends: { type: integer }
+        refund_policy: { type: string, enum: [release, hold_back] }
+
+    EventInput:
+      type: object
+      required: [name, venue_id, starts_at]
+      properties:
+        name: { type: string }
+        venue_id: { type: string, format: uuid }
+        seat_map_id: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time, nullable: true }
+        timezone: { type: string }
+        currency: { type: string }
+        status: { type: string, enum: [draft, published, closed, cancelled] }
+        hold_ttl_seconds: { type: integer, minimum: 60, maximum: 3600 }
+        max_extends: { type: integer, minimum: 0, maximum: 10 }
+        refund_policy: { type: string, enum: [release, hold_back] }
+
+    PriceZone:
+      type: object
+      required: [key, name, amount]
+      properties:
+        key: { type: string }
+        name: { type: string }
+        amount:
+          type: integer
+          description: Minor units (e.g. cents) — never a float.
+        color: { type: string, nullable: true }
+
+    SeatOverride:
+      type: object
+      required: [seat_id]
+      properties:
+        seat_id: { type: string, format: uuid }
+        blocked: { type: boolean, default: false }
+        amount: { type: integer, nullable: true }
+        zone_key: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+
+    EmbedEvent:
+      type: object
+      properties:
+        public_id: { type: string }
+        name: { type: string }
+        starts_at: { type: string, format: date-time }
+        timezone: { type: string }
+        currency: { type: string }
+        status: { type: string }
+        venue: { type: object, properties: { name: { type: string }, city: { type: string } } }
+        seat_map_version_id: { type: string, format: uuid }
+        hold_ttl_seconds: { type: integer }
+        zones:
+          type: array
+          items: { $ref: "#/components/schemas/PriceZone" }
+
+    Availability:
+      type: object
+      properties:
+        cursor:
+          type: string
+          description: Pass back as `since` to receive only subsequent changes.
+        full: { type: boolean, description: True when the payload is a complete snapshot. }
+        seats:
+          type: array
+          items:
+            type: object
+            properties:
+              seat_id: { type: string, format: uuid }
+              state: { type: string, enum: [available, held, allocated, blocked] }
+              amount: { type: integer, nullable: true }
+              zone_key: { type: string, nullable: true }
+
+    Hold:
+      type: object
+      properties:
+        hold_token: { type: string }
+        event_public_id: { type: string }
+        expires_at: { type: string, format: date-time }
+        extends_used: { type: integer }
+        max_extends: { type: integer }
+        currency: { type: string }
+        total_amount: { type: integer }
+        seat_map_version_id: { type: string, format: uuid }
+        seats:
+          type: array
+          items:
+            type: object
+            properties:
+              seat_id: { type: string, format: uuid }
+              section: { type: string }
+              row: { type: string }
+              label: { type: string }
+              amount: { type: integer }
+              zone_key: { type: string, nullable: true }
+        price_snapshot:
+          type: object
+          description: The signed payload the storefront must price the cart from.
+          properties:
+            payload: { type: string, description: Base64url of the canonical JSON. }
+            signature: { type: string, description: HMAC-SHA256 hex over `payload`. }
+            algorithm: { type: string, const: HMAC-SHA256 }
+
+    Buyer:
+      type: object
+      properties:
+        name: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        phone: { type: string, nullable: true }
+        locale: { type: string, nullable: true }
+
+    ExternalOrder:
+      type: object
+      properties:
+        external_order_id: { type: string }
+        status: { type: string, enum: [pending, confirmed, cancelled, refunded, partially_refunded] }
+        event_public_id: { type: string }
+        hold_token: { type: string, nullable: true }
+        currency: { type: string }
+        total_amount: { type: integer }
+        confirmed_at: { type: string, format: date-time, nullable: true }
+        allocations:
+          type: array
+          items: { $ref: "#/components/schemas/Allocation" }
+        tickets:
+          type: array
+          items: { $ref: "#/components/schemas/Ticket" }
+
+    Allocation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        seat_id: { type: string, format: uuid }
+        section: { type: string }
+        row: { type: string }
+        label: { type: string }
+        amount: { type: integer }
+        status: { type: string, enum: [active, released, void] }
+
+    Ticket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        allocation_id: { type: string, format: uuid }
+        status: { type: string, enum: [issued, used, void] }
+        token:
+          type: string
+          description: Returned only at issuance and to authorised tenant readers. Encode this in the QR.
+        seat:
+          type: object
+          properties:
+            section: { type: string }
+            row: { type: string }
+            label: { type: string }
+        issued_at: { type: string, format: date-time }
+        used_at: { type: string, format: date-time, nullable: true }
+
+    CheckinDevice:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        event_ids:
+          type: array
+          items: { type: string, format: uuid }
+
+    Checkin:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticket_id: { type: string, format: uuid }
+        result: { type: string }
+        scanned_at: { type: string, format: date-time }
+        device: { type: string, nullable: true }
+        operator: { type: string, nullable: true }
+
+    ScanResult:
+      type: object
+      required: [result]
+      properties:
+        result:
+          type: string
+          enum: [valid, already_used, cancelled, refunded, wrong_event, invalid]
+        ticket:
+          oneOf:
+            - $ref: "#/components/schemas/Ticket"
+            - type: "null"
+        first_scan:
+          type: object
+          nullable: true
+          description: Present when `result` is `already_used` — who admitted this ticket, and when.
+          properties:
+            scanned_at: { type: string, format: date-time }
+            device: { type: string, nullable: true }
+            operator: { type: string, nullable: true }
+
+    EventStats:
+      type: object
+      properties:
+        seats_total: { type: integer }
+        available: { type: integer }
+        held: { type: integer }
+        allocated: { type: integer }
+        blocked: { type: integer }
+        gross_amount: { type: integer, description: Indicative, from price snapshots. }
+        currency: { type: string }
+        checked_in: { type: integer }
+        checkin_rate: { type: number }
