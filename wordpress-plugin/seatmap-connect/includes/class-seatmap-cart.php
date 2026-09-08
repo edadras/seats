@@ -66,6 +66,17 @@ class Seatmap_Cart {
 			);
 		}
 
+		$common = array(
+			'event_public_id'    => $event_public_id,
+			'hold_token'         => $hold['hold_token'],
+			'expires_at'         => $hold['expires_at'],
+			'currency'           => $hold['currency'],
+			// Kept so the price can be shown to have come from the server, and so support can
+			// verify a disputed charge after the fact.
+			'snapshot_payload'   => $hold['price_snapshot']['payload'] ?? '',
+			'snapshot_signature' => $hold['price_snapshot']['signature'] ?? '',
+		);
+
 		foreach ( $hold['seats'] as $seat ) {
 			$added = WC()->cart->add_to_cart(
 				$product_id,
@@ -73,34 +84,61 @@ class Seatmap_Cart {
 				0,
 				array(),
 				array(
-					self::ITEM_KEY => array(
-						'event_public_id'    => $event_public_id,
-						'hold_token'         => $hold['hold_token'],
-						'expires_at'         => $hold['expires_at'],
-						'currency'           => $hold['currency'],
-						'seat_id'            => $seat['seat_id'],
-						'section'            => $seat['section'],
-						'row'                => $seat['row'],
-						'label'              => $seat['label'],
-						'amount'             => (int) $seat['amount'],
-						// Kept so the price can be shown to have come from the server, and so
-						// support can verify a disputed charge after the fact.
-						'snapshot_payload'   => $hold['price_snapshot']['payload'] ?? '',
-						'snapshot_signature' => $hold['price_snapshot']['signature'] ?? '',
+					self::ITEM_KEY => $common + array(
+						'kind'     => 'seat',
+						'seat_id'  => $seat['seat_id'],
+						'section'  => $seat['section'],
+						'row'      => $seat['row'],
+						'label'    => $seat['label'],
+						'amount'   => (int) $seat['amount'],
+						'quantity' => 1,
 					),
 				)
 			);
 
 			if ( ! $added ) {
-				return new WP_Error(
-					'seatmap_cart_failed',
-					__( 'The seats could not be added to your cart.', 'seatmap-connect' ),
-					array( 'status' => 500 )
-				);
+				return $this->cartFailure();
+			}
+		}
+
+		// Standing room is one cart line for the whole quantity rather than one line per place: a
+		// buyer thinks of it as "four in the pit", and WooCommerce's own quantity control then
+		// behaves the way they expect.
+		foreach ( $hold['areas'] ?? array() as $area ) {
+			$added = WC()->cart->add_to_cart(
+				$product_id,
+				(int) $area['quantity'],
+				0,
+				array(),
+				array(
+					self::ITEM_KEY => $common + array(
+						'kind'               => 'area',
+						'capacity_object_id' => $area['capacity_object_id'],
+						'section'            => $area['label'],
+						'row'                => '',
+						'label'              => $area['label'],
+						// The signed amount is for the whole line, so the per-place price is what
+						// WooCommerce needs for a line of this quantity.
+						'amount'             => (int) round( $area['amount'] / max( 1, (int) $area['quantity'] ) ),
+						'quantity'           => (int) $area['quantity'],
+					),
+				)
+			);
+
+			if ( ! $added ) {
+				return $this->cartFailure();
 			}
 		}
 
 		return true;
+	}
+
+	private function cartFailure(): WP_Error {
+		return new WP_Error(
+			'seatmap_cart_failed',
+			__( 'Your seats could not be added to your cart.', 'seatmap-connect' ),
+			array( 'status' => 500 )
+		);
 	}
 
 	public function remove_hold_from_cart( string $hold_token ): void {
@@ -146,6 +184,26 @@ class Seatmap_Cart {
 		return $minor / ( 10 ** max( 0, $decimals ) );
 	}
 
+	/** How a line reads to the buyer: a named seat, or a number of places in an area. */
+	private function describe( array $seat ): string {
+		if ( 'area' === ( $seat['kind'] ?? 'seat' ) ) {
+			return sprintf(
+				/* translators: 1: number of places, 2: area name. */
+				_n( '%1$d place in %2$s', '%1$d places in %2$s', (int) $seat['quantity'], 'seatmap-connect' ),
+				(int) $seat['quantity'],
+				$seat['section']
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: section name, 2: row name, 3: seat label. */
+			__( '%1$s, row %2$s, seat %3$s', 'seatmap-connect' ),
+			$seat['section'],
+			$seat['row'],
+			$seat['label']
+		);
+	}
+
 	/** Show section/row/seat in the cart and at checkout. */
 	public function display_item_data( array $item_data, array $cart_item ): array {
 		$seat = $cart_item[ self::ITEM_KEY ] ?? null;
@@ -155,14 +213,10 @@ class Seatmap_Cart {
 		}
 
 		$item_data[] = array(
-			'key'     => __( 'Seat', 'seatmap-connect' ),
-			'value'   => sprintf(
-				/* translators: 1: section name, 2: row name, 3: seat label. */
-				__( '%1$s, row %2$s, seat %3$s', 'seatmap-connect' ),
-				$seat['section'],
-				$seat['row'],
-				$seat['label']
-			),
+			'key'     => 'area' === ( $seat['kind'] ?? 'seat' )
+				? __( 'Standing', 'seatmap-connect' )
+				: __( 'Seat', 'seatmap-connect' ),
+			'value'   => $this->describe( $seat ),
 			'display' => '',
 		);
 
@@ -181,19 +235,14 @@ class Seatmap_Cart {
 		}
 
 		$item->add_meta_data(
-			__( 'Seat', 'seatmap-connect' ),
-			sprintf(
-				/* translators: 1: section name, 2: row name, 3: seat label. */
-				__( '%1$s, row %2$s, seat %3$s', 'seatmap-connect' ),
-				$seat['section'],
-				$seat['row'],
-				$seat['label']
-			),
+			'area' === ( $seat['kind'] ?? 'seat' ) ? __( 'Standing', 'seatmap-connect' ) : __( 'Seat', 'seatmap-connect' ),
+			$this->describe( $seat ),
 			true
 		);
 
 		// Hidden keys (leading underscore) carry what the integration needs later.
-		$item->add_meta_data( '_seatmap_seat_id', $seat['seat_id'], true );
+		$item->add_meta_data( '_seatmap_seat_id', $seat['seat_id'] ?? '', true );
+		$item->add_meta_data( '_seatmap_capacity_object_id', $seat['capacity_object_id'] ?? '', true );
 		$item->add_meta_data( '_seatmap_hold_token', $seat['hold_token'], true );
 		$item->add_meta_data( '_seatmap_event_public_id', $seat['event_public_id'], true );
 	}

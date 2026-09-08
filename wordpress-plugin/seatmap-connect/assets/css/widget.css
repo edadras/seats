@@ -107,6 +107,79 @@
 }
 
 /*
+ * Standing areas: a stepper each, because there is no seat to click. Real buttons rather than a
+ * drag control, so the keyboard path is the same as the pointer one.
+ */
+.seatmap-widget__areas {
+	margin-block-start: 1rem;
+	padding: 0.75rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 10px;
+}
+
+.seatmap-widget__areas h3 {
+	margin: 0 0 0.5rem;
+	font-size: 0.95em;
+}
+
+.seatmap-widget__area {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+	padding-block: 0.35rem;
+	border-block-start: 1px solid var(--seatmap-border);
+}
+
+.seatmap-widget__area:first-of-type {
+	border-block-start: none;
+}
+
+.seatmap-widget__area-name {
+	flex: 1;
+	min-inline-size: 8rem;
+}
+
+.seatmap-widget__area-left {
+	font-size: 0.85em;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__stepper {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.seatmap-widget__stepper button {
+	inline-size: 2rem;
+	block-size: 2rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 6px;
+	background: var(--seatmap-surface);
+	color: inherit;
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.seatmap-widget__stepper button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.seatmap-widget__stepper output {
+	min-inline-size: 1.5rem;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.seatmap-widget__stepper button:focus-visible {
+	outline: 3px solid var(--seatmap-accent);
+	outline-offset: 2px;
+}
+
+/*
  * The seat list is the accessible control, not a fallback: it is always in the document and always
  * reachable by keyboard. It is visually compact rather than hidden, because "available to screen
  * readers only" would leave keyboard users navigating an invisible grid.

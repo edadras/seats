@@ -23,6 +23,12 @@ seats/
 | [`docs/LEGACY_AUDIT.md`](docs/LEGACY_AUDIT.md) | What was found in the original source and what was reused |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Running it: requirements, secrets, monitoring, backups, incidents |
 
+## What the designer can draw
+
+Rows (straight or curved), enterable polygon sections, general admission areas, tables bookable by
+the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
+floors, on four selection layers, with categories, a focal point and a validation checklist.
+
 ## Two rules that explain most of the design
 
 **Seat state is derived, never stored.** `seat_map_versions.geometry` describes where chairs are;
@@ -56,9 +62,9 @@ connected API client, and prints the credentials you need for the plugin.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 66 unit + feature tests
-./vendor/bin/phpunit --group concurrency    # the 100-way race, as 100 real processes
-node --test tests/js/geometry.test.cjs      # 18 editor geometry tests
+./vendor/bin/phpunit                        # 101 unit + feature tests
+./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
+node --test tests/js/chart.test.cjs         # 33 chart model tests
 ```
 
 The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concurrency tests spawn
@@ -72,7 +78,7 @@ server and a browser:
 php artisan migrate:fresh --seed --force
 php artisan serve --port=8123 &
 
-node api/editor_smoke.mjs                                        # drives the editor in Chromium
+node api/editor_smoke.mjs                                        # drives the designer in Chromium
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 
@@ -91,6 +97,8 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Replay, tampering and key rotation | `ApiSecurityTest` |
 | A second scan reports who got in, and when | `CheckinTest` |
 | Republishing a map cannot break old orders | `SeatMapVersioningTest` |
+| Standing room never oversells, even under contention | `GeneralAdmissionTest`, `SeatConcurrencyTest` |
+| The PHP and JavaScript seat maths agree exactly | `RowGeometryTest` |
 | Webhooks retry, die honestly, and stay tenant-scoped | `WebhookDeliveryTest` |
 
 ## Installing the plugin

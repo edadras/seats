@@ -39,9 +39,12 @@ class Seatmap_Rest {
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 					'seat_ids'        => array(
-						'required' => true,
-						'type'     => 'array',
-						'items'    => array( 'type' => 'string' ),
+						'type'  => 'array',
+						'items' => array( 'type' => 'string' ),
+					),
+					// Standing room is asked for by quantity: { "<capacity object id>": 3 }.
+					'areas'           => array(
+						'type' => 'object',
 					),
 				),
 			)
@@ -80,9 +83,22 @@ class Seatmap_Rest {
 
 	public function create_hold( WP_REST_Request $request ) {
 		$seat_ids = array_values( array_filter( array_map( 'sanitize_text_field', (array) $request->get_param( 'seat_ids' ) ) ) );
+		$areas    = array();
 
-		if ( ! $seat_ids ) {
-			return new WP_Error( 'seatmap_no_seats', __( 'Choose at least one seat.', 'seatmap-connect' ), array( 'status' => 400 ) );
+		foreach ( (array) $request->get_param( 'areas' ) as $object_id => $quantity ) {
+			$quantity = (int) $quantity;
+
+			if ( $quantity > 0 ) {
+				$areas[ sanitize_text_field( (string) $object_id ) ] = $quantity;
+			}
+		}
+
+		if ( ! $seat_ids && ! $areas ) {
+			return new WP_Error(
+				'seatmap_no_seats',
+				__( 'Choose at least one seat or place.', 'seatmap-connect' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		$event_id = (string) $request->get_param( 'event_public_id' );
@@ -96,6 +112,7 @@ class Seatmap_Rest {
 			'/v1/embed/events/' . rawurlencode( $event_id ) . '/holds',
 			array(
 				'seat_ids'   => $seat_ids,
+				'areas'      => (object) $areas,
 				'session_id' => Seatmap_Cart::session_id(),
 			)
 		);
@@ -107,8 +124,9 @@ class Seatmap_Rest {
 				$response->get_error_code(),
 				$response->get_error_message(),
 				array(
-					'status'                 => 'seat_unavailable' === ( $data['code'] ?? '' ) ? 409 : 400,
-					'unavailable_seat_ids'   => $data['details']['unavailable_seat_ids'] ?? array(),
+					'status'                            => in_array( $data['code'] ?? '', array( 'seat_unavailable', 'capacity_unavailable' ), true ) ? 409 : 400,
+					'unavailable_seat_ids'              => $data['details']['unavailable_seat_ids'] ?? array(),
+					'unavailable_capacity_object_ids'   => $data['details']['unavailable_capacity_object_ids'] ?? array(),
 				)
 			);
 		}
@@ -130,6 +148,7 @@ class Seatmap_Rest {
 				'total_amount' => $response['total_amount'],
 				'currency'     => $response['currency'],
 				'seats'        => $response['seats'],
+				'areas'        => $response['areas'] ?? array(),
 				'cart_url'     => wc_get_cart_url(),
 			)
 		);

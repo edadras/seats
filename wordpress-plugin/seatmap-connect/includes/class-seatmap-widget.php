@@ -154,6 +154,15 @@ class Seatmap_Widget {
 							'held'           => __( 'Seats held until %s', 'seatmap-connect' ),
 							'expired'        => __( 'Your reservation expired. Please choose your seats again.', 'seatmap-connect' ),
 							'stage'          => __( 'Stage', 'seatmap-connect' ),
+							'standingAreas'  => __( 'Standing and tables', 'seatmap-connect' ),
+							/* translators: %d: number of places still available. */
+							'placesLeft'     => __( '%d left', 'seatmap-connect' ),
+							'soldOut'        => __( 'Sold out', 'seatmap-connect' ),
+							/* translators: %s: name of the standing area. */
+							'addOne'         => __( 'Add one place in %s', 'seatmap-connect' ),
+							/* translators: %s: name of the standing area. */
+							'removeOne'      => __( 'Remove one place in %s', 'seatmap-connect' ),
+							'areaFull'       => __( 'That area filled up while you were choosing. Please pick a different number of places.', 'seatmap-connect' ),
 						),
 					)
 				)

@@ -62,7 +62,7 @@ function signed(string $method, string $path, ?array $payload, string $keyId, st
 }
 
 $fail = 0;
-function check(string $label, bool $ok, string $detail = ''): void {
+function check(string $label, bool $ok, ?string $detail = ''): void {
     global $fail;
     echo ($ok ? "  ok   " : "  FAIL ") . $label . ($detail ? " — $detail" : "") . "\n";
     if (! $ok) { $fail++; }
@@ -73,23 +73,73 @@ echo "1. Public widget reads\n";
 check('event descriptor', $code === 200 && isset($ev['zones']), "HTTP $code");
 
 [$code, $map] = http('GET', "$base/v1/embed/events/$event/seat-map", null, []);
+
+/** Walk the chart, gathering every seat id. Rows live on a floor or inside a section. */
+$collect = function (array $objects) use (&$collect): array {
+    $ids = [];
+
+    foreach ($objects as $object) {
+        if (($object['type'] ?? '') === 'section') {
+            $ids = array_merge($ids, $collect($object['objects'] ?? []));
+
+            continue;
+        }
+
+        if (in_array($object['type'] ?? '', ['row', 'table'], true)) {
+            foreach ($object['seats'] ?? [] as $seat) {
+                if (! empty($seat['seat_id'])) {
+                    $ids[] = $seat['seat_id'];
+                }
+            }
+        }
+    }
+
+    return $ids;
+};
+
 $seatIds = [];
-foreach ($map['geometry']['sections'] ?? [] as $s) {
-    foreach ($s['rows'] as $r) { foreach ($r['seats'] as $seat) { $seatIds[] = $seat['seat_id']; } }
+
+foreach ($map['geometry']['floors'] ?? [] as $floor) {
+    $seatIds = array_merge($seatIds, $collect($floor['objects'] ?? []));
 }
-check('geometry carries stable seat ids', $code === 200 && count($seatIds) > 10 && $seatIds[0] !== null, count($seatIds).' seats');
+
+check('geometry carries stable seat ids', $code === 200 && count($seatIds) > 10, count($seatIds).' seats');
 
 [$code, $avail] = http('GET', "$base/v1/embed/events/$event/availability", null, []);
-check('availability', $code === 200 && count($avail['seats']) === count($seatIds), 'cursor '.($avail['cursor'] ?? '?'));
+check('availability lists every seat', $code === 200 && count($avail['seats']) === count($seatIds),
+    count($avail['seats'] ?? []).' of '.count($seatIds).', cursor '.($avail['cursor'] ?? '?'));
 
-echo "2. Hold two seats (as the store does on the buyer's behalf)\n";
+[$code, $avail0] = http('GET', "$base/v1/embed/events/$event/availability", null, []);
+$area = $avail0['areas'][0] ?? null;
+check('standing areas reported with places remaining',
+    $area !== null && $area['remaining'] > 0,
+    $area ? $area['label'].': '.$area['remaining'].' of '.$area['places'] : 'none');
+
+echo "2. Hold two seats and some standing room (as the store does for the buyer)\n";
 $chosen = array_slice($seatIds, 0, 2);
+$body = ['seat_ids' => $chosen, 'session_id' => 'roundtrip-'.getmypid()];
+
+if ($area) {
+    $body['areas'] = [$area['capacity_object_id'] => 3];
+}
+
 [$code, $hold] = http('POST', "$base/v1/embed/events/$event/holds",
-    json_encode(['seat_ids' => $chosen, 'session_id' => 'roundtrip-'.getmypid()]),
+    json_encode($body),
     ['Content-Type' => 'application/json', 'Accept' => 'application/json', 'Idempotency-Key' => bin2hex(random_bytes(8))]);
 check('hold created', $code === 201 && ! empty($hold['hold_token']), "HTTP $code");
 check('server-set price', ($hold['total_amount'] ?? 0) > 0, 'total '.($hold['total_amount'] ?? 0));
 check('price snapshot signed', ! empty($hold['price_snapshot']['signature']));
+
+if ($area) {
+    check('standing places held by quantity',
+        ($hold['areas'][0]['quantity'] ?? 0) === 3,
+        json_encode($hold['areas'][0] ?? null));
+
+    [$code, $availHeld] = http('GET', "$base/v1/embed/events/$event/availability", null, []);
+    check('remaining places drop by the amount held',
+        ($availHeld['areas'][0]['remaining'] ?? 0) === $area['remaining'] - 3,
+        ($availHeld['areas'][0]['remaining'] ?? '?').' left');
+}
 
 echo "3. Signed server-to-server order lifecycle\n";
 $orderId = 'wc-roundtrip-'.getmypid();
@@ -104,6 +154,13 @@ $path = "/v1/integrations/woocommerce/orders/$orderId/confirm";
 [$h, $b] = signed('POST', $path, ['paid_at' => gmdate('c')], $keyId, $secret, "confirm-$orderId");
 [$code, $confirmed] = http('POST', "$base$path", $b, $h);
 check('confirmed', $code === 200 && $confirmed['status'] === 'confirmed', "HTTP $code");
+
+if ($area) {
+    $standing = array_values(array_filter($confirmed['allocations'], fn ($a) => $a['row'] === ''));
+    check('standing places allocated as one line',
+        count($standing) === 1 && $standing[0]['label'] === '3 places',
+        json_encode($standing[0] ?? null));
+}
 $token = $confirmed['tickets'][0]['token'] ?? null;
 check('ticket token issued once', $token !== null && str_starts_with($token, 'TKT'));
 
@@ -118,7 +175,9 @@ echo "5. Seats now read as sold\n";
 [$code, $after] = http('GET', "$base/v1/embed/events/$event/availability", null, []);
 $states = [];
 foreach ($after['seats'] as $s) { $states[$s['seat_id']] = $s['state']; }
-check('both seats allocated', $states[$chosen[0]] === 'allocated' && $states[$chosen[1]] === 'allocated');
+check('both seats allocated',
+    ($states[$chosen[0]] ?? '?') === 'allocated' && ($states[$chosen[1]] ?? '?') === 'allocated',
+    ($states[$chosen[0]] ?? 'missing').' / '.($states[$chosen[1]] ?? 'missing'));
 check('cursor advanced', $after['cursor'] !== $avail['cursor'], "{$avail['cursor']} -> {$after['cursor']}");
 
 echo "6. Tampering is rejected\n";
@@ -139,7 +198,13 @@ check('refunded', $code === 200 && $refunded['status'] === 'refunded', "HTTP $co
 [$code, $final] = http('GET', "$base/v1/embed/events/$event/availability", null, []);
 $states = [];
 foreach ($final['seats'] as $s) { $states[$s['seat_id']] = $s['state']; }
-check('seats back on sale', $states[$chosen[0]] === 'available', $states[$chosen[0]]);
+check('seats back on sale', ($states[$chosen[0]] ?? '?') === 'available', (string) ($states[$chosen[0]] ?? 'missing'));
+
+if ($area) {
+    check('standing places back on sale',
+        ($final['areas'][0]['remaining'] ?? 0) === $area['remaining'],
+        ($final['areas'][0]['remaining'] ?? '?').' left');
+}
 
 echo "\n" . ($fail === 0 ? "ALL ROUND-TRIP CHECKS PASSED\n" : "$fail CHECK(S) FAILED\n");
 exit($fail === 0 ? 0 : 1);
