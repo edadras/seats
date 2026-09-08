@@ -23,6 +23,8 @@ class SeatMapController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorize($request, 'maps.view');
+
         $maps = SeatMap::query()
             // Eager loaded, or presenting a page of maps would issue two queries per map — and
             // outside production the lazy-load guard turns that into a 500 rather than a slow page.
@@ -36,7 +38,7 @@ class SeatMapController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'maps.manage');
 
         $data = $request->validate([
             'venue_id' => ['required', 'uuid'],
@@ -71,8 +73,10 @@ class SeatMapController extends Controller
         return response()->json($this->present($map->fresh(['publishedVersion', 'versions'])), 201);
     }
 
-    public function show(SeatMap $map)
+    public function show(Request $request, SeatMap $map)
     {
+        $this->authorize($request, 'maps.view');
+
         $map->load(['publishedVersion', 'versions']);
 
         return response()->json($this->present($map));
@@ -80,7 +84,7 @@ class SeatMapController extends Controller
 
     public function update(Request $request, SeatMap $map)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'maps.manage');
 
         $map->update($request->validate([
             'name' => ['sometimes', 'string', 'max:160'],
@@ -90,8 +94,10 @@ class SeatMapController extends Controller
         return response()->json($this->present($map->fresh(['publishedVersion', 'versions'])));
     }
 
-    public function versions(SeatMap $map)
+    public function versions(Request $request, SeatMap $map)
     {
+        $this->authorize($request, 'maps.view');
+
         return response()->json([
             'data' => $map->versions()->get()->map(fn (SeatMapVersion $v) => $this->presentVersion($v, false)),
         ]);
@@ -105,7 +111,7 @@ class SeatMapController extends Controller
      */
     public function saveVersion(Request $request, SeatMap $map)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'maps.manage');
 
         $data = $request->validate([
             'geometry' => ['required', 'array'],
@@ -149,6 +155,8 @@ class SeatMapController extends Controller
 
     public function validateGeometry(Request $request, SeatMap $map)
     {
+        $this->authorize($request, 'maps.manage');
+
         $data = $request->validate(['geometry' => ['required', 'array']]);
 
         return response()->json($this->validator->validate($data['geometry']));
@@ -156,7 +164,7 @@ class SeatMapController extends Controller
 
     public function publish(Request $request, SeatMap $map)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'maps.publish');
 
         $draft = $map->draftVersion();
 

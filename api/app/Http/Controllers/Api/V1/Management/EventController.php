@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
-use App\Domain\Availability\AvailabilityService;
+use App\Domain\Events\EventStats;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Checkin;
@@ -19,12 +19,14 @@ use Illuminate\Support\Str;
 class EventController extends Controller
 {
     public function __construct(
-        private readonly AvailabilityService $availability,
+        private readonly EventStats $stats,
         private readonly AuditLogger $audit,
     ) {}
 
     public function index(Request $request)
     {
+        $this->authorize($request, 'events.view');
+
         $events = Event::with('venue')
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('starts_at')
@@ -35,7 +37,7 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'events.manage');
 
         $data = $this->validateEvent($request, creating: true);
 
@@ -55,14 +57,16 @@ class EventController extends Controller
         return response()->json($this->present($event), 201);
     }
 
-    public function show(Event $event)
+    public function show(Request $request, Event $event)
     {
+        $this->authorize($request, 'events.view');
+
         return response()->json($this->present($event));
     }
 
     public function update(Request $request, Event $event)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'events.manage');
 
         $data = $this->validateEvent($request, creating: false);
 
@@ -73,9 +77,14 @@ class EventController extends Controller
             );
         }
 
-        $event->update($data);
+        // Filled from the request and audited *before* the write, so the log records what the
+        // database is about to be told rather than what the caller believed they asked for. After
+        // save() there is nothing dirty left to read, and those two differ often enough to matter.
+        $event->fill($data);
 
-        $this->audit->record('event.updated', $event, ['changes' => array_keys($data)]);
+        $this->audit->recordChange('event.updated', $event);
+
+        $event->save();
 
         return response()->json($this->present($event->fresh()));
     }
@@ -89,7 +98,7 @@ class EventController extends Controller
      */
     public function pricing(Request $request, Event $event)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'pricing.manage');
 
         $data = $request->validate([
             'currency' => ['required', 'string', 'size:3'],
@@ -166,13 +175,23 @@ class EventController extends Controller
         return response()->json($this->present($event->fresh()));
     }
 
-    public function stats(Event $event)
+    public function stats(Request $request, Event $event)
     {
-        return response()->json($this->buildStats($event));
+        $this->authorize($request, 'reports.attendance.view');
+
+        // Attendance to anyone who may see attendance; the takings only to someone who may see
+        // those. Both on one endpoint because they are one screen, and a door volunteer looking
+        // at how many are still outside should not learn the revenue on the way past.
+        return response()->json($this->stats->for(
+            $event,
+            withMoney: app(\App\Support\Access\Gate::class)->allows($request, 'reports.orders.view'),
+        ));
     }
 
     public function checkins(Request $request, Event $event)
     {
+        $this->authorize($request, 'checkins.view');
+
         $checkins = Checkin::with(['device', 'operator'])
             ->where('event_id', $event->id)
             ->orderByDesc('scanned_at')
@@ -188,23 +207,6 @@ class EventController extends Controller
         ]);
     }
 
-    public function buildStats(Event $event): array
-    {
-        $summary = $this->availability->summaryForEvent($event);
-
-        $gross = (int) $event->allocations()->where('status', 'active')->sum('amount');
-        $checkedIn = $event->tickets()->where('status', 'used')->count();
-        $issued = $event->tickets()->whereIn('status', ['issued', 'used'])->count();
-
-        return $summary + [
-            // Indicative only: coupons and tax live in the shop, not here (ADR-0001).
-            'gross_amount' => $gross,
-            'currency' => $event->currency,
-            'tickets_issued' => $issued,
-            'checked_in' => $checkedIn,
-            'checkin_rate' => $issued > 0 ? round($checkedIn / $issued, 4) : 0.0,
-        ];
-    }
 
     private function validateEvent(Request $request, bool $creating): array
     {

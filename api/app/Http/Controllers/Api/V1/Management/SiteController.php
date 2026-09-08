@@ -34,8 +34,10 @@ class SiteController extends Controller
         private readonly AuditLogger $audit,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $this->authorize($request, 'sites.view');
+
         $sites = Site::with('domains')->orderBy('name')->get();
 
         return response()->json(['data' => $sites->map(fn (Site $site) => $this->present($site))]);
@@ -43,7 +45,7 @@ class SiteController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.manage');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -60,14 +62,16 @@ class SiteController extends Controller
         return response()->json($this->present($site, withPages: true), 201);
     }
 
-    public function show(Site $site)
+    public function show(Request $request, Site $site)
     {
+        $this->authorize($request, 'sites.view');
+
         return response()->json($this->present($site->load(['domains', 'pages', 'menus.items']), withPages: true));
     }
 
     public function update(Request $request, Site $site)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.manage');
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:120'],
@@ -94,10 +98,14 @@ class SiteController extends Controller
             );
         }
 
-        $site->update($data);
+        $site->fill($data);
+
+        // Before the write, so the log records what actually moved rather than what was sent.
+        $this->audit->recordChange('site.updated', $site);
+
+        $site->save();
 
         $this->forgetDomains($site);
-        $this->audit->record('site.updated', $site, ['changes' => array_keys($data)]);
 
         return response()->json($this->present($site->fresh(['domains', 'pages', 'menus.items']), withPages: true));
     }
@@ -106,7 +114,7 @@ class SiteController extends Controller
 
     public function storePage(Request $request, Site $site)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.manage');
 
         if ($site->pages()->count() >= (int) config('seatmap.sites.limits.max_pages', 200)) {
             throw ApiException::unprocessable('too_many_pages', 'This site has as many pages as it can hold.');
@@ -135,7 +143,7 @@ class SiteController extends Controller
 
     public function updatePage(Request $request, Site $site, SitePage $page)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.manage');
         $this->assertBelongs($site, $page->site_id);
 
         $data = $request->validate([
@@ -170,7 +178,7 @@ class SiteController extends Controller
     /** Publishing copies the draft over the live copy — the same discipline the seat maps have. */
     public function publishPage(Request $request, Site $site, SitePage $page)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.publish');
         $this->assertBelongs($site, $page->site_id);
 
         $page->update([
@@ -185,7 +193,7 @@ class SiteController extends Controller
 
     public function destroyPage(Request $request, Site $site, SitePage $page)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.manage');
         $this->assertBelongs($site, $page->site_id);
 
         if (in_array($page->kind, ['home', 'event'], true)) {
@@ -204,7 +212,7 @@ class SiteController extends Controller
 
     public function updateMenu(Request $request, Site $site, string $key)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'sites.manage');
 
         $menu = $site->menus()->where('key', $key)->firstOrFail();
 
@@ -247,7 +255,7 @@ class SiteController extends Controller
 
     public function storeDomain(Request $request, Site $site)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'domains.manage');
 
         if ($site->domains()->count() >= (int) config('seatmap.sites.limits.max_domains', 5)) {
             throw ApiException::unprocessable('too_many_domains', 'This site already has as many addresses as it can hold.');
@@ -287,7 +295,7 @@ class SiteController extends Controller
 
     public function verifyDomain(Request $request, Site $site, SiteDomain $domain)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'domains.manage');
         $this->assertBelongs($site, $domain->site_id);
 
         VerifySiteDomain::dispatchSync($domain->id);
@@ -297,7 +305,7 @@ class SiteController extends Controller
 
     public function makeDomainPrimary(Request $request, Site $site, SiteDomain $domain)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'domains.manage');
         $this->assertBelongs($site, $domain->site_id);
 
         if (! $domain->isVerified()) {
@@ -316,7 +324,7 @@ class SiteController extends Controller
 
     public function destroyDomain(Request $request, Site $site, SiteDomain $domain)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'domains.manage');
         $this->assertBelongs($site, $domain->site_id);
 
         if ($domain->is_primary && $site->domains()->count() > 1) {
@@ -333,8 +341,10 @@ class SiteController extends Controller
 
     /* ---------------------------------------------------------------------------- helpers */
 
-    public function themes()
+    public function themes(Request $request)
     {
+        $this->authorize($request, 'sites.view');
+
         return response()->json([
             'themes' => array_values(Themes::all()),
             'fonts' => array_keys(Themes::FONTS),

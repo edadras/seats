@@ -33,8 +33,10 @@ class ModuleController extends Controller
         private readonly AuditLogger $audit,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $this->authorize($request, 'modules.manage');
+
         $modules = array_map(
             fn (ModuleManifest $manifest) => $this->present($manifest),
             array_values($this->registry->installed())
@@ -48,8 +50,10 @@ class ModuleController extends Controller
         ]);
     }
 
-    public function show(string $key)
+    public function show(Request $request, string $key)
     {
+        $this->authorize($request, 'modules.manage');
+
         return response()->json($this->present($this->find($key), withFailures: true));
     }
 
@@ -62,7 +66,7 @@ class ModuleController extends Controller
      */
     public function update(Request $request, string $key)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'modules.manage');
 
         $manifest = $this->find($key);
 

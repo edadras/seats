@@ -26,6 +26,7 @@ class ResolveTenantFromUser
             throw ApiException::unauthorized('unauthenticated', 'Authentication required.');
         }
 
+        // `memberships()` is unscoped by design — it is what decides which tenant to bind.
         $memberships = $user->memberships()->get();
 
         if ($memberships->isEmpty()) {
@@ -51,6 +52,13 @@ class ResolveTenantFromUser
         }
 
         $this->tenantContext->set($tenant);
+        // A suspended member keeps their history and loses their access. They are told which,
+        // because "your password is wrong" to somebody whose account was suspended is a support
+        // call that takes a week to resolve.
+        if ($membership->isSuspended()) {
+            throw ApiException::denied('member_suspended', 'This account has been suspended.');
+        }
+
         $request->attributes->set('membership', $membership);
 
         return $next($request);

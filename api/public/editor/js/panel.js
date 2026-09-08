@@ -30,6 +30,8 @@
 		{ key: 'sites', label: 'Websites', icon: 'globe' },
 		{ key: 'connections', label: 'Connections', icon: 'plug' },
 		{ key: 'modules', label: 'Modules', icon: 'puzzle' },
+		{ key: 'team', label: 'Team', icon: 'users' },
+		{ key: 'audit', label: 'Activity', icon: 'history' },
 	];
 
 	var STATUS_TONE = {
@@ -355,6 +357,8 @@
 			case 'connections': return this.renderConnections();
 			case 'sites': return window.SeatmapSites.renderList( this );
 			case 'modules': return window.SeatmapModules.render( this );
+			case 'team': return window.SeatmapTeam.render( this );
+			case 'audit': return window.SeatmapAudit.render( this );
 			case 'tickets': return window.SeatmapTickets.render( this );
 			default: return this.renderEvents();
 		}

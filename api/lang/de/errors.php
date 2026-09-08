@@ -88,4 +88,14 @@ return [
     'not_part_of_site' => 'Gehört nicht zu dieser Website.',
     'unknown_event' => 'Unbekannte Veranstaltung.',
     'unknown_tenant' => 'Unbekannter Veranstalter.',
+
+// --- Team, Rollen und Einladungen -------------------------------------------------------
+    'member_suspended' => 'Ihr Zugang zu diesem Konto wurde gesperrt.',
+    'reserved_role' => 'Dieser Name gehört zu einer eingebauten Rolle. Wählen Sie einen anderen.',
+    'role_in_use' => 'Jemand hat diese Rolle noch. Weisen Sie ihr zuerst eine andere zu.',
+    'last_owner' => 'Ein Konto muss mindestens eine Inhaberin oder einen Inhaber behalten.',
+    'cannot_change_own_role' => 'Sie können Ihre eigene Rolle nicht ändern.',
+    'invitation_invalid' => 'Diese Einladung ist ungültig oder wurde bereits benutzt.',
+    'invitation_expired' => 'Diese Einladung ist abgelaufen. Fordern Sie eine neue an.',
+    'already_a_member' => 'Diese Person gehört bereits zu diesem Konto.',
 ];

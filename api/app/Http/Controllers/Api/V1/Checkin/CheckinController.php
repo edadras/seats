@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1\Checkin;
 
 use App\Domain\Checkin\CheckinService;
 use App\Exceptions\ApiException;
-use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Controller;
 use App\Models\CheckinDevice;
+use App\Domain\Events\EventStats;
 use App\Models\Event;
 use App\Models\Ticket;
 use App\Support\Tenancy\TenantContext;
@@ -158,7 +158,7 @@ class CheckinController extends Controller
         $device = $request->attributes->get('checkin_device');
         $event = $this->authorizedEvent($device, $eventId);
 
-        return response()->json(app(EventController::class)->buildStats($event));
+        return response()->json(app(EventStats::class)->for($event));
     }
 
     private function authorizedEvent(CheckinDevice $device, string $eventId): Event

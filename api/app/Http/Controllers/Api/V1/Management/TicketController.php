@@ -26,6 +26,8 @@ class TicketController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize($request, 'tickets.view');
+
         $data = $request->validate([
             'event_id' => ['required', 'uuid'],
             'q' => ['sometimes', 'nullable', 'string', 'max:120'],
@@ -70,7 +72,7 @@ class TicketController extends Controller
      */
     public function release(Request $request, Ticket $ticket)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'tickets.release');
 
         $allocation = $ticket->allocation;
 
@@ -105,8 +107,10 @@ class TicketController extends Controller
      * to the storefront and never readable again, so a panel session cannot be used to harvest
      * working tickets.
      */
-    public function show(Ticket $ticket)
+    public function show(Request $request, Ticket $ticket)
     {
+        $this->authorize($request, 'tickets.view');
+
         return response()->json($this->present($ticket->load('allocation.order')));
     }
 

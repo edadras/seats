@@ -88,4 +88,14 @@ return [
     'not_part_of_site' => 'Non fa parte di questo sito.',
     'unknown_event' => 'Evento sconosciuto.',
     'unknown_tenant' => 'Organizzatore sconosciuto.',
+
+// --- Team, ruoli e inviti ---------------------------------------------------------------
+    'member_suspended' => 'Il tuo accesso a questo account è stato sospeso.',
+    'reserved_role' => 'Questo nome appartiene a un ruolo integrato. Scegline un altro.',
+    'role_in_use' => 'Qualcuno ha ancora questo ruolo. Spostalo prima.',
+    'last_owner' => 'Un account deve conservare almeno un proprietario.',
+    'cannot_change_own_role' => 'Non puoi cambiare il tuo stesso ruolo.',
+    'invitation_invalid' => 'Questo invito non è valido, oppure è già stato usato.',
+    'invitation_expired' => 'Questo invito è scaduto. Chiedine uno nuovo.',
+    'already_a_member' => 'Questa persona fa già parte di questo account.',
 ];

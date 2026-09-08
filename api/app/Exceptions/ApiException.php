@@ -42,6 +42,18 @@ class ApiException extends \RuntimeException implements HttpExceptionInterface
         return new self('forbidden', $message, 403, [], $key);
     }
 
+    /**
+     * A refusal with its own code, for the ones a client should be able to branch on.
+     *
+     * "You cannot change your own role" and "you lack a permission" are both 403s and are not the
+     * same event: the first is a rule, the second is a setting somebody can change. A panel that
+     * cannot tell them apart offers the wrong next step.
+     */
+    public static function denied(string $code, string $message): self
+    {
+        return new self($code, $message, 403, [], $code);
+    }
+
     public static function unauthorized(string $code, string $message, ?string $key = null): self
     {
         return new self($code, $message, 401, [], $key);

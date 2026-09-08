@@ -44,6 +44,26 @@ Rows (straight or curved), enterable polygon sections, general admission areas, 
 the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
 floors, on four selection layers, with categories, a focal point and a validation checklist.
 
+## Who may do what
+
+Six built-in roles — owner, administrator, manager, box office, door staff, viewer — over a closed
+catalogue of named permissions, and an organiser can invent their own for a job their venue
+actually has.
+
+The separation that matters most is money from operations. A door volunteer sees the head count and
+not the takings; the same `/events/{id}/stats` endpoint answers both questions and only answers the
+second to somebody who may hear it. A box office finds a booking, refunds it and puts a seat back on
+sale, and cannot republish the map that seat is on.
+
+Two rules stop an account destroying itself: nobody changes their own membership — without that,
+every permission check is advice — and an account always keeps at least one owner who is not
+suspended, or nobody can grant anything ever again. Removing someone suspends them rather than
+deleting them, so the audit log keeps its names.
+
+The **audit log** now records what changed, not only that something did, taken from what the
+database was actually told rather than what the caller believed they asked for. It is read-only by
+construction: there is no endpoint that edits or deletes a row, and there will not be one.
+
 ## Six languages
 
 Persian, English, Arabic, German, French and Italian, with Persian and Arabic right-to-left.
@@ -153,7 +173,7 @@ connected API client, and prints the credentials you need for the plugin.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 145 unit, feature and module tests
+./vendor/bin/phpunit                        # 163 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -214,6 +234,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A module cannot reach the seating inventory | `ModuleBoundaryTest` |
 | A module secret is never readable from the panel | `ModuleSystemTest` |
 | A broken module does not take a request with it, and does not fail silently | `ModuleSystemTest` |
+| A door volunteer sees the head count and not the takings | `AccessControlTest` |
+| An account cannot lose its last owner, and nobody edits their own role | `AccessControlTest` |
+| One organiser never sees another's staff or audit log | `AccessControlTest` |
 | A rial price is not divided by a hundred | `LocalisationTest` |
 | An Iranian reader gets the Persian calendar, an Arabic one does not | `LocalisationTest` |
 | A hosted purchase makes allocations, tickets and a server-priced order | `HostedSiteTest` |

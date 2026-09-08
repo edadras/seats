@@ -18,8 +18,10 @@ class ApiClientController extends Controller
 {
     public function __construct(private readonly AuditLogger $audit) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $this->authorize($request, 'connections.manage');
+
         return response()->json([
             'data' => ApiClient::with(['keys' => fn ($q) => $q->whereNull('revoked_at')])
                 ->orderBy('name')->get()
@@ -29,7 +31,7 @@ class ApiClientController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'connections.manage');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -58,7 +60,7 @@ class ApiClientController extends Controller
      */
     public function rotate(Request $request, ApiClient $client)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'connections.manage');
 
         $issued = ApiKey::issue($client, $request->input('label', 'rotated'));
 
@@ -73,7 +75,7 @@ class ApiClientController extends Controller
 
     public function revoke(Request $request, ApiClient $client, string $keyId)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'connections.manage');
 
         $key = ApiKey::where('api_client_id', $client->id)->where('key_id', $keyId)->firstOrFail();
         $key->forceFill(['revoked_at' => now()])->save();

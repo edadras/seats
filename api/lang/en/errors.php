@@ -92,4 +92,14 @@ return [
     'not_part_of_site' => 'Not part of this site.',
     'unknown_event' => 'Unknown event.',
     'unknown_tenant' => 'Unknown organiser.',
+
+// --- Team, roles and invitations --------------------------------------------------------
+    'member_suspended' => 'Your access to this account has been suspended.',
+    'reserved_role' => 'That name belongs to a built-in role. Choose another.',
+    'role_in_use' => 'Someone still has this role. Move them first.',
+    'last_owner' => 'An account must keep at least one owner.',
+    'cannot_change_own_role' => 'You cannot change your own role.',
+    'invitation_invalid' => 'That invitation is not valid, or it has already been used.',
+    'invitation_expired' => 'That invitation has expired. Ask for a new one.',
+    'already_a_member' => 'That person is already part of this account.',
 ];

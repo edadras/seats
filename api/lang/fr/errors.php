@@ -88,4 +88,14 @@ return [
     'not_part_of_site' => 'Ne fait pas partie de ce site.',
     'unknown_event' => 'Événement inconnu.',
     'unknown_tenant' => 'Organisateur inconnu.',
+
+// --- Équipe, rôles et invitations --------------------------------------------------------
+    'member_suspended' => 'Votre accès à ce compte a été suspendu.',
+    'reserved_role' => 'Ce nom appartient à un rôle intégré. Choisissez-en un autre.',
+    'role_in_use' => 'Quelqu’un occupe encore ce rôle. Déplacez-le d’abord.',
+    'last_owner' => 'Un compte doit conserver au moins un propriétaire.',
+    'cannot_change_own_role' => 'Vous ne pouvez pas modifier votre propre rôle.',
+    'invitation_invalid' => 'Cette invitation n’est pas valide, ou elle a déjà servi.',
+    'invitation_expired' => 'Cette invitation a expiré. Demandez-en une nouvelle.',
+    'already_a_member' => 'Cette personne fait déjà partie de ce compte.',
 ];

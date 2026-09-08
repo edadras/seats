@@ -14,6 +14,8 @@ class VenueController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorize($request, 'venues.view');
+
         $venues = Venue::query()
             ->when($request->query('q'), fn ($q, $term) => $q->where('name', 'ilike', "%{$term}%"))
             ->orderBy('name')
@@ -24,7 +26,7 @@ class VenueController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'venues.manage');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
@@ -41,16 +43,18 @@ class VenueController extends Controller
         return response()->json($this->present($venue), 201);
     }
 
-    public function show(Venue $venue)
+    public function show(Request $request, Venue $venue)
     {
+        $this->authorize($request, 'venues.view');
+
         return response()->json($this->present($venue));
     }
 
     public function update(Request $request, Venue $venue)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'venues.manage');
 
-        $venue->update($request->validate([
+        $venue->fill($request->validate([
             'name' => ['sometimes', 'string', 'max:160'],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:120'],
@@ -58,14 +62,16 @@ class VenueController extends Controller
             'timezone' => ['sometimes', 'string', 'timezone'],
         ]));
 
-        $this->audit->record('venue.updated', $venue);
+        $this->audit->recordChange('venue.updated', $venue);
+
+        $venue->save();
 
         return response()->json($this->present($venue->fresh()));
     }
 
     public function destroy(Request $request, Venue $venue)
     {
-        $this->authorizeWrite($request);
+        $this->authorize($request, 'venues.manage');
 
         if ($venue->events()->exists()) {
             throw ApiException::conflict(

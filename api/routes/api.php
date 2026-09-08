@@ -5,11 +5,13 @@ use App\Http\Controllers\Api\V1\Embed\EmbedController;
 use App\Http\Controllers\Api\V1\Integrations\WooCommerceController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
+use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
+use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
 use App\Http\Controllers\Api\V1\Management\VenueController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +67,21 @@ Route::prefix('v1')->group(function () {
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);
         Route::post('tickets/{ticket}/release', [TicketController::class, 'release']);
+
+        // ---- Team, roles and the audit log ----------------------------------------------
+        Route::get('team', [TeamController::class, 'index']);
+        Route::patch('team/members/{member}', [TeamController::class, 'updateMember']);
+        Route::post('team/invitations', [TeamController::class, 'invite']);
+        Route::delete('team/invitations/{invitation}', [TeamController::class, 'revokeInvitation']);
+
+        Route::get('roles', [TeamController::class, 'roles']);
+        Route::post('roles', [TeamController::class, 'storeRole']);
+        Route::patch('roles/{role}', [TeamController::class, 'updateRole']);
+        Route::delete('roles/{role}', [TeamController::class, 'destroyRole']);
+
+        // Read-only, by construction. An audit trail an administrator can edit is a diary.
+        Route::get('audit', [AuditController::class, 'index']);
+        Route::get('audit/facets', [AuditController::class, 'facets']);
 
         // ---- Modules (ADR-0004) --------------------------------------------------------
         // There is no install endpoint and there will not be one: what code runs on a server is

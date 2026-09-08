@@ -50,6 +50,8 @@ tags:
   - name: Tickets
   - name: Sites
   - name: Modules
+  - name: Team
+  - name: Audit
   - name: Check-in
 
 security:
@@ -836,6 +838,304 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /team:
+    get:
+      operationId: listTeam
+      tags: [Team]
+      summary: Who is in this account, who has been invited, and the roles available
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Member" }
+                  invitations:
+                    type: array
+                    items: { $ref: "#/components/schemas/Invitation" }
+                  roles:
+                    type: array
+                    items: { $ref: "#/components/schemas/Role" }
+
+  /team/members/{member}:
+    parameters:
+      - name: member
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateMember
+      tags: [Team]
+      summary: Change someone's role, or suspend and restore them
+      description: |
+        Two rules are enforced here and both exist because of a way an account can become unusable:
+
+        - **Nobody changes their own membership.** Without it the permission system is advice —
+          anyone with `team.manage` could hand themselves everything.
+        - **An account keeps at least one owner who is not suspended.** Otherwise nobody can grant
+          anything ever again, and the only way out is a support ticket and a database console.
+
+        Suspension rather than deletion, so somebody who left keeps their name on what they did.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, description: A built-in role key or one this organiser invented. }
+                suspended: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Member" }
+        "403":
+          description: "`cannot_change_own_role`, or the caller lacks `team.manage`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "`last_owner`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /team/invitations:
+    post:
+      operationId: inviteMember
+      tags: [Team]
+      summary: Invite somebody to this account
+      description: |
+        The response carries `token` in plaintext **once**, so it can be put in an email or handed
+        over in person. It is stored hashed and is never returned again: an invitation link is a way
+        into an account, and a leaked database should not be a set of working ones.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email }
+                role: { type: string }
+      responses:
+        "201":
+          description: Invited
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Invitation"
+                  - type: object
+                    properties:
+                      token:
+                        type: string
+                        description: Shown on this response and never again.
+        "409":
+          description: "`already_a_member`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /team/invitations/{invitation}:
+    parameters:
+      - name: invitation
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: revokeInvitation
+      tags: [Team]
+      summary: Cancel an invitation
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [Team]
+      summary: Every role, and the catalogue of permissions they are built from
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Role" }
+                  permissions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string, examples: ["orders.view"] }
+                        group: { type: string, examples: ["boxoffice"] }
+                        label:
+                          type: string
+                          description: What somebody can *do*, translated — not what the code calls it.
+                  groups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string }
+                        label: { type: string }
+    post:
+      operationId: createRole
+      tags: [Team]
+      summary: Invent a role for a job this venue actually has
+      description: |
+        Permissions that are not in the catalogue are dropped rather than rejected, so a client
+        sending a stale list still gets a working role. Reserved keys are refused outright: a
+        custom role called `owner` holding five permissions would be the worst kind of surprise.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, name, permissions]
+              properties:
+                key: { type: string, pattern: "^[a-z][a-z0-9_]*$" }
+                name: { type: string, maxLength: 80 }
+                permissions: { type: array, items: { type: string } }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Role" }
+        "409":
+          description: "`role_exists`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`reserved_role`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /roles/{role}:
+    parameters:
+      - name: role
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateRole
+      tags: [Team]
+      summary: Rename a role or change what it holds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 80 }
+                permissions: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Role" }
+    delete:
+      operationId: deleteRole
+      tags: [Team]
+      summary: Delete a role nobody holds
+      description: Deleting a role somebody holds would leave them with nothing, silently.
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "409":
+          description: "`role_in_use`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /audit:
+    get:
+      operationId: listAudit
+      tags: [Audit]
+      summary: Who changed what, when, and from where
+      description: |
+        Read-only, by construction. There is no endpoint that edits or deletes a row here and there
+        will not be: an audit trail an administrator can edit is a diary, not a record.
+
+        `changes` names the fields that moved and their before and after. Secrets never reach it —
+        redaction walks the whole structure, including the `{from, to}` pair, because checking only
+        the leaf would see two innocent words holding a credential.
+      parameters:
+        - { name: action, in: query, schema: { type: string }, description: Prefix match — `team.` finds every team action. }
+        - { name: actor_id, in: query, schema: { type: string } }
+        - { name: subject_type, in: query, schema: { type: string } }
+        - { name: subject_id, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AuditEntry" }
+
+  /audit/facets:
+    get:
+      operationId: auditFacets
+      tags: [Audit]
+      summary: The actions and people present in this log, so filters offer real values
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions: { type: array, items: { type: string } }
+                  actors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        email: { type: string }
 
   /modules:
     get:
@@ -2121,6 +2421,75 @@ components:
             section: { type: [string, "null"] }
             row: { type: [string, "null"] }
             label: { type: [string, "null"] }
+
+    Member:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        name: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+        role: { type: string }
+        role_name: { type: string, description: Translated for built-in roles; the organiser's own wording otherwise. }
+        suspended: { type: boolean }
+        last_seen_at: { type: [string, "null"], format: date-time }
+
+    Invitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string }
+        invited_by: { type: [string, "null"] }
+        expires_at: { type: string, format: date-time }
+        expired: { type: boolean }
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+          description: Null for a built-in role, which is code rather than a row.
+        key: { type: string }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        built_in: { type: boolean }
+        permissions:
+          type: array
+          items: { type: string }
+
+    AuditEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string, examples: ["event.updated"] }
+        actor:
+          type: object
+          properties:
+            type: { type: string, enum: [user, api_key, device, system] }
+            id: { type: [string, "null"] }
+            name:
+              type: [string, "null"]
+              description: Present for a person. An API key or a device has no name in `users`; `type` says which it was.
+        subject:
+          type: object
+          properties:
+            type: { type: [string, "null"] }
+            id: { type: [string, "null"] }
+            label:
+              type: [string, "null"]
+              description: Something a person can recognise, because a page of UUIDs is a page nobody reads.
+        changes:
+          type: [object, "null"]
+          description: Field name to `{from, to}`, taken from what the database was actually told.
+          additionalProperties: true
+        context:
+          type: [object, "null"]
+          additionalProperties: true
+        ip: { type: [string, "null"] }
+        request_id: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
 
     Module:
       type: object

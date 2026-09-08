@@ -23,6 +23,11 @@
 		puzzle: '<path d="M10.2 4.2a1.8 1.8 0 0 1 3.6 0V6h3.4a.8.8 0 0 1 .8.8v3.4h1.8a1.8 1.8 0 0 1 0 3.6H18v3.4a.8.8 0 0 1-.8.8h-3.4v-1.8a1.8 1.8 0 0 0-3.6 0V18H6.8a.8.8 0 0 1-.8-.8v-3.4H4.2a1.8 1.8 0 0 1 0-3.6H6V6.8A.8.8 0 0 1 6.8 6h3.4Z"/>',
 		logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h11"/>',
 		user: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+		// Two people, the second half-hidden behind the first: enough to read as "more than one"
+		// without drawing a crowd nobody can resolve at 16px.
+		users: '<circle cx="9.5" cy="8" r="3.2"/><path d="M3.5 19.5a6 6 0 0 1 12 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6"/><path d="M17.5 14.4a6 6 0 0 1 3 5.1"/>',
+		// A clock with its hand turned back: the log, not the schedule.
+		history: '<path d="M3.6 12a8.4 8.4 0 1 1 2.5 6"/><path d="M3 14.5 6.1 18l3.4-3"/><path d="M12 7.5V12l3 1.8"/>',
 		key: '<circle cx="8" cy="14" r="4"/><path d="M11 11l8-8M17 5l2 2M14.5 7.5l2 2"/>',
 
 		/* --- actions ------------------------------------------------------------------- */
