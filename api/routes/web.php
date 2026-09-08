@@ -1,11 +1,37 @@
 <?php
 
+use App\Http\Controllers\FrontDoorController;
+use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\SitePageController;
+use App\Http\Controllers\Site\StoreController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| The panel is served as a single page that talks to /v1. Deep links are handled client-side, so
-| every non-API path returns the same shell.
+| Two things are served from here — the control panel and organisers' event sites — and which one a
+| request gets is decided by its Host and nothing else (ADR-0003 §1).
+|
+| The site's own routes come first because they are specific. Everything else falls through to
+| FrontDoorController, which is where the panel-or-site decision is actually made; the comment on
+| that class explains why it cannot be made by the router.
 */
 
-Route::view('/', 'panel')->name('panel');
-Route::view('/{any}', 'panel')->where('any', '^(?!v1|up|storage).*$');
+Route::middleware('site')->group(function () {
+    // What the seat picker talks to. Same shapes as the WordPress plugin's store routes, because it
+    // is one shared picker that must not know which kind of shop it sits in.
+    Route::prefix('_store')->group(function () {
+        Route::get('availability/{event}', [StoreController::class, 'availability'])
+            ->middleware('throttle:120,1');
+        Route::post('hold', [StoreController::class, 'hold'])->middleware('throttle:30,1');
+        Route::post('release', [StoreController::class, 'release'])->middleware('throttle:60,1');
+    });
+
+    Route::get('checkout', [CheckoutController::class, 'show']);
+    Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1');
+    Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
+
+    Route::get('events/{event}', [SitePageController::class, 'event']);
+});
+
+Route::get('/', FrontDoorController::class);
+Route::get('{path}', FrontDoorController::class)
+    ->where('path', '^(?!v1|up|storage|site|checkin).*$');

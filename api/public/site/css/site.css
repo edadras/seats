@@ -1,0 +1,423 @@
+/**
+ * Structure for every hosted site.
+ *
+ * Only layout and rhythm live here; colour, type and roundness come from the theme file and then
+ * from the organiser's brand, in that order. A theme is therefore a small file, and a site's own
+ * colours survive switching between them.
+ */
+
+:root {
+	--shell: 68rem;
+	--shell-narrow: 44rem;
+	--space: 1.25rem;
+	--radius: 10px;
+
+	--surface: #ffffff;
+	--surface-sunken: #f6f7f9;
+	--border: #e3e6ec;
+	--text: #171a21;
+	--text-muted: #5f6878;
+	--accent: #4a4fdc;
+	--on-accent: #ffffff;
+
+	--font-heading: system-ui, sans-serif;
+	--font-body: system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+	margin: 0;
+	font-family: var(--font-body);
+	font-size: 1rem;
+	line-height: 1.65;
+	color: var(--text);
+	background: var(--surface);
+	-webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+	margin: 0 0 0.4em;
+	font-family: var(--font-heading);
+	line-height: 1.15;
+	letter-spacing: -0.015em;
+}
+
+h1 { font-size: clamp(2rem, 5vw, 3rem); }
+h2 { font-size: clamp(1.5rem, 3.4vw, 2rem); }
+h3 { font-size: 1.15rem; }
+
+p { margin: 0 0 1em; }
+a { color: inherit; }
+img { max-inline-size: 100%; block-size: auto; display: block; }
+hr { border: none; }
+
+/* Never rely on the browser default alone; a themed site is where it most often goes missing. */
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+	border-radius: 3px;
+}
+
+.skip {
+	position: absolute;
+	inset-inline-start: -9999px;
+}
+
+.skip:focus {
+	inset-inline-start: 1rem;
+	inset-block-start: 1rem;
+	z-index: 10;
+	padding: 0.6rem 1rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.shell {
+	inline-size: min(100% - 2.5rem, var(--shell));
+	margin-inline: auto;
+}
+
+.section { padding-block: clamp(2rem, 5vw, 3.5rem); }
+.section--tight { padding-block: clamp(1rem, 2.5vw, 1.75rem); }
+
+.muted { color: var(--text-muted); }
+
+/* ============================================================================= masthead */
+
+.masthead {
+	border-block-end: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.masthead__inner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	padding-block: 1rem;
+}
+
+.brand { text-decoration: none; }
+.brand__logo { max-block-size: 2.5rem; inline-size: auto; }
+
+.brand__name {
+	font-family: var(--font-heading);
+	font-size: 1.25rem;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+.nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem 1.25rem;
+}
+
+.nav__link {
+	text-decoration: none;
+	color: var(--text-muted);
+	font-size: 0.95rem;
+}
+
+.nav__link:hover { color: var(--text); }
+
+/* ================================================================================ blocks */
+
+.prose { max-inline-size: var(--shell-narrow); }
+.prose:last-child { margin-block-end: 0; }
+.prose ul, .prose ol { padding-inline-start: 1.4rem; }
+.prose table { inline-size: 100%; border-collapse: collapse; }
+.prose th, .prose td { padding: 0.5rem 0.6rem; border-block-end: 1px solid var(--border); text-align: start; }
+
+.block-heading { margin-block-end: 0.6em; }
+
+.image { margin: 0; padding-inline: 0; }
+.image--content img, .image--content figcaption { inline-size: min(100% - 2.5rem, var(--shell)); margin-inline: auto; }
+.image--wide img { inline-size: min(100% - 1.5rem, 90rem); margin-inline: auto; }
+.image--full img { inline-size: 100%; }
+.image img { border-radius: var(--radius); }
+.image--full img { border-radius: 0; }
+
+.image figcaption {
+	margin-block-start: 0.6rem;
+	font-size: 0.875rem;
+	color: var(--text-muted);
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.button {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 2.75rem;
+	padding-inline: 1.25rem;
+	border-radius: var(--radius);
+	border: 1px solid var(--accent);
+	background: var(--accent);
+	color: var(--on-accent);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.button--secondary {
+	background: transparent;
+	color: var(--text);
+	border-color: var(--border);
+}
+
+.divider {
+	border-block-start: 1px solid var(--border);
+	margin-block: 1rem;
+}
+
+.faq__item {
+	border-block-end: 1px solid var(--border);
+	padding-block: 0.9rem;
+}
+
+.faq__item summary {
+	cursor: pointer;
+	font-weight: 600;
+	font-family: var(--font-heading);
+}
+
+.venue__address {
+	font-style: normal;
+	margin-block-end: 1rem;
+}
+
+.notice {
+	padding: 1rem 1.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-sunken);
+	color: var(--text-muted);
+}
+
+/* ============================================================================== events */
+
+.events--cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+	gap: 1rem;
+}
+
+.events--list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.event-card {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	text-decoration: none;
+	transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.event-card:hover {
+	border-color: var(--accent);
+	transform: translateY(-1px);
+}
+
+.event-card__when {
+	display: grid;
+	place-items: center;
+	inline-size: 3.25rem;
+	padding-block: 0.4rem;
+	border-radius: calc(var(--radius) * 0.7);
+	background: var(--surface-sunken);
+	flex: none;
+	line-height: 1.1;
+}
+
+.event-card__day { font-size: 1.4rem; font-weight: 700; font-family: var(--font-heading); }
+.event-card__month { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+
+.event-card__body { flex: 1; min-inline-size: 0; }
+.event-card__name { margin: 0 0 0.15rem; font-size: 1.05rem; }
+.event-card__meta { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
+.event-card__price { margin: 0.2rem 0 0; font-size: 0.875rem; font-weight: 600; }
+
+.event-card__cta {
+	flex: none;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--accent);
+}
+
+.event__name { margin-block-end: 0.2em; }
+.event__when { color: var(--text-muted); margin-block-end: 1.5rem; }
+
+/* ============================================================================== footer */
+
+.footer {
+	margin-block-start: 3rem;
+	border-block-start: 1px solid var(--border);
+	background: var(--surface-sunken);
+}
+
+.footer__inner {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1.5rem;
+	justify-content: space-between;
+	padding-block: 2rem;
+}
+
+.footer__name { margin: 0; font-weight: 600; font-family: var(--font-heading); }
+.footer__tagline { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+	* { transition: none !important; }
+}
+
+/* ============================================================================ checkout */
+
+.checkout__grid {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 2rem;
+}
+
+.checkout__form { flex: 1 1 24rem; min-inline-size: 0; }
+
+.checkout__form h2 {
+	font-size: 1.05rem;
+	margin-block: 1.75rem 0.9rem;
+}
+
+.checkout__form h2:first-child { margin-block-start: 0; }
+
+.field { margin-block-end: 1rem; }
+
+.field label {
+	display: block;
+	margin-block-end: 0.3rem;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.field input {
+	inline-size: 100%;
+	min-block-size: 2.75rem;
+	padding-inline: 0.8rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+}
+
+.field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.field__hint { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.field__error { margin: 0.35rem 0 0; font-size: 0.85rem; color: #b3261e; }
+
+/* A payment method is a decision, so it gets a target big enough to be one. */
+.pay {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	padding: 0.9rem 1rem;
+	margin-block-end: 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	cursor: pointer;
+}
+
+.pay:has(input:checked) { border-color: var(--accent); }
+.pay input { margin-block-start: 0.3rem; }
+.pay span { display: block; }
+.pay strong { display: block; }
+.pay .muted { font-size: 0.9rem; }
+
+.checkout__submit { margin-block-start: 1.5rem; }
+
+.checkout__summary {
+	flex: 1 1 18rem;
+	min-inline-size: 0;
+	padding: 1.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-sunken);
+	position: sticky;
+	inset-block-start: 1rem;
+}
+
+.checkout__summary h2 {
+	margin-block-start: 0;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: var(--text-muted);
+}
+
+.summary-lines { margin: 0 0 0.75rem; padding: 0; list-style: none; }
+
+.summary-lines li {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding-block: 0.35rem;
+	border-block-end: 1px solid var(--border);
+	font-size: 0.925rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.summary-lines li:last-child { border-block-end: none; }
+
+.summary-total {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	margin: 0;
+	padding-block-start: 0.6rem;
+	border-block-start: 1px solid var(--border);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.summary-hold { margin-block-start: 0.75rem; font-size: 0.85rem; }
+
+/* ============================================================================= tickets */
+
+.tickets {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+	gap: 1rem;
+	margin-block-start: 1.5rem;
+}
+
+.ticket {
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.ticket__seat { margin: 0 0 0.35rem; font-weight: 600; font-family: var(--font-heading); }
+
+.ticket__code {
+	margin: 0;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	letter-spacing: 0.02em;
+	/* A ticket token is long and has no spaces, so it has to be told where it may break. */
+	word-break: break-all;
+}
+
+.ticket__qr {
+	inline-size: 100%;
+	max-inline-size: 200px;
+	block-size: auto;
+	margin-block-end: 0.75rem;
+	border-radius: calc(var(--radius) * 0.6);
+	background: #fff;
+	padding: 6px;
+}

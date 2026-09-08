@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Embed;
 
 use App\Domain\Availability\AvailabilityService;
 use App\Domain\Inventory\HoldService;
+use App\Domain\SeatMaps\PublishedGeometry;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\HoldResource;
@@ -26,6 +27,7 @@ class EmbedController extends Controller
         private readonly AvailabilityService $availability,
         private readonly HoldService $holds,
         private readonly TenantContext $tenantContext,
+        private readonly PublishedGeometry $geometry,
     ) {}
 
     public function show(string $publicId)
@@ -79,7 +81,7 @@ class EmbedController extends Controller
         return response()
             ->json([
                 'seat_map_version_id' => $version->id,
-                'geometry' => $this->withSeatIds($version),
+                'geometry' => $this->geometry->forVersion($version),
             ])
             ->setEtag($version->checksum ?? md5($version->id))
             ->header('Cache-Control', 'public, max-age=3600, immutable');
@@ -93,57 +95,6 @@ class EmbedController extends Controller
      * nothing guarantees the two share an order — one reshuffle and every buyer selects the wrong
      * chair.
      */
-    private function withSeatIds(\App\Models\SeatMapVersion $version): array
-    {
-        $geometry = $version->geometry;
-
-        $seatIds = DB::table('seat_placements as sp')
-            ->join('seats as s', 's.id', '=', 'sp.seat_id')
-            ->where('sp.seat_map_version_id', $version->id)
-            ->pluck('sp.seat_id', 's.key');
-
-        $capacityIds = DB::table('capacity_placements as cp')
-            ->join('capacity_objects as c', 'c.id', '=', 'cp.capacity_object_id')
-            ->where('cp.seat_map_version_id', $version->id)
-            ->pluck('cp.capacity_object_id', 'c.key');
-
-        $annotate = function (array &$objects) use (&$annotate, $seatIds, $capacityIds) {
-            foreach ($objects as &$object) {
-                $type = $object['type'] ?? null;
-
-                if ($type === 'section') {
-                    if (isset($object['objects'])) {
-                        $annotate($object['objects']);
-                    }
-
-                    continue;
-                }
-
-                // Iterate the real offset, not `$object['seats'] ?? []` — the null-coalesce would
-                // hand the loop a temporary copy and the ids would be written to nothing.
-                if (($type === 'row' || $type === 'table') && isset($object['seats'])) {
-                    foreach ($object['seats'] as &$seat) {
-                        $seat['seat_id'] = $seatIds[$seat['key']] ?? null;
-                    }
-                    unset($seat);
-                }
-
-                if (in_array($type, ['area', 'booth', 'table'], true)) {
-                    $object['capacity_object_id'] = $capacityIds[$object['key']] ?? null;
-                }
-            }
-            unset($object);
-        };
-
-        foreach (($geometry['floors'] ?? []) as $index => $unusedFloor) {
-            if (isset($geometry['floors'][$index]['objects'])) {
-                $annotate($geometry['floors'][$index]['objects']);
-            }
-        }
-
-        return $geometry;
-    }
-
     public function availability(Request $request, string $publicId)
     {
         $event = $this->resolveEvent($publicId);

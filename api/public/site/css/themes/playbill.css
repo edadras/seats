@@ -1,0 +1,25 @@
+/* Playbill — warm paper and serif headings, in the manner of a printed programme. */
+:root {
+	--surface: #fbf7f0;
+	--surface-sunken: #f3ece1;
+	--border: #ded3c2;
+	--text: #21201d;
+	--text-muted: #6a6459;
+	--on-accent: #fbf7f0;
+	--shell: 62rem;
+}
+
+body { background: var(--surface); }
+
+h1, h2, h3 { letter-spacing: 0; }
+
+h1 {
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+.masthead { border-block-end-width: 3px; border-block-end-style: double; }
+.brand__name { text-transform: uppercase; letter-spacing: 0.06em; }
+.event-card { border-width: 1px; }
+.event-card__when { background: var(--surface); border: 1px solid var(--border); }
+.divider { border-block-start-style: double; border-block-start-width: 3px; }

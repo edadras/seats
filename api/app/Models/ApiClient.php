@@ -7,12 +7,20 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/** A connected storefront — in practice, one WordPress site. */
+/**
+ * A storefront selling this organiser's seats.
+ *
+ * `kind` says which sort: `external` is a shop that signs its requests — in practice a WordPress
+ * site — and `storefront` is one of our own hosted sites, which calls the order services in-process
+ * and therefore has no key to sign with (ADR-0003 §4).
+ */
 class ApiClient extends Model
 {
     use BelongsToTenant, HasFactory, HasUuids;
 
-    protected $fillable = ['tenant_id', 'name', 'site_url', 'allowed_origins', 'status', 'last_seen_at'];
+    protected $fillable = [
+        'tenant_id', 'name', 'kind', 'site_url', 'allowed_origins', 'status', 'last_seen_at',
+    ];
 
     protected $casts = ['allowed_origins' => 'array', 'last_seen_at' => 'datetime'];
 

@@ -19,3 +19,4 @@ Thumbs.db
 /wordpress-plugin/**/vendor
 /wordpress-plugin/**/node_modules
 *.log
+dump.rdb

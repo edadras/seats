@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
+use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
 use App\Http\Controllers\Api\V1\Management\VenueController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,7 @@ Route::prefix('v1')->group(function () {
             Route::post('events', [EventController::class, 'store']);
             Route::post('api-clients', [ApiClientController::class, 'store']);
             Route::post('api-clients/{client}/keys', [ApiClientController::class, 'rotate']);
+            Route::post('sites', [SiteController::class, 'store']);
         });
 
         Route::get('venues', [VenueController::class, 'index']);
@@ -52,7 +54,28 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}/stats', [EventController::class, 'stats']);
         Route::get('events/{event}/checkins', [EventController::class, 'checkins']);
 
+        Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);
+        Route::post('tickets/{ticket}/release', [TicketController::class, 'release']);
+
+        // ---- Hosted event sites (ADR-0003) ---------------------------------------------
+        Route::get('site-themes', [SiteController::class, 'themes']);
+
+        Route::get('sites', [SiteController::class, 'index']);
+        Route::get('sites/{site}', [SiteController::class, 'show']);
+        Route::patch('sites/{site}', [SiteController::class, 'update']);
+
+        Route::post('sites/{site}/pages', [SiteController::class, 'storePage']);
+        Route::patch('sites/{site}/pages/{page}', [SiteController::class, 'updatePage']);
+        Route::post('sites/{site}/pages/{page}/publish', [SiteController::class, 'publishPage']);
+        Route::delete('sites/{site}/pages/{page}', [SiteController::class, 'destroyPage']);
+
+        Route::put('sites/{site}/menus/{key}', [SiteController::class, 'updateMenu']);
+
+        Route::post('sites/{site}/domains', [SiteController::class, 'storeDomain']);
+        Route::post('sites/{site}/domains/{domain}/verify', [SiteController::class, 'verifyDomain']);
+        Route::post('sites/{site}/domains/{domain}/primary', [SiteController::class, 'makeDomainPrimary']);
+        Route::delete('sites/{site}/domains/{domain}', [SiteController::class, 'destroyDomain']);
 
         Route::get('api-clients', [ApiClientController::class, 'index']);
         Route::delete('api-clients/{client}/keys/{keyId}', [ApiClientController::class, 'revoke']);

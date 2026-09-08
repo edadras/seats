@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Domain\SeatMaps\SeatMapPublisher;
+use App\Domain\Sites\SiteProvisioner;
 use App\Models\ApiClient;
 use App\Models\ApiKey;
 use App\Models\CheckinDevice;
@@ -11,6 +12,7 @@ use App\Models\EventPriceZone;
 use App\Models\Plan;
 use App\Models\SeatMap;
 use App\Models\SeatMapVersion;
+use App\Models\SiteDomain;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\TenantUser;
@@ -98,7 +100,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
-        return app(TenantContext::class)->runAs($tenant, function () use ($tenant, $user, $plan, $seatsPerRow, $rows, $email, $name) {
+        return app(TenantContext::class)->runAs($tenant, function () use ($tenant, $user, $plan, $seatsPerRow, $rows, $email, $name, $slug) {
             TenantUser::firstOrCreate(
                 ['tenant_id' => $tenant->id, 'user_id' => $user->id],
                 ['role' => 'owner'],
@@ -180,9 +182,33 @@ class DatabaseSeeder extends Seeder
                 ],
             )->grantAccessTo($event);
 
+            // A hosted site, on a hostname that resolves without DNS: 127.0.0.1.nip.io and
+            // localhost both point at this machine, so the site is reachable the moment it is
+            // seeded rather than after a hosts-file edit.
+            $site = app(SiteProvisioner::class)->create($name, [
+                'timezone' => $tenant->timezone,
+                'currency' => 'EUR',
+                'theme_key' => 'northgate' === $slug ? 'playbill' : 'noir',
+                'brand' => ['tagline' => 'Tickets straight from the box office.'],
+            ]);
+
+            SiteDomain::firstOrCreate(
+                ['hostname' => $slug.'.localhost'],
+                [
+                    'tenant_id' => $tenant->id,
+                    'site_id' => $site->id,
+                    'is_primary' => true,
+                    'verification_token' => SiteDomain::newToken(),
+                    'verified_at' => now(),
+                ],
+            );
+
+            $site->update(['status' => 'live']);
+
             return [
                 'tenant' => $tenant,
                 'event' => $event,
+                'site' => $site,
                 'email' => $email,
                 'key_id' => $issued['model']->key_id,
                 'secret' => $issued['secret'],

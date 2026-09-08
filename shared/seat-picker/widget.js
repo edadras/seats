@@ -1,4 +1,3 @@
-/* Generated from shared/seat-picker — edit that, then run tools/sync-seat-picker.sh. */
 /**
  * Seat selection widget.
  *

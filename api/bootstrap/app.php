@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ResolveTenantFromUser::class,
             \App\Http\Middleware\AuthenticateApiClient::class,
             \App\Http\Middleware\ResolveCheckinDevice::class,
+            \App\Http\Middleware\ResolveSiteFromHost::class,
         ] as $tenantResolver) {
             $middleware->prependToPriorityList(
                 before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
@@ -46,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\ResolveTenantFromUser::class,
             'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,
             'device' => \App\Http\Middleware\ResolveCheckinDevice::class,
+            'site' => \App\Http\Middleware\ResolveSiteFromHost::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -43,6 +43,38 @@ return [
         'dead_after_failures' => 20,
     ],
 
+    /*
+     | Hosted event sites (ADR-0003).
+     |
+     | `panel_hosts` is the allow-list for the control panel. Every other Host is looked up as a
+     | site domain, so a hostname that is neither is a 404 rather than a panel someone was not
+     | meant to reach.
+     */
+    'sites' => [
+        'panel_hosts' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('SEATMAP_PANEL_HOSTS', ''))
+        ))),
+
+        // Scheme used when building canonical URLs and links in email.
+        'scheme' => env('SEATMAP_SITE_SCHEME', 'https'),
+
+        // Subdomain every new site gets for free, before a custom domain is verified.
+        'default_domain' => env('SEATMAP_SITES_DOMAIN', ''),
+
+        // How long a hostname lookup is cached. A miss is cached too, so an unknown Host cannot be
+        // used to hammer the database.
+        'resolution_ttl_seconds' => (int) env('SEATMAP_SITE_RESOLUTION_TTL', 300),
+        'miss_ttl_seconds' => (int) env('SEATMAP_SITE_MISS_TTL', 30),
+
+        'limits' => [
+            'max_pages' => (int) env('SEATMAP_SITE_MAX_PAGES', 200),
+            'max_blocks_per_page' => (int) env('SEATMAP_SITE_MAX_BLOCKS', 100),
+            'max_menu_items' => (int) env('SEATMAP_SITE_MAX_MENU_ITEMS', 60),
+            'max_domains' => (int) env('SEATMAP_SITE_MAX_DOMAINS', 5),
+        ],
+    ],
+
     'checkin' => [
         'pairing_code_ttl_minutes' => 30,
         'max_batch_scans' => 500,
