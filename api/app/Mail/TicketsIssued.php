@@ -19,12 +19,20 @@ class TicketsIssued extends Mailable
         public readonly Site $site,
         public readonly ExternalOrder $order,
         public readonly array $tickets,
-    ) {}
+        ?string $locale = null,
+    ) {
+        // Pinned at construction, not read at render. This mail is built inside the buyer's
+        // request but rendered by the mailer, and a queued send later would otherwise render it in
+        // whatever language the worker happened to be in.
+        $this->locale($locale ?? app()->getLocale());
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your tickets for '.($this->order->event?->name ?? $this->site->name),
+            subject: __('mail.subject', [
+                'event' => $this->order->event?->name ?? $this->site->name,
+            ], $this->locale),
         );
     }
 

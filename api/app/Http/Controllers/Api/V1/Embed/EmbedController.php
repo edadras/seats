@@ -187,12 +187,12 @@ class EmbedController extends Controller
         );
 
         if (! $event || ! $event->tenant?->isActive()) {
-            throw ApiException::notFound('Unknown event.');
+            throw ApiException::notFound('Unknown event.', 'unknown_event');
         }
 
         if (! in_array($event->status, ['published', 'closed'], true)) {
             // A draft event must not be discoverable by guessing ids.
-            throw ApiException::notFound('Unknown event.');
+            throw ApiException::notFound('Unknown event.', 'unknown_event');
         }
 
         $this->tenantContext->set($event->tenant);
@@ -207,7 +207,7 @@ class EmbedController extends Controller
         );
 
         if (! $hold) {
-            throw ApiException::notFound('Unknown hold token.');
+            throw ApiException::notFound('Unknown hold token.', 'hold_not_found');
         }
 
         $this->tenantContext->set($hold->event->tenant);

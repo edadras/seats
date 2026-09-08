@@ -17,14 +17,14 @@
                         <h3 class="event-card__name">{{ $event['name'] }}</h3>
                         <p class="event-card__meta">{{ $event['time'] }}@if ($event['venue']) · {{ $event['venue'] }}@endif</p>
                         @if ($event['from_price'])
-                            <p class="event-card__price">From {{ $event['from_price'] }}</p>
+                            <p class="event-card__price">{{ __('site.from', ['price' => $event['from_price']]) }}</p>
                         @endif
                     </div>
-                    <span class="event-card__cta">{{ $event['sold_out'] ? 'Sold out' : 'Book' }}</span>
+                    <span class="event-card__cta">{{ $event['sold_out'] ? __('site.soldOut') : __('site.book') }}</span>
                 </a>
             @endforeach
         </div>
     @else
-        <p class="muted">Nothing on sale just now. Check back soon.</p>
+        <p class="muted">{{ __('site.nothingOnSale') }}</p>
     @endif
 </section>

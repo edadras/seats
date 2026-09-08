@@ -9,6 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Site;
 use App\Models\SitePage;
+use App\Support\Locale\Dates;
+use App\Support\Locale\Locales;
+use App\Support\Locale\Money;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -110,7 +113,9 @@ class SitePageController extends Controller
             ->limit($limit)
             ->get();
 
-        return $events->map(function (Event $event) use ($site) {
+        $locale = app()->getLocale();
+
+        return $events->map(function (Event $event) use ($site, $locale) {
             $starts = $event->starts_at?->setTimezone($event->timezone ?: $site->timezone);
             $summary = $this->availability->summaryForEvent($event);
             $cheapest = $event->priceZones->min('amount');
@@ -119,9 +124,12 @@ class SitePageController extends Controller
                 'name' => $event->name,
                 'url' => '/events/'.$event->public_id,
                 'starts_at_iso' => $event->starts_at?->toIso8601String(),
-                'day' => $starts?->format('j') ?? '',
-                'month' => $starts?->format('M') ?? '',
-                'time' => $starts?->format('D j M · H:i') ?? '',
+                // Dates, not format(): `D j M` prints "Tue 29 Sep" in every language, which is the
+                // exact bug this exercise exists to remove — and the calendar follows the reader
+                // too, so an Iranian visitor is told ۷ مهر rather than a date they must convert.
+                'day' => Dates::day($starts, $locale),
+                'month' => Dates::month($starts, $locale),
+                'time' => Dates::shortWhen($starts, $locale),
                 'venue' => $event->venue?->name,
                 'from_price' => null === $cheapest ? null : $this->money($cheapest, $event->currency),
                 'sold_out' => 0 === (int) ($summary['available'] ?? 0),
@@ -151,12 +159,12 @@ class SitePageController extends Controller
             'name' => $event->name,
             'description' => $event->description,
             'venue' => $event->venue?->name,
-            'long_when' => $starts?->format('l j F Y · H:i') ?? '',
+            'long_when' => Dates::longWhen($starts),
             'on_sale' => $onSale,
             'closed_message' => match ($event->status) {
-                'cancelled' => 'This performance has been cancelled.',
-                'closed' => 'Booking for this performance has closed.',
-                default => 'Tickets for this performance are not on sale yet.',
+                'cancelled' => __('site.closed.cancelled'),
+                'closed' => __('site.closed.closed'),
+                default => __('site.closed.notYet'),
             },
             'container_id' => $containerId,
             'boot' => $onSale ? $this->boot($site, $event, $containerId) : null,
@@ -178,13 +186,17 @@ class SitePageController extends Controller
             'restUrl' => '/_store',
             'nonce' => csrf_token(),
             'nonceHeader' => 'X-CSRF-TOKEN',
+            // The event decides the currency; the reader decides how it is written. `symbol` and
+            // `position` stay in the payload for the WordPress path, which formats money itself
+            // from what its shop knows — one picker, two hosts, and neither told the other's story.
             'currency' => [
-                'code' => $event->currency ?: $site->currency,
-                'symbol' => $this->symbol($event->currency ?: $site->currency),
-                'decimals' => 2,
-                'position' => 'left',
+                'code' => $currency = ($event->currency ?: $site->currency),
+                'symbol' => $currency,
+                'decimals' => Money::exponent($currency),
+                'position' => 'left_space',
             ],
-            'isRtl' => in_array($site->locale, ['fa', 'ar', 'he'], true),
+            'locale' => $locale = app()->getLocale(),
+            'isRtl' => Locales::isRtl($locale),
             'event' => [
                 'zones' => $event->priceZones->map(fn ($zone) => [
                     'key' => $zone->key,
@@ -203,18 +215,9 @@ class SitePageController extends Controller
         ];
     }
 
+    /** The event's currency, written the reader's way (ADR-0005 §5). */
     private function money(int $minor, ?string $currency): string
     {
-        return $this->symbol($currency).number_format($minor / 100, 2);
-    }
-
-    private function symbol(?string $currency): string
-    {
-        return match (strtoupper((string) $currency)) {
-            'EUR' => '€',
-            'GBP' => '£',
-            'USD' => '$',
-            default => (strtoupper((string) $currency) ?: '').' ',
-        };
+        return Money::format($minor, $currency ?: 'EUR');
     }
 }

@@ -6,6 +6,7 @@ use App\Domain\Sites\SiteResolver;
 use App\Http\Controllers\Site\SitePageController;
 use App\Models\SiteDomain;
 use App\Models\Tenant;
+use App\Support\Locale\LocaleResolver;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -25,6 +26,7 @@ class FrontDoorController extends Controller
     public function __construct(
         private readonly SiteResolver $resolver,
         private readonly TenantContext $tenantContext,
+        private readonly LocaleResolver $locales,
     ) {}
 
     public function __invoke(Request $request, SitePageController $pages, string $path = '')
@@ -49,6 +51,11 @@ class FrontDoorController extends Controller
 
             $this->tenantContext->set($tenant);
             $request->attributes->set('site', $site);
+
+            // Ask again, now that there is a site to ask about. The locale middleware ran before
+            // this action — it had to, so that a 404 from here is still written in a language —
+            // but at that point nothing knew whose site this was (ADR-0005 §4).
+            $this->locales->apply($request);
 
             return $pages->show($request, $path);
         }

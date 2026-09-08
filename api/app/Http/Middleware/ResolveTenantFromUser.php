@@ -29,7 +29,7 @@ class ResolveTenantFromUser
         $memberships = $user->memberships()->get();
 
         if ($memberships->isEmpty()) {
-            throw ApiException::forbidden('This account is not a member of any organiser.');
+            throw ApiException::forbidden('This account is not a member of any organiser.', 'no_membership');
         }
 
         $requested = $request->header('X-Tenant-Id');
@@ -41,13 +41,13 @@ class ResolveTenantFromUser
         if (! $membership) {
             // The user is authenticated but not a member: report it as not-found so the header
             // cannot be used to probe which tenant ids exist.
-            throw ApiException::notFound('Unknown organiser.');
+            throw ApiException::notFound('Unknown organiser.', 'unknown_tenant');
         }
 
         $tenant = $this->tenantContext->runUnscoped(fn () => Tenant::find($membership->tenant_id));
 
         if (! $tenant || ! $tenant->isActive()) {
-            throw ApiException::forbidden('This organiser account is suspended.');
+            throw ApiException::forbidden('This organiser account is suspended.', 'tenant_suspended');
         }
 
         $this->tenantContext->set($tenant);

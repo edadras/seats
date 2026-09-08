@@ -1,0 +1,119 @@
+<?php
+
+/**
+ * Textes qu'un site d'événement hébergé montre à l'acheteur.
+ *
+ * Le vocabulaire du sélecteur de places vit sous `picker` et lui est remis comme un seul objet :
+ * le sélecteur est partagé avec l'extension WordPress et prend tous ses textes de ce qui le lance.
+ *
+ * Les substitutions sous `picker` s'écrivent %s / %d / %1$s et non :name — le sélecteur les
+ * remplace lui-même, dans le navigateur. En dehors de `picker`, c'est :name.
+ */
+return [
+    'picker' => [
+        'selectSeats' => 'Choisissez vos places',
+        'available' => 'Libre',
+        'unavailable' => 'Occupée',
+        'selected' => 'Choisie',
+        'yourSelection' => 'Votre sélection',
+        'noneSelected' => 'Aucune place choisie pour l’instant.',
+        'total' => 'Total',
+        'addToCart' => 'Réserver ces places',
+        'working' => 'Réservation…',
+        'seatTaken' => 'Désolé, l’une de ces places vient d’être prise. Elle a été retirée de votre sélection.',
+        'genericError' => 'Un problème est survenu. Merci de réessayer.',
+        'maxSeats' => 'Vous pouvez choisir jusqu’à %d places.',
+        'seatLabel' => '%1$s, rang %2$s, place %3$s — %4$s',
+        'seatUnavailable' => '%1$s, rang %2$s, place %3$s — occupée',
+        'zoomIn' => 'Zoom avant',
+        'zoomOut' => 'Zoom arrière',
+        'resetView' => 'Réinitialiser la vue',
+        'held' => 'Places retenues jusqu’à %s',
+        'expired' => 'Votre réservation a expiré. Choisissez à nouveau vos places.',
+        'stage' => 'Scène',
+        'standingAreas' => 'Debout et tables',
+        'placesLeft' => 'il reste %d',
+        'soldOut' => 'Complet',
+        'addOne' => 'Ajouter une place en %s',
+        'removeOne' => 'Retirer une place en %s',
+        'areaFull' => 'Cet espace s’est rempli pendant votre choix. Merci de choisir un autre nombre de places.',
+        'floors' => 'Niveau',
+        'chooseSection' => 'Choisissez un espace',
+        'backToPlan' => 'Retour au plan de la salle',
+        'sectionFrom' => 'À partir de %s',
+        'sectionSeatsLeft' => 'il reste %d places',
+        'sectionSoldOut' => 'Complet',
+        'openSection' => 'Voir les places en %s',
+        'inSection' => 'En %s',
+    ],
+
+    // --- Habillage du site ------------------------------------------------------------------
+    'skipToContent' => 'Aller au contenu',
+    'mainNav' => 'Principal',
+    'footerNav' => 'Pied de page',
+    'language' => 'Langue',
+
+    // --- Programme et page d'événement ------------------------------------------------------
+    'whatsOn' => 'À l’affiche',
+    'noEvents' => 'Rien n’est en vente pour le moment.',
+    'bookNow' => 'Réserver',
+    'from' => 'À partir de :price',
+    'soldOut' => 'Complet',
+    'doorsOpen' => 'Ouverture des portes à :time',
+    'eventDate' => 'Le :date à :time',
+
+    // --- Paiement ---------------------------------------------------------------------------
+    'checkout' => 'Paiement',
+    'whoFor' => 'À qui sont destinés les billets ?',
+    'name' => 'Nom',
+    'email' => 'E-mail',
+    'emailHint' => 'Vos billets sont envoyés à cette adresse.',
+    'phone' => 'Téléphone',
+    'optional' => '(facultatif)',
+    'howToPay' => 'Comment souhaitez-vous payer ?',
+    'confirmBooking' => 'Confirmer la réservation',
+    'yourSeats' => 'Vos places',
+    'total' => 'Total',
+    'heldUntil' => 'Retenues jusqu’à :time.',
+    'holdExpired' => 'Votre réservation a expiré. Choisissez à nouveau vos places.',
+
+    // --- Confirmation -----------------------------------------------------------------------
+    'orderConfirmed' => 'C’est réservé',
+    'orderReference' => 'Réservation :reference',
+    'ticketsSentTo' => 'Vos billets sont en route vers :email.',
+    'ticketsBelow' => 'Ils sont aussi ci-dessous — présentez-en un à l’entrée.',
+    'payAtDoor' => 'Vous paierez au guichet en arrivant.',
+    'addToCalendar' => 'Ajouter au calendrier',
+    'printTickets' => 'Imprimer les billets',
+    'seat' => 'Place',
+    'section' => 'Espace',
+    'row' => 'Rang',
+    'admits' => 'Valable pour une personne',
+
+    // --- Venir ------------------------------------------------------------------------------
+    'findingUs' => 'Nous trouver',
+    'questions' => 'Questions',
+
+    // --- Page de confirmation et états vides -----------------------------------------------
+    'bookedHeading' => 'C’est réservé',
+    'orderLine' => 'Réservation :reference · :event',
+    'showCodeAtDoor' => 'Présentez un code à l’entrée — un par place. Nous vous les avons aussi envoyés par e-mail.',
+    'codesByEmail' => 'Vos billets arrivent par e-mail. Les codes ne s’affichent ici qu’une seule fois, pensez à vérifier votre boîte.',
+    'bookingStatus' => 'Cette réservation est :status. Si cela vous semble faux, contactez le guichet en indiquant :reference.',
+    'standing' => 'Debout',
+    'emptyPage' => 'Cette page est encore vide.',
+    'nothingOnSale' => 'Rien en vente pour l’instant. Revenez bientôt.',
+    'book' => 'Réserver',
+    'status' => [
+        'pending' => 'en attente de paiement',
+        'confirmed' => 'confirmée',
+        'cancelled' => 'annulée',
+        'refunded' => 'remboursée',
+        'partially_refunded' => 'partiellement remboursée',
+    ],
+    'closed' => [
+        'cancelled' => 'Cette représentation a été annulée.',
+        'closed' => 'La billetterie de cette représentation est fermée.',
+        'notYet' => 'Les billets de cette représentation ne sont pas encore en vente.',
+    ],
+];

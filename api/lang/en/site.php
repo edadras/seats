@@ -1,14 +1,15 @@
 <?php
 
 /**
- * Strings the hosted site shows a buyer.
+ * Strings a hosted event site shows a buyer.
  *
  * The picker's own vocabulary lives under `picker` and is handed to it as one object, because the
  * picker is shared with the WordPress plugin and takes every string from whoever boots it.
  *
- * The placeholders are `%s` / `%d` / `%1$s` rather than Laravel's `:name`: the picker substitutes
- * them itself, in the browser, and it learned that shape from WordPress. Changing it would mean
- * two versions of the picker, which is the thing tools/sync-seat-picker.sh exists to prevent.
+ * The placeholders under `picker` are `%s` / `%d` / `%1$s` rather than Laravel's `:name`: the
+ * picker substitutes them itself, in the browser, and it learned that shape from WordPress.
+ * Changing it would mean two versions of the picker, which is the thing tools/sync-seat-picker.sh
+ * exists to prevent. Everything outside `picker` uses `:name`.
  */
 return [
     'picker' => [
@@ -39,5 +40,83 @@ return [
         'removeOne' => 'Remove one place in %s',
         'areaFull' => 'That area filled up while you were choosing. Please pick a different number of places.',
         'floors' => 'Floor',
+        // Block view: the plan of sections a buyer sees before zooming into one.
+        'chooseSection' => 'Choose an area',
+        'backToPlan' => 'Back to the whole venue',
+        'sectionFrom' => 'From %s',
+        'sectionSeatsLeft' => '%d seats left',
+        'sectionSoldOut' => 'Sold out',
+        'openSection' => 'Show seats in %s',
+        'inSection' => 'In %s',
+    ],
+
+    // --- Site chrome ------------------------------------------------------------------------
+    'skipToContent' => 'Skip to content',
+    'mainNav' => 'Main',
+    'footerNav' => 'Footer',
+    'language' => 'Language',
+
+    // --- Event listings and detail ----------------------------------------------------------
+    'whatsOn' => 'What’s on',
+    'noEvents' => 'Nothing is on sale at the moment.',
+    'bookNow' => 'Book now',
+    'from' => 'From :price',
+    'soldOut' => 'Sold out',
+    'doorsOpen' => 'Doors open at :time',
+    'eventDate' => ':date at :time',
+
+    // --- Checkout ---------------------------------------------------------------------------
+    'checkout' => 'Checkout',
+    'whoFor' => 'Who are the tickets for?',
+    'name' => 'Name',
+    'email' => 'Email',
+    'emailHint' => 'Your tickets are sent here.',
+    'phone' => 'Phone',
+    'optional' => '(optional)',
+    'howToPay' => 'How would you like to pay?',
+    'confirmBooking' => 'Confirm booking',
+    'yourSeats' => 'Your seats',
+    'total' => 'Total',
+    'heldUntil' => 'Held until :time.',
+    'holdExpired' => 'Your reservation expired. Please choose your seats again.',
+
+    // --- Confirmation -----------------------------------------------------------------------
+    'orderConfirmed' => 'You’re going',
+    'orderReference' => 'Booking :reference',
+    'ticketsSentTo' => 'Your tickets are on their way to :email.',
+    'ticketsBelow' => 'They are also below — show one of these at the door.',
+    'payAtDoor' => 'Pay at the box office when you arrive.',
+    'addToCalendar' => 'Add to calendar',
+    'printTickets' => 'Print tickets',
+    'seat' => 'Seat',
+    'section' => 'Section',
+    'row' => 'Row',
+    'admits' => 'Admits one',
+
+    // --- Visiting ---------------------------------------------------------------------------
+    'findingUs' => 'Finding us',
+    'questions' => 'Questions',
+
+    // --- Confirmation page and empty states ------------------------------------------------
+    'bookedHeading' => 'You’re booked',
+    'orderLine' => 'Booking :reference · :event',
+    'showCodeAtDoor' => 'Show a code at the door — one for each seat. We’ve emailed them to you as well.',
+    'codesByEmail' => 'Your tickets are on their way by email. The codes are shown only once here, so check your inbox.',
+    'bookingStatus' => 'This booking is :status. If that looks wrong, contact the box office and quote :reference.',
+    'standing' => 'Standing',
+    'emptyPage' => 'This page has nothing on it yet.',
+    'nothingOnSale' => 'Nothing on sale just now. Check back soon.',
+    'book' => 'Book',
+    'status' => [
+        'pending' => 'awaiting payment',
+        'confirmed' => 'confirmed',
+        'cancelled' => 'cancelled',
+        'refunded' => 'refunded',
+        'partially_refunded' => 'partly refunded',
+    ],
+    'closed' => [
+        'cancelled' => 'This performance has been cancelled.',
+        'closed' => 'Booking for this performance has closed.',
+        'notYet' => 'Tickets for this performance are not on sale yet.',
     ],
 ];

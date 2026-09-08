@@ -24,12 +24,12 @@ class OfflineGateway implements PaymentGateway
 
     public function label(): string
     {
-        return 'Pay at the box office';
+        return __('payments.offline.label');
     }
 
     public function description(): string
     {
-        return 'Your seats are reserved now. Pay when you collect your tickets.';
+        return __('payments.offline.description');
     }
 
     public function begin(ExternalOrder $order, array $context): PaymentIntent

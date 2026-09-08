@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Checkin\CheckinController;
 use App\Http\Controllers\Api\V1\Embed\EmbedController;
 use App\Http\Controllers\Api\V1\Integrations\WooCommerceController;
+use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
@@ -18,6 +19,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function () {
+
+    // ---- Languages ----------------------------------------------------------------------
+    // Public: the sign-in screen has words on it, so the catalogue has to be readable before
+    // anyone has signed in. Nothing here is secret.
+    Route::get('i18n', [LocaleController::class, 'index'])->middleware('throttle:120,1');
+    Route::get('i18n/{locale}', [LocaleController::class, 'show'])->middleware('throttle:120,1');
 
     // ---- Panel / management -------------------------------------------------------------
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');

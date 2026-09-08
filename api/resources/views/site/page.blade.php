@@ -5,7 +5,7 @@
         @includeIf('site.blocks.'.$block['type'], ['block' => $block])
     @empty
         <div class="shell section">
-            <p class="muted">This page has nothing on it yet.</p>
+            <p class="muted">{{ __('site.emptyPage') }}</p>
         </div>
     @endforelse
 @endsection

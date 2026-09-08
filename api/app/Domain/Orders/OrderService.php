@@ -54,7 +54,7 @@ class OrderService
         $hold = Hold::where('token', $holdToken)->first();
 
         if (! $hold) {
-            throw ApiException::notFound('Unknown hold token.');
+            throw ApiException::notFound('Unknown hold token.', 'hold_not_found');
         }
 
         if (! $hold->isActive()) {

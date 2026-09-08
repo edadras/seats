@@ -21,7 +21,7 @@ abstract class Controller
         $membership = $request->attributes->get('membership');
 
         if (! $membership instanceof TenantUser || ! $membership->canWrite()) {
-            throw ApiException::forbidden('Your role does not permit changes to this organiser.');
+            throw ApiException::forbidden('Your role does not permit changes to this organiser.', 'forbidden');
         }
     }
 

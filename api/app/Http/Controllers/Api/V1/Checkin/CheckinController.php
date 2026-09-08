@@ -166,7 +166,7 @@ class CheckinController extends Controller
         $event = Event::find($eventId);
 
         if (! $event || ! $device->mayScan($eventId)) {
-            throw ApiException::forbidden('This device is not authorised to scan that event.');
+            throw ApiException::forbidden('This device is not authorised to scan that event.', 'device_not_authorised');
         }
 
         return $event;

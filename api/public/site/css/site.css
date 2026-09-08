@@ -272,6 +272,33 @@ hr { border: none; }
 .footer__name { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .footer__tagline { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
 
+/*
+ * The language menu.
+ *
+ * In the footer rather than the header on purpose: the locale is resolved from the visitor before
+ * the page renders (ADR-0005 §4), so this is a correction, not a first choice, and a correction
+ * does not need to compete with the venue's own navigation. Each language is written in itself —
+ * somebody who cannot read the current language cannot read a translated list of languages either.
+ */
+.langs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem 0.75rem;
+	font-size: 0.85rem;
+}
+
+.langs__link,
+.langs__current {
+	padding-block: 0.15rem;
+	border-block-end: 1px solid transparent;
+}
+
+.langs__link { color: var(--text-muted); text-decoration: none; }
+.langs__link:hover { color: var(--text); border-block-end-color: currentColor; }
+.langs__link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.langs__current { color: var(--text); font-weight: 600; }
+
 @media (prefers-reduced-motion: reduce) {
 	* { transition: none !important; }
 }

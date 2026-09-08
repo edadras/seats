@@ -393,7 +393,7 @@ class SiteController extends Controller
     private function assertBelongs(Site $site, string $siteId): void
     {
         if ($site->id !== $siteId) {
-            throw ApiException::notFound('Not part of this site.');
+            throw ApiException::notFound('Not part of this site.', 'not_part_of_site');
         }
     }
 

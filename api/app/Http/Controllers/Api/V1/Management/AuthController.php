@@ -56,7 +56,7 @@ class AuthController extends Controller
         $membership = $user->memberships()->first();
 
         if (! $membership) {
-            throw ApiException::forbidden('This account is not a member of any organiser.');
+            throw ApiException::forbidden('This account is not a member of any organiser.', 'no_membership');
         }
 
         $tenant = $this->tenantContext->runUnscoped(fn () => Tenant::find($membership->tenant_id));

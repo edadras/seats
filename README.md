@@ -26,6 +26,9 @@ seats/
 | [`docs/adr/0001-saas-woocommerce-boundary.md`](docs/adr/0001-saas-woocommerce-boundary.md) | Who owns what, and why the SaaS never touches payments |
 | [`docs/adr/0002-seat-inventory-integrity.md`](docs/adr/0002-seat-inventory-integrity.md) | How a seat is sold exactly once |
 | [`docs/adr/0003-hosted-event-sites.md`](docs/adr/0003-hosted-event-sites.md) | Why we build sites ourselves, and what that costs |
+| [`docs/adr/0004-module-architecture.md`](docs/adr/0004-module-architecture.md) | What a module may extend, and what it may never touch |
+| [`docs/adr/0005-internationalisation.md`](docs/adr/0005-internationalisation.md) | Six languages, right-to-left, and how nothing is left untranslated |
+| [`docs/adr/0006-report-engine.md`](docs/adr/0006-report-engine.md) | Why the report builder has no SQL box |
 | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) | Assets, trust boundaries, threats T1–T12 and mitigations |
 | [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | ERD, invariants, state machines |
 | [`docs/openapi.yaml`](docs/openapi.yaml) | The full `/v1` contract |
@@ -38,6 +41,30 @@ seats/
 Rows (straight or curved), enterable polygon sections, general admission areas, tables bookable by
 the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
 floors, on four selection layers, with categories, a focal point and a validation checklist.
+
+## Six languages
+
+Persian, English, Arabic, German, French and Italian, with Persian and Arabic right-to-left.
+
+The language is chosen from the nearest person outwards: an explicit `?lang=`, then a choice
+already made this session, then the signed-in user's preference, then the site's own language, then
+the organiser's, then `Accept-Language`. A buyer on a Persian site gets Persian without asking, and
+a German-speaking member of that organiser's staff gets German in the panel at the same moment.
+
+Money and dates follow the **reader**; the currency and the event follow the **event**. A Persian
+reader looking at a Berlin show sees euros, in Persian digits, on the Persian calendar — not
+tomans, and not the German way of writing a euro. That is `Money::format()` and `Dates::longWhen()`
+and never string concatenation, because the alternative misstates a price.
+
+Nothing may be left behind, and that is enforced rather than asked for:
+
+```bash
+node tools/i18n-check.mjs     # runs in CI on every push
+```
+
+It fails the build on a missing key, on a stale key left behind by a rename, and on a placeholder
+that appears in one translation of a string and not another — a translation that quietly drops
+`:max` tells a buyer they may select *up to seats*.
 
 ## Hosted event sites
 
@@ -103,11 +130,13 @@ connected API client, and prints the credentials you need for the plugin.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 110 unit + feature tests
+./vendor/bin/phpunit                        # 125 unit + feature tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
 cd ../checkin-app && flutter test           # 13 scanner tests
+
+cd .. && node tools/i18n-check.mjs          # every locale complete
 ```
 
 The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concurrency tests spawn
@@ -158,6 +187,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Replay, tampering and key rotation | `ApiSecurityTest` |
 | A second scan reports who got in, and when | `CheckinTest`, `checkin-app/test` |
 | A hosted site serves only its own tenant's events | `HostedSiteTest` |
+| A refusal is written in the language of whoever was refused | `LocalisationTest` |
+| A rial price is not divided by a hundred | `LocalisationTest` |
+| An Iranian reader gets the Persian calendar, an Arabic one does not | `LocalisationTest` |
 | A hosted purchase makes allocations, tickets and a server-priced order | `HostedSiteTest` |
 | An unverified or unknown hostname is a 404, not somebody's site | `HostedSiteTest` |
 | Republishing a map cannot break old orders | `SeatMapVersioningTest` |

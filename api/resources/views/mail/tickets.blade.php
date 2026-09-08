@@ -5,23 +5,26 @@
     not an option, because a mail client will not load one.
 --}}
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Your tickets</title></head>
-<body style="margin:0;padding:24px;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1b2030;">
+{{-- An email is read in a client we do not control, so direction goes on the root element and on
+     the body: some clients keep one and drop the other. --}}
+@php($locale = app()->getLocale())
+@php($dir = \App\Support\Locale\Locales::direction($locale))
+<html lang="{{ $locale }}" dir="{{ $dir }}">
+<head><meta charset="utf-8"><title>{{ __('mail.title') }}</title></head>
+<body dir="{{ $dir }}" style="margin:0;padding:24px;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1b2030;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
     <tr>
         <td style="padding:24px;background:#ffffff;border-radius:12px;">
             <h1 style="margin:0 0 4px;font-size:20px;">{{ $site->name }}</h1>
             <p style="margin:0 0 20px;color:#5f6878;font-size:14px;">
                 {{ $order->event?->name }}@if ($order->event?->starts_at) ·
-                    {{ $order->event->starts_at->setTimezone($site->timezone)->format('l j F Y · H:i') }}
+                    {{-- Not format(): `l j F Y` prints English month names in every language, and
+                         the calendar matters too — an Iranian reader wants ۷ مهر, not 29 September. --}}
+                    {{ \App\Support\Locale\Dates::longWhen($order->event->starts_at->setTimezone($site->timezone), $locale) }}
                 @endif
             </p>
 
-            <p style="margin:0 0 20px;font-size:15px;">
-                Thank you. Show a code below at the door — one for each seat. They work from this
-                email or from your booking page.
-            </p>
+            <p style="margin:0 0 20px;font-size:15px;">{{ __('mail.intro') }}</p>
 
             @foreach ($tickets as $ticket)
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
@@ -32,7 +35,7 @@
                         </td>
                         <td style="padding:14px;">
                             <p style="margin:0 0 4px;font-weight:600;font-size:15px;">
-                                {{ $ticket['seat'] ?: 'Standing' }}
+                                {{ $ticket['seat'] ?: __('mail.standing') }}
                                 @if ('' === $ticket['seat'] && $ticket['quantity'])
                                     <span style="color:#5f6878;">× {{ $ticket['quantity'] }}</span>
                                 @endif
@@ -46,8 +49,7 @@
             @endforeach
 
             <p style="margin:20px 0 0;color:#5f6878;font-size:13px;">
-                Booking reference {{ $order->external_order_id }}. Keep this email — anyone holding
-                a code can use it to come in.
+                {{ __('mail.keepThis', ['reference' => $order->external_order_id]) }}
             </p>
         </td>
     </tr>

@@ -21,17 +21,17 @@ class ResolveCheckinDevice
         $device = $request->user();
 
         if (! $device instanceof CheckinDevice) {
-            throw ApiException::unauthorized('unauthenticated', 'A check-in device token is required.');
+            throw ApiException::unauthorized('unauthenticated', 'A check-in device token is required.', 'device_token_required');
         }
 
         if ($device->status !== 'active') {
-            throw ApiException::forbidden('This device has been revoked.');
+            throw ApiException::forbidden('This device has been revoked.', 'device_revoked');
         }
 
         $tenant = $this->tenantContext->runUnscoped(fn () => $device->tenant()->first());
 
         if (! $tenant?->isActive()) {
-            throw ApiException::forbidden('This organiser account is suspended.');
+            throw ApiException::forbidden('This organiser account is suspended.', 'tenant_suspended');
         }
 
         $this->tenantContext->set($tenant);

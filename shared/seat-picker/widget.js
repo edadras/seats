@@ -1502,13 +1502,44 @@
 		this.messageEl.textContent = message;
 	};
 
+	/**
+	 * Money, in the currency the event charges and the shape the reader reads.
+	 *
+	 * Two paths, and which one is taken depends on what the host handed us:
+	 *
+	 * A hosted site sends `locale` and a currency `code`, so the browser's own ICU data does the
+	 * work — Persian digits, an Arabic decimal mark, a German comma, and the right number of
+	 * decimals for a currency that has none. That last point is not cosmetic: the rial has no
+	 * minor unit, and dividing by a hundred understates every Iranian price a hundredfold.
+	 *
+	 * WooCommerce sends a symbol, a decimal count and a position, because that is what a WordPress
+	 * shop knows about itself, and the picker must keep matching the prices printed everywhere
+	 * else on that shop. So that path stays exactly as it was.
+	 */
 	SeatmapWidget.prototype.formatMoney = function ( minorUnits ) {
 		if ( null === minorUnits || undefined === minorUnits ) {
 			return '';
 		}
 
 		var currency = this.config.currency;
-		var amount = ( minorUnits / Math.pow( 10, currency.decimals ) ).toFixed( currency.decimals );
+		var decimals = 'number' === typeof currency.decimals ? currency.decimals : 2;
+		var value = minorUnits / Math.pow( 10, decimals );
+
+		if ( currency.code && this.config.locale && window.Intl && window.Intl.NumberFormat ) {
+			try {
+				return new Intl.NumberFormat( this.config.locale, {
+					style: 'currency',
+					currency: currency.code,
+					minimumFractionDigits: decimals,
+					maximumFractionDigits: decimals
+				} ).format( value );
+			} catch ( e ) {
+				// An unknown currency code, or a browser without the data. Fall through rather
+				// than show nothing: a price is the one thing on this screen that must appear.
+			}
+		}
+
+		var amount = value.toFixed( decimals );
 
 		switch ( currency.position ) {
 			case 'right':

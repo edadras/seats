@@ -42,8 +42,19 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         }
 
+        // Runs after the tenant and site resolvers above (they are prepended, so they end up
+        // ahead of it) and before anything that renders a message to a person.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: \App\Http\Middleware\ResolveLocale::class,
+        );
+
+        $middleware->web(append: [\App\Http\Middleware\ResolveLocale::class]);
+        $middleware->api(append: [\App\Http\Middleware\ResolveLocale::class]);
+
         $middleware->alias([
             'api.client' => \App\Http\Middleware\AuthenticateApiClient::class,
+            'locale' => \App\Http\Middleware\ResolveLocale::class,
             'tenant' => \App\Http\Middleware\ResolveTenantFromUser::class,
             'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,
             'device' => \App\Http\Middleware\ResolveCheckinDevice::class,
@@ -65,23 +76,27 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $e->render($request);
             }
 
+            // Framework failures leave through the same envelope *and* the same catalogue as the
+            // deliberate ones: a 404 from route model binding should read like a 404 we threw.
             [$code, $message, $status, $details] = match (true) {
                 $e instanceof ValidationException => [
-                    'validation_failed', 'The request payload is invalid.', 422, $e->errors(),
+                    'validation_failed', __('errors.validation_failed'), 422, $e->errors(),
                 ],
                 $e instanceof AuthenticationException => [
-                    'unauthenticated', 'Authentication required.', 401, [],
+                    'unauthenticated', __('errors.unauthenticated'), 401, [],
                 ],
                 $e instanceof ModelNotFoundException,
                 $e instanceof NotFoundHttpException => [
-                    'not_found', 'Resource not found.', 404, [],
+                    'not_found', __('errors.not_found'), 404, [],
                 ],
                 $e instanceof HttpExceptionInterface => [
-                    'http_error', $e->getMessage() ?: 'Request failed.', $e->getStatusCode(), [],
+                    'http_error', $e->getMessage() ?: __('errors.http_error'), $e->getStatusCode(), [],
                 ],
                 default => [
                     'server_error',
-                    app()->hasDebugModeEnabled() ? $e->getMessage() : 'An unexpected error occurred.',
+                    // Debug mode shows the real exception, untranslated on purpose: it is for
+                    // whoever is reading a stack trace, not for a buyer.
+                    app()->hasDebugModeEnabled() ? $e->getMessage() : __('errors.server_error'),
                     500,
                     [],
                 ],

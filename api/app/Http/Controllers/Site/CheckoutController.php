@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\Site;
+use App\Support\Locale\Money;
 use App\Support\Qr\QrRenderer;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -190,16 +191,16 @@ class CheckoutController extends Controller
         return StorefrontCheckout::referenceFor($hold);
     }
 
+    /**
+     * The currency is the event's; the way it is written is the reader's (ADR-0005 §5).
+     *
+     * This replaced a symbol table and a divide-by-100. Both were wrong for the currencies that
+     * matter most here: the rial has no minor unit at all, so dividing by a hundred understated
+     * every Iranian price by two orders of magnitude.
+     */
     private function money(int $minor, ?string $currency): string
     {
-        $symbol = match (strtoupper((string) $currency)) {
-            'EUR' => '€',
-            'GBP' => '£',
-            'USD' => '$',
-            default => (strtoupper((string) $currency) ?: '').' ',
-        };
-
-        return $symbol.number_format($minor / 100, 2);
+        return Money::format($minor, $currency ?: 'EUR');
     }
 
     private function view(Site $site, string $template, array $data)

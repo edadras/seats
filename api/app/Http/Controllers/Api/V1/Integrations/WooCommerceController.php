@@ -114,7 +114,7 @@ class WooCommerceController extends Controller
             ->first();
 
         if (! $order) {
-            throw ApiException::notFound('Unknown order.');
+            throw ApiException::notFound('Unknown order.', 'order_not_found');
         }
 
         return $order;

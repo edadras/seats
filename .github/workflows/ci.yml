@@ -147,6 +147,30 @@ jobs:
       - name: Validate the specification
         run: npx --yes @redocly/cli@latest lint docs/openapi.yaml --format stylish
 
+  languages:
+    name: Six languages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: No locale may fall behind English
+        run: |
+          # Missing keys, stale keys left by a rename, and placeholders that differ between
+          # translations of the same string — a translation that silently drops :max tells a buyer
+          # they may select up to seats. See ADR-0005 §2.
+          node tools/i18n-check.mjs
+
   plugin:
     name: WordPress plugin
     runs-on: ubuntu-latest
