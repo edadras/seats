@@ -47,6 +47,13 @@ are retried automatically every five minutes.
    rejected if this server's time is more than five minutes out.
 5. Add the **Seat map** block, or `[seatmap_event id="evt_..."]`, to any page.
 
+= Previewing without a WordPress install =
+
+`../tools/preview.html` runs this plugin's own seat picker against a live API, standing in only for
+the two store routes WordPress normally provides. Serve the `wordpress-plugin` directory over HTTP
+and open `tools/preview.html?api=https://api.example&event=evt_xxxxxxxx`. Holding seats there
+creates real holds, so point it at a test tenant.
+
 == Frequently Asked Questions ==
 
 = Can a customer change the price in their browser? =
