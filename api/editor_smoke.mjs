@@ -37,8 +37,9 @@ check( 'login form rendered', await page.locator( '#login' ).isVisible() );
 await page.fill( 'input[name=email]', 'owner@northgate.test' );
 await page.fill( 'input[name=password]', 'password' );
 await page.click( '#login button[type=submit]' );
-await page.waitForSelector( '.topbar', { timeout: 10000 } );
-check( 'signed in', await page.locator( '.topbar' ).isVisible() );
+await page.waitForSelector( '.sidebar', { timeout: 10000 } );
+check( 'signed in', await page.locator( '.sidebar' ).isVisible() );
+check( 'sidebar lists every section', ( await page.locator( '.nav-item' ).count() ) === 4 );
 
 console.log( 'Designer: open the chart' );
 await page.click( 'nav button[data-view=maps]' );
@@ -48,18 +49,21 @@ await page.waitForSelector( '#dz-canvas' );
 await page.waitForTimeout( 800 );
 
 check( 'canvas mounted', await page.locator( '#dz-canvas' ).isVisible() );
-check( 'tool palette rendered', ( await page.locator( '.dz-tool' ).count() ) >= 14,
-	`${ await page.locator( '.dz-tool' ).count() } tools` );
+check( 'tool palette rendered', ( await page.locator( '.tools [data-tool]' ).count() ) >= 14,
+	`${ await page.locator( '.tools [data-tool]' ).count() } tools` );
+check( 'tools are vector icons, not emoji',
+	( await page.locator( '.tools [data-tool] svg.icon' ).count() ) ===
+	( await page.locator( '.tools [data-tool]' ).count() ) );
 
-const layers = await page.locator( '.dz-layer' ).allInnerTexts();
+const layers = await page.locator( '.layer' ).allInnerTexts();
 check( 'selection layers listed', layers.length === 5, layers.map( ( l ) => l.split( '\n' )[ 0 ] ).join( ', ' ) );
 
-const places = await page.locator( '.insp-places' ).first().innerText();
-check( 'places counted', /\d+ places/.test( places ), places );
+const places = await page.locator( '.stat' ).first().innerText();
+check( 'places counted', /[\d,]+\s+places/.test( places ), places.replace( /\n/g, ' ' ) );
 
-const checks = await page.locator( '.insp-check' ).allInnerTexts();
+const checks = await page.locator( '.check-row' ).allInnerTexts();
 check( 'validation checklist shown', checks.length === 5, `${ checks.length } checks` );
-check( 'checklist matches the designer', checks.map( ( c ) => c.split( '\n' )[ 1 ] ).join( ' | ' ) ===
+check( 'checklist matches the designer', checks.map( ( c ) => c.trim() ).join( ' | ' ) ===
 	'No duplicate objects | All objects are labeled | All objects are categorized | One category per object type | Focal point is set' );
 
 console.log( 'Designer: read-only until a draft exists' );
@@ -76,7 +80,7 @@ await page.mouse.dblclick( box.x + box.width / 2, box.y + box.height * 0.55 );
 await page.waitForTimeout( 600 );
 
 check( 'exit-section control appears', await page.locator( '#dz-exit' ).isVisible() );
-const sectionTitle = await page.locator( '.insp-title' ).innerText();
+const sectionTitle = await page.locator( '.inspector__head' ).innerText();
 check( 'panel narrows to the section', /section/i.test( sectionTitle ), sectionTitle );
 
 console.log( 'Designer: inspect and edit a row' );
@@ -95,14 +99,14 @@ check( 'row panel shows the designer fields',
 	fields.slice( 0, 8 ).join( ', ' ) );
 check( 'row labeling fields present',
 	[ 'Enabled', 'Label', 'Displayed label', 'Position', 'Displayed type' ].every( ( f ) => fields.includes( f ) ) );
-check( 'row label position control rendered', ( await page.locator( '.insp-position__end' ).count() ) === 2 );
+check( 'row label position control rendered', ( await page.locator( '.ends__cap' ).count() ) === 2 );
 
 const seatsBefore = await page.evaluate( () =>
 	window.__editor.container().objects.find( ( o ) => o.type === 'row' ).seats.length );
 
 // Type into "Number of seats" — the row has to rearrange, which is only possible because seat
 // positions are computed rather than stored.
-const seatCountInput = page.locator( '.insp-stepper input' ).first();
+const seatCountInput = page.locator( '.stepper input' ).first();
 await seatCountInput.fill( '7' );
 await page.waitForTimeout( 400 );
 
@@ -110,7 +114,7 @@ const seatsAfter = await page.evaluate( () =>
 	window.__editor.container().objects.find( ( o ) => o.type === 'row' ).seats.length );
 check( 'changing the seat count rebuilds the row', seatsAfter === 7, `${ seatsBefore } -> ${ seatsAfter }` );
 
-const curveInput = page.locator( '.insp-stepper input' ).nth( 2 );
+const curveInput = page.locator( '.stepper input' ).nth( 2 );
 await curveInput.fill( '40' );
 await page.waitForTimeout( 400 );
 const curved = await page.evaluate( () => {
@@ -138,16 +142,17 @@ await page.waitForTimeout( 500 );
 check( 'back at chart level', ! ( await page.locator( '#dz-exit' ).isVisible() ) );
 
 console.log( 'Designer: categories' );
-await page.locator( '.insp-link', { hasText: 'Manage' } ).first().click();
-await page.waitForSelector( '.dz-modal' );
-check( 'category manager lists the chart categories', ( await page.locator( '.dz-cat' ).count() ) === 5 );
-await page.click( '#dz-cat-close' );
+await page.locator( '.link-btn', { hasText: 'Manage' } ).first().click();
+await page.waitForSelector( '.modal' );
+check( 'category manager lists the chart categories', ( await page.locator( '.modal .category-row' ).count() ) === 5 );
+await page.click( '.modal__foot .btn--primary' );
+await page.waitForSelector( '.modal', { state: 'detached' } );
 
 console.log( 'Designer: draw a general admission area' );
 const areasBefore = await page.evaluate( () =>
 	window.__editor.floor().objects.filter( ( o ) => o.type === 'area' ).length );
 
-await page.click( '.dz-tool[data-tool=area]' );
+await page.click( '.tools [data-tool=area]' );
 
 // Draw on clear canvas: the selection-layer panel floats over the top-left corner of the stage.
 const drawX = box.x + box.width - 320;
@@ -169,7 +174,7 @@ check( 'area panel shows shape and capacity fields',
 		.every( ( f ) => areaFields.includes( f ) ),
 	areaFields.join( ', ' ) );
 check( 'general admission explained in the panel',
-	( await page.locator( '.insp-hint' ).allInnerTexts() )
+	( await page.locator( '.inspector .hint' ).allInnerTexts() )
 		.some( ( t ) => /Multiple users can select places/.test( t ) ) );
 
 console.log( 'Designer: publish' );
@@ -196,9 +201,9 @@ await page.evaluate( () => {
 } );
 await page.waitForTimeout( 400 );
 
-check( 'client flags it immediately', ( await page.locator( '.insp-issue--error' ).count() ) > 0 );
+check( 'client flags it immediately', ( await page.locator( '.issue--error' ).count() ) > 0 );
 check( 'and the checklist is no longer clean',
-	( await page.locator( '.insp-check.is-bad' ).count() ) > 0 );
+	( await page.locator( '.check-row.is-bad' ).count() ) > 0 );
 
 await page.click( '#dz-publish' );
 await page.waitForTimeout( 2000 );
@@ -211,6 +216,13 @@ console.log( '\nUnexpected console errors: ' + ( unexpected.length ? unexpected.
 if ( unexpected.length ) failures++;
 
 await page.screenshot( { path: '/tmp/designer.png' } );
+
+await page.click( '#dz-theme' );
+await page.waitForTimeout( 400 );
+check( 'dark theme applied', 'dark' === await page.evaluate( () =>
+	document.documentElement.getAttribute( 'data-theme' ) ) );
+await page.screenshot( { path: '/tmp/designer-dark.png' } );
+
 await browser.close();
 
 console.log( failures === 0 ? '\nALL DESIGNER CHECKS PASSED' : `\n${ failures } CHECK(S) FAILED` );

@@ -263,6 +263,87 @@
 		};
 	};
 
+	/**
+	 * The canvas palette.
+	 *
+	 * A canvas has no cascade, so the two themes are stated here rather than read from CSS. They
+	 * track the tokens in design.css by hand — the alternative, reading a dozen custom properties
+	 * on every repaint, costs a style flush per frame while something is being dragged.
+	 */
+	var PALETTES = {
+		light: {
+			grid: 'rgba(27,32,48,0.06)',
+			bounds: '#c7cddb',
+			ink: '#1b2030',
+			inkFill: 'rgba(27,32,48,0.08)',
+			halo: 'rgba(27,32,48,0.22)',
+			seatFillOn: '#1b2030',
+			seatTextOn: '#ffffff',
+			seatEdge: 'rgba(27,32,48,0.22)',
+			seatText: 'rgba(27,32,48,0.72)',
+			emptySeat: 'rgba(27,32,48,0.25)',
+			rowLabel: 'rgba(27,32,48,0.55)',
+			dimmed: '#9aa3b7',
+			neutralSeat: '#c9ced6',
+			text: '#3d4457',
+			iconInk: '#4a5160',
+			shapeEdge: 'rgba(27,32,48,0.2)',
+			shapeLabel: '#ffffff',
+			focal: '#d1495b',
+			accessible: '#1c4f8f',
+			// How far a category colour moves to make a label legible against its own fill.
+			labelShift: -0.45,
+			shapes: {
+				stage: '#3d4457',
+				entrance: '#2f8f63',
+				exit: '#b3543a',
+				aisle: '#e8eaee',
+				wall: '#9aa3b7',
+				fallback: '#c8ccd4',
+			},
+		},
+
+		dark: {
+			grid: 'rgba(233,236,243,0.06)',
+			bounds: '#3b4256',
+			ink: '#e9ecf3',
+			inkFill: 'rgba(233,236,243,0.08)',
+			halo: 'rgba(233,236,243,0.20)',
+			seatFillOn: '#f1f3f7',
+			seatTextOn: '#12151f',
+			seatEdge: 'rgba(9,11,16,0.45)',
+			seatText: 'rgba(9,11,16,0.78)',
+			emptySeat: 'rgba(233,236,243,0.28)',
+			rowLabel: 'rgba(233,236,243,0.6)',
+			dimmed: '#6f7891',
+			neutralSeat: '#5b6478',
+			text: '#c3cad9',
+			iconInk: '#a8b0c3',
+			shapeEdge: 'rgba(233,236,243,0.22)',
+			// A shape label sits on the shape's own fill, which is dark in this theme — not on
+			// the canvas — so it lightens rather than darkening.
+			shapeLabel: '#e9ecf3',
+			focal: '#f0736a',
+			accessible: '#9dc4f5',
+			labelShift: 0.4,
+			shapes: {
+				stage: '#394054',
+				entrance: '#2c6f52',
+				exit: '#8b453a',
+				aisle: '#262c3c',
+				wall: '#4a5266',
+				fallback: '#3a4155',
+			},
+		},
+	};
+
+	/** The palette for whatever theme the document is in, looked up once per repaint. */
+	Editor.prototype.colors = function () {
+		return 'dark' === document.documentElement.getAttribute( 'data-theme' )
+			? PALETTES.dark
+			: PALETTES.light;
+	};
+
 	Editor.prototype.draw = function () {
 		var ctx = this.ctx;
 		var floor = this.floor();
@@ -322,7 +403,7 @@
 		}
 
 		ctx.save();
-		ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+		ctx.strokeStyle = this.colors().grid;
 		ctx.lineWidth = 1 / this.view.scale;
 		ctx.beginPath();
 
@@ -342,7 +423,7 @@
 
 	Editor.prototype.drawCanvasBounds = function ( ctx, floor ) {
 		ctx.save();
-		ctx.strokeStyle = '#b6bcc7';
+		ctx.strokeStyle = this.colors().bounds;
 		ctx.lineWidth = 1 / this.view.scale;
 		ctx.setLineDash( [ 6 / this.view.scale, 4 / this.view.scale ] );
 		ctx.strokeRect( 0, 0, floor.canvas.width, floor.canvas.height );
@@ -390,7 +471,7 @@
 
 		ctx.fillStyle = withAlpha( color, 0.18 );
 		ctx.fill();
-		ctx.strokeStyle = selected ? '#12263f' : color;
+		ctx.strokeStyle = selected ? this.colors().ink : color;
 		ctx.lineWidth = ( selected ? 3 : 1.5 ) / this.view.scale;
 		ctx.stroke();
 
@@ -404,7 +485,7 @@
 			var center = Chart.polygonCentroid( section.polygon );
 
 			ctx.save();
-			ctx.fillStyle = dimmed ? '#8a8f99' : shade( color, -0.45 );
+			ctx.fillStyle = dimmed ? this.colors().dimmed : shade( color, this.colors().labelShift );
 			ctx.font = '600 ' + ( labeling.fontSize || 16 ) + 'px system-ui, sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
@@ -443,6 +524,7 @@
 
 	Editor.prototype.drawRow = function ( ctx, row ) {
 		var self = this;
+		var colors = this.colors();
 		var positions = Chart.rowSeatPositions( row );
 		var rowSelected = this.selection.indexOf( row.key ) !== -1;
 
@@ -465,7 +547,7 @@
 
 			if ( 'empty' === seat.type ) {
 				ctx.save();
-				ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+				ctx.strokeStyle = colors.emptySeat;
 				ctx.setLineDash( [ 2, 2 ] );
 				ctx.lineWidth = 1 / self.view.scale;
 				ctx.beginPath();
@@ -478,9 +560,11 @@
 
 			ctx.beginPath();
 			ctx.arc( point.x, point.y, SEAT_R, 0, Math.PI * 2 );
-			ctx.fillStyle = selected ? '#12263f' : withAlpha( self.categoryColor( category, '#c9ced6' ), 0.85 );
+			ctx.fillStyle = selected
+				? colors.seatFillOn
+				: withAlpha( self.categoryColor( category, colors.neutralSeat ), 0.85 );
 			ctx.fill();
-			ctx.strokeStyle = selected ? '#12263f' : 'rgba(0,0,0,0.22)';
+			ctx.strokeStyle = selected ? colors.seatFillOn : colors.seatEdge;
 			ctx.lineWidth = ( selected ? 2 : 1 ) / self.view.scale;
 			ctx.stroke();
 
@@ -488,7 +572,7 @@
 				self.drawWheelchair( ctx, point.x, point.y, selected );
 			} else if ( self.showLabels && self.view.scale > 1 ) {
 				ctx.save();
-				ctx.fillStyle = selected ? '#ffffff' : 'rgba(0,0,0,0.7)';
+				ctx.fillStyle = selected ? colors.seatTextOn : colors.seatText;
 				ctx.font = '9px system-ui, sans-serif';
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'middle';
@@ -504,7 +588,7 @@
 
 	Editor.prototype.drawRowHalo = function ( ctx, positions ) {
 		ctx.save();
-		ctx.strokeStyle = 'rgba(18,38,63,0.28)';
+		ctx.strokeStyle = this.colors().halo;
 		ctx.lineWidth = ( Chart.SEAT_SIZE + 8 );
 		ctx.lineCap = 'round';
 		ctx.lineJoin = 'round';
@@ -547,7 +631,7 @@
 		var theta = ( ( Number( row.rotation ) || 0 ) * Math.PI ) / 180;
 
 		ctx.save();
-		ctx.fillStyle = 'rgba(0,0,0,0.55)';
+		ctx.fillStyle = this.colors().rowLabel;
 		ctx.font = '600 10px system-ui, sans-serif';
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
@@ -565,7 +649,7 @@
 
 	Editor.prototype.drawWheelchair = function ( ctx, x, y, selected ) {
 		ctx.save();
-		ctx.strokeStyle = selected ? '#ffffff' : '#1c4f8f';
+		ctx.strokeStyle = selected ? this.colors().seatTextOn : this.colors().accessible;
 		ctx.lineWidth = 1.4;
 		ctx.beginPath();
 		ctx.arc( x, y - 3.2, 1.5, 0, Math.PI * 2 );   // head
@@ -588,7 +672,7 @@
 		ctx.save();
 		ctx.globalAlpha *= area.translucent ? 0.45 : 1;
 		ctx.fillStyle = withAlpha( color, 0.28 );
-		ctx.strokeStyle = selected ? '#12263f' : color;
+		ctx.strokeStyle = selected ? this.colors().ink : color;
 		ctx.lineWidth = ( selected ? 3 : 1.5 ) / this.view.scale;
 
 		this.tracePath( ctx, shape );
@@ -602,7 +686,7 @@
 			var box = Ops.bounds( area );
 
 			ctx.save();
-			ctx.fillStyle = shade( color, -0.5 );
+			ctx.fillStyle = shade( color, this.colors().labelShift );
 			ctx.font = '600 ' + ( labeling.fontSize || 20 ) + 'px system-ui, sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
@@ -621,6 +705,7 @@
 
 	Editor.prototype.drawTable = function ( ctx, table ) {
 		var self = this;
+		var colors = this.colors();
 		var selected = this.selection.indexOf( table.key ) !== -1;
 		var color = this.categoryColor( table.categoryKey, '#8a6f4b' );
 
@@ -628,7 +713,7 @@
 		ctx.translate( table.x, table.y );
 		ctx.rotate( ( ( table.rotation || 0 ) * Math.PI ) / 180 );
 		ctx.fillStyle = withAlpha( color, 0.3 );
-		ctx.strokeStyle = selected ? '#12263f' : color;
+		ctx.strokeStyle = selected ? colors.ink : color;
 		ctx.lineWidth = ( selected ? 3 : 1.5 ) / this.view.scale;
 		ctx.beginPath();
 
@@ -643,7 +728,7 @@
 
 		if ( ( table.labeling || {} ).visible !== false && Chart.objectLabel( table ) ) {
 			ctx.rotate( -( ( table.rotation || 0 ) * Math.PI ) / 180 );
-			ctx.fillStyle = shade( color, -0.5 );
+			ctx.fillStyle = shade( color, this.colors().labelShift );
 			ctx.font = '600 ' + ( ( table.labeling || {} ).fontSize || 14 ) + 'px system-ui, sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
@@ -658,20 +743,23 @@
 
 			ctx.beginPath();
 			ctx.arc( point.x, point.y, SEAT_R, 0, Math.PI * 2 );
-			ctx.fillStyle = seatSelected ? '#12263f' : withAlpha( self.categoryColor( seat.categoryKey || table.categoryKey, '#c9ced6' ), 0.85 );
+			ctx.fillStyle = seatSelected
+				? colors.seatFillOn
+				: withAlpha( self.categoryColor( seat.categoryKey || table.categoryKey, colors.neutralSeat ), 0.85 );
 			ctx.fill();
-			ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+			ctx.strokeStyle = colors.seatEdge;
 			ctx.lineWidth = 1 / self.view.scale;
 			ctx.stroke();
 		} );
 	};
 
 	Editor.prototype.drawShape = function ( ctx, shape ) {
+		var colors = this.colors();
 		var selected = this.selection.indexOf( shape.key ) !== -1;
 
 		ctx.save();
-		ctx.fillStyle = shape.fill || shapeColour( shape.kind );
-		ctx.strokeStyle = selected ? '#12263f' : 'rgba(0,0,0,0.2)';
+		ctx.fillStyle = shape.fill || shapeColour( shape.kind, colors );
+		ctx.strokeStyle = selected ? colors.ink : colors.shapeEdge;
 		ctx.lineWidth = ( selected ? 3 : 1 ) / this.view.scale;
 
 		if ( 'line' === shape.kind && shape.points ) {
@@ -679,7 +767,7 @@
 			shape.points.forEach( function ( point, index ) {
 				index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
 			} );
-			ctx.strokeStyle = shape.fill || '#8a8f99';
+			ctx.strokeStyle = shape.fill || colors.shapes.wall;
 			ctx.lineWidth = 3 / this.view.scale;
 			ctx.stroke();
 			ctx.restore();
@@ -695,7 +783,7 @@
 		}
 
 		if ( shape.label ) {
-			ctx.fillStyle = '#ffffff';
+			ctx.fillStyle = colors.shapeLabel;
 			ctx.font = '600 15px system-ui, sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
@@ -741,14 +829,14 @@
 		ctx.save();
 		ctx.translate( text.x, text.y );
 		ctx.rotate( ( ( text.rotation || 0 ) * Math.PI ) / 180 );
-		ctx.fillStyle = text.color || '#3a3f4b';
+		ctx.fillStyle = text.color || this.colors().text;
 		ctx.font = '500 ' + ( text.fontSize || 16 ) + 'px system-ui, sans-serif';
 		ctx.textBaseline = 'alphabetic';
 		ctx.fillText( text.text, 0, 0 );
 
 		if ( selected ) {
 			var width = ctx.measureText( text.text ).width;
-			ctx.strokeStyle = '#12263f';
+			ctx.strokeStyle = this.colors().ink;
 			ctx.lineWidth = 1.5 / this.view.scale;
 			ctx.strokeRect( -2, -( text.fontSize || 16 ), width + 4, ( text.fontSize || 16 ) * 1.3 );
 		}
@@ -756,29 +844,41 @@
 		ctx.restore();
 	};
 
-	Editor.prototype.drawIcon = function ( ctx, icon ) {
-		var selected = this.selection.indexOf( icon.key ) !== -1;
+	/**
+	 * A venue marker, drawn from the same vector paths the panel uses.
+	 *
+	 * These were emoji, which meant a different weight, colour and size on every platform, and a
+	 * chart that looked different to the venue than it did to the buyer.
+	 */
+	Editor.prototype.drawIcon = function ( ctx, marker ) {
+		var colors = this.colors();
+		var selected = this.selection.indexOf( marker.key ) !== -1;
+		var size = marker.size || 20;
+		var data = global.SeatmapIcon && global.SeatmapIcon.venuePath( marker.name );
 
 		ctx.save();
-		ctx.fillStyle = selected ? '#12263f' : '#4a5160';
-		ctx.strokeStyle = selected ? '#12263f' : '#4a5160';
-		ctx.lineWidth = 1.5;
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
-		ctx.font = icon.size + 'px system-ui, sans-serif';
-		ctx.fillText( ICONS[ icon.name ] || '•', icon.x, icon.y );
-		ctx.restore();
-	};
+		ctx.strokeStyle = selected ? colors.ink : colors.iconInk;
+		ctx.fillStyle = ctx.strokeStyle;
 
-	var ICONS = {
-		wheelchair: '♿',
-		toilets: '🚻',
-		bar: '🍸',
-		food: '🍴',
-		entrance: '⇥',
-		exit: '⇤',
-		stairs: '⌁',
-		lift: '⇕',
+		if ( data && global.Path2D ) {
+			// The paths are drawn on a 24-unit grid, so scale to the marker and keep the stroke
+			// weight constant in that space rather than in chart units.
+			ctx.translate( marker.x - size / 2, marker.y - size / 2 );
+			ctx.scale( size / 24, size / 24 );
+			ctx.lineWidth = 1.75;
+			ctx.lineCap = 'round';
+			ctx.lineJoin = 'round';
+			ctx.stroke( new global.Path2D( data ) );
+		} else {
+			// An unknown marker still has to be visible, or it becomes impossible to select and
+			// delete.
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.font = '600 ' + Math.round( size * 0.7 ) + 'px system-ui, sans-serif';
+			ctx.fillText( String( marker.name || '?' ).charAt( 0 ).toUpperCase(), marker.x, marker.y );
+		}
+
+		ctx.restore();
 	};
 
 	Editor.prototype.drawImage = function ( ctx, object ) {
@@ -819,7 +919,7 @@
 		var size = 12 / this.view.scale;
 
 		ctx.save();
-		ctx.strokeStyle = '#d1495b';
+		ctx.strokeStyle = this.colors().focal;
 		ctx.lineWidth = 2 / this.view.scale;
 		ctx.beginPath();
 		ctx.moveTo( point.x - size, point.y );
@@ -841,8 +941,8 @@
 		var box = normalise( this.marquee );
 
 		ctx.save();
-		ctx.fillStyle = 'rgba(18,38,63,0.08)';
-		ctx.strokeStyle = '#12263f';
+		ctx.fillStyle = this.colors().inkFill;
+		ctx.strokeStyle = this.colors().ink;
 		ctx.lineWidth = 1 / this.view.scale;
 		ctx.fillRect( box.x, box.y, box.width, box.height );
 		ctx.strokeRect( box.x, box.y, box.width, box.height );
@@ -855,8 +955,8 @@
 		}
 
 		ctx.save();
-		ctx.fillStyle = 'rgba(18,38,63,0.08)';
-		ctx.strokeStyle = '#12263f';
+		ctx.fillStyle = this.colors().inkFill;
+		ctx.strokeStyle = this.colors().ink;
 		ctx.lineWidth = 1 / this.view.scale;
 		ctx.beginPath();
 		this.lasso.forEach( function ( point, index ) {
@@ -875,7 +975,7 @@
 		}
 
 		ctx.save();
-		ctx.strokeStyle = '#12263f';
+		ctx.strokeStyle = this.colors().ink;
 		ctx.setLineDash( [ 5 / this.view.scale, 4 / this.view.scale ] );
 		ctx.lineWidth = 1.5 / this.view.scale;
 
@@ -1730,15 +1830,8 @@
 		};
 	}
 
-	function shapeColour( kind ) {
-		switch ( kind ) {
-			case 'stage': return '#3a3f4b';
-			case 'entrance': return '#3f9c6d';
-			case 'exit': return '#b3543a';
-			case 'aisle': return '#e8eaee';
-			case 'wall': return '#8a8f99';
-			default: return '#c8ccd4';
-		}
+	function shapeColour( kind, colors ) {
+		return colors.shapes[ kind ] || colors.shapes.fallback;
 	}
 
 	function withAlpha( color, alpha ) {

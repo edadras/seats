@@ -12,6 +12,7 @@
 	'use strict';
 
 	var Chart = global.SeatmapChart;
+	var icon = global.SeatmapIcon;
 
 	function Inspector( root, editor, options ) {
 		this.root = root;
@@ -49,8 +50,8 @@
 		switch ( object.type ) {
 			case 'row': this.renderRow( object ); break;
 			case 'section': this.renderSectionObject( object ); break;
-			case 'area': this.renderArea( object, 'AREA' ); break;
-			case 'booth': this.renderArea( object, 'BOOTH' ); break;
+			case 'area': this.renderArea( object, 'Area' ); break;
+			case 'booth': this.renderArea( object, 'Booth' ); break;
 			case 'table': this.renderTable( object ); break;
 			case 'text': this.renderText( object ); break;
 			case 'shape': this.renderShape( object ); break;
@@ -70,48 +71,30 @@
 
 		this.title( chart.name );
 
-		var categories = this.section();
-		var head = el( 'div', 'insp-row insp-row--head' );
-		head.appendChild( el( 'span', 'insp-count', String( ( chart.categories || [] ).length ) + ' categories' ) );
-
-		var manage = el( 'button', 'insp-link', '⚙ Manage' );
-		manage.addEventListener( 'click', function () { self.onManageCategories(); } );
-		head.appendChild( manage );
-		categories.appendChild( head );
-
-		( chart.categories || [] ).forEach( function ( category ) {
-			var line = el( 'div', 'insp-category' );
-			var dot = el( 'span', 'insp-dot' );
-			dot.style.background = category.color;
-			line.appendChild( dot );
-			line.appendChild( el( 'span', '', category.label ) );
-
-			if ( category.accessible ) {
-				line.appendChild( el( 'span', 'insp-flag', '♿' ) );
-			}
-
-			categories.appendChild( line );
-		} );
-
 		var places = this.section();
-		var placesHead = el( 'div', 'insp-row insp-row--head' );
-		placesHead.appendChild( el( 'strong', 'insp-places', report.places.toLocaleString() + ' places' ) );
-		places.appendChild( placesHead );
+		places.appendChild( stat( report.places.toLocaleString(), 1 === report.places ? 'place' : 'places' ) );
 
 		// The checklist from the designer, each line answering a question that only bites once the
 		// chart is being sold against.
 		report.checks.forEach( function ( check ) {
-			var line = el( 'div', 'insp-check ' + ( check.ok ? 'is-ok' : 'is-bad' ) );
-			line.appendChild( el( 'span', 'insp-check__mark', check.ok ? '✓' : '✕' ) );
-			line.appendChild( el( 'span', '', check.label ) );
-			places.appendChild( line );
+			places.appendChild( checkRow( check ) );
+		} );
+
+		var categories = this.section( 'Categories', 'Manage', function () { self.onManageCategories(); } );
+
+		if ( ! ( chart.categories || [] ).length ) {
+			categories.appendChild( el( 'p', 'hint', 'No categories yet. Every bookable object needs one.' ) );
+		}
+
+		( chart.categories || [] ).forEach( function ( category ) {
+			categories.appendChild( categoryRow( category ) );
 		} );
 
 		if ( report.errors.length ) {
 			var issues = this.section( 'Problems' );
 
 			report.errors.slice( 0, 12 ).forEach( function ( issue ) {
-				issues.appendChild( el( 'div', 'insp-issue insp-issue--error', issue.message ) );
+				issues.appendChild( issueRow( issue.message, 'error' ) );
 			} );
 		}
 
@@ -119,7 +102,7 @@
 			var warnings = this.section( 'Worth a look' );
 
 			report.warnings.slice( 0, 12 ).forEach( function ( issue ) {
-				warnings.appendChild( el( 'div', 'insp-issue insp-issue--warning', issue.message ) );
+				warnings.appendChild( issueRow( issue.message, 'warning' ) );
 			} );
 		}
 	};
@@ -133,13 +116,10 @@
 		this.title( ( Chart.objectLabel( section ) || 'Section' ) + ' section' );
 
 		var body = this.section();
-		body.appendChild( el( 'strong', 'insp-places', report.places.toLocaleString() + ' places' ) );
+		body.appendChild( stat( report.places.toLocaleString(), 1 === report.places ? 'place' : 'places' ) );
 
 		report.checks.slice( 0, 3 ).forEach( function ( check ) {
-			var line = el( 'div', 'insp-check ' + ( check.ok ? 'is-ok' : 'is-bad' ) );
-			line.appendChild( el( 'span', 'insp-check__mark', check.ok ? '✓' : '✕' ) );
-			line.appendChild( el( 'span', '', check.label ) );
-			body.appendChild( line );
+			body.appendChild( checkRow( check ) );
 		} );
 	};
 
@@ -148,7 +128,7 @@
 	Inspector.prototype.renderRow = function ( row ) {
 		var self = this;
 
-		this.title( 'ROW' );
+		this.title( 'Row' );
 		this.categoryField( row );
 
 		var geometry = this.section( 'Row' );
@@ -232,10 +212,15 @@
 		var line = el( 'div', 'insp-field' );
 		line.appendChild( el( 'label', '', 'Position' ) );
 
-		var control = el( 'div', 'insp-position' );
-		var start = el( 'button', 'insp-position__end', labeling.label || 'A' );
-		var end = el( 'button', 'insp-position__end', labeling.label || 'A' );
-		var track = el( 'div', 'insp-position__track' );
+		var control = el( 'div', 'ends' );
+		var start = el( 'button', 'ends__cap', labeling.label || 'A' );
+		var end = el( 'button', 'ends__cap', labeling.label || 'A' );
+		var track = el( 'div', 'ends__track' );
+
+		start.type = 'button';
+		end.type = 'button';
+		start.setAttribute( 'aria-label', 'Label at the start of the row' );
+		end.setAttribute( 'aria-label', 'Label at the end of the row' );
 
 		function paint() {
 			start.classList.toggle( 'is-on', 'both' === labeling.position || 'start' === labeling.position );
@@ -262,7 +247,7 @@
 		end.addEventListener( 'click', function () { toggle( 'end' ); } );
 
 		for ( var i = 0; i < 5; i++ ) {
-			track.appendChild( el( 'span', 'insp-position__dot' ) );
+			track.appendChild( el( 'span', 'ends__dot' ) );
 		}
 
 		control.appendChild( start );
@@ -304,7 +289,7 @@
 	Inspector.prototype.renderSeats = function ( seats ) {
 		var self = this;
 
-		this.title( 1 === seats.length ? 'SEAT' : seats.length + ' SEATS' );
+		this.title( 1 === seats.length ? 'Seat' : seats.length + ' seats' );
 
 		var first = seats[ 0 ].seat;
 
@@ -346,7 +331,7 @@
 	Inspector.prototype.renderSectionObject = function ( section ) {
 		var self = this;
 
-		this.title( 'SECTION' );
+		this.title( 'Section' );
 		this.categoryField( section );
 
 		var body = this.section( 'Section' );
@@ -382,7 +367,10 @@
 
 		contents.appendChild( el( 'div', 'insp-static', seatCount + ' seats in ' + ( counts.row || 0 ) + ' rows' ) );
 
-		var open = el( 'button', 'insp-button', 'Edit seats in this section' );
+		var open = el( 'button', 'btn btn--block' );
+		open.type = 'button';
+		open.innerHTML = icon( 'seat', { size: 15 } );
+		open.appendChild( document.createTextNode( 'Edit seats in this section' ) );
 		open.addEventListener( 'click', function () { self.editor.enterSection( section.key ); } );
 		contents.appendChild( open );
 
@@ -479,7 +467,7 @@
 
 		body.appendChild( el(
 			'p',
-			'insp-hint',
+			'hint',
 			'generalAdmission' === capacity.type
 				? 'Multiple users can select places in a general admission area.'
 				: 'The whole object is sold once, to this many people.'
@@ -493,7 +481,7 @@
 	Inspector.prototype.renderTable = function ( table ) {
 		var self = this;
 
-		this.title( 'TABLE' );
+		this.title( 'Table' );
 		this.categoryField( table );
 
 		var body = this.section( 'Table' );
@@ -539,7 +527,7 @@
 
 		booking.appendChild( el(
 			'p',
-			'insp-hint',
+			'hint',
 			'table' === table.bookAs
 				? 'One booking takes the table and every chair at it.'
 				: 'Each chair is sold separately, like any other seat.'
@@ -551,7 +539,7 @@
 	Inspector.prototype.renderText = function ( text ) {
 		var self = this;
 
-		this.title( 'TEXT' );
+		this.title( 'Text' );
 
 		var body = this.section( 'Text' );
 
@@ -577,7 +565,7 @@
 	Inspector.prototype.renderShape = function ( shape ) {
 		var self = this;
 
-		this.title( 'SHAPE' );
+		this.title( 'Shape' );
 
 		var body = this.section( 'Shape' );
 
@@ -625,7 +613,7 @@
 	Inspector.prototype.renderImage = function ( image ) {
 		var self = this;
 
-		this.title( 'IMAGE' );
+		this.title( 'Image' );
 
 		var body = this.section( 'Image' );
 
@@ -641,7 +629,7 @@
 			self.change( function () { image.opacity = value; } );
 		} );
 
-		body.appendChild( el( 'p', 'insp-hint', 'Trace over a scanned floor plan, then delete or hide the image.' ) );
+		body.appendChild( el( 'p', 'hint', 'Trace over a scanned floor plan, then delete or hide the image.' ) );
 
 		this.layerField( image );
 	};
@@ -649,7 +637,7 @@
 	Inspector.prototype.renderIcon = function ( icon ) {
 		var self = this;
 
-		this.title( 'ICON' );
+		this.title( 'Icon' );
 
 		var body = this.section( 'Icon' );
 
@@ -681,7 +669,7 @@
 			types[ object.type ] = ( types[ object.type ] || 0 ) + 1;
 		} );
 
-		this.title( objects.length + ' OBJECTS' );
+		this.title( objects.length + ' objects' );
 
 		var body = this.section( 'Selection' );
 
@@ -696,6 +684,8 @@
 		} );
 
 		var arrange = this.section( 'Arrange' );
+		var grid = el( 'div', 'arrange' );
+		arrange.appendChild( grid );
 
 		[
 			[ 'Align left', function () { self.editor.alignSelection( 'left' ); } ],
@@ -707,9 +697,10 @@
 			[ 'Distribute across', function () { self.editor.distributeSelection( 'x' ); } ],
 			[ 'Distribute down', function () { self.editor.distributeSelection( 'y' ); } ],
 		].forEach( function ( entry ) {
-			var button = el( 'button', 'insp-button insp-button--small', entry[ 0 ] );
+			var button = el( 'button', 'btn btn--sm', entry[ 0 ] );
+			button.type = 'button';
 			button.addEventListener( 'click', entry[ 1 ] );
-			arrange.appendChild( button );
+			grid.appendChild( button );
 		} );
 	};
 
@@ -717,7 +708,7 @@
 
 	Inspector.prototype.categoryField = function ( object, apply ) {
 		var self = this;
-		var body = this.section( 'Category', '⚙ Manage', function () { self.onManageCategories(); } );
+		var body = this.section( 'Category', 'Manage', function () { self.onManageCategories(); } );
 
 		var options = [ { value: '', label: 'No category assigned' } ].concat(
 			( this.editor.chart.categories || [] ).map( function ( category ) {
@@ -750,7 +741,10 @@
 	/* ------------------------------------------------------------------------- primitives */
 
 	Inspector.prototype.title = function ( text ) {
-		this.root.appendChild( el( 'h2', 'insp-title', text ) );
+		var head = el( 'div', 'inspector__head' );
+
+		head.appendChild( el( 'h2', '', text ) );
+		this.root.appendChild( head );
 	};
 
 	Inspector.prototype.section = function ( heading, actionLabel, onAction ) {
@@ -761,7 +755,8 @@
 			head.appendChild( el( 'h3', '', heading ) );
 
 			if ( actionLabel ) {
-				var button = el( 'button', 'insp-link', actionLabel );
+				var button = el( 'button', 'link-btn', actionLabel );
+				button.type = 'button';
 				button.addEventListener( 'click', onAction );
 				head.appendChild( button );
 			}
@@ -782,12 +777,20 @@
 		var field = el( 'div', 'insp-field' );
 		field.appendChild( el( 'label', '', label ) );
 
-		var control = el( 'div', 'insp-stepper' );
-		var down = el( 'button', 'insp-stepper__arrow', '‹' );
+		var control = el( 'div', 'stepper' );
+		var down = el( 'button', 'stepper__btn' );
 		var input = document.createElement( 'input' );
-		var up = el( 'button', 'insp-stepper__arrow', '›' );
+		var up = el( 'button', 'stepper__btn' );
+
+		down.type = 'button';
+		up.type = 'button';
+		down.innerHTML = icon( 'minus', { size: 14 } );
+		up.innerHTML = icon( 'plus', { size: 14 } );
+		down.setAttribute( 'aria-label', 'Decrease ' + label );
+		up.setAttribute( 'aria-label', 'Increase ' + label );
 
 		input.type = 'number';
+		input.setAttribute( 'aria-label', label );
 		input.value = round( value );
 		input.min = min;
 		input.max = max;
@@ -815,7 +818,7 @@
 		control.appendChild( input );
 
 		if ( suffix ) {
-			control.appendChild( el( 'span', 'insp-suffix', suffix ) );
+			control.appendChild( el( 'span', 'stepper__unit', suffix ) );
 		}
 
 		control.appendChild( up );
@@ -824,13 +827,14 @@
 	};
 
 	Inspector.prototype.text = function ( body, label, value, onChange, disabled, placeholder ) {
-		var field = el( 'div', 'insp-field' );
+		var field = el( 'div', 'insp-field' + ( label ? '' : ' insp-field--wide' ) );
 
 		if ( label ) {
 			field.appendChild( el( 'label', '', label ) );
 		}
 
 		var input = document.createElement( 'input' );
+		input.className = 'input';
 		input.type = 'text';
 		input.value = value == null ? '' : value;
 		input.disabled = !! disabled;
@@ -849,6 +853,7 @@
 		field.appendChild( el( 'label', '', label ) );
 
 		var input = document.createElement( 'input' );
+		input.className = 'checkbox';
 		input.type = 'checkbox';
 		input.checked = !! value;
 		input.disabled = !! disabled;
@@ -859,13 +864,14 @@
 	};
 
 	Inspector.prototype.select = function ( body, label, value, options, onChange, disabled ) {
-		var field = el( 'div', 'insp-field' );
+		var field = el( 'div', 'insp-field' + ( label ? '' : ' insp-field--wide' ) );
 
 		if ( label ) {
 			field.appendChild( el( 'label', '', label ) );
 		}
 
 		var input = document.createElement( 'select' );
+		input.className = 'select';
 		input.disabled = !! disabled;
 
 		options.forEach( function ( option ) {
@@ -886,7 +892,9 @@
 		field.appendChild( el( 'label', '', label ) );
 
 		var input = document.createElement( 'input' );
+		input.className = 'slider';
 		input.type = 'range';
+		input.setAttribute( 'aria-label', label );
 		input.min = min;
 		input.max = max;
 		input.step = step;
@@ -902,7 +910,9 @@
 		field.appendChild( el( 'label', '', label ) );
 
 		var input = document.createElement( 'input' );
+		input.className = 'swatch';
 		input.type = 'color';
+		input.setAttribute( 'aria-label', label );
 		input.value = value;
 		input.addEventListener( 'input', function () { onChange( input.value ); } );
 
@@ -919,6 +929,55 @@
 	Inspector.prototype.change = function ( callback ) {
 		this.editor.mutate( callback );
 	};
+
+	/**
+	 * One number and the word for what it counts, so the figure is what the eye lands on.
+	 */
+	function stat( value, label ) {
+		var wrap = el( 'div', 'stat' );
+
+		wrap.appendChild( el( 'span', 'stat__value', value ) );
+		wrap.appendChild( el( 'span', 'stat__label', label ) );
+
+		return wrap;
+	}
+
+	function checkRow( check ) {
+		var line = el( 'div', 'check-row ' + ( check.ok ? 'is-ok' : 'is-bad' ) );
+
+		line.innerHTML = icon( check.ok ? 'check' : 'close', { size: 15 } );
+		line.appendChild( el( 'span', '', check.label ) );
+
+		return line;
+	}
+
+	function issueRow( message, severity ) {
+		var line = el( 'div', 'issue issue--' + severity );
+
+		line.innerHTML = icon( 'error' === severity ? 'alert' : 'info', { size: 15 } );
+		line.appendChild( el( 'span', '', message ) );
+
+		return line;
+	}
+
+	function categoryRow( category ) {
+		var line = el( 'div', 'category-row' );
+		var dot = el( 'span', 'dot' );
+
+		dot.style.background = category.color;
+		line.appendChild( dot );
+		line.appendChild( el( 'span', 'category-row__label', category.label ) );
+
+		if ( category.accessible ) {
+			var flag = el( 'span', 'muted' );
+
+			flag.innerHTML = icon( 'accessibility', { size: 15 } );
+			flag.setAttribute( 'data-tip', 'Accessible' );
+			line.appendChild( flag );
+		}
+
+		return line;
+	}
 
 	function el( tag, className, text ) {
 		var node = document.createElement( tag );
