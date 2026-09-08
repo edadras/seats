@@ -15,6 +15,8 @@
     <script src="{{ asset('editor/js/chart-ops.js') }}"></script>
     <script src="{{ asset('editor/js/editor.js') }}"></script>
     <script src="{{ asset('editor/js/inspector.js') }}"></script>
+    <script src="{{ asset('editor/js/sites.js') }}"></script>
+    <script src="{{ asset('editor/js/tickets.js') }}"></script>
     <script src="{{ asset('editor/js/panel.js') }}"></script>
 </body>
 </html>

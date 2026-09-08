@@ -23,8 +23,10 @@
 	/* Navigation, in the order the work happens: events are the daily screen, so they come first. */
 	var NAV = [
 		{ key: 'events', label: 'Events', icon: 'calendar' },
+		{ key: 'tickets', label: 'Tickets', icon: 'ticket' },
 		{ key: 'maps', label: 'Seat maps', icon: 'map' },
 		{ key: 'venues', label: 'Venues', icon: 'building' },
+		{ key: 'sites', label: 'Websites', icon: 'globe' },
 		{ key: 'connections', label: 'Connections', icon: 'plug' },
 	];
 
@@ -317,6 +319,8 @@
 			case 'venues': return this.renderVenues();
 			case 'maps': return this.renderMaps();
 			case 'connections': return this.renderConnections();
+			case 'sites': return window.SeatmapSites.renderList( this );
+			case 'tickets': return window.SeatmapTickets.render( this );
 			default: return this.renderEvents();
 		}
 	};
@@ -336,6 +340,19 @@
 				'<div class="page-head__actions">' + ( options.actions || '' ) + '</div>' +
 			'</div>' +
 			'<div class="page-body">' + ( options.body || '' ) + '</div>';
+	};
+
+	// Shared with the website and ticket screens, which build the same furniture.
+	App.table = function ( headings, rows, emptyMarkup ) {
+		return table( headings, rows, emptyMarkup );
+	};
+
+	App.emptyState = function ( iconName, title, body ) {
+		return emptyState( iconName, title, body );
+	};
+
+	App.timezone = function () {
+		return guessTimezone();
 	};
 
 	App.loading = function ( title ) {

@@ -39,7 +39,13 @@ await page.fill( 'input[name=password]', 'password' );
 await page.click( '#login button[type=submit]' );
 await page.waitForSelector( '.sidebar', { timeout: 10000 } );
 check( 'signed in', await page.locator( '.sidebar' ).isVisible() );
-check( 'sidebar lists every section', ( await page.locator( '.nav-item' ).count() ) === 4 );
+// By name, not by count: a screen that quietly stops being reachable is the failure worth
+// catching, and a count passes just as happily when one is replaced by another.
+check(
+	'sidebar lists every section',
+	JSON.stringify( await page.locator( '.nav-item' ).allInnerTexts() ) ===
+		JSON.stringify( [ 'Events', 'Tickets', 'Seat maps', 'Venues', 'Websites', 'Connections' ] )
+);
 
 console.log( 'Designer: open the chart' );
 await page.click( 'nav button[data-view=maps]' );

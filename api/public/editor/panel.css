@@ -909,3 +909,211 @@
 	.nav-item { inline-size: auto; }
 	.page-head, .page-body { padding-inline: var(--s-4); }
 }
+
+/* ================================================================== the website editor */
+
+/*
+ * Same shape as the designer — a fixed rail beside a scrolling pane — because it is the same kind
+ * of work: a list of things on the left, the one being edited on the right.
+ */
+.site-body {
+	grid-template-columns: 15rem 1fr;
+}
+
+.site-nav {
+	border-inline-end: 1px solid var(--border);
+	background: var(--surface);
+	overflow-y: auto;
+	padding: var(--s-2);
+}
+
+.site-nav__group { margin-block-end: var(--s-4); }
+.site-nav__title { padding: var(--s-2) var(--s-3) var(--s-1); }
+.site-nav__add { margin: var(--s-1) var(--s-3); }
+
+.site-nav .nav-item { justify-content: flex-start; }
+.site-nav .nav-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A dot on a page in the list means it has edits nobody has published yet. */
+.dot--warn { background: var(--warn); }
+
+.site-main {
+	overflow-y: auto;
+	background: var(--surface-sunken);
+}
+
+.site-pane {
+	max-inline-size: 52rem;
+	margin-inline: auto;
+	padding: 0 var(--s-6) var(--s-10);
+}
+
+.page-head--inline {
+	padding-inline: 0;
+	background: transparent;
+	border-block-end: none;
+}
+
+/* ------------------------------------------------------------------------------ blocks */
+
+.blocks { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.block {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	box-shadow: var(--shadow-xs);
+	overflow: hidden;
+}
+
+.block__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-2);
+	padding: var(--s-2) var(--s-3);
+	background: var(--surface-sunken);
+	border-block-end: 1px solid var(--border-subtle);
+}
+
+.block__type {
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.block__tools { display: flex; gap: 2px; }
+.block__body { padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); }
+
+.blocks__add {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--s-2);
+	margin-block-start: var(--s-4);
+	padding-block-start: var(--s-4);
+	border-block-start: 1px dashed var(--border-strong);
+}
+
+.blocks__add .overline { margin-inline-end: var(--s-1); }
+
+.textarea {
+	min-block-size: 5rem;
+	block-size: auto;
+	padding: var(--s-2) var(--s-3);
+	line-height: 1.5;
+	resize: vertical;
+	font-family: inherit;
+}
+
+.faq-edit {
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-2);
+	padding: var(--s-3);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--r-md);
+}
+
+/* ------------------------------------------------------------------------------ themes */
+
+.themes {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+	gap: var(--s-3);
+	margin-block-end: var(--s-6);
+}
+
+.theme-card {
+	display: flex;
+	gap: var(--s-3);
+	padding: var(--s-3);
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+	text-align: start;
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+	transition: border-color var(--speed) var(--ease);
+}
+
+.theme-card:hover { border-color: var(--border-strong); }
+.theme-card.is-active { border-color: var(--accent); box-shadow: var(--ring); }
+
+.theme-card__body { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+.theme-card__body .muted { font-size: var(--text-xs); line-height: 1.4; }
+
+/* A swatch each, so the difference is visible before it is read. */
+.theme-card__swatch {
+	inline-size: 2.5rem;
+	block-size: 2.5rem;
+	flex: none;
+	border-radius: var(--r-md);
+	border: 1px solid var(--border);
+}
+
+.theme-card__swatch--aurora { background: linear-gradient(150deg, #ffffff 45%, #4a4fdc 45%); }
+.theme-card__swatch--noir { background: linear-gradient(150deg, #14171f 45%, #f0455f 45%); }
+.theme-card__swatch--playbill { background: linear-gradient(150deg, #fbf7f0 45%, #8c2f39 45%); }
+
+/* ------------------------------------------------------------------------------- menus */
+
+.menu-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr auto;
+	align-items: center;
+	gap: var(--s-2);
+	margin-block-end: var(--s-2);
+}
+
+.menu-row input[hidden] { display: none !important; }
+.menu-row:has(input:not([hidden]):nth-child(3)) { grid-template-columns: 1fr 1fr 1fr auto; }
+
+/* ----------------------------------------------------------------------------- domains */
+
+.domain {
+	padding: var(--s-4);
+	margin-block-end: var(--s-3);
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+}
+
+.domain__head {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--s-2);
+}
+
+.domain__tools { margin-inline-start: auto; display: flex; gap: var(--s-2); align-items: center; }
+.domain__record { margin-block-start: var(--s-3); }
+
+.record {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: var(--s-1) var(--s-4);
+	margin: var(--s-3) 0 0;
+	font-size: var(--text-sm);
+}
+
+.record dt { color: var(--text-muted); }
+.record dd { margin: 0; }
+.record code { word-break: break-all; }
+
+.spaced-none { margin-block-start: 0; }
+
+/* A filter row: the search takes what is left, the two choices stay the width of their content. */
+.filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--s-2);
+	align-items: center;
+}
+
+.filters__event { flex: 0 1 18rem; }
+.filters__status { flex: 0 0 9.5rem; }
+.filters .input { flex: 1 1 14rem; min-inline-size: 0; }

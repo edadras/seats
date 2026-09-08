@@ -48,6 +48,7 @@ tags:
   - name: Embed
   - name: WooCommerce
   - name: Tickets
+  - name: Sites
   - name: Check-in
 
 security:
@@ -768,6 +769,468 @@ paths:
               schema: { $ref: "#/components/schemas/Ticket" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [Tickets]
+      summary: Every ticket for one event
+      description: |
+        The box-office lookup. `q` searches the holder's name, the buyer's name and email, the seat,
+        the order reference and the *visible prefix* of the code.
+
+        Searching by a whole ticket token is deliberately not offered: a token is a credential, and
+        a search box that accepts one is a search box that logs one.
+      parameters:
+        - name: event_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [issued, used, void] }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Ticket" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /tickets/{ticket}/release:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+    post:
+      operationId: releaseTicket
+      tags: [Tickets]
+      summary: Void a ticket and put its seat back on sale
+      description: |
+        Expressed as a partial refund of the order, because voiding the ticket and freeing the seat
+        have to happen together.
+
+        A ticket that has already been scanned cannot be released — the seat is occupied, and
+        selling it again would send two people to one chair.
+      responses:
+        "200":
+          description: Released
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        "409":
+          description: |
+            `already_used` — someone has already come in on this ticket.
+            `no_allocation` / `no_order` — the ticket is not attached to a seat or an order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /site-themes:
+    get:
+      operationId: listSiteThemes
+      tags: [Sites]
+      summary: The themes, fonts, corner radii and block types a site can use
+      description: |
+        Everything the site editor needs to render its choices. The lists are closed: a theme key,
+        font or block type that is not here is rejected on the way in.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  themes:
+                    type: array
+                    items: { $ref: "#/components/schemas/SiteTheme" }
+                  fonts: { type: array, items: { type: string } }
+                  radii: { type: array, items: { type: string } }
+                  blocks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type: { type: string, enum: [heading, richText, image, buttons, eventList, eventDetail, faq, venueMap, divider, html] }
+                        name: { type: string }
+                        icon: { type: string }
+
+  /sites:
+    get:
+      operationId: listSites
+      tags: [Sites]
+      summary: The organiser's hosted event sites
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Site" }
+    post:
+      operationId: createSite
+      tags: [Sites]
+      summary: Create a site
+      description: |
+        Creating a site provisions it: a home page, an event page, a "visiting us" page, a primary
+        and a footer menu, and — if `SEATMAP_SITES_DOMAIN` is configured — a free subdomain, already
+        verified. A new site is `draft` until a verified domain exists.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                theme_key: { type: string, maxLength: 40 }
+                locale: { type: string, maxLength: 12 }
+                timezone: { type: string }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteDetail" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /sites/{site}:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    get:
+      operationId: getSite
+      tags: [Sites]
+      summary: One site with its pages, menus and domains
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateSite
+      tags: [Sites]
+      summary: Rename, restyle, or publish a site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                theme_key: { type: string, maxLength: 40 }
+                locale: { type: string, maxLength: 12 }
+                timezone: { type: string }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                status: { type: string, enum: [draft, live] }
+                brand: { $ref: "#/components/schemas/SiteBrand" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteDetail" }
+        "409":
+          description: "`no_verified_domain` — a site cannot go live with no address to visit."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`unknown_theme`, or an invalid field."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /sites/{site}/pages:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    post:
+      operationId: createSitePage
+      tags: [Sites]
+      summary: Add a page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, slug]
+              properties:
+                title: { type: string, maxLength: 160 }
+                slug:
+                  type: string
+                  maxLength: 80
+                  pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SitePage" }
+        "409":
+          description: "`slug_taken` — a page already uses that address."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`too_many_pages`, or an invalid slug."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /sites/{site}/pages/{page}:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/PageId"
+    patch:
+      operationId: updateSitePage
+      tags: [Sites]
+      summary: Edit a page's draft
+      description: |
+        Writes the draft only; the public site keeps showing the last published copy until
+        `/publish` is called.
+
+        Blocks are normalised here and nowhere else: unknown types are dropped, every string is
+        length-capped, every URL is checked, and `html` blocks are refused unless the organiser has
+        `allow_raw_html` turned on. Rendering re-validates nothing, so this is the boundary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 160 }
+                slug: { type: string, maxLength: 80 }
+                blocks:
+                  type: array
+                  items: { $ref: "#/components/schemas/Block" }
+                seo_title: { type: [string, "null"], maxLength: 160 }
+                seo_description: { type: [string, "null"], maxLength: 320 }
+                position: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SitePage" }
+        "409":
+          description: "`slug_taken`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`home_slug_fixed` — the home page lives at the root and cannot move."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      operationId: deleteSitePage
+      tags: [Sites]
+      summary: Delete a page
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "422":
+          description: "`page_required` — the home and event pages are part of how the site works."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /sites/{site}/pages/{page}/publish:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/PageId"
+    post:
+      operationId: publishSitePage
+      tags: [Sites]
+      summary: Copy the draft over the live page
+      description: The same draft/published discipline the seat maps have — visitors never see a half-finished edit.
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SitePage" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /sites/{site}/menus/{key}:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, examples: [primary, footer] }
+    put:
+      operationId: updateSiteMenu
+      tags: [Sites]
+      summary: Replace a menu's items
+      description: |
+        The whole menu is sent each time rather than diffed. A menu is short, and sending the
+        intended order is the only version where two editors cannot interleave into a mess.
+
+        Items pointing at a page or event that is not this tenant's are dropped, not rejected: a
+        menu cannot be aimed at another organiser's event by guessing an id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 60
+                  items:
+                    type: object
+                    required: [label, target_type]
+                    properties:
+                      label: { type: string, maxLength: 60 }
+                      target_type: { type: string, enum: [page, event, url] }
+                      site_page_id: { type: [string, "null"], format: uuid }
+                      event_id: { type: [string, "null"], format: uuid }
+                      url: { type: [string, "null"], maxLength: 400 }
+                      new_tab: { type: boolean }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteMenu" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /sites/{site}/domains:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    post:
+      operationId: addSiteDomain
+      tags: [Sites]
+      summary: Point a custom domain at the site
+      description: |
+        The hostname is claimed but not yet served. It becomes routable only once the TXT record in
+        the response is published and verification passes — otherwise anyone could claim a hostname
+        they do not own and receive its traffic.
+
+        Uniqueness is checked across every tenant, because a hostname routes globally. The conflict
+        never says who holds it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hostname]
+              properties:
+                hostname: { type: string, maxLength: 253, examples: ["tickets.northgate.example"] }
+      responses:
+        "201":
+          description: Added, pending verification
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteDomain" }
+        "409":
+          description: "`hostname_taken`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`invalid_hostname`, or `too_many_domains`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /sites/{site}/domains/{domain}/verify:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/DomainId"
+    post:
+      operationId: verifySiteDomain
+      tags: [Sites]
+      summary: Check the TXT record now
+      description: Runs the DNS check immediately instead of waiting for the queued one. `last_error` says why a failure failed.
+      responses:
+        "200":
+          description: Checked — read `verified`
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteDomain" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /sites/{site}/domains/{domain}/primary:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/DomainId"
+    post:
+      operationId: makeSiteDomainPrimary
+      tags: [Sites]
+      summary: Make this the address the site calls its own
+      description: The primary domain is what canonical URLs and ticket emails use. Every other verified domain still serves the site.
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteDomain" }
+        "409":
+          description: "`domain_unverified`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /sites/{site}/domains/{domain}:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/DomainId"
+    delete:
+      operationId: deleteSiteDomain
+      tags: [Sites]
+      summary: Stop serving the site at this address
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "409":
+          description: "`primary_domain` — make another address the main one first."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /checkin/auth/token:
     post:
       operationId: pairCheckinDevice
@@ -954,6 +1417,26 @@ components:
       in: path
       required: true
       schema: { type: string }
+    TicketId:
+      name: ticket
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SiteId:
+      name: site
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PageId:
+      name: page
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DomainId:
+      name: domain
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 
   responses:
     NotFound:
@@ -1453,7 +1936,7 @@ components:
           items: { $ref: "#/components/schemas/Allocation" }
         tickets:
           type: array
-          items: { $ref: "#/components/schemas/Ticket" }
+          items: { $ref: "#/components/schemas/IssuedTicket" }
 
     Allocation:
       type: object
@@ -1468,13 +1951,48 @@ components:
 
     Ticket:
       type: object
+      description: |
+        A ticket as the panel and the scanner see it.
+
+        Note what is absent: the QR token. It is handed to the storefront once, on the response
+        that issued it, and never readable again — so a panel session cannot be used to harvest
+        working tickets. `token_prefix` is the short visible fragment printed on the ticket, which
+        is what staff read out at a box office.
+      properties:
+        id: { type: string, format: uuid }
+        allocation_id: { type: [string, "null"], format: uuid }
+        event_id: { type: string, format: uuid }
+        status: { type: string, enum: [issued, used, void] }
+        holder_name: { type: [string, "null"] }
+        token_prefix: { type: [string, "null"] }
+        seat:
+          type: object
+          properties:
+            section: { type: [string, "null"] }
+            row: { type: [string, "null"] }
+            label: { type: [string, "null"] }
+            quantity: { type: [integer, "null"] }
+        order:
+          type: [object, "null"]
+          properties:
+            reference: { type: string }
+            status: { type: string }
+            buyer_name: { type: [string, "null"] }
+            buyer_email: { type: [string, "null"] }
+        issued_at: { type: [string, "null"], format: date-time }
+        used_at: { type: [string, "null"], format: date-time }
+
+    IssuedTicket:
+      description: |
+        The shape returned inside an order. `token` is present on exactly one response — the one
+        that confirmed the order and issued the ticket — because the storefront needs it to draw
+        the QR in the customer's email. Every later read of the same order omits it.
+      type: object
       properties:
         id: { type: string, format: uuid }
         allocation_id: { type: string, format: uuid }
         status: { type: string, enum: [issued, used, void] }
-        token:
-          type: string
-          description: Returned only at issuance and to authorised tenant readers. Encode this in the QR.
+        token: { type: string }
         seat:
           type: object
           properties:
@@ -1483,6 +2001,149 @@ components:
             label: { type: string }
         issued_at: { type: string, format: date-time }
         used_at: { type: [string, "null"], format: date-time }
+
+    ScannedTicket:
+      description: What a scanner is told about the ticket it just read — enough to admit or refuse a person, and nothing else.
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [issued, used, void] }
+        holder_name: { type: [string, "null"] }
+        seat:
+          type: object
+          properties:
+            section: { type: [string, "null"] }
+            row: { type: [string, "null"] }
+            label: { type: [string, "null"] }
+
+    SiteTheme:
+      type: object
+      properties:
+        key: { type: string, examples: [aurora, noir, playbill] }
+        name: { type: string }
+        description: { type: string }
+
+    SiteBrand:
+      description: |
+        The organiser's own look, inside bounds. Colours, fonts, radii and logo URLs are validated
+        on the way in — a brand is a set of choices from closed lists, not arbitrary CSS, because
+        this renders on a domain we serve.
+      type: object
+      properties:
+        accent: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
+        heading_font: { type: string }
+        body_font: { type: string }
+        radius: { type: string }
+        logo_url: { type: string, format: uri }
+        tagline: { type: string, maxLength: 160 }
+        gateways:
+          type: array
+          description: Payment drivers the storefront offers. Defaults to `offline` — pay at the box office.
+          items: { type: string }
+
+    Site:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        theme_key: { type: string }
+        locale: { type: string }
+        timezone: { type: string }
+        currency: { type: string }
+        brand: { $ref: "#/components/schemas/SiteBrand" }
+        status: { type: string, enum: [draft, live] }
+        url:
+          type: [string, "null"]
+          description: Canonical address, or null while no domain is verified.
+        domains:
+          type: array
+          items: { $ref: "#/components/schemas/SiteDomain" }
+
+    SiteDetail:
+      allOf:
+        - $ref: "#/components/schemas/Site"
+        - type: object
+          properties:
+            pages:
+              type: array
+              items: { $ref: "#/components/schemas/SitePage" }
+            menus:
+              type: array
+              items: { $ref: "#/components/schemas/SiteMenu" }
+
+    SitePage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        kind:
+          type: string
+          enum: [home, page, event]
+          description: "`home` and `event` are structural: the site needs them, so they cannot be deleted and home cannot move off the root."
+        path: { type: string }
+        blocks:
+          type: array
+          description: The draft. What visitors see is the published copy, which this response does not carry.
+          items: { $ref: "#/components/schemas/Block" }
+        seo_title: { type: [string, "null"] }
+        seo_description: { type: [string, "null"] }
+        position: { type: integer }
+        published_at: { type: [string, "null"], format: date-time }
+        has_unpublished_changes: { type: boolean }
+
+    Block:
+      type: object
+      description: |
+        One piece of a page. `type` decides which other properties are meaningful; everything else
+        is dropped on the way in, so a stored block only ever holds fields its type defines.
+      required: [type]
+      properties:
+        id:
+          type: string
+          description: Stable across edits, so reordering one block does not break an anchor to another.
+        type:
+          type: string
+          enum: [heading, richText, image, buttons, eventList, eventDetail, faq, venueMap, divider, html]
+      additionalProperties: true
+
+    SiteMenu:
+      type: object
+      properties:
+        key: { type: string, examples: [primary, footer] }
+        name: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              label: { type: string }
+              target_type: { type: string, enum: [page, event, url] }
+              site_page_id: { type: [string, "null"], format: uuid }
+              event_id: { type: [string, "null"], format: uuid }
+              url: { type: [string, "null"] }
+              new_tab: { type: boolean }
+
+    SiteDomain:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        hostname: { type: string }
+        is_primary: { type: boolean }
+        verified:
+          type: boolean
+          description: Until this is true the hostname is claimed but not served.
+        verified_at: { type: [string, "null"], format: date-time }
+        last_checked_at: { type: [string, "null"], format: date-time }
+        last_error: { type: [string, "null"] }
+        record:
+          type: object
+          description: The DNS record to publish before verification can pass.
+          properties:
+            type: { type: string, examples: [TXT] }
+            name: { type: string }
+            value: { type: string }
 
     CheckinDevice:
       type: object
@@ -1512,7 +2173,7 @@ components:
           enum: [valid, already_used, cancelled, refunded, wrong_event, invalid]
         ticket:
           oneOf:
-            - $ref: "#/components/schemas/Ticket"
+            - $ref: "#/components/schemas/ScannedTicket"
             - type: "null"
         first_scan:
           type: [object, "null"]
