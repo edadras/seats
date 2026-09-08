@@ -238,6 +238,38 @@
 		} );
 	}
 
+	/**
+	 * The picker's icons.
+	 *
+	 * Inline SVG rather than characters: `+`, `−` and `⟲` are a different weight in every theme's
+	 * font, and `⟲` is missing from some of them entirely. These take the colour of the button
+	 * they sit in and are the same shape everywhere.
+	 */
+	var ICONS = {
+		plus: '<path d="M12 5v14M5 12h14"/>',
+		minus: '<path d="M5 12h14"/>',
+		reset: '<path d="M4 9a8 8 0 1 1 .6 6"/><path d="M3.5 4v5h5"/>',
+	};
+
+	function iconMarkup( name ) {
+		return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+			'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+			ICONS[ name ] + '</svg>';
+	}
+
+	/** A round icon button: zoom, reset and the quantity steppers are all the same control. */
+	function iconButton( name, label, onClick ) {
+		var button = document.createElement( 'button' );
+
+		button.type = 'button';
+		button.className = 'seatmap-widget__icon-button';
+		button.innerHTML = iconMarkup( name );
+		button.setAttribute( 'aria-label', label );
+		button.addEventListener( 'click', onClick );
+
+		return button;
+	}
+
 	function labelOf( object ) {
 		if ( object.labeling ) {
 			return object.labeling.displayedLabel || object.labeling.label || '';
@@ -267,6 +299,12 @@
 		stage.appendChild( this.canvas );
 		stage.appendChild( this.buildZoomControls() );
 
+		var floors = this.buildFloorSwitcher();
+
+		if ( floors ) {
+			stage.appendChild( floors );
+		}
+
 		this.container.appendChild( stage );
 		this.container.appendChild( this.buildAreaList() );
 		this.container.appendChild( this.buildSeatList() );
@@ -279,6 +317,13 @@
 		window.addEventListener( 'resize', function () {
 			self.resize();
 		} );
+
+		// The plan is drawn, not styled, so a change of system theme has to be repainted by hand.
+		var scheme = window.matchMedia && window.matchMedia( '(prefers-color-scheme: dark)' );
+
+		if ( scheme && scheme.addEventListener ) {
+			scheme.addEventListener( 'change', function () { self.paint(); } );
+		}
 	};
 
 	SeatmapWidget.prototype.buildLegend = function () {
@@ -312,25 +357,71 @@
 
 	SeatmapWidget.prototype.buildZoomControls = function () {
 		var wrap = document.createElement( 'div' );
-		wrap.className = 'seatmap-widget__zoom';
+		wrap.className = 'seatmap-widget__float seatmap-widget__zoom';
 
 		var self = this;
-		var buttons = [
-			[ '+', this.i18n.zoomIn, function () { self.zoomBy( 1.25 ); } ],
-			[ '−', this.i18n.zoomOut, function () { self.zoomBy( 0.8 ); } ],
-			[ '⟲', this.i18n.resetView, function () { self.resetView(); } ]
-		];
 
-		buttons.forEach( function ( spec ) {
+		wrap.appendChild( iconButton( 'plus', this.i18n.zoomIn, function () { self.zoomBy( 1.25 ); } ) );
+		wrap.appendChild( iconButton( 'minus', this.i18n.zoomOut, function () { self.zoomBy( 0.8 ); } ) );
+		wrap.appendChild( iconButton( 'reset', this.i18n.resetView, function () { self.resetView(); } ) );
+
+		return wrap;
+	};
+
+	/**
+	 * The floor switcher.
+	 *
+	 * A multi-floor chart used to show the buyer only whichever floor happened to be first, with
+	 * no way to reach the others — the balcony was simply unsellable. Built only when there is
+	 * more than one floor, so a single-floor venue gets no dead furniture.
+	 */
+	SeatmapWidget.prototype.buildFloorSwitcher = function () {
+		var self = this;
+		var floors = this.floors || [];
+
+		if ( floors.length < 2 ) {
+			return null;
+		}
+
+		var wrap = document.createElement( 'div' );
+		wrap.className = 'seatmap-widget__float seatmap-widget__floors';
+		wrap.setAttribute( 'role', 'group' );
+		wrap.setAttribute( 'aria-label', this.i18n.floors );
+
+		this.floorButtons = [];
+
+		floors.forEach( function ( floor ) {
 			var button = document.createElement( 'button' );
+
 			button.type = 'button';
-			button.textContent = spec[ 0 ];
-			button.setAttribute( 'aria-label', spec[ 1 ] );
-			button.addEventListener( 'click', spec[ 2 ] );
+			button.className = 'seatmap-widget__floor';
+			button.textContent = floor.key;
+			button.setAttribute( 'aria-label', floor.name || floor.key );
+			button.setAttribute( 'aria-pressed', floor.key === self.floorKey ? 'true' : 'false' );
+			button.addEventListener( 'click', function () { self.setFloor( floor.key ); } );
+
+			self.floorButtons.push( { key: floor.key, button: button } );
 			wrap.appendChild( button );
 		} );
 
 		return wrap;
+	};
+
+	SeatmapWidget.prototype.setFloor = function ( key ) {
+		if ( key === this.floorKey ) {
+			return;
+		}
+
+		this.floorKey = key;
+
+		( this.floorButtons || [] ).forEach( function ( entry ) {
+			entry.button.setAttribute( 'aria-pressed', entry.key === key ? 'true' : 'false' );
+		} );
+
+		// A selection made on another floor stays in the basket — only the view moves.
+		this.resetView();
+		this.renderAreaList();
+		this.renderSeatList();
 	};
 
 	/**
@@ -404,24 +495,17 @@
 			var stepper = document.createElement( 'div' );
 			stepper.className = 'seatmap-widget__stepper';
 
-			var minus = document.createElement( 'button' );
-			minus.type = 'button';
-			minus.textContent = '−';
+			var minus = iconButton( 'minus', self.i18n.removeOne.replace( '%s', area.label ),
+				function () { self.changeAreaQuantity( area, -1 ); } );
 			minus.disabled = area.quantity <= 0;
-			minus.setAttribute( 'aria-label', self.i18n.removeOne.replace( '%s', area.label ) );
 
 			var count = document.createElement( 'output' );
 			count.textContent = String( area.quantity );
 			count.setAttribute( 'aria-live', 'polite' );
 
-			var plus = document.createElement( 'button' );
-			plus.type = 'button';
-			plus.textContent = '+';
+			var plus = iconButton( 'plus', self.i18n.addOne.replace( '%s', area.label ),
+				function () { self.changeAreaQuantity( area, 1 ); } );
 			plus.disabled = area.quantity >= area.remaining || area.quantity >= self.maxSeats;
-			plus.setAttribute( 'aria-label', self.i18n.addOne.replace( '%s', area.label ) );
-
-			minus.addEventListener( 'click', function () { self.changeAreaQuantity( area, -1 ); } );
-			plus.addEventListener( 'click', function () { self.changeAreaQuantity( area, 1 ); } );
 
 			stepper.appendChild( minus );
 			stepper.appendChild( count );
@@ -603,7 +687,10 @@
 	};
 
 	SeatmapWidget.prototype.resize = function () {
-		var width = this.container.clientWidth || 800;
+		// Measured from the plan's own box, not the whole picker: on a wide screen the summary
+		// sits alongside, and sizing to the container drew a canvas wider than the space for it.
+		var host = this.canvas.parentNode;
+		var width = ( host && host.clientWidth ) || this.container.clientWidth || 800;
 		var size = this.canvasSize();
 		var geometryWidth = size.width || 1000;
 		var geometryHeight = size.height || 800;
@@ -621,6 +708,63 @@
 		this.dpr = dpr;
 
 		this.paint();
+	};
+
+	/**
+	 * The canvas palette.
+	 *
+	 * A canvas has no cascade, so the two themes are written out here. The picker follows the
+	 * reader's system preference rather than a theme class, because it is a guest inside someone
+	 * else's stylesheet and cannot assume one exists.
+	 */
+	var PALETTES = {
+		light: {
+			ink: '#1b2030',
+			text: '#3d4457',
+			muted: '#6f7891',
+			seatEdge: 'rgba(27,32,48,0.2)',
+			seatTaken: '#d3d6dc',
+			shapeEdge: 'rgba(27,32,48,0.25)',
+			shapeLabel: '#ffffff',
+			tableFill: 'rgba(27,32,48,0.06)',
+			areaSoldOut: 'rgba(27,32,48,0.08)',
+			areaSoldOutEdge: '#c7cddb',
+			shapes: {
+				stage: '#3d4457',
+				entrance: '#2f8f63',
+				exit: '#b3543a',
+				aisle: '#e8eaee',
+				wall: '#9aa3b7',
+				fallback: '#c8ccd4',
+			},
+		},
+
+		dark: {
+			ink: '#e9ecf3',
+			text: '#c3cad9',
+			muted: '#838ca3',
+			seatEdge: 'rgba(9,11,16,0.45)',
+			seatTaken: '#394052',
+			shapeEdge: 'rgba(233,236,243,0.22)',
+			shapeLabel: '#e9ecf3',
+			tableFill: 'rgba(233,236,243,0.07)',
+			areaSoldOut: 'rgba(233,236,243,0.06)',
+			areaSoldOutEdge: '#3b4256',
+			shapes: {
+				stage: '#394054',
+				entrance: '#2c6f52',
+				exit: '#8b453a',
+				aisle: '#262c3c',
+				wall: '#4a5266',
+				fallback: '#3a4155',
+			},
+		},
+	};
+
+	SeatmapWidget.prototype.colours = function () {
+		var query = window.matchMedia && window.matchMedia( '(prefers-color-scheme: dark)' );
+
+		return query && query.matches ? PALETTES.dark : PALETTES.light;
 	};
 
 	SeatmapWidget.prototype.paint = function () {
@@ -647,6 +791,7 @@
 
 	SeatmapWidget.prototype.paintDecorations = function ( ctx ) {
 		var self = this;
+		var colours = this.colours();
 
 		this.decorations.filter( function ( entry ) {
 			return entry.floorKey === self.floorKey;
@@ -655,7 +800,7 @@
 
 			if ( 'text' === object.type ) {
 				ctx.save();
-				ctx.fillStyle = object.color || '#3a3f4b';
+				ctx.fillStyle = object.color || colours.text;
 				ctx.font = '500 ' + ( object.fontSize || 16 ) + 'px system-ui, sans-serif';
 				ctx.fillText( object.text, object.x, object.y );
 				ctx.restore();
@@ -664,12 +809,7 @@
 			}
 
 			if ( 'icon' === object.type ) {
-				ctx.save();
-				ctx.font = ( object.size || 22 ) + 'px system-ui, sans-serif';
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.fillText( ICONS[ object.name ] || '•', object.x, object.y );
-				ctx.restore();
+				self.paintMarker( ctx, object, colours );
 
 				return;
 			}
@@ -678,18 +818,58 @@
 		} );
 	};
 
-	var ICONS = {
-		wheelchair: '♿', toilets: '🚻', bar: '🍸', food: '🍴',
-		entrance: '⇥', exit: '⇤', stairs: '⌁', lift: '⇕',
+	/**
+	 * Venue markers, drawn from the same vector paths the designer uses.
+	 *
+	 * These were emoji, which meant the buyer saw a different symbol from the one the venue drew,
+	 * at a different weight and colour on every device.
+	 */
+	var MARKERS = {
+		wheelchair: 'M13.9 4.8a1.9 1.9 0 1 1-3.8 0 1.9 1.9 0 1 1 3.8 0M8 8.6h8M12 8.6v5h4.5M12 13.6 9.5 20M16.5 13.6 19 20',
+		toilets: 'M8.6 5.4a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 1 1 2.8 0M7.2 8.4v5.8M5.7 9.8h3M6.1 14.2V20M8.3 14.2V20M17.7 5.4a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 1 1 2.8 0M16.3 8.4 14.1 14.6h4.4L16.3 8.4M15.3 14.6V20M17.3 14.6V20',
+		bar: 'M4.5 5h15l-7.5 7.5zM12 12.5V19M8.5 19h7',
+		food: 'M8 4v6.5M11 4v6.5M9.5 4v6.5M9.5 10.5V20M16.5 4c-1.4 1.4-2.1 3.1-2.1 5s.7 3.1 2.1 3.5V20',
+		entrance: 'M13.5 4H19a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5.5M9.5 8l4 4-4 4M13.5 12H4',
+		exit: 'M10.5 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5.5M14.5 8l4 4-4 4M18.5 12H8',
+		stairs: 'M3.5 20h4.5v-4h4.5v-4H17V7.5h3.5',
+		lift: 'M5 3.5h14a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5ZM9.5 10.5 12 7l2.5 3.5M9.5 13.5 12 17l2.5-3.5',
+	};
+
+	SeatmapWidget.prototype.paintMarker = function ( ctx, marker, colours ) {
+		var size = marker.size || 22;
+		var data = MARKERS[ marker.name ];
+
+		ctx.save();
+		ctx.strokeStyle = colours.muted;
+		ctx.fillStyle = colours.muted;
+
+		if ( data && window.Path2D ) {
+			// The paths are drawn on a 24-unit grid, so scale to the marker and keep the stroke
+			// weight constant in that space rather than in chart units.
+			ctx.translate( marker.x - size / 2, marker.y - size / 2 );
+			ctx.scale( size / 24, size / 24 );
+			ctx.lineWidth = 1.75;
+			ctx.lineCap = 'round';
+			ctx.lineJoin = 'round';
+			ctx.stroke( new window.Path2D( data ) );
+		} else {
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.font = '600 ' + Math.round( size * 0.7 ) + 'px system-ui, sans-serif';
+			ctx.fillText( String( marker.name || '?' ).charAt( 0 ).toUpperCase(), marker.x, marker.y );
+		}
+
+		ctx.restore();
 	};
 
 	SeatmapWidget.prototype.paintShape = function ( ctx, shape ) {
 		var self = this;
+		var colours = this.colours();
 
 		[ shape ].forEach( function ( shape ) {
 			ctx.save();
 			ctx.fillStyle = shape.fill || self.shapeColour( shape.kind );
-			ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+			ctx.strokeStyle = colours.shapeEdge;
 
 			if ( 'polygon' === shape.kind && shape.points ) {
 				ctx.beginPath();
@@ -719,7 +899,7 @@
 			var label = shape.label || ( 'stage' === shape.kind ? self.i18n.stage : '' );
 
 			if ( label ) {
-				ctx.fillStyle = '#ffffff';
+				ctx.fillStyle = colours.shapeLabel;
 				ctx.font = '600 16px system-ui, sans-serif';
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'middle';
@@ -740,6 +920,7 @@
 	 */
 	SeatmapWidget.prototype.paintAreas = function ( ctx ) {
 		var self = this;
+		var colours = this.colours();
 
 		this.areas.filter( function ( area ) {
 			return area.floorKey === self.floorKey;
@@ -760,13 +941,13 @@
 				ctx.rect( box.x, box.y, box.width, box.height );
 			}
 
-			ctx.fillStyle = soldOut ? 'rgba(0,0,0,0.08)' : withAlpha( colour, chosen ? 0.55 : 0.25 );
+			ctx.fillStyle = soldOut ? colours.areaSoldOut : withAlpha( colour, chosen ? 0.55 : 0.25 );
 			ctx.fill();
-			ctx.strokeStyle = chosen ? '#12263f' : soldOut ? '#b6bcc7' : colour;
+			ctx.strokeStyle = chosen ? colours.ink : soldOut ? colours.areaSoldOutEdge : colour;
 			ctx.lineWidth = chosen ? 3 : 1.5;
 			ctx.stroke();
 
-			ctx.fillStyle = soldOut ? '#6b7280' : '#1c2129';
+			ctx.fillStyle = soldOut ? colours.muted : colours.ink;
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
 			ctx.font = '600 15px system-ui, sans-serif';
@@ -803,6 +984,7 @@
 	/** The table itself, under its chairs. Chairs are painted with the other seats. */
 	SeatmapWidget.prototype.paintTables = function ( ctx ) {
 		var self = this;
+		var colours = this.colours();
 
 		this.tables.filter( function ( entry ) {
 			return entry.floorKey === self.floorKey && 'table' !== entry.object.bookAs;
@@ -812,7 +994,7 @@
 			ctx.save();
 			ctx.translate( table.x, table.y );
 			ctx.rotate( ( ( table.rotation || 0 ) * Math.PI ) / 180 );
-			ctx.fillStyle = 'rgba(0,0,0,0.06)';
+			ctx.fillStyle = colours.tableFill;
 			ctx.beginPath();
 
 			if ( 'round' === table.shape ) {
@@ -827,29 +1009,21 @@
 	};
 
 	SeatmapWidget.prototype.shapeColour = function ( kind ) {
-		switch ( kind ) {
-			case 'stage':
-				return '#3a3f4b';
-			case 'entrance':
-				return '#3f9c6d';
-			case 'exit':
-				return '#b3543a';
-			case 'wall':
-				return '#8a8f99';
-			default:
-				return '#c8ccd4';
-		}
+		var shapes = this.colours().shapes;
+
+		return shapes[ kind ] || shapes.fallback;
 	};
 
 	SeatmapWidget.prototype.paintSeats = function ( ctx, scale ) {
 		var self = this;
+		var colours = this.colours();
 
 		this.seats.filter( function ( seat ) {
 			return seat.floorKey === self.floorKey;
 		} ).forEach( function ( seat ) {
 			ctx.beginPath();
 			ctx.fillStyle = self.seatColour( seat );
-			ctx.strokeStyle = 'selected' === seat.state ? '#12263f' : 'rgba(0,0,0,0.2)';
+			ctx.strokeStyle = 'selected' === seat.state ? colours.ink : colours.seatEdge;
 			ctx.lineWidth = 'selected' === seat.state ? 2.5 / scale : 1 / scale;
 
 			ctx.arc( seat.x, seat.y, SEAT_RADIUS, 0, Math.PI * 2 );
@@ -859,12 +1033,14 @@
 	};
 
 	SeatmapWidget.prototype.seatColour = function ( seat ) {
+		var colours = this.colours();
+
 		if ( 'selected' === seat.state ) {
-			return '#12263f';
+			return colours.ink;
 		}
 
 		if ( 'available' !== seat.state ) {
-			return '#d3d6dc';
+			return colours.seatTaken;
 		}
 
 		return this.zoneColour( seat.zoneKey );
@@ -954,8 +1130,14 @@
 
 		var hit = null;
 		var best = SEAT_RADIUS * 1.6;
+		var self = this;
 
 		this.seats.forEach( function ( seat ) {
+			// Only the floor on screen can be clicked; two floors may occupy the same coordinates.
+			if ( seat.floorKey !== self.floorKey ) {
+				return;
+			}
+
 			var distance = Math.hypot( seat.x - x, seat.y - y );
 
 			if ( distance < best ) {
@@ -1125,6 +1307,7 @@
 
 		if ( ! this.selected.length && ! chosenAreas.length ) {
 			var empty = document.createElement( 'li' );
+			empty.className = 'seatmap-widget__selection-empty';
 			empty.textContent = this.i18n.noneSelected;
 			this.selectionEl.appendChild( empty );
 			this.totalEl.textContent = '';
@@ -1135,25 +1318,41 @@
 
 		var total = 0;
 
+		// Description on one side, money on the other: a column of prices is read down, not across.
+		function line( description, amount ) {
+			var item = document.createElement( 'li' );
+			var left = document.createElement( 'span' );
+			var right = document.createElement( 'span' );
+
+			left.textContent = description;
+			right.textContent = amount;
+			item.appendChild( left );
+			item.appendChild( right );
+
+			return item;
+		}
+
 		this.selected.forEach( function ( seat ) {
 			total += seat.amount || 0;
 
-			var item = document.createElement( 'li' );
-			item.textContent = [ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ) +
-				' — ' + self.formatMoney( seat.amount );
-			self.selectionEl.appendChild( item );
+			self.selectionEl.appendChild( line(
+				[ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ),
+				self.formatMoney( seat.amount )
+			) );
 		} );
 
 		chosenAreas.forEach( function ( area ) {
 			total += ( area.amount || 0 ) * area.quantity;
 
-			var item = document.createElement( 'li' );
-			item.textContent = area.quantity + ' × ' + area.label + ' — ' +
-				self.formatMoney( ( area.amount || 0 ) * area.quantity );
-			self.selectionEl.appendChild( item );
+			self.selectionEl.appendChild( line(
+				area.quantity + ' × ' + area.label,
+				self.formatMoney( ( area.amount || 0 ) * area.quantity )
+			) );
 		} );
 
-		this.totalEl.textContent = this.i18n.total + ': ' + this.formatMoney( total );
+		this.totalEl.innerHTML = '';
+		this.totalEl.appendChild( textSpan( this.i18n.total ) );
+		this.totalEl.appendChild( textSpan( this.formatMoney( total ) ) );
 		this.submitEl.disabled = false;
 	};
 
@@ -1262,6 +1461,14 @@
 		this.renderAreaList();
 		this.renderSelection();
 	};
+
+	function textSpan( text ) {
+		var span = document.createElement( 'span' );
+
+		span.textContent = text;
+
+		return span;
+	}
 
 	SeatmapWidget.prototype.announce = function ( message ) {
 		this.messageEl.textContent = message;

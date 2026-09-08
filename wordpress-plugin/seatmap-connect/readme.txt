@@ -54,6 +54,31 @@ the two store routes WordPress normally provides. Serve the `wordpress-plugin` d
 and open `tools/preview.html?api=https://api.example&event=evt_xxxxxxxx`. Holding seats there
 creates real holds, so point it at a test tenant.
 
+= Matching your shop's styling =
+
+The picker inherits your theme's fonts and follows the reader's light or dark system preference on
+its own. Everything it colours comes from custom properties on `.seatmap-widget`, so a child theme
+can match it to your shop by overriding a few values rather than fighting selectors:
+
+`
+.seatmap-widget {
+    --seatmap-accent: #7b1e3c;    /* selected seats, the reserve button */
+    --seatmap-on-accent: #ffffff; /* text on the accent */
+    --seatmap-surface: #ffffff;
+    --seatmap-surface-sunken: #f6f7f9;
+    --seatmap-border: #e2e2e6;
+    --seatmap-text: #1b2030;
+    --seatmap-muted: #6f7891;
+    --seatmap-radius: 12px;
+}
+`
+
+Seat colours themselves come from the event's price zones, set by the organiser, so the same chart
+reads the same way everywhere it is sold.
+
+The reserve button carries your theme's own `.button` class and its default appearance is written
+with zero specificity, so any rule your theme has for buttons wins without needing `!important`.
+
 == Frequently Asked Questions ==
 
 = Can a customer change the price in their browser? =

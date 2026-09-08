@@ -20,11 +20,34 @@
 
 <link rel="stylesheet" href="../seatmap-connect/assets/css/widget.css">
 <style>
+	/*
+	 * The harness follows the system theme as well, so a dark preview shows the picker against a
+	 * dark page rather than floating on a light one — which is what a shop in dark mode looks like.
+	 */
+	:root {
+		color-scheme: light dark;
+		--pv-page: #f5f6f8;
+		--pv-surface: #ffffff;
+		--pv-border: #dfe3ea;
+		--pv-text: #1b2030;
+		--pv-note: #9a6a00;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--pv-page: #0c0e14;
+			--pv-surface: #171a24;
+			--pv-border: #2c3244;
+			--pv-text: #e9ecf3;
+			--pv-note: #e0a43a;
+		}
+	}
+
 	body {
 		margin: 0;
 		font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
-		background: #f5f6f8;
-		color: #1c2129;
+		background: var(--pv-page);
+		color: var(--pv-text);
 	}
 
 	.preview {
@@ -40,22 +63,22 @@
 		align-items: baseline;
 		padding: 0.6rem 0.9rem;
 		margin-block-end: 1.25rem;
-		border: 1px solid #d7dae0;
-		border-inline-start: 4px solid #9a6a00;
+		border: 1px solid var(--pv-border);
+		border-inline-start: 4px solid var(--pv-note);
 		border-radius: 8px;
-		background: #fff;
+		background: var(--pv-surface);
 		font-size: 0.9em;
 	}
 
-	.preview__banner strong { color: #9a6a00; }
-	.preview__banner code { background: #f5f6f8; padding: 0.1rem 0.3rem; border-radius: 4px; }
+	.preview__banner strong { color: var(--pv-note); }
+	.preview__banner code { background: var(--pv-page); padding: 0.1rem 0.3rem; border-radius: 4px; }
 
 	.preview__cart {
 		margin-block-start: 1.5rem;
 		padding: 1rem;
-		border: 1px solid #d7dae0;
+		border: 1px solid var(--pv-border);
 		border-radius: 10px;
-		background: #fff;
+		background: var(--pv-surface);
 	}
 
 	.preview__cart h2 { margin-block-start: 0; font-size: 1rem; }

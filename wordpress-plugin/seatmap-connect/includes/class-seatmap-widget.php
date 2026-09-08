@@ -154,6 +154,7 @@ class Seatmap_Widget {
 							'held'           => __( 'Seats held until %s', 'seatmap-connect' ),
 							'expired'        => __( 'Your reservation expired. Please choose your seats again.', 'seatmap-connect' ),
 							'stage'          => __( 'Stage', 'seatmap-connect' ),
+							'floors'         => __( 'Floor', 'seatmap-connect' ),
 							'standingAreas'  => __( 'Standing and tables', 'seatmap-connect' ),
 							/* translators: %d: number of places still available. */
 							'placesLeft'     => __( '%d left', 'seatmap-connect' ),

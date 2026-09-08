@@ -1,61 +1,155 @@
 /**
  * Seat picker styles.
  *
- * Written to inherit rather than impose: no font stack, no brand colour, and layout that adapts to
- * the theme's container width. Logical properties throughout so RTL works without a second sheet.
+ * Written to inherit rather than impose: no font stack, no brand colour, and a layout that adapts
+ * to whatever container the theme puts it in. Logical properties throughout, so RTL works without a
+ * second sheet.
+ *
+ * Every colour is a custom property on `.seatmap-widget`, so a theme can restyle the picker to
+ * match its shop by overriding a handful of values rather than fighting selectors.
  */
 
 .seatmap-widget {
-	--seatmap-border: #d7dae0;
-	--seatmap-muted: #6b7280;
-	--seatmap-accent: #12263f;
+	/* Surfaces and lines */
 	--seatmap-surface: #ffffff;
+	--seatmap-surface-sunken: #f6f7f9;
+	--seatmap-surface-hover: #eef0f4;
+	--seatmap-border: #dfe3ea;
+	--seatmap-border-strong: #c7cddb;
+
+	/* Text */
+	--seatmap-text: #1b2030;
+	--seatmap-muted: #6f7891;
+
+	/* The one colour the picker asserts. A shop that wants its own sets this and nothing else. */
+	--seatmap-accent: #1b2030;
+	--seatmap-on-accent: #ffffff;
+
+	--seatmap-danger: #b12f27;
+	--seatmap-danger-soft: #fdedec;
+	--seatmap-ok: #0f7a4a;
+
+	--seatmap-radius: 12px;
+	--seatmap-radius-sm: 8px;
+	--seatmap-shadow: 0 1px 2px rgba(27, 32, 48, 0.06), 0 4px 16px rgba(27, 32, 48, 0.06);
+	--seatmap-ring: 0 0 0 3px rgba(27, 32, 48, 0.16);
 
 	margin-block: 1.5rem;
+	color: var(--seatmap-text);
 }
 
+/*
+ * The picker sits inside someone else's theme, so it follows the reader's system preference rather
+ * than a class the theme may or may not set.
+ */
 @media (prefers-color-scheme: dark) {
 	.seatmap-widget {
-		--seatmap-border: #3a3f4b;
-		--seatmap-muted: #9aa1ad;
-		--seatmap-accent: #e7ecf3;
-		--seatmap-surface: #1c1f26;
+		--seatmap-surface: #171a24;
+		--seatmap-surface-sunken: #101219;
+		--seatmap-surface-hover: #232838;
+		--seatmap-border: #2c3244;
+		--seatmap-border-strong: #3b4256;
+
+		--seatmap-text: #e9ecf3;
+		--seatmap-muted: #a8b0c3;
+
+		--seatmap-accent: #e9ecf3;
+		--seatmap-on-accent: #12151f;
+
+		--seatmap-danger: #f0736a;
+		--seatmap-danger-soft: rgba(240, 115, 106, 0.12);
+		--seatmap-ok: #4ac585;
+
+		--seatmap-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.35);
+		--seatmap-ring: 0 0 0 3px rgba(233, 236, 243, 0.22);
 	}
 }
 
+.seatmap-widget *,
+.seatmap-widget *::before,
+.seatmap-widget *::after {
+	box-sizing: border-box;
+}
+
 .seatmap-widget--notice {
-	padding: 1rem;
+	padding: 1rem 1.25rem;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 8px;
+	border-radius: var(--seatmap-radius);
+	background: var(--seatmap-surface-sunken);
 	color: var(--seatmap-muted);
 }
 
 .seatmap-widget__title {
-	margin-block-end: 0.75rem;
+	margin: 0 0 0.75rem;
 }
+
+/*
+ * On a wide container the summary parks beside the plan and stays put while the seat list scrolls,
+ * so the price and the button are never somewhere you have to go looking for them.
+ */
+@media (min-width: 900px) {
+	.seatmap-widget:not(.seatmap-widget--notice) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 19rem;
+		grid-template-areas:
+			"head    summary"
+			"legend  summary"
+			"stage   summary"
+			"areas   summary"
+			"seats   summary";
+		gap: 0 1.5rem;
+		align-items: start;
+	}
+
+	.seatmap-widget__title { grid-area: head; }
+	.seatmap-widget__legend { grid-area: legend; }
+	.seatmap-widget__stage { grid-area: stage; }
+	.seatmap-widget__areas { grid-area: areas; }
+	.seatmap-widget__seats { grid-area: seats; }
+
+	.seatmap-widget__summary {
+		grid-area: summary;
+		position: sticky;
+		inset-block-start: 1rem;
+		margin-block-start: 0;
+	}
+}
+
+/* ============================================================================ the legend */
 
 .seatmap-widget__legend {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.75rem 1.25rem;
+	gap: 0.4rem 0.5rem;
 	margin: 0 0 1rem;
 	padding: 0;
 	list-style: none;
-	font-size: 0.9em;
 }
 
 .seatmap-widget__legend li {
 	display: flex;
 	align-items: center;
 	gap: 0.4rem;
+	padding: 0.25rem 0.6rem 0.25rem 0.45rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 999px;
+	background: var(--seatmap-surface);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	white-space: nowrap;
+}
+
+[dir="rtl"] .seatmap-widget__legend li {
+	padding-inline: 0.45rem 0.6rem;
 }
 
 .seatmap-widget__swatch {
-	inline-size: 0.9rem;
-	block-size: 0.9rem;
+	inline-size: 0.75rem;
+	block-size: 0.75rem;
+	flex: none;
 	border-radius: 50%;
-	background: #2d6cdf;
-	border: 1px solid rgba(0, 0, 0, 0.15);
+	background: #5b63f0;
+	box-shadow: inset 0 0 0 1px rgba(27, 32, 48, 0.16);
 }
 
 .seatmap-widget__swatch--selected {
@@ -63,15 +157,17 @@
 }
 
 .seatmap-widget__swatch--unavailable {
-	background: #d3d6dc;
+	background: var(--seatmap-border-strong);
 }
+
+/* ============================================================================= the plan */
 
 .seatmap-widget__stage {
 	position: relative;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 10px;
+	border-radius: var(--seatmap-radius);
 	overflow: hidden;
-	background: var(--seatmap-surface);
+	background: var(--seatmap-surface-sunken);
 }
 
 .seatmap-widget__canvas {
@@ -85,26 +181,90 @@
 	cursor: grabbing;
 }
 
-.seatmap-widget__zoom {
+/* Floating controls over the plan share one treatment, so they read as one layer. */
+.seatmap-widget__float {
 	position: absolute;
-	inset-block-start: 0.5rem;
-	inset-inline-end: 0.5rem;
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
+	z-index: 2;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 999px;
+	background: var(--seatmap-surface);
+	box-shadow: var(--seatmap-shadow);
 }
 
-.seatmap-widget__zoom button {
-	inline-size: 2rem;
-	block-size: 2rem;
-	border: 1px solid var(--seatmap-border);
-	border-radius: 6px;
-	background: var(--seatmap-surface);
-	color: inherit;
-	font-size: 1rem;
-	line-height: 1;
+.seatmap-widget__zoom {
+	inset-block-start: 0.6rem;
+	inset-inline-end: 0.6rem;
+	display: flex;
+	flex-direction: column;
+	padding: 2px;
+}
+
+/* The floor switcher only exists on a chart with more than one, so it is never dead furniture. */
+.seatmap-widget__floors {
+	inset-block-end: 0.6rem;
+	inset-inline-start: 0.6rem;
+	display: flex;
+	padding: 2px;
+	gap: 2px;
+}
+
+.seatmap-widget__floor {
+	min-inline-size: 2rem;
+	block-size: 1.75rem;
+	padding-inline: 0.5rem;
+	border: none;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--seatmap-muted);
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 500;
 	cursor: pointer;
 }
+
+.seatmap-widget__floor:hover {
+	background: var(--seatmap-surface-hover);
+	color: var(--seatmap-text);
+}
+
+.seatmap-widget__floor[aria-pressed="true"] {
+	background: var(--seatmap-accent);
+	color: var(--seatmap-on-accent);
+}
+
+/* One round control: zoom, reset, and the quantity steppers are all the same object. */
+.seatmap-widget__icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 1.9rem;
+	block-size: 1.9rem;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--seatmap-muted);
+	cursor: pointer;
+	transition: background 120ms ease, color 120ms ease;
+}
+
+.seatmap-widget__icon-button:hover:not(:disabled) {
+	background: var(--seatmap-surface-hover);
+	color: var(--seatmap-text);
+}
+
+.seatmap-widget__icon-button:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+.seatmap-widget__icon-button svg {
+	display: block;
+	inline-size: 1rem;
+	block-size: 1rem;
+}
+
+/* ================================================================= standing and tables */
 
 /*
  * Standing areas: a stepper each, because there is no seat to click. Real buttons rather than a
@@ -112,22 +272,27 @@
  */
 .seatmap-widget__areas {
 	margin-block-start: 1rem;
-	padding: 0.75rem;
+	padding: 0.25rem 0.9rem;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 10px;
+	border-radius: var(--seatmap-radius);
+	background: var(--seatmap-surface);
 }
 
 .seatmap-widget__areas h3 {
-	margin: 0 0 0.5rem;
-	font-size: 0.95em;
+	margin: 0.75rem 0 0.25rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--seatmap-muted);
 }
 
 .seatmap-widget__area {
 	display: flex;
 	align-items: center;
-	gap: 0.6rem;
+	gap: 0.4rem 0.75rem;
 	flex-wrap: wrap;
-	padding-block: 0.35rem;
+	padding-block: 0.6rem;
 	border-block-start: 1px solid var(--seatmap-border);
 }
 
@@ -138,46 +303,32 @@
 .seatmap-widget__area-name {
 	flex: 1;
 	min-inline-size: 8rem;
+	font-weight: 500;
 }
 
 .seatmap-widget__area-left {
-	font-size: 0.85em;
+	font-size: 0.8125rem;
 	color: var(--seatmap-muted);
+	font-variant-numeric: tabular-nums;
 }
 
 .seatmap-widget__stepper {
 	display: flex;
 	align-items: center;
-	gap: 0.4rem;
-}
-
-.seatmap-widget__stepper button {
-	inline-size: 2rem;
-	block-size: 2rem;
+	padding: 2px;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 6px;
+	border-radius: 999px;
 	background: var(--seatmap-surface);
-	color: inherit;
-	font-size: 1rem;
-	line-height: 1;
-	cursor: pointer;
-}
-
-.seatmap-widget__stepper button:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
 }
 
 .seatmap-widget__stepper output {
-	min-inline-size: 1.5rem;
+	min-inline-size: 2rem;
 	text-align: center;
 	font-variant-numeric: tabular-nums;
+	font-weight: 500;
 }
 
-.seatmap-widget__stepper button:focus-visible {
-	outline: 3px solid var(--seatmap-accent);
-	outline-offset: 2px;
-}
+/* ========================================================================= the seat list */
 
 /*
  * The seat list is the accessible control, not a fallback: it is always in the document and always
@@ -188,14 +339,24 @@
 	margin-block-start: 1rem;
 	max-block-size: 22rem;
 	overflow: auto;
-	padding: 0.5rem;
+	padding: 0.25rem 0.9rem 0.9rem;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 10px;
+	border-radius: var(--seatmap-radius);
+	background: var(--seatmap-surface);
 }
 
-.seatmap-widget__section h4 {
-	margin: 0.75rem 0 0.4rem;
-	font-size: 0.95em;
+.seatmap-widget__section h4,
+.seatmap-widget__seats h4 {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 1;
+	margin: 0 -0.9rem 0.5rem;
+	padding: 0.75rem 0.9rem 0.4rem;
+	background: var(--seatmap-surface);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	color: var(--seatmap-muted);
 }
 
@@ -204,70 +365,138 @@
 	align-items: center;
 	flex-wrap: wrap;
 	gap: 0.25rem;
-	margin-block-end: 0.3rem;
+	margin-block-end: 0.35rem;
 }
 
 .seatmap-widget__row-label {
-	inline-size: 4rem;
+	inline-size: 3.5rem;
 	flex: none;
-	font-size: 0.8em;
+	font-size: 0.75rem;
+	font-weight: 500;
 	color: var(--seatmap-muted);
+	font-variant-numeric: tabular-nums;
 }
 
 .seatmap-widget__seat {
+	position: relative;
 	min-inline-size: 2rem;
 	block-size: 2rem;
-	padding-inline: 0.35rem;
+	padding-inline: 0.4rem;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 6px;
+	border-radius: var(--seatmap-radius-sm);
 	background: var(--seatmap-surface);
 	color: inherit;
-	font-size: 0.8em;
+	font: inherit;
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
 	cursor: pointer;
+	transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.seatmap-widget__seat:hover:not(:disabled):not(.is-selected) {
+	background: var(--seatmap-surface-hover);
+	border-color: var(--seatmap-border-strong);
 }
 
 .seatmap-widget__seat.is-selected {
 	background: var(--seatmap-accent);
-	color: var(--seatmap-surface);
+	color: var(--seatmap-on-accent);
 	border-color: var(--seatmap-accent);
+	font-weight: 600;
 }
 
 .seatmap-widget__seat:disabled {
-	opacity: 0.45;
+	background: var(--seatmap-surface-sunken);
+	border-style: dashed;
+	color: var(--seatmap-muted);
 	cursor: not-allowed;
-	text-decoration: line-through;
 }
 
+/*
+ * The accessibility mark is a masked vector rather than the ♿ emoji: an emoji is a different
+ * weight, colour and size on every platform, and cannot take the colour of the chip it sits on.
+ */
 .seatmap-widget__seat.is-accessible::after {
-	content: " ♿";
+	content: "";
+	position: absolute;
+	inset-block-start: 1px;
+	inset-inline-end: 1px;
+	inline-size: 0.6rem;
+	block-size: 0.6rem;
+	background: currentColor;
+	opacity: 0.75;
+	-webkit-mask: var(--seatmap-accessible-mark) center / contain no-repeat;
+	mask: var(--seatmap-accessible-mark) center / contain no-repeat;
+}
+
+.seatmap-widget {
+	--seatmap-accessible-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='4.8' r='1.9'/%3E%3Cpath d='M8 8.6h8M12 8.6v5h4.5M12 13.6 9.5 20M16.5 13.6 19 20'/%3E%3C/svg%3E");
 }
 
 /* Never rely on the browser default alone — some themes remove it entirely. */
-.seatmap-widget__seat:focus-visible,
-.seatmap-widget__zoom button:focus-visible,
-.seatmap-widget__submit:focus-visible {
-	outline: 3px solid var(--seatmap-accent);
+.seatmap-widget button:focus-visible {
+	outline: 2px solid var(--seatmap-accent);
 	outline-offset: 2px;
+	box-shadow: var(--seatmap-ring);
 }
+
+/* ============================================================================ the summary */
 
 .seatmap-widget__summary {
 	margin-block-start: 1.25rem;
 	padding: 1rem;
 	border: 1px solid var(--seatmap-border);
-	border-radius: 10px;
+	border-radius: var(--seatmap-radius);
+	background: var(--seatmap-surface);
+	box-shadow: var(--seatmap-shadow);
 }
 
 .seatmap-widget__summary h3 {
-	margin-block-start: 0;
+	margin: 0 0 0.6rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--seatmap-muted);
 }
 
 .seatmap-widget__selection {
 	margin: 0 0 0.75rem;
-	padding-inline-start: 1.1rem;
+	padding: 0;
+	list-style: none;
+	font-size: 0.875rem;
+}
+
+.seatmap-widget__selection li {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding-block: 0.3rem;
+	border-block-end: 1px solid var(--seatmap-border);
+	font-variant-numeric: tabular-nums;
+}
+
+.seatmap-widget__selection li:last-child {
+	border-block-end: none;
+}
+
+/* "No seats selected yet" is a sentence, not a priced line. */
+.seatmap-widget__selection-empty {
+	display: block;
+	border-block-end: none;
+	color: var(--seatmap-muted);
 }
 
 .seatmap-widget__total {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin: 0 0 0.75rem;
+	padding-block-start: 0.6rem;
+	border-block-start: 1px solid var(--seatmap-border);
 	font-weight: 600;
+	font-variant-numeric: tabular-nums;
 }
 
 .seatmap-widget__message:empty {
@@ -275,8 +504,43 @@
 }
 
 .seatmap-widget__message {
-	margin-block: 0.5rem;
-	color: #b32d2e;
+	margin: 0 0 0.75rem;
+	padding: 0.5rem 0.7rem;
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-danger-soft);
+	color: var(--seatmap-danger);
+	font-size: 0.8125rem;
+	line-height: 1.45;
+}
+
+/*
+ * The submit carries the theme's own `.button` class too. Its appearance is written inside
+ * `:where()`, which has no specificity at all, so the shop's own button style wins without a
+ * single `!important` — and a theme that styles nothing still gets a real button rather than the
+ * browser's default grey.
+ */
+:where(.seatmap-widget__submit) {
+	border: 1px solid var(--seatmap-accent);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-accent);
+	color: var(--seatmap-on-accent);
+	font: inherit;
+	font-weight: 600;
+}
+
+:where(.seatmap-widget__submit:hover:not(:disabled)) {
+	filter: brightness(1.15);
+}
+
+.seatmap-widget__submit {
+	inline-size: 100%;
+	min-block-size: 2.75rem;
+	cursor: pointer;
+}
+
+.seatmap-widget__submit:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 @media (max-width: 600px) {
