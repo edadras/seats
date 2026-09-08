@@ -1,13 +1,21 @@
-# Seatmap — multi-tenant seating SaaS + WooCommerce plugin
+# Seatmap — multi-tenant seating SaaS, event sites, WooCommerce plugin, door scanner
 
-Organisers design a venue map once, connect their WordPress shop, and sell reserved seats from
-their own site. The SaaS owns seating inventory; WooCommerce keeps the cart, the payment and the
-books.
+Organisers design a venue map once and sell reserved seats from it. How they sell is their choice:
+
+- **Their existing WordPress shop**, through the plugin. The SaaS owns seating inventory;
+  WooCommerce keeps the cart, the payment and the books.
+- **A site we host for them**, on their own domain, with their own theme, pages and menus, and the
+  same seat picker. Here the shop is ours — the trade that buys is written down in
+  [ADR-0003](docs/adr/0003-hosted-event-sites.md).
+
+Either way the tickets are the same tickets, and the same scanner reads them at the door.
 
 ```
 seats/
-├── api/                 Laravel service: tenants, maps, events, holds, tickets, check-in
+├── api/                 Laravel service: tenants, maps, events, holds, tickets, sites, check-in
 ├── wordpress-plugin/    WooCommerce plugin: widget, cart integration, order lifecycle
+├── checkin-app/         Flutter web app: the scanner staff use at the door
+├── shared/              The seat picker, shared verbatim by the plugin and the hosted sites
 └── docs/                Audit, ADRs, threat model, data model, OpenAPI contract
 ```
 
@@ -17,17 +25,50 @@ seats/
 | --- | --- |
 | [`docs/adr/0001-saas-woocommerce-boundary.md`](docs/adr/0001-saas-woocommerce-boundary.md) | Who owns what, and why the SaaS never touches payments |
 | [`docs/adr/0002-seat-inventory-integrity.md`](docs/adr/0002-seat-inventory-integrity.md) | How a seat is sold exactly once |
+| [`docs/adr/0003-hosted-event-sites.md`](docs/adr/0003-hosted-event-sites.md) | Why we build sites ourselves, and what that costs |
 | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) | Assets, trust boundaries, threats T1–T12 and mitigations |
 | [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | ERD, invariants, state machines |
 | [`docs/openapi.yaml`](docs/openapi.yaml) | The full `/v1` contract |
 | [`docs/LEGACY_AUDIT.md`](docs/LEGACY_AUDIT.md) | What was found in the original source and what was reused |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Running it: requirements, secrets, monitoring, backups, incidents |
+| [`checkin-app/README.md`](checkin-app/README.md) | The door scanner: what it does, and the four CDNs it refuses to need |
 
 ## What the designer can draw
 
 Rows (straight or curved), enterable polygon sections, general admission areas, tables bookable by
 the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
 floors, on four selection layers, with categories, a focal point and a validation checklist.
+
+## Hosted event sites
+
+An organiser who has no WordPress can have a site instead: pages built from typed blocks, a theme,
+menus, and a domain of their own.
+
+Which site a request gets is decided by its `Host` header and nothing else — never a header, query
+parameter or path prefix, because any of those would let one visitor ask for another organiser's
+site. A hostname is claimed but not served until a TXT record proves the organiser owns it.
+
+Pages have drafts and a published copy, the same discipline seat maps have. Blocks are normalised
+once, on the way in; nothing downstream re-validates, and raw HTML is off unless an organiser has
+deliberately turned it on for their account.
+
+Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the control panel; every
+other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
+in development and never in production.
+
+## The door
+
+`checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and
+scan. It admits or refuses in one glance, tells you who got in first when a ticket is scanned
+twice, keeps working with no signal by queueing scans and sending them in one deduplicated batch,
+and needs nothing from any CDN — see its README for why that last one is not a detail.
+
+```bash
+checkin-app/build.sh     # analyse, test, build, install into api/public/checkin
+```
+
+It is then served at `/checkin` on every host the platform answers to. The build is an artefact
+and is not committed.
 
 ## Two rules that explain most of the design
 
@@ -62,9 +103,11 @@ connected API client, and prints the credentials you need for the plugin.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 102 unit + feature tests
+./vendor/bin/phpunit                        # 110 unit + feature tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
+
+cd ../checkin-app && flutter test           # 13 scanner tests
 ```
 
 The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concurrency tests spawn
@@ -113,7 +156,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Tenant A cannot reach tenant B's anything | `TenantIsolationTest` |
 | Browser-set prices are ignored | `ApiSecurityTest` |
 | Replay, tampering and key rotation | `ApiSecurityTest` |
-| A second scan reports who got in, and when | `CheckinTest` |
+| A second scan reports who got in, and when | `CheckinTest`, `checkin-app/test` |
+| A hosted site serves only its own tenant's events | `HostedSiteTest` |
+| A hosted purchase makes allocations, tickets and a server-priced order | `HostedSiteTest` |
+| An unverified or unknown hostname is a 404, not somebody's site | `HostedSiteTest` |
 | Republishing a map cannot break old orders | `SeatMapVersioningTest` |
 | Standing room never oversells, even under contention | `GeneralAdmissionTest`, `SeatConcurrencyTest` |
 | The PHP and JavaScript seat maths agree exactly | `RowGeometryTest` |

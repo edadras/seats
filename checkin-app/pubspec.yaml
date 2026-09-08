@@ -1,0 +1,38 @@
+name: seatmap_checkin
+description: Door scanner for Seatmap events — pair a device, scan tickets, work offline.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Camera and barcode decoding, with a software decoder so it works where the browser has no
+  # native BarcodeDetector — which is most iPhones, and half of a venue's staff phones.
+  mobile_scanner: ^7.4.0
+  # The device token and the offline queue have to survive a reload; a door phone gets reloaded.
+  shared_preferences: ^2.5.5
+  http: ^1.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Roboto is bundled, not fetched. The engine downloads it from fonts.gstatic.com when the app
+  # does not carry its own copy, and a scanner that needs Google's CDN before it can draw a word is
+  # a scanner that shows a blank screen on a venue's guest wifi. Declaring the family here is also
+  # what tells the engine to stop asking for it.
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: fonts/Roboto-Regular.ttf
+        - asset: fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: fonts/Roboto-Bold.ttf
+          weight: 700

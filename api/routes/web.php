@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CheckinAppController;
 use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\SitePageController;
@@ -31,6 +32,11 @@ Route::middleware('site')->group(function () {
 
     Route::get('events/{event}', [SitePageController::class, 'event']);
 });
+
+// The door scanner. Ahead of the front door because /checkin belongs to the platform on every
+// host: a site is a place to buy a ticket, never a place that answers for scanning one.
+Route::get('checkin', CheckinAppController::class);
+Route::get('checkin/{path}', CheckinAppController::class)->where('path', '.*');
 
 Route::get('/', FrontDoorController::class);
 Route::get('{path}', FrontDoorController::class)

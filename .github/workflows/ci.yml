@@ -192,3 +192,44 @@ jobs:
           # two implementations would otherwise go unnoticed until seats moved.
           cd api && node tests/js/generate-golden.cjs
           git diff --exit-code tests/Fixtures/row-geometry-golden.json
+
+  scanner:
+    name: Door scanner
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: checkin-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.6'
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      - name: Build for the web, exactly as build.sh does
+        run: flutter build web --release --base-href=/checkin/ --no-web-resources-cdn
+
+      - name: Nothing the door needs may come from a CDN
+        run: |
+          # A scanner is used on venue wifi that is captive, filtered, or simply bad. Every one of
+          # these was a runtime fetch to gstatic.com or jsdelivr.net before it was pinned local, and
+          # each one, missing, is a scanner that cannot read a ticket.
+          test -f build/web/canvaskit/canvaskit.wasm
+          test -f build/web/assets/fonts/Roboto-Regular.ttf
+          test -f build/web/zxing/index.js
+          test -f build/web/zxing/zxing_reader.wasm
+
+          # And the flag that makes the loader prefer the local copy is actually set. The gstatic
+          # URL still appears in the loader's other branch, so its absence is not what to assert.
+          grep -q '"useLocalCanvasKit":true' build/web/flutter_bootstrap.js
+
+          # The decoder must be ours, not the package's CDN default.
+          grep -q 'id="mobile-scanner-zxing-wasm"' build/web/index.html

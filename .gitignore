@@ -3,6 +3,8 @@
 /api/public/build
 /api/public/hot
 /api/public/storage
+# Built by checkin-app/build.sh; a compiled Flutter bundle is an artefact, not source.
+/api/public/checkin
 /api/storage/*.key
 /api/storage/pail
 /api/.env

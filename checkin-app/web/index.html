@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Scan tickets at the door.">
+    <meta name="theme-color" content="#0b0d12">
+
+    <!-- Installed to a home screen it should open like an app: no browser chrome at a door. -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Check-in">
+
+    <base href="$FLUTTER_BASE_HREF">
+
+    <title>Seatmap check-in</title>
+    <link rel="manifest" href="manifest.json">
+
+    <!--
+      The barcode decoder, served from here rather than from jsDelivr.
+
+      mobile_scanner injects this script itself, from a CDN, the first time the camera starts — and
+      the decoder then fetches its own .wasm from the same CDN. Neither is reachable on a venue's
+      captive or filtered wifi, which is exactly where this app is used. Loading it under our own
+      id (`mobile-scanner-zxing-wasm`) is what makes the package skip its own injection; loading it
+      synchronously is what guarantees it is ready before the first frame is scanned.
+    -->
+    <script id="mobile-scanner-zxing-wasm" src="zxing/index.js"></script>
+    <script>
+        // The decoder resolves its .wasm against jsDelivr unless told otherwise. Resolved against
+        // document.baseURI so it keeps working if the app is ever served from another path.
+        if (window.ZXingWASM) {
+            window.ZXingWASM.setZXingModuleOverrides({
+                locateFile: function (path, prefix) {
+                    return path.endsWith('.wasm')
+                        ? new URL('zxing/' + path, document.baseURI).href
+                        : prefix + path;
+                },
+            });
+        }
+    </script>
+
+    <style>
+        /* Shown while the engine loads, so the first thing a volunteer sees is not a white page. */
+        html, body { margin: 0; height: 100%; background: #0b0d12; }
+
+        #boot {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #98a1b3;
+            font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            text-align: center;
+        }
+
+        #boot p { margin: 12px 0 0; }
+
+        .boot__mark {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: #5b63f0;
+            margin: 0 auto;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        @keyframes pulse { 50% { opacity: 0.45; } }
+        @media (prefers-reduced-motion: reduce) { .boot__mark { animation: none; } }
+    </style>
+</head>
+<body>
+<div id="boot">
+    <div>
+        <div class="boot__mark"></div>
+        <p>Loading the scanner…</p>
+    </div>
+</div>
+
+<script>
+    window.addEventListener('flutter-first-frame', function () {
+        var boot = document.getElementById('boot');
+        if (boot) { boot.remove(); }
+    });
+</script>
+<script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
