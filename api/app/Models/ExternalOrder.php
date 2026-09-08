@@ -51,9 +51,17 @@ class ExternalOrder extends Model
         return $this->belongsTo(Hold::class);
     }
 
+    /**
+     * Ordered the way a human reads a ticket list. Without an explicit order Postgres is free to
+     * return rows however it likes, so the same order could render its seats differently on two
+     * requests — and a client indexing into the list would quietly read the wrong seat.
+     */
     public function allocations()
     {
-        return $this->hasMany(Allocation::class, 'external_order_row_id');
+        return $this->hasMany(Allocation::class, 'external_order_row_id')
+            ->orderBy('section_name')
+            ->orderBy('row_name')
+            ->orderByRaw('LPAD(seat_label, 12, \'0\')');
     }
 
     public function canTransitionTo(string $status): bool

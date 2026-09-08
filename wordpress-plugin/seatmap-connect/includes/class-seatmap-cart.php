@@ -18,7 +18,6 @@ class Seatmap_Cart {
 	}
 
 	private function __construct() {
-		add_filter( 'woocommerce_add_cart_item_data', array( $this, 'attach_item_data' ), 10, 3 );
 		add_action( 'woocommerce_before_calculate_totals', array( $this, 'apply_server_price' ), 20 );
 		add_filter( 'woocommerce_get_item_data', array( $this, 'display_item_data' ), 10, 2 );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'copy_to_order_item' ), 10, 4 );
@@ -114,13 +113,6 @@ class Seatmap_Cart {
 				WC()->cart->remove_cart_item( $key );
 			}
 		}
-	}
-
-	/**
-	 * Cart item data passes through unchanged; it was built server-side in add_hold_to_cart().
-	 */
-	public function attach_item_data( array $data, int $product_id, int $variation_id ): array {
-		return $data;
 	}
 
 	/**
