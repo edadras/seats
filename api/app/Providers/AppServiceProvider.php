@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Domain\SeatMaps\SeatMapValidator;
+use App\Models\PersonalAccessToken;
 use App\Support\Signing\PriceSigner;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +36,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Resolves token holders without tenant scoping — see PersonalAccessToken for why device
+        // authentication cannot work otherwise.
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
         // Catching an accidental lazy load in development is cheaper than discovering an N+1 in
         // an availability query over 20,000 seats in production.
         Model::preventLazyLoading(! $this->app->isProduction());

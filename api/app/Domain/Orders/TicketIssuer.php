@@ -5,6 +5,7 @@ namespace App\Domain\Orders;
 use App\Models\Allocation;
 use App\Models\Ticket;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Issues and voids tickets.
@@ -27,7 +28,10 @@ class TicketIssuer
         [$token, $hash] = $this->generateToken();
 
         try {
-            $ticket = Ticket::create([
+            // Wrapped in its own transaction so that, when this runs inside the confirm
+            // transaction, a violation rolls back to a savepoint instead of poisoning the whole
+            // transaction — Postgres refuses every later statement once one has failed.
+            $ticket = DB::transaction(fn () => Ticket::create([
                 'event_id' => $allocation->event_id,
                 'allocation_id' => $allocation->id,
                 'token_hash' => $hash,
@@ -35,8 +39,10 @@ class TicketIssuer
                 'status' => 'issued',
                 'holder_name' => $holderName,
                 'issued_at' => now(),
-            ]);
+            ]));
         } catch (UniqueConstraintViolationException) {
+            // Another confirm for the same allocation won. Its ticket is the real one, and its
+            // token is not ours to reveal.
             return Ticket::where('allocation_id', $allocation->id)->firstOrFail();
         }
 

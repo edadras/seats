@@ -6,9 +6,9 @@ use App\Models\Checkin;
 use App\Models\CheckinDevice;
 use App\Models\Event;
 use App\Models\Ticket;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Scanning.
@@ -118,21 +118,23 @@ class CheckinService
         bool $offline,
         ?array $firstScan = null,
     ): array {
-        try {
-            Checkin::create([
-                'event_id' => $event->id,
-                'ticket_id' => $ticket?->id,
-                'checkin_device_id' => $device?->id,
-                'checkin_operator_id' => $device?->checkin_operator_id,
-                'result' => $result,
-                'scanned_at' => $scannedAt,
-                'client_scan_id' => $clientScanId,
-                'offline' => $offline,
-            ]);
-        } catch (UniqueConstraintViolationException) {
-            // This exact scan was already uploaded by this device — an offline batch being
-            // replayed. The outcome above is still the right answer to return.
-        }
+        // insertOrIgnore, not create-and-catch: a duplicate is expected whenever a device replays
+        // an offline batch, and in Postgres a failed statement aborts the enclosing transaction —
+        // so catching the violation would leave the rest of the batch unable to run.
+        Checkin::insertOrIgnore([
+            'id' => (string) Str::uuid(),
+            'tenant_id' => $event->tenant_id,
+            'event_id' => $event->id,
+            'ticket_id' => $ticket?->id,
+            'checkin_device_id' => $device?->id,
+            'checkin_operator_id' => $device?->checkin_operator_id,
+            'result' => $result,
+            'scanned_at' => $scannedAt,
+            'client_scan_id' => $clientScanId,
+            'offline' => $offline,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return ['result' => $result, 'ticket' => $ticket, 'first_scan' => $firstScan];
     }

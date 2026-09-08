@@ -26,6 +26,21 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\AssignRequestId::class,
         ]);
 
+        // Tenant resolution must precede route model binding. SubstituteBindings sits in the
+        // framework's priority list and would otherwise run first, resolving {event}/{venue} with
+        // no tenant bound — where the fail-closed scope matches nothing and every panel route
+        // with a bound model 404s.
+        foreach ([
+            \App\Http\Middleware\ResolveTenantFromUser::class,
+            \App\Http\Middleware\AuthenticateApiClient::class,
+            \App\Http\Middleware\ResolveCheckinDevice::class,
+        ] as $tenantResolver) {
+            $middleware->prependToPriorityList(
+                before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+                prepend: $tenantResolver,
+            );
+        }
+
         $middleware->alias([
             'api.client' => \App\Http\Middleware\AuthenticateApiClient::class,
             'tenant' => \App\Http\Middleware\ResolveTenantFromUser::class,
