@@ -20,7 +20,12 @@ info:
     ## HMAC signing
     `signature = hex(hmac_sha256(secret, METHOD + "\n" + PATH + "\n" + timestamp + "\n" + nonce + "\n" + hex(sha256(raw_body))))`
 
+    `secret` is the value returned once when the key was created. The path is part of the signed
+    string, so a captured signature cannot be redirected to another endpoint.
+
     Timestamps must be within ±300 s of server time; nonces may not repeat inside that window.
+    Both conditions are enforced, so an accurate clock on the calling server is a requirement,
+    not a nicety.
 
     ## Idempotency
     Every mutating endpoint accepts `Idempotency-Key`. The first request for a key is executed and

@@ -9,9 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
- * An API credential pair. The secret exists in plaintext exactly once — in the response to the
- * call that created it. After that only `secret_hash` remains, so a database compromise does not
- * hand over the ability to confirm sales.
+ * An API credential pair.
+ *
+ * The secret is returned to the tenant exactly once, in the response to the call that created it,
+ * and is stored **encrypted** rather than hashed. That is not laziness: verifying an HMAC signature
+ * needs the secret, so hashing would only mean signing with the hash — and a stolen database would
+ * then be enough to forge requests. Encrypted with the application key, it is not (threat T5).
  *
  * Rotation issues a second key for the same client rather than replacing the first, so a site can
  * be updated without a window where neither key works.
@@ -21,13 +24,14 @@ class ApiKey extends Model
     use BelongsToTenant, HasFactory, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'api_client_id', 'key_id', 'secret_hash', 'label',
+        'tenant_id', 'api_client_id', 'key_id', 'secret', 'secret_hint', 'label',
         'last_used_at', 'expires_at', 'revoked_at',
     ];
 
-    protected $hidden = ['secret_hash'];
+    protected $hidden = ['secret'];
 
     protected $casts = [
+        'secret' => 'encrypted',
         'last_used_at' => 'datetime',
         'expires_at' => 'datetime',
         'revoked_at' => 'datetime',
@@ -49,7 +53,8 @@ class ApiKey extends Model
             'tenant_id' => $client->tenant_id,
             'api_client_id' => $client->id,
             'key_id' => 'ak_'.Str::lower(Str::random(24)),
-            'secret_hash' => hash('sha256', $secret),
+            'secret' => $secret,
+            'secret_hint' => substr($secret, -4),
             'label' => $label,
             'expires_at' => $expiresAt,
         ]);
@@ -58,9 +63,10 @@ class ApiKey extends Model
         return ['model' => $key, 'secret' => $secret];
     }
 
-    public function matches(string $secret): bool
+    /** The key an incoming request's signature must be verified against. */
+    public function signingSecret(): string
     {
-        return hash_equals($this->secret_hash, hash('sha256', $secret));
+        return (string) $this->secret;
     }
 
     public function isUsable(): bool

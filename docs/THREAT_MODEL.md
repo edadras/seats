@@ -70,11 +70,14 @@ another endpoint.
 ### T5 — Secret compromise (Spoofing)
 A leaked plugin secret lets an attacker confirm or cancel sales.
 
-*Mitigations.* Secrets are shown once and stored only as a hash (`hash('sha256')`, looked up by
-a separate non-secret key id). Rotation issues a second active key with an overlap window so a
+*Mitigations.* Secrets are shown once, at creation, and are looked up by a separate non-secret key
+id. They are stored **encrypted with the application key**, not hashed: verifying an HMAC signature
+requires the secret itself, so hashing would only mean signing with the hash — and a stolen database
+would then be enough to forge requests. Encrypted, a database leak alone is not, because the
+application key lives outside it. Rotation issues a second active key with an overlap window so a
 site can be updated without downtime; revocation is immediate. Every authenticated call records
-`api_key_id` in the audit log, so the blast radius of one key is knowable. Secrets are redacted
-from logs and exception reports.
+`api_key_id` in the audit log, so the blast radius of one key is knowable. Secrets are redacted from
+logs and exception reports, and never returned by any read endpoint.
 
 ### T6 — Ticket forgery or theft (Spoofing)
 An attacker guesses or crafts a QR that scans as valid.

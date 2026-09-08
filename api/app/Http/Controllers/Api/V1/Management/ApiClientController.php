@@ -95,6 +95,7 @@ class ApiClientController extends Controller
             'keys' => $client->keys->whereNull('revoked_at')->map(fn (ApiKey $key) => [
                 'key_id' => $key->key_id,
                 'label' => $key->label,
+                'secret_hint' => $key->secret_hint,
                 'last_used_at' => $key->last_used_at?->toIso8601String(),
                 'expires_at' => $key->expires_at?->toIso8601String(),
             ])->values(),

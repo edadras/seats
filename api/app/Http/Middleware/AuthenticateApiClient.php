@@ -75,10 +75,7 @@ class AuthenticateApiClient
             $request->getContent(),
         );
 
-        // The stored value is a hash of the secret, and HMAC needs the secret itself. We therefore
-        // sign with the *hash* as the key: the plugin does the same, so both sides derive the same
-        // value while the plaintext secret never has to be stored here.
-        if (! HmacSigner::verify($key->secret_hash, $canonical, $signature)) {
+        if (! HmacSigner::verify($key->signingSecret(), $canonical, $signature)) {
             throw ApiException::unauthorized('invalid_signature', 'Signature verification failed.');
         }
 

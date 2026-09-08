@@ -164,8 +164,7 @@ trait BuildsSeatingFixtures
             return [
                 'client' => $client,
                 'key_id' => $issued['model']->key_id,
-                // The server signs with the stored hash, so that is what a client must sign with.
-                'secret' => $issued['model']->secret_hash,
+                'secret' => $issued['secret'],
             ];
         });
     }

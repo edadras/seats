@@ -117,7 +117,7 @@ class ApiSecurityTest extends TestCase
         // Rotate: the new key is issued alongside the old so a site can be updated with no gap.
         $rotated = $this->asTenant($ctx['tenant'], fn () => ApiKey::issue($original['client'], 'rotated'));
 
-        $newKey = ['key_id' => $rotated['model']->key_id, 'secret' => $rotated['model']->secret_hash];
+        $newKey = ['key_id' => $rotated['model']->key_id, 'secret' => $rotated['secret']];
 
         $this->storefrontApi = $newKey;
         $this->storefront('GET', '/v1/integrations/woocommerce/orders/wc_4006')->assertOk();

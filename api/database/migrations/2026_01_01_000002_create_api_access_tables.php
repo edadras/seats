@@ -25,14 +25,18 @@ return new class extends Migration
             $table->index(['tenant_id', 'status']);
         });
 
-        // Secrets are never stored in the clear. `key_id` is the public handle sent in the
-        // X-Seatmap-Key header; the secret is only ever shown once, at creation.
+        // `key_id` is the public handle sent in the X-Seatmap-Key header. The secret is shown to
+        // the tenant exactly once, at creation, and is stored encrypted rather than hashed:
+        // verifying an HMAC signature requires the secret itself, so a hash would have to *be*
+        // the signing key and a database leak alone would be enough to sign requests. Encrypted
+        // with the application key, a leaked database is not.
         Schema::create('api_keys', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('api_client_id')->constrained()->cascadeOnDelete();
             $table->string('key_id')->unique();
-            $table->string('secret_hash');
+            $table->text('secret'); // encrypted at rest, never logged, never returned
+            $table->string('secret_hint', 8)->nullable(); // last characters, for the UI only
             $table->string('label')->nullable();
             $table->timestamp('last_used_at')->nullable();
             $table->timestamp('expires_at')->nullable();
