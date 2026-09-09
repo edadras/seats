@@ -12,6 +12,7 @@ use App\Models\EventSeatOverride;
 use App\Models\Seat;
 use App\Models\SeatMap;
 use App\Support\Audit\AuditLogger;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -44,6 +45,7 @@ class EventController extends Controller
         app(\App\Support\Plans\PlanLimits::class)->assertCanAddEvent();
 
         $data = $this->validateEvent($request, creating: true);
+        $data = $this->resolveTimes($data, $data['timezone'] ?? 'UTC');
 
         $map = SeatMap::findOrFail($data['seat_map_id']);
 
@@ -73,6 +75,7 @@ class EventController extends Controller
         $this->authorize($request, 'events.manage');
 
         $data = $this->validateEvent($request, creating: false);
+        $data = $this->resolveTimes($data, $data['timezone'] ?? $event->timezone ?: 'UTC');
 
         if (isset($data['status']) && $data['status'] === 'published' && ! $event->seat_map_version_id) {
             throw ApiException::conflict(
@@ -226,6 +229,33 @@ class EventController extends Controller
     }
 
 
+    /**
+     * A time somebody typed is a wall clock, not an instant.
+     *
+     * "Saturday, 21:00" means nine in the evening at the venue, so a datetime with no offset in it
+     * is read in the event's own timezone rather than the server's. Without this an organiser in
+     * Istanbul who types 21:00 sells a midnight show, and the panel and the website disagree with
+     * the poster on the door.
+     *
+     * A value that carries its own offset or a Z is left exactly as it came: the caller has already
+     * said which instant they mean, and second-guessing them would be the same bug pointed the
+     * other way.
+     */
+    private function resolveTimes(array $data, string $timezone): array
+    {
+        foreach (['starts_at', 'ends_at'] as $field) {
+            $value = $data[$field] ?? null;
+
+            if (! is_string($value) || '' === $value || preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $value)) {
+                continue;
+            }
+
+            $data[$field] = CarbonImmutable::parse($value, $timezone)->utc();
+        }
+
+        return $data;
+    }
+
     private function validateEvent(Request $request, bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';
@@ -234,6 +264,10 @@ class EventController extends Controller
             'name' => [$required, 'string', 'max:200'],
             'seat_map_id' => [$creating ? 'required' : 'prohibited', 'uuid'],
             'description' => ['nullable', 'string', 'max:5000'],
+            // The poster. `url` alone would accept javascript: and data:, which is a
+            // stored XSS on a domain we serve, so the scheme is named rather than implied.
+            'image_url' => ['nullable', 'string', 'max:500', 'url:http,https'],
+            'category' => ['nullable', 'string', 'max:40'],
             'starts_at' => [$required, 'date'],
             'ends_at' => ['nullable', 'date', 'after:starts_at'],
             'timezone' => ['sometimes', 'string', 'timezone'],
@@ -253,6 +287,8 @@ class EventController extends Controller
             'public_id' => $event->public_id,
             'name' => $event->name,
             'description' => $event->description,
+            'image_url' => $event->image_url,
+            'category' => $event->category,
             'status' => $event->status,
             'starts_at' => $event->starts_at?->toIso8601String(),
             'ends_at' => $event->ends_at?->toIso8601String(),

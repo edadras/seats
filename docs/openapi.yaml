@@ -3367,6 +3367,8 @@ components:
         id: { type: string, format: uuid }
         public_id: { type: string }
         name: { type: string }
+        image_url: { type: [string, "null"], format: uri, description: "The event's poster, shown on the hosted site and in listings." }
+        category: { type: [string, "null"], description: "One word for the kind of evening this is — Concert, Theatre, Sport." }
         status: { type: string, enum: [draft, published, closed, cancelled] }
         starts_at: { type: string, format: date-time }
         ends_at: { type: [string, "null"], format: date-time }
@@ -3383,6 +3385,8 @@ components:
       required: [name, venue_id, starts_at]
       properties:
         name: { type: string }
+        image_url: { type: [string, "null"], format: uri, maxLength: 500, description: "Must be http or https." }
+        category: { type: [string, "null"], maxLength: 40 }
         venue_id: { type: string, format: uuid }
         seat_map_id: { type: string, format: uuid }
         starts_at: { type: string, format: date-time }

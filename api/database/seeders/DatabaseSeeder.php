@@ -176,6 +176,7 @@ class DatabaseSeeder extends Seeder
                     'seat_map_version_id' => $map->published_version_id,
                     'public_id' => 'evt_'.Str::lower(Str::random(20)),
                     'status' => 'published',
+                    'category' => 'Theatre',
                     'starts_at' => now()->addWeeks(3)->setTime(19, 30),
                     'ends_at' => now()->addWeeks(3)->setTime(22, 0),
                     'timezone' => 'Europe/Berlin',
@@ -198,6 +199,59 @@ class DatabaseSeeder extends Seeder
                 );
             }
 
+            /*
+             * A second night, sold without a single named seat.
+             *
+             * Half the events on this platform are like this — a warehouse, a festival tent, a
+             * standing gig — and a demo that only ever shows a theatre hides every way that path
+             * differs: no plan to zoom into, a quantity rather than a chair, and a capacity per
+             * area that is the only thing standing between a sale and a fire risk.
+             */
+            $standingMap = SeatMap::firstOrCreate(
+                ['tenant_id' => $tenant->id, 'venue_id' => $venue->id, 'name' => 'The warehouse'],
+                ['description' => 'Standing room, sold by the head'],
+            );
+
+            if (! $standingMap->published_version_id) {
+                app(SeatMapPublisher::class)->publish($standingMap, SeatMapVersion::create([
+                    'seat_map_id' => $standingMap->id,
+                    'version' => 1,
+                    'status' => 'draft',
+                    'geometry' => $this->warehouse(),
+                ]));
+
+                $standingMap->refresh();
+            }
+
+            $standingEvent = Event::firstOrCreate(
+                ['tenant_id' => $tenant->id, 'seat_map_id' => $standingMap->id, 'name' => 'Late night session'],
+                [
+                    'venue_id' => $venue->id,
+                    'seat_map_version_id' => $standingMap->published_version_id,
+                    'public_id' => 'evt_'.Str::lower(Str::random(20)),
+                    'status' => 'published',
+                    'category' => 'Club',
+                    'description' => 'Doors at ten, four rooms, one ticket. No seats — come and stand.',
+                    'starts_at' => now()->addWeeks(5)->setTime(22, 0),
+                    'ends_at' => now()->addWeeks(5)->addHours(5),
+                    'timezone' => 'Europe/Berlin',
+                    'currency' => 'EUR',
+                    'max_seats_per_order' => 8,
+                ],
+            );
+
+            foreach ([
+                ['floor', 'Floor', 2400, '#e0526a'],
+                ['gallery', 'Gallery', 3600, '#b8860b'],
+                ['terrace', 'Terrace', 3000, '#3f9c6d'],
+                ['accessible', 'Wheelchair space', 2400, '#7b5ea7'],
+            ] as [$key, $zoneName, $amount, $color]) {
+                EventPriceZone::firstOrCreate(
+                    ['event_id' => $standingEvent->id, 'key' => $key],
+                    ['name' => $zoneName, 'amount' => $amount, 'color' => $color],
+                );
+            }
+
             $client = ApiClient::firstOrCreate(
                 ['tenant_id' => $tenant->id, 'name' => $name.' website'],
                 ['site_url' => "https://{$tenant->slug}.test", 'allowed_origins' => ["https://{$tenant->slug}.test"], 'status' => 'active'],
@@ -205,14 +259,17 @@ class DatabaseSeeder extends Seeder
 
             $issued = ApiKey::issue($client, 'seeded');
 
-            CheckinDevice::firstOrCreate(
+            $scanner = CheckinDevice::firstOrCreate(
                 ['tenant_id' => $tenant->id, 'name' => 'Front door scanner'],
                 [
                     'status' => 'pending',
                     'pairing_code_hash' => hash('sha256', $tenant->slug.'-pair'),
                     'pairing_expires_at' => now()->addDays(7),
                 ],
-            )->grantAccessTo($event);
+            );
+
+            $scanner->grantAccessTo($event);
+            $scanner->grantAccessTo($standingEvent);
 
             // A hosted site, on a hostname that resolves without DNS: 127.0.0.1.nip.io and
             // localhost both point at this machine, so the site is reachable the moment it is
@@ -332,6 +389,66 @@ class DatabaseSeeder extends Seeder
      *
      * Rows carry an anchor, rotation, curve and spacing — seat positions follow from those.
      */
+    /**
+     * A room with no chairs in it.
+     *
+     * Four areas, each with a capacity and a price of its own, and not one seat. Everything the
+     * picker does with a plan — zoom into a section, click a chair, name a row — has to have a
+     * sensible answer here too, and the only way to keep that true is to have such a room in the
+     * demo that everybody looks at.
+     */
+    private function warehouse(): array
+    {
+        $area = function (string $key, string $label, string $category, int $places, array $box): array {
+            return [
+                'type' => 'area', 'key' => $key, 'layer' => 'interactive',
+                'shape' => [
+                    'kind' => 'rect', 'x' => $box[0], 'y' => $box[1],
+                    'width' => $box[2], 'height' => $box[3],
+                    'rotation' => 0, 'cornerRadius' => 18, 'points' => null,
+                ],
+                'translucent' => false, 'scale' => 1, 'categoryKey' => $category,
+                'entrance' => 'Main door',
+                'labeling' => [
+                    'label' => $label, 'displayedLabel' => null, 'visible' => true,
+                    'fontSize' => 24, 'positionX' => 0, 'positionY' => 0, 'locked' => false,
+                ],
+                'capacity' => ['type' => 'generalAdmission', 'places' => $places],
+            ];
+        };
+
+        return [
+            'version' => 2,
+            'name' => 'The warehouse',
+            'focalPoint' => ['x' => 600, 'y' => 150],
+            'categories' => [
+                ['key' => 'floor', 'label' => 'Floor', 'color' => '#e0526a', 'accessible' => false],
+                ['key' => 'gallery', 'label' => 'Gallery', 'color' => '#b8860b', 'accessible' => false],
+                ['key' => 'terrace', 'label' => 'Terrace', 'color' => '#3f9c6d', 'accessible' => false],
+                ['key' => 'accessible', 'label' => 'Wheelchair space', 'color' => '#7b5ea7', 'accessible' => true],
+            ],
+            'floors' => [[
+                'key' => '1',
+                'name' => 'Level 1',
+                'canvas' => ['width' => 1200, 'height' => 900, 'background' => null],
+                'objects' => [
+                    [
+                        'type' => 'shape', 'key' => 'stage', 'layer' => 'background', 'kind' => 'stage',
+                        'x' => 380, 'y' => 90, 'width' => 440, 'height' => 80, 'rotation' => 0,
+                        'cornerRadius' => 6, 'points' => null, 'fill' => null, 'label' => 'Stage',
+                    ],
+                    $area('floor', 'Floor', 'floor', 900, [220, 220, 760, 320]),
+                    $area('gallery', 'Gallery', 'gallery', 260, [220, 580, 360, 180]),
+                    $area('terrace', 'Terrace', 'terrace', 180, [620, 580, 360, 180]),
+                    $area('accessible-platform', 'Accessible platform', 'accessible', 24, [220, 790, 760, 70]),
+                    ['type' => 'icon', 'key' => 'icon-entrance', 'layer' => 'foreground', 'name' => 'entrance', 'x' => 140, 'y' => 830, 'size' => 24, 'rotation' => 0],
+                    ['type' => 'icon', 'key' => 'icon-bar', 'layer' => 'foreground', 'name' => 'bar', 'x' => 1060, 'y' => 400, 'size' => 24, 'rotation' => 0],
+                    ['type' => 'icon', 'key' => 'icon-toilets', 'layer' => 'foreground', 'name' => 'toilets', 'x' => 1060, 'y' => 640, 'size' => 24, 'rotation' => 0],
+                ],
+            ]],
+        ];
+    }
+
     private function auditorium(int $rows, int $seatsPerRow): array
     {
         $categories = [

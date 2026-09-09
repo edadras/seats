@@ -105,7 +105,9 @@ class SitePageController extends Controller
 
     private function upcoming(Site $site, int $limit): array
     {
-        $events = Event::with('venue')
+        // `priceZones` too: the card prints a "from" price, so leaving it lazy is one query per
+        // event — and, with lazy loading disabled, a 500 on the first site that has two of them.
+        $events = Event::with(['venue', 'priceZones'])
             ->where('status', 'published')
             ->whereNotNull('seat_map_version_id')
             ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))

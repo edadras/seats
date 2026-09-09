@@ -850,6 +850,7 @@
 						esc( self.t( 'panel.events.copyPublicId' ) ) + '">' + icon( 'copy', { size: 14 } ) +
 						'</button></td>' +
 						'<td class="table__actions">' +
+						actionButton( 'event-edit', event.id, self.t( 'panel.events.edit' ), 'settings' ) +
 						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
 						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
 						'</td></tr>';
@@ -888,6 +889,18 @@
 					add.addEventListener( 'click', function () { self.newEvent( sellable ); } );
 				}
 
+				self.main().querySelectorAll( '[data-event-edit]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						var event = results[ 0 ].data.filter( function ( row ) {
+							return row.id === button.dataset.eventEdit;
+						} )[ 0 ];
+
+						if ( event ) {
+							self.editEvent( event );
+						}
+					} );
+				} );
+
 				self.main().querySelectorAll( '[data-prices]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
 						window.SeatmapPricing.open( self, button.dataset.prices );
@@ -910,58 +923,208 @@
 			.catch( function ( error ) { self.error( error ); } );
 	};
 
+	/**
+	 * The timezones a browser knows, for the field that decides what "21:00" means.
+	 *
+	 * Offered as a datalist rather than a select: the list is six hundred long, and typing three
+	 * letters of a city is faster than scrolling to it. Browsers without the list still get a text
+	 * field, which the server validates anyway.
+	 */
+	function timezoneOptions() {
+		var zones = [];
+
+		try {
+			zones = Intl.supportedValuesOf( 'timeZone' );
+		} catch ( e ) {
+			// An older browser. The field stays a plain text input; nothing is lost but the list.
+			zones = [];
+		}
+
+		return zones.map( function ( zone ) {
+			return '<option value="' + esc( zone ) + '">';
+		} ).join( '' );
+	}
+
+	/** The browser's own zone, as the sensible default for somebody creating their first event. */
+	function hereZone() {
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		} catch ( e ) {
+			return 'UTC';
+		}
+	}
+
+	/**
+	 * An ISO instant as the wall clock at the venue, in the shape `datetime-local` wants.
+	 *
+	 * en-CA because it writes dates the way the input parses them — year first, zero padded — and
+	 * not because anybody here is Canadian.
+	 */
+	function wallClock( iso, zone ) {
+		if ( ! iso ) {
+			return '';
+		}
+
+		var parts = new Intl.DateTimeFormat( 'en-CA', {
+			timeZone: zone || 'UTC',
+			year: 'numeric', month: '2-digit', day: '2-digit',
+			hour: '2-digit', minute: '2-digit', hour12: false,
+		} ).formatToParts( new Date( iso ) ).reduce( function ( found, part ) {
+			found[ part.type ] = part.value;
+
+			return found;
+		}, {} );
+
+		// Midnight comes back as "24" from some engines, which is the same instant written the one
+		// way `datetime-local` refuses to parse.
+		var hour = '24' === parts.hour ? '00' : parts.hour;
+
+		return parts.year + '-' + parts.month + '-' + parts.day + 'T' + hour + ':' + parts.minute;
+	}
+
+	/**
+	 * The fields an event has, shared by the form that creates one and the form that edits it.
+	 *
+	 * One list, so a field added for the website cannot quietly exist on only one of the two — the
+	 * failure that leaves an organiser able to set a poster but never change it.
+	 */
+	function eventFields( event, maps ) {
+		var zone = ( event && event.timezone ) || hereZone();
+
+		return '<div class="stack">' +
+			'<div class="field"><label class="field__label" for="e-name">' +
+			esc( App.t( 'panel.common.name' ) ) + '</label>' +
+			'<input class="input" id="e-name" name="name" required maxlength="200" ' +
+			'placeholder="' + esc( App.t( 'panel.events.namePlaceholder' ) ) + '" value="' +
+			esc( event ? event.name : '' ) + '"></div>' +
+
+			'<div class="field"><label class="field__label" for="e-category">' +
+			esc( App.t( 'panel.events.category' ) ) + '</label>' +
+			'<input class="input" id="e-category" name="category" maxlength="40" ' +
+			'placeholder="' + esc( App.t( 'panel.events.categoryPlaceholder' ) ) + '" value="' +
+			esc( ( event && event.category ) || '' ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.categoryHint' ) ) + '</span></div>' +
+
+			( maps
+				? '<div class="field"><label class="field__label" for="e-map">' +
+					esc( App.t( 'panel.events.seatMap' ) ) + '</label>' +
+					'<select class="select" id="e-map" name="seat_map_id" required>' +
+					maps.map( function ( map ) {
+						return '<option value="' + esc( map.id ) + '">' + esc( map.name ) +
+							' — v' + map.published_version.version + '</option>';
+					} ).join( '' ) +
+					'</select><span class="field__hint">' + esc( App.t( 'panel.events.seatMapHint' ) ) +
+					'</span></div>'
+				: '' ) +
+
+			'<div class="field"><label class="field__label" for="e-starts">' +
+			esc( App.t( 'panel.events.starts' ) ) + '</label>' +
+			'<input class="input" id="e-starts" name="starts_at" type="datetime-local" required value="' +
+			esc( event ? wallClock( event.starts_at, zone ) : '' ) + '"></div>' +
+
+			'<div class="field"><label class="field__label" for="e-timezone">' +
+			esc( App.t( 'panel.events.timezone' ) ) + '</label>' +
+			'<input class="input" id="e-timezone" name="timezone" list="e-timezones" required value="' +
+			esc( zone ) + '">' +
+			'<datalist id="e-timezones">' + timezoneOptions() + '</datalist>' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.timezoneHint' ) ) + '</span></div>' +
+
+			'<div class="field"><label class="field__label" for="e-currency">' +
+			esc( App.t( 'pricing.currency' ) ) + '</label>' +
+			'<input class="input input--code" id="e-currency" name="currency" list="e-currencies" ' +
+			'maxlength="3" required value="' +
+			esc( ( event && event.currency ) || window.SeatmapPricing.CURRENCIES[ 0 ] ) + '">' +
+			'<datalist id="e-currencies">' +
+			window.SeatmapPricing.CURRENCIES.map( function ( code ) {
+				return '<option value="' + code + '">';
+			} ).join( '' ) +
+			'</datalist>' +
+			'<span class="field__hint">' + esc( App.t( 'pricing.currencyHint' ) ) + '</span></div>' +
+
+			'<div class="field"><label class="field__label" for="e-status">' +
+			esc( App.t( 'panel.common.status' ) ) + '</label>' +
+			'<select class="select" id="e-status" name="status">' +
+			[ 'draft', 'published', 'closed', 'cancelled' ].map( function ( status ) {
+				return '<option value="' + status + '"' +
+					( event && event.status === status ? ' selected' : '' ) + '>' +
+					esc( App.t( 'panel.eventStatus.' + status ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>' +
+
+			'<div class="field"><label class="field__label" for="e-image">' +
+			esc( App.t( 'panel.events.artwork' ) ) + '</label>' +
+			'<input class="input" id="e-image" name="image_url" type="url" maxlength="500" ' +
+			'placeholder="https://" value="' + esc( ( event && event.image_url ) || '' ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.artworkHint' ) ) + '</span></div>' +
+
+			'<div class="field"><label class="field__label" for="e-about">' +
+			esc( App.t( 'panel.events.about' ) ) + '</label>' +
+			'<textarea class="input" id="e-about" name="description" rows="4" maxlength="5000">' +
+			esc( ( event && event.description ) || '' ) + '</textarea>' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.aboutHint' ) ) + '</span></div>' +
+			'</div>';
+	}
+
+	/** Empty is nothing, not an empty string: `''` is not a URL and would fail validation. */
+	function orNull( value ) {
+		var text = String( value == null ? '' : value ).trim();
+
+		return '' === text ? null : text;
+	}
+
+	/** The fields both forms send, read back off the form itself. */
+	function eventPayload( data ) {
+		return {
+			name: data.get( 'name' ),
+			category: orNull( data.get( 'category' ) ),
+			starts_at: data.get( 'starts_at' ),
+			timezone: data.get( 'timezone' ),
+			currency: String( data.get( 'currency' ) || '' ).trim().toUpperCase(),
+			status: data.get( 'status' ),
+			image_url: orNull( data.get( 'image_url' ) ),
+			description: orNull( data.get( 'description' ) ),
+		};
+	}
+
 	App.newEvent = function ( maps ) {
 		var self = this;
 
 		this.modal( {
 			title: this.t( 'panel.events.new' ),
 			submitLabel: this.t( 'panel.events.create' ),
-			body:
-				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="e-name">' +
-				esc( this.t( 'panel.common.name' ) ) + '</label>' +
-				'<input class="input" id="e-name" name="name" required maxlength="200" ' +
-				'placeholder="' + esc( this.t( 'panel.events.namePlaceholder' ) ) + '"></div>' +
-				'<div class="field"><label class="field__label" for="e-map">' +
-				esc( this.t( 'panel.events.seatMap' ) ) + '</label>' +
-				'<select class="select" id="e-map" name="seat_map_id" required>' +
-				maps.map( function ( map ) {
-					return '<option value="' + esc( map.id ) + '">' + esc( map.name ) +
-						' — v' + map.published_version.version + '</option>';
-				} ).join( '' ) +
-				'</select><span class="field__hint">' + esc( self.t( 'panel.events.seatMapHint' ) ) +
-				'</span></div>' +
-				'<div class="field"><label class="field__label" for="e-starts">' +
-				esc( self.t( 'panel.events.starts' ) ) + '</label>' +
-				'<input class="input" id="e-starts" name="starts_at" type="datetime-local" required></div>' +
-				'<div class="field"><label class="field__label" for="e-currency">' +
-				esc( self.t( 'pricing.currency' ) ) + '</label>' +
-				'<input class="input input--code" id="e-currency" name="currency" list="e-currencies" ' +
-				'maxlength="3" required value="' + esc( window.SeatmapPricing.CURRENCIES[ 0 ] ) + '">' +
-				'<datalist id="e-currencies">' +
-				window.SeatmapPricing.CURRENCIES.map( function ( code ) {
-					return '<option value="' + code + '">';
-				} ).join( '' ) +
-				'</datalist>' +
-				'<span class="field__hint">' + esc( self.t( 'pricing.currencyHint' ) ) + '</span></div>' +
-				'<div class="field"><label class="field__label" for="e-status">' +
-				esc( self.t( 'panel.common.status' ) ) + '</label>' +
-				'<select class="select" id="e-status" name="status">' +
-				'<option value="draft">' + esc( self.t( 'panel.events.statusDraft' ) ) + '</option>' +
-				'<option value="published">' + esc( self.t( 'panel.events.statusPublished' ) ) + '</option>' +
-				'</select></div>' +
-				'</div>',
+			body: eventFields( null, maps ),
 			onSubmit: function ( data ) {
-				return self.request( 'POST', '/events', {
-					name: data.get( 'name' ),
-					seat_map_id: data.get( 'seat_map_id' ),
-					starts_at: data.get( 'starts_at' ),
-					currency: String( data.get( 'currency' ) || '' ).trim().toUpperCase(),
-					status: data.get( 'status' ),
-				} ).then( function () {
+				var payload = eventPayload( data );
+
+				payload.seat_map_id = data.get( 'seat_map_id' );
+
+				return self.request( 'POST', '/events', payload ).then( function () {
 					self.toast( self.t( 'panel.events.created' ) );
 					self.renderEvents();
 				} );
+			},
+		} );
+	};
+
+	/**
+	 * Everything about an event except which chart it sells against.
+	 *
+	 * That one is deliberately absent: an event keeps selling against the version published when it
+	 * was created, and moving a live event onto another chart would strand every seat already sold.
+	 */
+	App.editEvent = function ( event ) {
+		var self = this;
+
+		this.modal( {
+			title: event.name,
+			submitLabel: this.t( 'panel.common.save' ),
+			body: eventFields( event, null ),
+			onSubmit: function ( data ) {
+				return self.request( 'PATCH', '/events/' + event.id, eventPayload( data ) )
+					.then( function () {
+						self.toast( self.t( 'panel.events.saved' ) );
+						self.renderEvents();
+					} );
 			},
 		} );
 	};

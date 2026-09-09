@@ -15,7 +15,7 @@ class Event extends Model
 
     protected $fillable = [
         'tenant_id', 'venue_id', 'seat_map_id', 'seat_map_version_id', 'public_id',
-        'name', 'description', 'status', 'starts_at', 'ends_at', 'timezone', 'currency',
+        'name', 'description', 'image_url', 'category', 'status', 'starts_at', 'ends_at', 'timezone', 'currency',
         'hold_ttl_seconds', 'max_extends', 'max_seats_per_order', 'refund_policy', 'settings',
     ];
 
