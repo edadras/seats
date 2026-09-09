@@ -40,6 +40,11 @@
                                     <span style="color:#5f6878;">× {{ $ticket['quantity'] }}</span>
                                 @endif
                             </p>
+                            @if (! empty($ticket['entry']))
+                                <p style="margin:0 0 4px;font-weight:600;font-size:13px;">
+                                    {{ $ticket['entry'] }}
+                                </p>
+                            @endif
                             <p style="margin:0;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#5f6878;word-break:break-all;">
                                 {{ $ticket['token'] }}
                             </p>

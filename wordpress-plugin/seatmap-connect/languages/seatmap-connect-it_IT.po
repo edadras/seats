@@ -378,7 +378,23 @@ msgstr "Rimuovi %s"
 msgid "Seat list"
 msgstr "Elenco dei posti"
 
-#: includes/class-seatmap-widget.php:219
+#: includes/class-seatmap-widget.php:211
+msgid "Arrival time"
+msgstr "Orario d'ingresso"
+
+#: includes/class-seatmap-widget.php:212
+msgid "Choose when you will arrive"
+msgstr "Scegliete il vostro orario d'ingresso"
+
+#: includes/class-seatmap-widget.php:213
+msgid "That arrival time filled up while you were choosing. Please pick another."
+msgstr "Questo orario d'ingresso si è appena esaurito. Sceglietene un altro."
+
+#: includes/class-seatmap-widget.php:214
+msgid "Choose an arrival time before reserving."
+msgstr "Scegliete un orario d'ingresso prima di prenotare."
+
+#: includes/class-seatmap-widget.php:225
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "Per scegliere i posti serve JavaScript. Attivalo, oppure contatta il botteghino."
 

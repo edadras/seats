@@ -236,7 +236,11 @@
 							'<td class="table__primary">' + esc( seat || App.t( 'panel.customers.standing' ) ) +
 								( line.seat ? '' : ' <span class="muted">' +
 									esc( App.t( 'panel.customers.quantity', { count: App.number( line.quantity ) } ) ) +
-									'</span>' ) + '</td>' +
+									'</span>' ) +
+								// When this person was told to arrive, on a timed-entry event.
+								( line.entry
+									? '<span class="muted on-own-line">' + esc( line.entry ) + '</span>'
+									: '' ) + '</td>' +
 							'<td class="tnum">' + esc( App.money( line.amount, order.currency ) ) + '</td>' +
 							'<td>' + esc( App.t( 'panel.orders.allocation.' + line.status ) ) + '</td>' +
 							'<td>' + ( line.used_at

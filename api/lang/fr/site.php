@@ -53,6 +53,10 @@ return [
         'maxTickets' => 'Vous pouvez prendre jusqu’à %d billets.',
         'removeLine' => 'Retirer %s',
         'seatList' => 'Liste des places',
+        'arrivalTime' => "Heure d'arrivée",
+        'chooseArrival' => "Choisissez votre heure d'arrivée",
+        'arrivalFull' => "Cette heure d'arrivée vient d'être complète. Veuillez en choisir une autre.",
+        'arrivalNeeded' => "Choisissez une heure d'arrivée avant de réserver.",
     ],
 
 
@@ -214,6 +218,10 @@ return [
     'bookingStatus' => 'Cette réservation est :status. Si cela vous semble faux, contactez le guichet en indiquant :reference.',
     'holdGone' => 'Ces places ne sont plus retenues. Choisissez à nouveau.',
     'standing' => 'Debout',
+    'entry' => [
+        'between' => "Entrée :from – :to",
+        'title' => "Heure d'arrivée",
+    ],
     'emptyPage' => 'Cette page est encore vide.',
     'nothingOnSale' => 'Rien en vente pour l’instant. Revenez bientôt.',
     'searchEvents' => 'Rechercher',

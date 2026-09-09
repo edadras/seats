@@ -378,7 +378,23 @@ msgstr "إزالة %s"
 msgid "Seat list"
 msgstr "قائمة المقاعد"
 
-#: includes/class-seatmap-widget.php:219
+#: includes/class-seatmap-widget.php:211
+msgid "Arrival time"
+msgstr "وقت الدخول"
+
+#: includes/class-seatmap-widget.php:212
+msgid "Choose when you will arrive"
+msgstr "اختر وقت وصولك"
+
+#: includes/class-seatmap-widget.php:213
+msgid "That arrival time filled up while you were choosing. Please pick another."
+msgstr "امتلأ وقت الدخول هذا أثناء اختيارك. الرجاء اختيار وقت آخر."
+
+#: includes/class-seatmap-widget.php:214
+msgid "Choose an arrival time before reserving."
+msgstr "اختر وقت الدخول قبل الحجز."
+
+#: includes/class-seatmap-widget.php:225
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "اختيار المقاعد يحتاج جافاسكربت. فعّله من فضلك، أو اتصل بشبّاك التذاكر."
 

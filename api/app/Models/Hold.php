@@ -14,7 +14,7 @@ class Hold extends Model
     protected $fillable = [
         'tenant_id', 'event_id', 'seat_map_version_id', 'token', 'session_id', 'source',
         'api_client_id', 'status', 'expires_at', 'extends_used', 'currency', 'total_amount',
-        'price_snapshot', 'external_order_id', 'released_at', 'converted_at', 'ip',
+        'price_snapshot', 'external_order_id', 'released_at', 'converted_at', 'ip', 'entry_slot_id',
     ];
 
     protected $hidden = ['ip'];
@@ -36,6 +36,11 @@ class Hold extends Model
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function entrySlot()
+    {
+        return $this->belongsTo(EntrySlot::class);
     }
 
     public function items()

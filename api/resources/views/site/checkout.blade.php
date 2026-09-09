@@ -134,6 +134,19 @@
             <aside class="checkout__summary">
                 <h2>{{ __('site.yourSeats') }}</h2>
 
+                @if ($entry)
+                    {{-- Above the seats, because on a timed-entry event it is the more important
+                         half of what was booked. --}}
+                    <p class="checkout__entry">
+                        <strong>{{ __('site.entry.title') }}</strong>
+                        <span>{{ \App\Domain\Events\EntrySlots::window(
+                            new \DateTimeImmutable($entry['starts_at']),
+                            new \DateTimeImmutable($entry['ends_at']),
+                            $hold->event?->timezone,
+                        ) }}</span>
+                    </p>
+                @endif
+
                 <ul class="summary-lines">
                     @foreach ($lines as $line)
                         <li>

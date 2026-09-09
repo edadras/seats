@@ -122,6 +122,8 @@ class EmbedController extends Controller
             // Standing areas and whole tables report places remaining rather than a state, because
             // "held" is not a useful answer about a pit that is half full.
             'areas' => $this->availability->capacityForEvent($event),
+            // Empty on an event that is not timed entry, which is how the picker knows not to ask.
+            'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event, openOnly: true),
         ]);
     }
 
@@ -145,6 +147,8 @@ class EmbedController extends Controller
             'area_types.*' => ['array', 'max:20'],
             'area_types.*.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
             'session_id' => ['required', 'string', 'max:100'],
+            // Which arrival window, on an event that sells timed entry.
+            'entry_slot_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
 
         $hold = $this->holds->create(
@@ -156,6 +160,7 @@ class EmbedController extends Controller
             $data['areas'] ?? [],
             $data['seat_types'] ?? [],
             $data['area_types'] ?? [],
+            $data['entry_slot_id'] ?? null,
         );
 
         /*

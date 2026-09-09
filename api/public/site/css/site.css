@@ -864,6 +864,27 @@ hr { border: none; }
 	color: var(--text-muted);
 }
 
+/* The arrival window, on a timed-entry booking: the more important half of what was reserved,
+   so it is set apart from the seat list rather than being one line in it. */
+.checkout__entry {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	margin: 0 0 0.9rem;
+	padding: 0.65rem 0.8rem;
+	border-radius: var(--radius);
+	background: var(--surface);
+	border: 1px solid var(--hairline);
+}
+
+.checkout__entry strong {
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--text-muted);
+	font-weight: 600;
+}
+
 .summary-lines { margin: 0 0 0.75rem; padding: 0; list-style: none; }
 
 .summary-lines li {

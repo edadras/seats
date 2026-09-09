@@ -54,6 +54,10 @@ return [
         'maxTickets' => 'Sie können bis zu %d Tickets nehmen.',
         'removeLine' => '%s entfernen',
         'seatList' => 'Sitzplatzliste',
+        'arrivalTime' => "Einlasszeit",
+        'chooseArrival' => "Wählen Sie Ihre Einlasszeit",
+        'arrivalFull' => "Diese Einlasszeit ist gerade voll geworden. Bitte wählen Sie eine andere.",
+        'arrivalNeeded' => "Wählen Sie eine Einlasszeit, bevor Sie reservieren.",
     ],
 
 
@@ -215,6 +219,10 @@ return [
     'bookingStatus' => 'Diese Buchung ist :status. Falls das falsch aussieht, wenden Sie sich an die Kasse und nennen Sie :reference.',
     'holdGone' => 'Diese Plätze sind nicht mehr reserviert. Bitte wählen Sie erneut.',
     'standing' => 'Stehplatz',
+    'entry' => [
+        'between' => "Einlass :from – :to",
+        'title' => "Einlasszeit",
+    ],
     'emptyPage' => 'Auf dieser Seite steht noch nichts.',
     'nothingOnSale' => 'Gerade ist nichts im Verkauf. Schauen Sie bald wieder vorbei.',
     'searchEvents' => 'Suchen',

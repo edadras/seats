@@ -95,6 +95,7 @@ class BoxOfficeController extends Controller
             )),
             'areas' => $this->availability->capacityForEvent($event),
             'ticket_types' => TicketTypes::forEvent($event),
+            'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event, openOnly: true),
         ]);
     }
 
@@ -126,6 +127,9 @@ class BoxOfficeController extends Controller
             'payment' => ['required', Rule::in(['paid', 'owed', 'comp'])],
             'note' => ['nullable', 'string', 'max:200'],
             'send_tickets' => ['sometimes', 'boolean'],
+            // The counter sells timed entry too: somebody walking up at ten past ten still has to
+            // be put in a window, and the window still has to have room.
+            'entry_slot_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
 
         if (! $event->isSellable()) {
@@ -156,6 +160,7 @@ class BoxOfficeController extends Controller
             $data['areas'] ?? [],
             $data['seat_types'] ?? [],
             $data['area_types'] ?? [],
+            $data['entry_slot_id'] ?? null,
         );
 
         $client = $this->counterClient($event);

@@ -26,6 +26,10 @@ class TicketMailer
 
     public function send(Site $site, ExternalOrder $order): void
     {
+        // The venue's clock is what an arrival window is written in, and reaching it needs the
+        // event loaded before the lines are built — lazy loading is off.
+        $order->loadMissing('event');
+
         $this->deliver($site, $order, $order->allocations->all(), $order->buyer['email'] ?? null);
     }
 
@@ -38,6 +42,8 @@ class TicketMailer
      */
     public function sendOne(Site $site, ExternalOrder $order, $allocation, string $email): void
     {
+        $order->loadMissing('event');
+
         $this->deliver($site, $order, [$allocation], $email);
     }
 
@@ -62,6 +68,13 @@ class TicketMailer
                     $allocation->section_name, $allocation->row_name, $allocation->seat_label,
                 ]))),
                 'quantity' => $allocation->quantity,
+                // When to arrive, on a timed-entry event. Empty everywhere else, and the email
+                // shows nothing rather than a blank line where a time should be.
+                'entry' => \App\Domain\Events\EntrySlots::window(
+                    $allocation->entry_starts_at,
+                    $allocation->entry_ends_at,
+                    $order->event?->timezone,
+                ),
                 'token' => $token,
                 'qr' => $this->qr->dataUri($token, 220),
             ];

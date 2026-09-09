@@ -61,6 +61,16 @@
 		this.mode = 'plan';
 		this.blockId = null;
 		this.selected = [];
+		/*
+		 * Timed entry.
+		 *
+		 * Empty on nearly every event. Where it is not, the constraint is not a chair but how many
+		 * people may be in the room between ten and half past, and nothing can be reserved until
+		 * the buyer has said which window they are coming in.
+		 */
+		this.entrySlots = [];
+		this.entrySlotId = null;
+		this.entryEl = null;
 		this.cursor = null;
 		this.view = { scale: 1, x: 0, y: 0 };
 		this.maxSeats = config.event.max_seats_per_order || 10;
@@ -1014,6 +1024,13 @@
 		heading.textContent = this.i18n.yourSelection;
 		summary.appendChild( heading );
 
+		// Above the selection, because it is the first thing a buyer of a timed-entry event has
+		// to decide and the last thing they should discover at the button.
+		this.entryEl = document.createElement( 'div' );
+		this.entryEl.className = 'seatmap-widget__entry';
+		this.entryEl.hidden = true;
+		summary.appendChild( this.entryEl );
+
 		this.selectionEl = document.createElement( 'ul' );
 		this.selectionEl.className = 'seatmap-widget__selection';
 		summary.appendChild( this.selectionEl );
@@ -1087,12 +1104,98 @@
 					self.applyAreaAvailability( data.areas );
 				}
 
+				if ( data.entry_slots ) {
+					self.applyEntrySlots( data.entry_slots );
+				}
+
 				self.cursor = data.cursor;
 			} )
 			.catch( function () {
 				// A failed poll is not worth interrupting the buyer over; the next one may work,
 				// and the hold request is authoritative anyway.
 			} );
+	};
+
+	/**
+	 * The arrival windows, and how full each one is.
+	 *
+	 * Redrawn on every poll, because a window fills up while somebody is choosing seats and the
+	 * honest thing is to say so before they press the button rather than after. A window the buyer
+	 * had already chosen and which has since filled is unchosen here — leaving it selected would
+	 * be showing them a choice the server is about to refuse.
+	 */
+	SeatmapWidget.prototype.applyEntrySlots = function ( slots ) {
+		this.entrySlots = slots || [];
+
+		if ( ! this.entryEl ) {
+			return;
+		}
+
+		if ( ! this.entrySlots.length ) {
+			this.entryEl.hidden = true;
+			this.entrySlotId = null;
+			this.updateSubmitState();
+
+			return;
+		}
+
+		var self = this;
+		var chosen = this.entrySlots.filter( function ( slot ) {
+			return slot.id === self.entrySlotId;
+		} )[ 0 ];
+
+		if ( chosen && chosen.sold_out ) {
+			this.entrySlotId = null;
+			this.announce( this.i18n.arrivalFull );
+		}
+
+		this.entryEl.hidden = false;
+		this.entryEl.innerHTML = '';
+
+		var heading = document.createElement( 'h4' );
+		heading.className = 'seatmap-widget__entry-title';
+		heading.textContent = this.i18n.arrivalTime;
+		this.entryEl.appendChild( heading );
+
+		var select = document.createElement( 'select' );
+		select.className = 'seatmap-widget__entry-select';
+		select.setAttribute( 'aria-label', this.i18n.arrivalTime );
+
+		var prompt = document.createElement( 'option' );
+		prompt.value = '';
+		prompt.textContent = this.i18n.chooseArrival;
+		select.appendChild( prompt );
+
+		this.entrySlots.forEach( function ( slot ) {
+			var option = document.createElement( 'option' );
+
+			option.value = slot.id;
+			option.disabled = !! slot.sold_out;
+			option.selected = slot.id === self.entrySlotId;
+			option.textContent = slot.label + ' — ' + ( slot.sold_out
+				? self.i18n.soldOut
+				: ( null === slot.remaining || undefined === slot.remaining
+					? ''
+					: self.i18n.placesLeft.replace( '%d', self.formatCount( slot.remaining ) ) ) );
+			// A window with no limit of its own says only its own name; the dash would be the
+			// start of a sentence that never arrives.
+			option.textContent = option.textContent.replace( /\s+—\s*$/, '' );
+
+			select.appendChild( option );
+		} );
+
+		select.addEventListener( 'change', function () {
+			self.entrySlotId = select.value || null;
+			self.updateSubmitState();
+		} );
+
+		this.entryEl.appendChild( select );
+		this.updateSubmitState();
+	};
+
+	/** Nothing may be reserved without an arrival time on an event that sells them. */
+	SeatmapWidget.prototype.needsEntrySlot = function () {
+		return this.entrySlots.length > 0 && ! this.entrySlotId;
 	};
 
 	SeatmapWidget.prototype.applyAvailability = function ( seats ) {
@@ -2236,6 +2339,7 @@
 			return;
 		}
 
+
 		var total = 0;
 
 		/*
@@ -2309,11 +2413,31 @@
 		this.totalEl.innerHTML = '';
 		this.totalEl.appendChild( textSpan( this.i18n.total ) );
 		this.totalEl.appendChild( textSpan( this.formatMoney( total ) ) );
-		this.submitEl.disabled = false;
+		this.updateSubmitState();
+	};
+
+	/**
+	 * Whether the button may be pressed.
+	 *
+	 * Two conditions, and both have to be asked from two places — the selection changes, and so
+	 * does the arrival time — so the question lives here rather than being answered twice.
+	 */
+	SeatmapWidget.prototype.updateSubmitState = function () {
+		if ( ! this.submitEl || this.busy ) {
+			return;
+		}
+
+		this.submitEl.disabled = ! this.totalChosen() || this.needsEntrySlot();
 	};
 
 	SeatmapWidget.prototype.reserve = function () {
 		if ( this.busy || ! this.totalChosen() ) {
+			return;
+		}
+
+		if ( this.needsEntrySlot() ) {
+			this.announce( this.i18n.arrivalNeeded );
+
 			return;
 		}
 
@@ -2376,6 +2500,9 @@
 				areas: areas,
 				seat_types: seatTypes,
 				area_types: areaTypes,
+				// Null on nearly every event. Where it is not, it is the window this booking is
+				// for, and the server refuses the hold without it rather than guessing one.
+				entry_slot_id: this.entrySlotId,
 				// Only the public embed API asks for this — it has no session to know a browser
 				// by. A shop's own route already knows whose cart this is and ignores it.
 				session_id: this.config.sessionId,
@@ -2414,8 +2541,8 @@
 			} )
 			.finally( function () {
 				self.busy = false;
-				self.submitEl.disabled = false;
-				self.submitEl.textContent = self.i18n.addToCart;
+				self.submitEl.textContent = self.seated ? self.i18n.addToCart : self.i18n.reserveTickets;
+				self.updateSubmitState();
 			} );
 	};
 
@@ -2429,6 +2556,17 @@
 		var taken = ( body && body.data && body.data.unavailable_seat_ids ) || [];
 		var fullAreas = ( body && body.data && body.data.unavailable_capacity_object_ids ) || [];
 		var self = this;
+
+		// The window filled between this buyer choosing it and pressing the button. Unchoose it
+		// and say so: everything they picked is still in the summary, and the next poll will show
+		// which windows are left.
+		if ( body && 'entry_slot_full' === body.code ) {
+			this.entrySlotId = null;
+			this.announce( this.i18n.arrivalFull );
+			this.updateSubmitState();
+
+			return;
+		}
 
 		if ( fullAreas.length ) {
 			// Someone filled the area while this buyer was deciding. Drop the quantity they can no

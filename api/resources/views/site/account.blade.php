@@ -75,6 +75,9 @@
                                             <span class="muted">× {{ \App\Support\Locale\Money::number($line['quantity']) }}</span>
                                         @endif
                                     </span>
+                                    @if ($line['entry'])
+                                        <span class="pillbox">{{ $line['entry'] }}</span>
+                                    @endif
                                     @if ($line['holder'])
                                         <span class="muted">{{ __('site.transfer.heldBy', ['name' => $line['holder']]) }}</span>
                                     @endif

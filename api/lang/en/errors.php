@@ -43,6 +43,9 @@ return [
     'refund_exceeds_order' => 'You cannot refund more than the order is worth.',
     'payment_failed' => 'The payment did not go through. Nothing has been charged.',
     'discount_used_up' => 'That code has just been used for the last time. Nothing has been charged.',
+    'entry_slot_required' => "Choose an arrival time before booking.",
+    'entry_slot_full' => "That arrival time is full. Please pick another.",
+    'entry_slot_closed' => "That arrival time is no longer offered.",
     'payment_verification_failed' => 'We could not verify that payment with the gateway. If money left your account, contact us and we will find it.',
 
     // --- Seat maps --------------------------------------------------------------------------

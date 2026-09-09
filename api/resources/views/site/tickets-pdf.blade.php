@@ -16,6 +16,7 @@
         .event { font-size: 15pt; font-weight: bold; margin: 1mm 0 0; }
         .when { font-size: 10pt; color: #3f4756; margin: 1mm 0 0; }
         .seat { font-size: 13pt; font-weight: bold; margin: 4mm 0 0; }
+        .entry { font-size: 11pt; font-weight: bold; margin: 1.5mm 0 0; }
 		.kind { font-size: 10pt; color: #555; margin-block-end: 2mm; }
         .meta { font-size: 8.5pt; color: #5f6878; margin: 1mm 0 0; }
         .code { font-family: monospace; font-size: 7.5pt; color: #5f6878; margin: 3mm 0 0; }
@@ -40,6 +41,16 @@
                         × {{ \App\Support\Locale\Money::number($allocation->quantity ?: 1) }}
                     @endif
                 </div>
+
+                @if ($allocation->entry_starts_at)
+                    {{-- The arrival window, on a timed-entry event. Printed as prominently as the
+                         seat, because it is the thing this holder is actually being told. --}}
+                    <div class="entry">{{ \App\Domain\Events\EntrySlots::window(
+                        $allocation->entry_starts_at,
+                        $allocation->entry_ends_at,
+                        $order->event?->timezone,
+                    ) }}</div>
+                @endif
 
                 @if ($allocation->ticket_type_name)
                     {{-- Printed on the ticket because it is what the door will ask about: a

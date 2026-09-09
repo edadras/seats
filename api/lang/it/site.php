@@ -53,6 +53,10 @@ return [
         'maxTickets' => 'Potete prendere fino a %d biglietti.',
         'removeLine' => 'Rimuovi %s',
         'seatList' => 'Elenco dei posti',
+        'arrivalTime' => "Orario d'ingresso",
+        'chooseArrival' => "Scegliete il vostro orario d'ingresso",
+        'arrivalFull' => "Questo orario d'ingresso si è appena esaurito. Sceglietene un altro.",
+        'arrivalNeeded' => "Scegliete un orario d'ingresso prima di prenotare.",
     ],
 
 
@@ -214,6 +218,10 @@ return [
     'bookingStatus' => 'Questa prenotazione è :status. Se ti sembra sbagliato, contatta il botteghino citando :reference.',
     'holdGone' => 'Quei posti non sono più tenuti. Sceglietene altri.',
     'standing' => 'In piedi',
+    'entry' => [
+        'between' => "Ingresso :from – :to",
+        'title' => "Orario d'ingresso",
+    ],
     'emptyPage' => 'In questa pagina non c’è ancora nulla.',
     'nothingOnSale' => 'Al momento non c’è nulla in vendita. Torna presto.',
     'searchEvents' => 'Cerca',

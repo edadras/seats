@@ -383,6 +383,22 @@
 					'<input class="input" id="c-email" type="email" maxlength="190">' +
 					'<span class="field__hint">' + esc( App.t( 'panel.boxOffice.buyerEmailHint' ) ) +
 					'</span></div>' +
+				// Somebody walking up at ten past ten still has to be put in a window, and the
+				// window still has to have room. Absent on every event that sells no windows.
+				( ( Counter.hall.entry_slots || [] ).length
+					? '<div class="field"><label class="field__label" for="c-slot">' +
+						esc( App.t( 'panel.boxOffice.entry' ) ) + '</label>' +
+						'<select class="select" id="c-slot">' +
+							Counter.hall.entry_slots.map( function ( slot ) {
+								return '<option value="' + esc( slot.id ) + '"' +
+									( slot.sold_out ? ' disabled' : '' ) + '>' +
+									esc( slot.label ) +
+									( slot.sold_out
+										? ' — ' + esc( App.t( 'panel.entrySlots.full' ) )
+										: '' ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>'
+					: '' ) +
 				'<div class="field"><label class="field__label" for="c-payment">' +
 					esc( App.t( 'panel.boxOffice.payment' ) ) + '</label>' +
 					'<select class="select" id="c-payment">' +
@@ -414,6 +430,7 @@
 						name: name,
 						email: document.getElementById( 'c-email' ).value.trim() || null,
 					},
+					entry_slot_id: ( document.getElementById( 'c-slot' ) || {} ).value || null,
 					payment: document.getElementById( 'c-payment' ).value,
 					note: document.getElementById( 'c-note' ).value.trim() || null,
 					send_tickets: document.getElementById( 'c-send' ).checked,

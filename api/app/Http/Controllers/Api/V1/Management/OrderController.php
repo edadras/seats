@@ -91,6 +91,13 @@ class OrderController extends Controller
                 'quantity' => $allocation->seat_id ? 1 : (int) ($allocation->quantity ?: 1),
                 'amount' => (int) $allocation->amount,
                 'status' => $allocation->status,
+                // Written in the venue's clock, because that is the hour this person was told
+                // to stand outside a building.
+                'entry' => \App\Domain\Events\EntrySlots::window(
+                    $allocation->entry_starts_at,
+                    $allocation->entry_ends_at,
+                    $order->event?->timezone,
+                ),
                 'ticket_status' => $allocation->ticket?->status,
                 'used_at' => $allocation->ticket?->used_at?->toIso8601String(),
             ])->values(),

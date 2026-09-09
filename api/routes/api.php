@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\DoorListController;
+use App\Http\Controllers\Api\V1\Management\EntrySlotController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\EventQuestionController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
@@ -102,6 +103,10 @@ Route::prefix('v1')->group(function () {
         // buyer is put through, saved as a whole list for the same reason.
         Route::get('events/{event}/questions', [EventQuestionController::class, 'index']);
         Route::put('events/{event}/questions', [EventQuestionController::class, 'replace']);
+        // When people may come in, on an event whose limit is the room rather than the chair.
+        Route::get('events/{event}/entry-slots', [EntrySlotController::class, 'index']);
+        Route::put('events/{event}/entry-slots', [EntrySlotController::class, 'replace']);
+        Route::post('events/{event}/entry-slots/generate', [EntrySlotController::class, 'generate']);
         Route::get('events/{event}/ticket-types', [TicketTypeController::class, 'index']);
         Route::put('events/{event}/ticket-types', [TicketTypeController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty

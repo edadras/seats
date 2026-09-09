@@ -74,6 +74,9 @@ class CheckoutController extends Controller
             'title' => 'Checkout · '.$site->name,
             'hold' => $hold,
             'lines' => $this->lines($snapshot),
+            // The window they chose, read back from the signed snapshot rather than looked up
+            // again: it is part of what was reserved, and the page must show what was reserved.
+            'entry' => $snapshot['entry'] ?? null,
             'subtotal' => (int) $hold->total_amount,
             'discount' => $offer ? [
                 'code' => $offer->code->code,

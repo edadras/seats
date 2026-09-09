@@ -595,6 +595,43 @@
 	color: var(--seatmap-muted);
 }
 
+/* --- timed entry -------------------------------------------------------------------------
+ *
+ * A choice that has to be made before anything else, so it sits above the seats rather than
+ * below them and is boxed off from the summary it precedes.
+ */
+
+.seatmap-widget__entry {
+	margin: 0 0 0.9rem;
+	padding: 0 0 0.9rem;
+	border-block-end: 1px solid var(--seatmap-border);
+}
+
+.seatmap-widget__entry-title {
+	margin: 0 0 0.4rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__entry-select {
+	inline-size: 100%;
+	padding: 0.5rem 0.6rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-surface);
+	color: inherit;
+	font: inherit;
+	font-size: 0.9rem;
+}
+
+.seatmap-widget__entry-select:focus-visible {
+	outline: 2px solid var(--seatmap-accent);
+	outline-offset: 1px;
+}
+
 .seatmap-widget__selection {
 	margin: 0 0 0.75rem;
 	padding: 0;

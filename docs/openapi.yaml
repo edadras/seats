@@ -842,6 +842,126 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/entry-slots:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: listEntrySlots
+      tags: [Events]
+      summary: When people may come in
+      description: |
+        Requires `events.view`. An empty list is an event that does not sell timed entry, which is
+        not a state to fix: nothing in the picker, the checkout or the ticket then mentions an
+        arrival time at all. Whether an event *is* timed entry is answered by whether it has any
+        open window — there is no separate switch to leave in the wrong position.
+
+        `capacity` is how many people may come in during the window. Null is a window that limits
+        nothing, which is different from a window with no room left: some runs stagger arrivals for
+        the queue's sake and have one hall behind it.
+
+        `sold` counts places already sold into each window. It is the reason a row cannot be
+        removed, said on the row rather than in an error afterwards.
+      responses:
+        "200":
+          description: The windows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EntrySlot" }
+                  timezone:
+                    type: [string, "null"]
+                    description: "The event's own zone, which is the clock its windows are read in."
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: replaceEntrySlots
+      tags: [Events]
+      summary: Replace the whole timetable
+      description: |
+        Requires `events.manage`. Saved as a whole list, like the ticket types and the questions: a
+        day's timetable is one decision about the event, and editing it a window at a time is how a
+        Saturday ends up with a gap in it.
+
+        Windows may not overlap. The whole point of timed entry is that a limit means something,
+        and two overlapping hundreds would put two hundred people in a hall that holds one.
+
+        A window somebody has been sold into cannot be left out of the list: their ticket says to
+        arrive between ten and half past, and removing the row would leave the door with an arrival
+        time it cannot look up. Close it instead — that stops it being sold and leaves what was
+        sold intact.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slots]
+              properties:
+                slots:
+                  type: array
+                  maxItems: 96
+                  items: { $ref: "#/components/schemas/EntrySlotWrite" }
+      responses:
+        "200":
+          description: The windows, as saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EntrySlot" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A window that has been sold was left out of the list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /events/{event}/entry-slots/generate:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    post:
+      operationId: generateEntrySlots
+      tags: [Events]
+      summary: Fill a day with windows of one length
+      description: |
+        Requires `events.manage`. Nothing is saved: this hands back rows for the caller to show,
+        change and then PUT, so an organiser sees the timetable they are about to create before
+        anything exists. A generator that wrote straight to the database would be a generator
+        nobody dares press twice.
+
+        A window that would run past `ends_at` is not made — an organiser who says the last entry
+        is at four means four, not four twenty — and at most 96 come back.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [starts_at, ends_at, minutes]
+              properties:
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                minutes: { type: integer, minimum: 5, maximum: 720 }
+                capacity: { type: [integer, "null"], minimum: 1 }
+      responses:
+        "200":
+          description: The windows this would create
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EntrySlotWrite" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/ticket-types:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -2344,6 +2464,17 @@ paths:
                   additionalProperties:
                     type: object
                     additionalProperties: { type: integer, minimum: 1 }
+                entry_slot_id:
+                  type: [string, "null"]
+                  format: uuid
+                  description: |
+                    Which arrival window, on an event that sells timed entry. Required there and
+                    refused everywhere else: a slot silently dropped would print a ticket with no
+                    arrival time on it and nobody would know why.
+
+                    Refused with `entry_slot_required`, `unknown_entry_slot`, `entry_slot_closed`
+                    or `entry_slot_full` before any seat is locked, and re-checked under a lock
+                    while the booking is made — the second answer is the one that counts.
                 session_id:
                   type: string
                   description: Opaque per-browser identifier, used for rate limiting and re-hold.
@@ -3053,6 +3184,13 @@ paths:
                   additionalProperties:
                     type: object
                     additionalProperties: { type: integer, minimum: 1 }
+                entry_slot_id:
+                  type: [string, "null"]
+                  format: uuid
+                  description: >-
+                    Which arrival window. The counter sells timed entry too: somebody walking up at
+                    ten past ten still has to be put in a window, and the window still has to have
+                    room.
                 buyer:
                   type: object
                   required: [name]
@@ -3114,6 +3252,12 @@ paths:
           in: query
           description: "`out` for those not in yet, `in` for those already through."
           schema: { type: string, enum: [in, out] }
+        - name: entry_slot_id
+          in: query
+          description: >-
+            One arrival window, on a timed-entry event. The ten o'clock queue is one list and the
+            eleven o'clock is another, which is how a door actually works.
+          schema: { type: string, format: uuid }
         - name: per_page
           in: query
           schema: { type: integer, minimum: 10, maximum: 200, default: 50 }
@@ -3143,6 +3287,12 @@ paths:
                       id: { type: string, format: uuid }
                       name: { type: string }
                       starts_at: { type: [string, "null"], format: date-time }
+                  entry_slots:
+                    type: array
+                    description: >-
+                      The windows to read the night by. Empty on an event that has none, and the
+                      screen then offers no filter rather than an empty one.
+                    items: { $ref: "#/components/schemas/EntrySlot" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /events/{event}/door-list/export:
@@ -3163,6 +3313,9 @@ paths:
         - name: state
           in: query
           schema: { type: string, enum: [in, out] }
+        - name: entry_slot_id
+          in: query
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: CSV, with a byte-order mark so a spreadsheet opens Persian headings as text
@@ -4604,6 +4757,44 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    EntrySlot:
+      type: object
+      description: >-
+        One arrival window of a timed-entry event. The event's timezone is the clock these are read
+        in; the instants themselves are absolute.
+      properties:
+        id: { type: string, format: uuid }
+        label:
+          type: string
+          description: "What to call it — the organiser's own name, or the window's own clock."
+        name:
+          type: [string, "null"]
+          description: "The name as it was actually typed, usually null."
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        capacity:
+          type: [integer, "null"]
+          description: "How many may come in. Null limits nothing."
+        taken: { type: integer, description: "Places held or sold in this window." }
+        remaining: { type: [integer, "null"] }
+        sold: { type: integer, description: "Places sold — why a window cannot be removed." }
+        status: { type: string, enum: [open, closed] }
+        sold_out: { type: boolean }
+
+    EntrySlotWrite:
+      type: object
+      required: [starts_at, ends_at]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+          description: "Present to edit a window, absent to create one."
+        label: { type: [string, "null"], maxLength: 80 }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        capacity: { type: [integer, "null"], minimum: 1 }
+        status: { type: string, enum: [open, closed], default: open }
+
     Settlement:
       type: object
       properties:
@@ -5209,6 +5400,11 @@ components:
         seat: { type: string }
         quantity: { type: integer, description: "More than one only for standing places." }
         ticket_type: { type: [string, "null"] }
+        entry_starts_at:
+          type: [string, "null"]
+          format: date-time
+          description: "When this person was told to arrive. Null on an event without windows."
+        entry_ends_at: { type: [string, "null"], format: date-time }
         code: { type: string, description: "The ticket code's visible prefix, for reading aloud." }
         arrived: { type: boolean }
         arrived_at: { type: [string, "null"], format: date-time }
@@ -5574,6 +5770,12 @@ components:
               state: { type: string, enum: [available, held, allocated, blocked] }
               amount: { type: [integer, "null"] }
               zone_key: { type: [string, "null"] }
+        entry_slots:
+          type: array
+          description: >-
+            The arrival windows still on sale, with how full each one is. Empty on every event that
+            is not timed entry, which is how a picker knows not to ask.
+          items: { $ref: "#/components/schemas/EntrySlot" }
 
     Hold:
       type: object
@@ -5707,6 +5909,25 @@ components:
             section: { type: [string, "null"] }
             row: { type: [string, "null"] }
             label: { type: [string, "null"] }
+        ticket_type:
+          type: [string, "null"]
+          description: >-
+            What kind of ticket this is, so the door knows to ask for the student card the discount
+            was given for. Null on an event that sells one kind.
+        entry:
+          type: [object, "null"]
+          description: |
+            The arrival window this person was sold into, and whether they are inside it.
+
+            Shown, not enforced. A scanner that refused a valid ticket because somebody arrived ten
+            minutes early would put a queue at the door with no way out of it, and the person
+            holding the tablet is far better placed to decide than a clock on a server. What timed
+            entry actually enforces is the selling: a window only ever holds as many people as it
+            was given.
+          properties:
+            starts_at: { type: string, format: date-time }
+            ends_at: { type: [string, "null"], format: date-time }
+            state: { type: string, enum: [early, on_time, late] }
 
     Member:
       type: object

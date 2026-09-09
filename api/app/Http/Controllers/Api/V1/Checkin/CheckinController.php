@@ -192,9 +192,39 @@ class CheckinController extends Controller
                 // discount was given for. Null on an event that sells one kind, and the scanner
                 // then shows nothing rather than an empty field.
                 'ticket_type' => $ticket->allocation?->ticket_type_name,
+                /*
+                 * The window this person was sold into, and whether they are inside it.
+                 *
+                 * Shown, not enforced. A scanner that refused a valid ticket because somebody
+                 * arrived ten minutes early would put a queue at the door with no way out of it,
+                 * and the person holding the tablet is far better placed to decide than a clock
+                 * on a server. What timed entry actually enforces is the selling: a window only
+                 * ever holds as many people as it was given.
+                 */
+                'entry' => $ticket->allocation?->entry_starts_at ? [
+                    'starts_at' => $ticket->allocation->entry_starts_at->toIso8601String(),
+                    'ends_at' => $ticket->allocation->entry_ends_at?->toIso8601String(),
+                    'state' => $this->entryState($ticket->allocation),
+                ] : null,
             ] : null,
             'first_scan' => $result['first_scan'],
         ], fn ($v) => $v !== null);
+    }
+
+    /** `early`, `on_time` or `late` — the sentence the door needs, not a decision it must obey. */
+    private function entryState(\App\Models\Allocation $allocation): string
+    {
+        $now = now();
+
+        if ($now->lessThan($allocation->entry_starts_at)) {
+            return 'early';
+        }
+
+        if ($allocation->entry_ends_at && $now->greaterThan($allocation->entry_ends_at)) {
+            return 'late';
+        }
+
+        return 'on_time';
     }
 
     private function presentEvent(Event $event): array

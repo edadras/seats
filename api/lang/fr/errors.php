@@ -39,6 +39,9 @@ return [
     'refund_exceeds_order' => 'Vous ne pouvez pas rembourser plus que le montant de la commande.',
     'payment_failed' => 'Le paiement n’a pas abouti. Rien n’a été débité.',
     'discount_used_up' => 'Ce code vient d’être utilisé pour la dernière fois. Rien n’a été débité.',
+    'entry_slot_required' => "Choisissez une heure d'arrivée avant de réserver.",
+    'entry_slot_full' => "Cette heure d'arrivée est complète. Veuillez en choisir une autre.",
+    'entry_slot_closed' => "Cette heure d'arrivée n'est plus proposée.",
     'payment_verification_failed' => 'Nous n’avons pas pu confirmer ce paiement auprès de la passerelle. Si de l’argent a quitté votre compte, contactez-nous et nous le retrouverons.',
 
     // --- Plans de salle ---------------------------------------------------------------------

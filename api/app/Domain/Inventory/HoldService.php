@@ -38,6 +38,7 @@ class HoldService
     public function __construct(
         private readonly PriceSigner $signer,
         private readonly TenantContext $tenantContext,
+        private readonly \App\Domain\Events\EntrySlots $slots,
     ) {}
 
     /**
@@ -51,6 +52,9 @@ class HoldService
      *                                            => quantity), splitting one area's places between
      *                                            types. Where present it replaces `$capacity`'s
      *                                            plain number for that object.
+     * @param  ?string  $entrySlotId  Which arrival window, on an event that sells timed entry.
+     *                                Required there and refused everywhere else: a slot silently
+     *                                dropped would print a ticket with no arrival time on it.
      */
     public function create(
         Event $event,
@@ -61,6 +65,7 @@ class HoldService
         array $capacity = [],
         array $seatTypes = [],
         array $areaTypes = [],
+        ?string $entrySlotId = null,
     ): Hold {
         if (! $event->isSellable()) {
             throw ApiException::conflict('event_not_sellable', 'This event is not currently on sale.');
@@ -98,13 +103,33 @@ class HoldService
 
         $this->assertSessionWithinLimit($event, $sessionId);
 
+        // Settled before anything is locked, so a buyer whose window filled while they were
+        // choosing is told about the window rather than watching a booking fail.
+        $slot = $this->slots->resolve($event, $entrySlotId, $requested);
+
         // Deterministic ordering, decided before the transaction opens.
         sort($seatIds);
 
         try {
             return DB::transaction(function () use (
-                $event, $seatIds, $capacity, $sessionId, $apiClientId, $ip, $areaTypes, $types
+                $event, $seatIds, $capacity, $sessionId, $apiClientId, $ip, $areaTypes, $types,
+                $slot, $requested
             ) {
+                /*
+                 * The window, before the seats.
+                 *
+                 * Taken first and always in this order: a request that locks a window and then
+                 * seats can never deadlock against one doing the same, and the recheck under the
+                 * lock is the answer that actually decides — the one above it was advice.
+                 */
+                if ($slot && null !== $slot->capacity) {
+                    $this->slots->lock($event, $slot);
+
+                    if ($this->slots->remaining($event, $slot) < $requested) {
+                        throw ApiException::conflict('entry_slot_full', 'That arrival time is full.');
+                    }
+                }
+
                 $seats = $seatIds === [] ? collect() : $this->lockSeats($event, $seatIds);
 
                 if ($seatIds !== []) {
@@ -121,7 +146,8 @@ class HoldService
                 $capacityLines = $this->reserveCapacity($event, $capacity, $areaTypes, $types);
 
                 $hold = $this->insertHold(
-                    $event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines, $types
+                    $event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines, $types,
+                    $slot
                 );
 
                 $event->bumpAvailabilityVersion();
@@ -616,6 +642,7 @@ class HoldService
         ?string $ip,
         array $capacityLines = [],
         array $types = [],
+        ?\App\Models\EntrySlot $slot = null,
     ): Hold {
         $total = 0;
         $seatAmounts = [];
@@ -646,6 +673,9 @@ class HoldService
             'total_amount' => $total,
             'price_snapshot' => [],
             'ip' => $ip,
+            // On the hold rather than on each item: a booking is one arrival, and a family that
+            // buys four places comes through the door together.
+            'entry_slot_id' => $slot?->id,
         ]);
 
         $now = now();
@@ -701,7 +731,7 @@ class HoldService
     {
         $hold->loadMissing(['items.seat.section', 'items.seat.row']);
 
-        $hold->loadMissing(['items.capacityObject', 'items.ticketType']);
+        $hold->loadMissing(['items.capacityObject', 'items.ticketType', 'entrySlot']);
 
         $seats = $hold->items->reject(fn (HoldItem $item) => $item->isCapacity())
             ->map(fn (HoldItem $item) => [
@@ -739,6 +769,15 @@ class HoldService
             'expires_at' => $hold->expires_at->toIso8601String(),
             'seats' => $seats,
             'areas' => $areas,
+            // Signed with the rest of the cart: the arrival time is part of what was bought, and
+            // a checkout page that had to look it up again could show a window that has since
+            // been renamed or withdrawn.
+            'entry' => $hold->entrySlot ? [
+                'id' => $hold->entrySlot->id,
+                'label' => $hold->entrySlot->label,
+                'starts_at' => $hold->entrySlot->starts_at?->toIso8601String(),
+                'ends_at' => $hold->entrySlot->ends_at?->toIso8601String(),
+            ] : null,
         ];
 
         return $this->signer->sign($payload) + ['decoded' => $payload];

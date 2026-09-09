@@ -154,6 +154,7 @@ class OrderService
             }
 
             $event = $order->event;
+            $hold->loadMissing('entrySlot');
             $items = HoldItem::with(['seat.section', 'seat.row', 'capacityObject', 'ticketType'])
                 ->where('hold_id', $hold->id)
                 ->whereNull('released_at')
@@ -183,6 +184,12 @@ class OrderService
                     'amount' => $item->amount,
                     'currency' => $order->currency,
                     'seat_map_version_id' => $hold->seat_map_version_id,
+                    // Copied off the hold, and the window's own times copied beside it: an
+                    // organiser who rewrites tomorrow's timetable must not change what a ticket
+                    // already in somebody's pocket says they were told to arrive.
+                    'entry_slot_id' => $hold->entry_slot_id,
+                    'entry_starts_at' => $hold->entrySlot?->starts_at,
+                    'entry_ends_at' => $hold->entrySlot?->ends_at,
                     // Denormalised at sale time so a ticket stays readable even if a later map
                     // version renames the section. Standing room has no row or seat, so its area
                     // name goes in the section column and the label says what it is.

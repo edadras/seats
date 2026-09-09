@@ -35,6 +35,7 @@ class DoorListController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'state' => ['nullable', 'in:in,out'],
+            'entry_slot_id' => ['nullable', 'uuid'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:200'],
         ]);
 
@@ -45,7 +46,7 @@ class DoorListController extends Controller
 
         return response()->json([
             'data' => collect($rows->items())
-                ->map(fn ($row) => $this->list->present($row, $answers))
+                ->map(fn ($row) => $this->list->present($row, $answers, $event->timezone))
                 ->values(),
             'meta' => [
                 'page' => $rows->currentPage(),
@@ -58,6 +59,9 @@ class DoorListController extends Controller
                 'name' => $event->name,
                 'starts_at' => $event->starts_at?->toIso8601String(),
             ],
+            // The windows to read the night by, on an event that has any. Empty everywhere else,
+            // and the screen offers no filter rather than an empty one.
+            'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event),
         ]);
     }
 
@@ -74,6 +78,7 @@ class DoorListController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'state' => ['nullable', 'in:in,out'],
+            'entry_slot_id' => ['nullable', 'uuid'],
         ]);
 
         $query = $this->list->query($event, $filters);
@@ -88,6 +93,7 @@ class DoorListController extends Controller
             __('panel.doorList.name'),
             __('panel.doorList.seat'),
             __('panel.doorList.ticketType'),
+            __('panel.doorList.entry'),
             __('panel.doorList.reference'),
             __('panel.doorList.email'),
             __('panel.doorList.code'),
@@ -115,12 +121,13 @@ class DoorListController extends Controller
                 $answers = $list->answersFor($event, $rows->all());
 
                 foreach ($rows as $raw) {
-                    $row = $list->present($raw, $answers);
+                    $row = $list->present($raw, $answers, $event->timezone);
 
                     fputcsv($handle, [
                         $row['name'],
                         $row['seat'],
                         $row['ticket_type'] ?? '',
+                        $row['entry'] ?? '',
                         $row['reference'],
                         $row['email'],
                         $row['code'],

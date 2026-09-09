@@ -225,6 +225,12 @@ class BuyerAccountController extends Controller
                         $allocation->seat_id ? $allocation->seat_label : null,
                     ]))),
                     'quantity' => $allocation->seat_id ? 1 : (int) ($allocation->quantity ?: 1),
+                    // When they were told to arrive, on a timed-entry booking.
+                    'entry' => \App\Domain\Events\EntrySlots::window(
+                        $allocation->entry_starts_at,
+                        $allocation->entry_ends_at,
+                        $order->event?->timezone,
+                    ),
                     'used' => (bool) $allocation->ticket?->used_at,
                     // Who is holding it now, when that is no longer the person who bought it.
                     'holder' => $allocation->ticket?->holder_name,

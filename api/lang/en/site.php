@@ -56,6 +56,10 @@ return [
         'maxTickets' => 'You can take up to %d tickets.',
         'removeLine' => 'Remove %s',
         'seatList' => 'Seat list',
+        'arrivalTime' => "Arrival time",
+        'chooseArrival' => "Choose when you will arrive",
+        'arrivalFull' => "That arrival time filled up while you were choosing. Please pick another.",
+        'arrivalNeeded' => "Choose an arrival time before reserving.",
     ],
 
     /* The block vocabulary, as the panel's block picker names it (Blocks::describe). */
@@ -218,6 +222,10 @@ return [
     'bookingStatus' => 'This booking is :status. If that looks wrong, contact the box office and quote :reference.',
     'holdGone' => 'Those seats are no longer held. Please choose again.',
     'standing' => 'Standing',
+    'entry' => [
+        'between' => "Entry :from – :to",
+        'title' => "Arrival time",
+    ],
     'emptyPage' => 'This page has nothing on it yet.',
     'nothingOnSale' => 'Nothing on sale just now. Check back soon.',
     'searchEvents' => 'Search',

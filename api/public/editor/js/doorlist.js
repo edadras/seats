@@ -17,7 +17,8 @@
 		App: null,
 		events: [],
 		eventId: '',
-		filters: { q: '', state: '' },
+		filters: { q: '', state: '', entry_slot_id: '' },
+		slots: [],
 		timer: null,
 		meta: null,
 	};
@@ -72,6 +73,20 @@
 									esc( App.t( 'panel.doorList.states.' + ( state || 'any' ) ) ) + '</option>';
 							} ).join( '' ) +
 						'</select>' +
+						// Only where there are windows to read the night by. An event with none
+						// gets no filter rather than an empty one.
+						( Door.slots.length
+							? '<select class="select" id="door-slot" aria-label="' +
+								esc( App.t( 'panel.doorList.entry' ) ) + '">' +
+								'<option value="">' + esc( App.t( 'panel.doorList.anyEntry' ) ) +
+									'</option>' +
+								Door.slots.map( function ( slot ) {
+									return '<option value="' + esc( slot.id ) + '"' +
+										( slot.id === Door.filters.entry_slot_id ? ' selected' : '' ) +
+										'>' + esc( slot.label ) + '</option>';
+								} ).join( '' ) +
+							'</select>'
+							: '' ) +
 					'</div>'
 					: App.emptyState( 'calendar', App.t( 'panel.doorList.noEventsTitle' ),
 						esc( App.t( 'panel.doorList.noEventsBody' ) ) ) ) +
@@ -90,7 +105,13 @@
 			} );
 		}
 
-		[ [ 'door-event', 'eventId' ], [ 'door-state', 'state' ] ].forEach( function ( pair ) {
+		var fields = [
+			[ 'door-event', 'eventId' ],
+			[ 'door-state', 'state' ],
+			[ 'door-slot', 'entry_slot_id' ],
+		];
+
+		fields.forEach( function ( pair ) {
 			var field = document.getElementById( pair[ 0 ] );
 
 			if ( ! field ) {
@@ -100,10 +121,15 @@
 			field.addEventListener( 'change', function () {
 				if ( 'eventId' === pair[ 1 ] ) {
 					Door.eventId = field.value;
-				} else {
-					Door.filters.state = field.value;
+					// A window belongs to one event; carrying it to the next would filter the new
+					// night by a time it has never heard of and show nobody.
+					Door.filters.entry_slot_id = '';
+					Door.load( true );
+
+					return;
 				}
 
+				Door.filters[ pair[ 1 ] ] = field.value;
 				Door.load();
 			} );
 		} );
@@ -129,10 +155,14 @@
 			parts.push( 'state=' + Door.filters.state );
 		}
 
+		if ( Door.filters.entry_slot_id ) {
+			parts.push( 'entry_slot_id=' + encodeURIComponent( Door.filters.entry_slot_id ) );
+		}
+
 		return parts.length ? '?' + parts.join( '&' ) : '';
 	};
 
-	Door.load = function () {
+	Door.load = function ( repaint ) {
 		var App = Door.App;
 		var host = document.getElementById( 'door-rows' );
 
@@ -143,6 +173,20 @@
 		App.request( 'GET', '/events/' + Door.eventId + '/door-list' + Door.query() )
 			.then( function ( response ) {
 				Door.meta = response.meta;
+
+				var slots = response.entry_slots || [];
+				var changed = slots.length !== Door.slots.length;
+
+				Door.slots = slots;
+
+				// The filter row itself has to be rebuilt when the windows change, which happens
+				// when the event does. Everything else redraws in place.
+				if ( repaint || changed ) {
+					Door.paint();
+
+					return Door.load();
+				}
+
 				document.getElementById( 'door-tally' ).innerHTML = Door.tallyMarkup( App, response.meta );
 				host.innerHTML = Door.rowsMarkup( App, response );
 			} )
@@ -173,6 +217,7 @@
 				App.t( 'panel.doorList.name' ),
 				App.t( 'panel.doorList.seat' ),
 				App.t( 'panel.doorList.reference' ),
+				App.t( 'panel.doorList.entry' ),
 				App.t( 'panel.doorList.arrived' ),
 			],
 			response.data.map( function ( row ) {
@@ -192,6 +237,11 @@
 							? ' <span class="muted">× ' + esc( App.number( row.quantity ) ) + '</span>'
 							: '' ) + '</td>' +
 					'<td class="muted"><code>' + esc( row.reference ) + '</code></td>' +
+					// Written by the server in the venue's own clock, not the reader's browser:
+					// this is the hour somebody was told to stand outside a building.
+					'<td class="tnum">' + ( row.entry
+						? esc( row.entry )
+						: '<span class="muted">—</span>' ) + '</td>' +
 					'<td>' + ( row.arrived
 						? '<span class="badge badge--ok">' +
 							esc( row.arrived_at

@@ -37,6 +37,7 @@
 			{ key: 'tickets', icon: 'ticket' },
 			{ key: 'doorlist', icon: 'check' },
 			{ key: 'questions', icon: 'file' },
+			{ key: 'entryslots', icon: 'clock' },
 			{ key: 'discounts', icon: 'tag' },
 		] },
 		{ group: 'venue', items: [
@@ -612,6 +613,7 @@
 			case 'counter': return window.SeatmapCounter.render( this );
 			case 'doorlist': return window.SeatmapDoorList.render( this );
 			case 'questions': return window.SeatmapQuestions.render( this );
+			case 'entryslots': return window.SeatmapEntrySlots.render( this );
 			case 'security': return window.SeatmapSecurity.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );

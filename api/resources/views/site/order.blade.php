@@ -64,6 +64,14 @@
                             @endif
                         </p>
 
+                        @if ($allocation->entry_starts_at)
+                            <p class="ticket__type">{{ \App\Domain\Events\EntrySlots::window(
+                                $allocation->entry_starts_at,
+                                $allocation->entry_ends_at,
+                                $order->event?->timezone,
+                            ) }}</p>
+                        @endif
+
                         @if ($allocation->ticket_type_name)
                             <p class="ticket__type" dir="auto">{{ $allocation->ticket_type_name }}</p>
                         @endif

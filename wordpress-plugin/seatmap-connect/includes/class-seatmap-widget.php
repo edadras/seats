@@ -206,6 +206,12 @@ class Seatmap_Widget {
 							'removeLine'     => __( 'Remove %s', 'seatmap-connect' ),
 							// The disclosure the chairs are folded into; the plan is where they are picked.
 							'seatList'       => __( 'Seat list', 'seatmap-connect' ),
+							// Timed entry: a window a buyer has to choose before anything can be
+							// reserved, on an event whose limit is the room rather than the chair.
+							'arrivalTime'    => __( 'Arrival time', 'seatmap-connect' ),
+							'chooseArrival'  => __( 'Choose when you will arrive', 'seatmap-connect' ),
+							'arrivalFull'    => __( 'That arrival time filled up while you were choosing. Please pick another.', 'seatmap-connect' ),
+							'arrivalNeeded'  => __( 'Choose an arrival time before reserving.', 'seatmap-connect' ),
 						),
 					)
 				)

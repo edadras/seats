@@ -39,6 +39,9 @@ return [
     'refund_exceeds_order' => 'Non puoi rimborsare più del valore dell’ordine.',
     'payment_failed' => 'Il pagamento non è andato a buon fine. Non è stato addebitato nulla.',
     'discount_used_up' => 'Questo codice è appena stato usato per l’ultima volta. Non è stato addebitato nulla.',
+    'entry_slot_required' => "Scegliete un orario d'ingresso prima di prenotare.",
+    'entry_slot_full' => "Questo orario d'ingresso è esaurito. Sceglietene un altro.",
+    'entry_slot_closed' => "Questo orario d'ingresso non è più offerto.",
     'payment_verification_failed' => 'Non siamo riusciti a verificare il pagamento presso il gateway. Se è stato addebitato del denaro, contattaci e lo rintracceremo.',
 
     // --- Piante della sala ------------------------------------------------------------------

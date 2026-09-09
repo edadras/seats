@@ -39,6 +39,9 @@ return [
     'refund_exceeds_order' => 'Sie können nicht mehr erstatten, als die Bestellung wert ist.',
     'payment_failed' => 'Die Zahlung ist nicht zustande gekommen. Es wurde nichts abgebucht.',
     'discount_used_up' => 'Dieser Code wurde soeben zum letzten Mal eingelöst. Es wurde nichts abgebucht.',
+    'entry_slot_required' => "Wählen Sie eine Einlasszeit, bevor Sie buchen.",
+    'entry_slot_full' => "Diese Einlasszeit ist voll. Bitte wählen Sie eine andere.",
+    'entry_slot_closed' => "Diese Einlasszeit wird nicht mehr angeboten.",
     'payment_verification_failed' => 'Wir konnten diese Zahlung beim Anbieter nicht bestätigen. Falls Geld abgebucht wurde, melden Sie sich – wir finden es.',
 
     // --- Saalpläne --------------------------------------------------------------------------

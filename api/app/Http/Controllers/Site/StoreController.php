@@ -38,6 +38,7 @@ class StoreController extends Controller
             'full' => true,
             'seats' => $this->availability->forEvent($event),
             'areas' => $this->availability->capacityForEvent($event),
+            'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event, openOnly: true),
         ]);
     }
 
@@ -57,6 +58,7 @@ class StoreController extends Controller
             'area_types' => ['sometimes', 'array', 'max:20'],
             'area_types.*' => ['array', 'max:20'],
             'area_types.*.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
+            'entry_slot_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
 
         $event = $this->event($data['event_public_id']);
@@ -70,6 +72,7 @@ class StoreController extends Controller
             $data['areas'] ?? [],
             $data['seat_types'] ?? [],
             $data['area_types'] ?? [],
+            $data['entry_slot_id'] ?? null,
         );
 
         // The token goes in the session, not to the browser as an identifier it could swap: the

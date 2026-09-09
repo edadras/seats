@@ -46,6 +46,8 @@ class DoorList
                 'allocations.seat_id',
                 'allocations.quantity',
                 'allocations.ticket_type_name',
+                'allocations.entry_starts_at',
+                'allocations.entry_ends_at',
                 'external_orders.external_order_id as reference',
                 DB::raw("coalesce(external_orders.buyer->>'name', '') as buyer_name"),
                 DB::raw("coalesce(external_orders.buyer->>'email', '') as buyer_email"),
@@ -75,7 +77,14 @@ class DoorList
             $query->where('tickets.status', 'issued');
         }
 
+        if (($filters['entry_slot_id'] ?? '') !== '') {
+            $query->where('allocations.entry_slot_id', $filters['entry_slot_id']);
+        }
+
         return $query
+            // On a timed-entry event the door reads by arrival window before anything else: the
+            // people coming at ten are one list and the people coming at eleven are another.
+            ->orderByRaw('allocations.entry_starts_at ASC NULLS FIRST')
             ->orderBy('external_orders.external_order_id')
             ->orderBy('allocations.section_name')
             ->orderBy('allocations.row_name')
@@ -133,8 +142,14 @@ class DoorList
         return $answers;
     }
 
-    /** One row, shaped the same for every surface that shows it. */
-    public function present(object $row, array $answers = []): array
+    /**
+     * One row, shaped the same for every surface that shows it.
+     *
+     * @param  ?string  $timezone  the venue's own clock, which is what an arrival window is
+     *                             written in — a door list that spelled it in UTC would send
+     *                             somebody to a door an hour early
+     */
+    public function present(object $row, array $answers = [], ?string $timezone = null): array
     {
         return [
             'id' => $row->id,
@@ -149,6 +164,18 @@ class DoorList
                 : trim($row->section_name),
             'quantity' => $row->seat_id ? 1 : max(1, (int) $row->quantity),
             'ticket_type' => $row->ticket_type_name,
+            // When this person was told to arrive, on a timed-entry event. Null everywhere else,
+            // and the door shows nothing rather than an empty column.
+            'entry_starts_at' => $row->entry_starts_at,
+            'entry_ends_at' => $row->entry_ends_at,
+            // The bare clock, not the sentence: this sits under a column already headed "Entry".
+            'entry' => $row->entry_starts_at
+                ? \App\Domain\Events\EntrySlots::range(
+                    new \DateTimeImmutable((string) $row->entry_starts_at),
+                    $row->entry_ends_at ? new \DateTimeImmutable((string) $row->entry_ends_at) : null,
+                    $timezone,
+                )
+                : null,
             'code' => $row->token_prefix,
             'arrived' => 'used' === $row->status,
             'arrived_at' => $row->used_at,
