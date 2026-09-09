@@ -80,7 +80,7 @@ class SitePageController extends Controller
 
     private function render(Site $site, ?SitePage $page, array $blocks, array $meta)
     {
-        $brand = Themes::resolveBrand($site->theme_key, $site->brand ?? []);
+        $brand = Themes::forSite($site);
 
         return response()->view('site.page', [
             'site' => $site,

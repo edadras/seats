@@ -19,7 +19,7 @@ class Site extends Model
     use BelongsToTenant, HasFactory, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'api_client_id', 'name', 'theme_key', 'locale', 'timezone',
+        'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'timezone',
         'currency', 'brand', 'status', 'published_at',
     ];
 
@@ -27,6 +27,17 @@ class Site extends Model
         'brand' => 'array',
         'published_at' => 'datetime',
     ];
+
+    /**
+     * The theme this organiser wrote, when the site wears one.
+     *
+     * Null means a first-party theme, named by `theme_key`. The relation is nulled rather than
+     * blocked on delete, so a site is never left rendering with nothing.
+     */
+    public function customTheme()
+    {
+        return $this->belongsTo(SiteTheme::class, 'site_theme_id');
+    }
 
     public function domains()
     {

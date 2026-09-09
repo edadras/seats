@@ -783,18 +783,41 @@
 
 		var themes = document.getElementById( 'themes' );
 
-		( state.meta.themes || [] ).forEach( function ( theme ) {
-			var card = node( 'button', 'theme-card' + ( theme.key === site.theme_key ? ' is-active' : '' ) );
+		/*
+		 * Ours and the account's own, on one screen. The swatch is painted from the theme's own
+		 * tokens rather than from a class per theme, so a theme somebody wrote this morning shows
+		 * its real colours without a stylesheet being edited.
+		 */
+		function themeCard( theme, active, onPick ) {
+			var tokens = theme.tokens || {};
+			var card = node( 'button', 'theme-card' + ( active ? ' is-active' : '' ) );
+
 			card.innerHTML =
-				'<span class="theme-card__swatch theme-card__swatch--' + esc( theme.key ) + '"></span>' +
+				'<span class="theme-card__swatch" style="background:linear-gradient(150deg,' +
+					esc( tokens.surface || '#ffffff' ) + ' 45%,' + esc( tokens.accent || '#4a4fdc' ) +
+					' 45%)"></span>' +
 				'<span class="theme-card__body"><strong>' + esc( theme.name ) + '</strong>' +
-				'<span class="muted">' + esc( theme.description ) + '</span></span>';
+				'<span class="muted">' + esc( theme.description || '' ) + '</span></span>';
 
-			card.addEventListener( 'click', function () {
-				Sites.saveSite( App, { theme_key: theme.key } );
-			} );
-
+			card.addEventListener( 'click', onPick );
 			themes.appendChild( card );
+		}
+
+		( state.meta.themes || [] ).forEach( function ( theme ) {
+			themeCard( theme, ! site.site_theme_id && theme.key === site.theme_key, function () {
+				// Choosing one of ours also takes the site out of whatever custom theme it wore.
+				Sites.saveSite( App, { theme_key: theme.key, site_theme_id: null } );
+			} );
+		} );
+
+		( state.meta.custom || [] ).forEach( function ( theme ) {
+			themeCard(
+				{ name: theme.name, tokens: theme.tokens, description: App.t( 'themes.basedOn', {
+					theme: theme.base_key,
+				} ) },
+				site.site_theme_id === theme.id,
+				function () { Sites.saveSite( App, { site_theme_id: theme.id } ); }
+			);
 		} );
 
 		var fields = document.getElementById( 'brand' );
@@ -811,7 +834,7 @@
 		accent.className = 'swatch';
 		accent.value = brand.accent || ( ( state.meta.themes || [] ).filter( function ( t ) {
 			return t.key === site.theme_key;
-		} )[ 0 ] || { defaults: {} } ).defaults.accent || '#4a4fdc';
+		} )[ 0 ] || { tokens: {} } ).tokens.accent || '#4a4fdc';
 		accent.addEventListener( 'change', function () {
 			Sites.saveBrand( App, { accent: accent.value } );
 		} );

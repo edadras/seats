@@ -1,12 +1,16 @@
-/* Aurora — light, roomy and quiet. The default. */
-:root {
-	--surface: #ffffff;
-	--surface-sunken: #f6f7fb;
-	--border: #e4e7ee;
-	--text: #16181f;
-	--text-muted: #5d6577;
-	--on-accent: #ffffff;
+/*
+ * Aurora — light, roomy and quiet. The default.
+ *
+ * Colour, type and roundness come from the theme's tokens, which are emitted after this file
+ * (App\Domain\Sites\ThemeTokens). What lives here is the structure that tokens cannot say.
+ */
+.masthead {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 5;
+	backdrop-filter: blur(8px);
+	background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
-.masthead { position: sticky; inset-block-start: 0; z-index: 5; backdrop-filter: blur(8px); background: rgba(255,255,255,0.86); }
-.event-card { box-shadow: 0 1px 2px rgba(22,24,31,0.04); }
+.event-card { transition: transform 120ms ease, box-shadow 120ms ease; }
+.event-card:hover { transform: translateY(-1px); }

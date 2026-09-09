@@ -1,0 +1,48 @@
+/*
+ * Marquee — loud. A headline you can read from the street.
+ *
+ * The type is a token decision (condensed, uppercase, heavy). What is here is the furniture that
+ * goes with it: a hard rule under the masthead, blocks that touch, and no rounded anything.
+ */
+.masthead {
+	border-block-end-width: 4px;
+	border-block-end-color: var(--accent);
+}
+
+.brand__name {
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	font-weight: 800;
+}
+
+
+.event-card {
+	border-width: 0 0 1px 0;
+	border-radius: 0;
+	padding-inline: 0;
+	background: transparent;
+}
+
+.event-card__when {
+	background: var(--accent);
+	color: var(--on-accent);
+	font-weight: 700;
+}
+
+.button { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.footer { background: var(--surface-sunken); }
+
+/* Committed to dark, so the picker is told rather than left to guess (see noir.css). */
+.theme-marquee .seatmap-widget {
+	--seatmap-surface: var(--surface-sunken);
+	--seatmap-surface-sunken: var(--surface);
+	--seatmap-surface-hover: #262626;
+	--seatmap-border: var(--border);
+	--seatmap-border-strong: #3d3d3d;
+	--seatmap-text: var(--text);
+	--seatmap-muted: var(--text-muted);
+	--seatmap-accent: var(--accent);
+	--seatmap-on-accent: var(--on-accent);
+	--seatmap-radius: 2px;
+	--seatmap-radius-sm: 2px;
+}

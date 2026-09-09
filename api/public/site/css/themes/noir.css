@@ -1,23 +1,9 @@
 /* Noir — dark and high contrast, for gigs and late shows. */
-:root {
-	--surface: #0d0f14;
-	--surface-sunken: #14171f;
-	--border: #262b36;
-	--text: #f2f4f8;
-	--text-muted: #98a1b3;
-	--on-accent: #0d0f14;
-	--shell: 72rem;
-}
-
-body { background: var(--surface); }
-
-h1, h2, h3 { letter-spacing: -0.03em; }
-
-.masthead { background: var(--surface); border-block-end-color: var(--border); }
+.masthead { border-block-end-color: var(--border); }
 .footer { background: var(--surface-sunken); }
 .button--secondary { border-color: var(--border); color: var(--text); }
 .event-card { background: var(--surface-sunken); }
-.event-card__when { background: rgba(255,255,255,0.06); }
+.event-card__when { background: rgba(255, 255, 255, 0.06); }
 
 /*
  * The picker is a guest on the page and follows the *visitor's* system theme by default. On a site
@@ -29,13 +15,13 @@ h1, h2, h3 { letter-spacing: -0.03em; }
  * is selling from.
  */
 .theme-noir .seatmap-widget {
-	--seatmap-surface: #14171f;
-	--seatmap-surface-sunken: #0d0f14;
+	--seatmap-surface: var(--surface-sunken);
+	--seatmap-surface-sunken: var(--surface);
 	--seatmap-surface-hover: #1e222c;
-	--seatmap-border: #262b36;
+	--seatmap-border: var(--border);
 	--seatmap-border-strong: #39414f;
-	--seatmap-text: #f2f4f8;
-	--seatmap-muted: #98a1b3;
+	--seatmap-text: var(--text);
+	--seatmap-muted: var(--text-muted);
 	--seatmap-accent: var(--accent);
-	--seatmap-on-accent: #0d0f14;
+	--seatmap-on-accent: var(--on-accent);
 }

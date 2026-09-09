@@ -1,0 +1,26 @@
+/*
+ * Kiosk — dense and practical. For a season of forty dates, not a single gala.
+ *
+ * Everything is one line shorter than elsewhere: the point of this theme is that a listing of
+ * forty events fits on a screen instead of scrolling for a minute.
+ */
+.masthead { padding-block: 0.35rem; border-block-end: 2px solid var(--border); }
+.brand__name { font-weight: 700; }
+
+.event-card {
+	gap: 0.6rem;
+	padding: 0.55rem 0.7rem;
+	line-height: 1.35;
+}
+
+.event-card + .event-card { margin-block-start: -1px; }
+
+.event-card__when {
+	background: var(--surface-sunken);
+	border: 1px solid var(--border);
+	font-variant-numeric: tabular-nums;
+	font-size: 0.85rem;
+}
+
+.button { min-block-size: 2.25rem; padding-inline: 0.9rem; }
+.footer { padding-block: 1rem; background: var(--surface-sunken); }

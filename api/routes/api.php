@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
+use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
 use App\Http\Controllers\Api\V1\Management\VenueController;
@@ -97,6 +98,14 @@ Route::prefix('v1')->group(function () {
 
         // ---- Hosted event sites (ADR-0003) ---------------------------------------------
         Route::get('site-themes', [SiteController::class, 'themes']);
+
+        // Themes an organiser writes: tokens and a stylesheet, never code (ADR-0003).
+        Route::get('themes', [SiteThemeController::class, 'index']);
+        Route::post('themes', [SiteThemeController::class, 'store']);
+        Route::get('themes/{theme}', [SiteThemeController::class, 'show']);
+        Route::patch('themes/{theme}', [SiteThemeController::class, 'update']);
+        Route::post('themes/{theme}/versions/{version}/revert', [SiteThemeController::class, 'revert']);
+        Route::delete('themes/{theme}', [SiteThemeController::class, 'destroy']);
 
         Route::get('sites', [SiteController::class, 'index']);
         Route::get('sites/{site}', [SiteController::class, 'show']);

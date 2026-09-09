@@ -210,7 +210,7 @@ class CheckoutController extends Controller
         return response()->view($template, $data + [
             'money' => fn (int $minor) => $this->money($minor, $currency),
             'site' => $site,
-            'brand' => Themes::resolveBrand($site->theme_key, $site->brand ?? []),
+            'brand' => Themes::forSite($site),
             'description' => null,
             'canonical' => null,
             'headerMenu' => $site->menuFor('header'),

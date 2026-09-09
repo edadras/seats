@@ -24,19 +24,20 @@
         <meta property="og:url" content="{{ $canonical }}">
     @endif
     <link rel="stylesheet" href="{{ asset('site/css/site.css') }}">
-    <link rel="stylesheet" href="{{ asset('site/css/themes/'.$site->theme_key.'.css') }}">
-    {{-- Brand overrides last, so an organiser's colour wins over the theme's default. --}}
-    <style>
-        :root {
-            --accent: {{ $brand['accent'] }};
-            --font-heading: {{ $brand['heading_family'] }};
-            --font-body: {{ $brand['body_family'] }};
-            --radius: {{ $brand['radius_value'] }};
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('site/css/themes/'.$brand['base_key'].'.css') }}">
+    {{-- Tokens last, so a custom theme and then the organiser's own brand win over the theme file.
+         Every value in here came from a closed table in ThemeTokens; none of it is a string an
+         organiser typed, because a font-family somebody typed is an injection into a stylesheet. --}}
+    <style>{!! $brand['token_css'] !!}</style>
+    @if ($brand['css'] !== '')
+        {{-- The organiser's own stylesheet. Sanitised on the way in (App\Domain\Sites\ThemeCss):
+             no angle brackets, so it cannot close this element; no @import; no url() that is not
+             plainly a picture or a page. --}}
+        <style>{!! $brand['css'] !!}</style>
+    @endif
     @stack('head')
 </head>
-<body class="theme-{{ $site->theme_key }}">
+<body class="theme-{{ $brand['base_key'] }}">
 <a class="skip" href="#main">{{ __('site.skipToContent') }}</a>
 
 <header class="masthead">

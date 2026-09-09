@@ -452,6 +452,148 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /themes:
+    get:
+      operationId: listCustomThemes
+      tags: [Sites]
+      summary: The themes available to this account
+      description: >
+        Ours, this account's own, and the token vocabulary the panel draws its controls from. A
+        theme is tokens and a stylesheet, never code (ADR-0003), so nothing here can run.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/CustomTheme" }
+                  built_in:
+                    type: array
+                    items: { $ref: "#/components/schemas/SiteTheme" }
+                  tokens:
+                    type: array
+                    description: Token definitions, including each choice's CSS value.
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string }
+                        kind: { type: string, enum: [colour, choice] }
+                        group: { type: string }
+                        var: { type: string }
+                        default: { type: string }
+                  max_css_bytes: { type: integer }
+    post:
+      operationId: createSiteTheme
+      tags: [Sites]
+      summary: Start a theme from one of ours
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, base_key]
+              properties:
+                name: { type: string, maxLength: 80 }
+                base_key:
+                  type: string
+                  description: The first-party theme to start from; its stylesheet stays linked.
+                tokens: { type: object, additionalProperties: { type: string } }
+                css: { type: [string, 'null'] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomTheme" }
+
+  /themes/{theme}:
+    parameters:
+      - name: theme
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getSiteTheme
+      tags: [Sites]
+      summary: One theme, with its stylesheet and its history
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomTheme" }
+    patch:
+      operationId: updateSiteTheme
+      tags: [Sites]
+      summary: Change a theme
+      description: >
+        Every save keeps what it replaced, because a stylesheet is the one thing an organiser can
+        change that breaks every page of a live site at once. `stylesheet_trimmed` says whether
+        anything had to be taken out of the CSS — angle brackets, `@import`, `expression(` and the
+        other ways a stylesheet was historically persuaded to run script.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 80 }
+                base_key: { type: string }
+                tokens: { type: object, additionalProperties: { type: string } }
+                css: { type: [string, 'null'] }
+                note: { type: [string, 'null'], maxLength: 160 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomTheme" }
+    delete:
+      operationId: deleteSiteTheme
+      tags: [Sites]
+      summary: Delete a theme nobody is wearing
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "409":
+          description: Some sites still wear it
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /themes/{theme}/versions/{version}/revert:
+    parameters:
+      - name: theme
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: version
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: revertSiteTheme
+      tags: [Sites]
+      summary: Put a theme back the way it was
+      responses:
+        "200":
+          description: Reverted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomTheme" }
+
   /events/{event}/seat-prices:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -2350,6 +2492,39 @@ components:
         max_extends: { type: integer, minimum: 0, maximum: 10 }
         refund_policy: { type: string, enum: [release, hold_back] }
 
+    CustomTheme:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        key: { type: string }
+        name: { type: string }
+        base_key: { type: string }
+        own_tokens:
+          type: object
+          description: Only what this theme overrides.
+          additionalProperties: { type: string }
+        tokens:
+          type: object
+          description: The resolved set — the base theme's, with this one's on top.
+          additionalProperties: { type: string }
+        token_css: { type: string }
+        css: { type: string }
+        css_bytes: { type: integer }
+        sites_count: { type: integer }
+        stylesheet_trimmed:
+          type: boolean
+          description: Present on a save that had to take something out of the stylesheet.
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              version: { type: integer }
+              note: { type: [string, 'null'] }
+              author: { type: [string, 'null'] }
+              created_at: { type: string, format: date-time }
+
     SeatPrice:
       type: object
       properties:
@@ -2692,9 +2867,13 @@ components:
     SiteTheme:
       type: object
       properties:
-        key: { type: string, examples: [aurora, noir, playbill] }
+        key: { type: string, examples: [aurora, noir, playbill, marquee, atrium, kiosk] }
         name: { type: string }
         description: { type: string }
+        tokens:
+          type: object
+          description: The theme's resolved token set.
+          additionalProperties: { type: string }
 
     SiteBrand:
       description: |

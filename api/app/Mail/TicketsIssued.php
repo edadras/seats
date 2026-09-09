@@ -39,7 +39,7 @@ class TicketsIssued extends Mailable
     public function content(): Content
     {
         return new Content(view: 'mail.tickets', with: [
-            'brand' => \App\Domain\Sites\Themes::resolveBrand($this->site->theme_key, $this->site->brand ?? []),
+            'brand' => \App\Domain\Sites\Themes::forSite($this->site),
         ]);
     }
 }

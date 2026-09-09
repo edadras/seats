@@ -1055,9 +1055,8 @@
 	border: 1px solid var(--border);
 }
 
-.theme-card__swatch--aurora { background: linear-gradient(150deg, #ffffff 45%, #4a4fdc 45%); }
-.theme-card__swatch--noir { background: linear-gradient(150deg, #14171f 45%, #f0455f 45%); }
-.theme-card__swatch--playbill { background: linear-gradient(150deg, #fbf7f0 45%, #8c2f39 45%); }
+/* The swatch is painted from the theme's own tokens, inline: a class per theme would have to be
+   edited every time somebody writes one. */
 
 /* ------------------------------------------------------------------------------- menus */
 
@@ -1522,3 +1521,105 @@
 .seat-bar.is-open { display: flex; }
 .seat-bar__count { font-weight: 600; margin-inline-end: var(--s-2); }
 .seat-bar .input--amount { inline-size: 8rem; }
+
+/* --- the themes screen ------------------------------------------------------------------ */
+
+.look-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+	gap: var(--s-3);
+	margin-block-end: var(--s-6);
+}
+
+.look {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+/* Painted in the theme it is offering, because a name is not a look. */
+.look__preview {
+	display: flex;
+	align-items: center;
+	gap: var(--s-2);
+	padding: var(--s-4);
+	border-block-end: 1px solid;
+	border-color: inherit;
+}
+
+.look__title { font-size: var(--text-lg); font-weight: 700; }
+.look__dot { inline-size: 1rem; block-size: 1rem; border-radius: var(--r-full); }
+.look__bar { flex: 1; block-size: 0.5rem; border-radius: var(--r-full); }
+
+.look__body { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-3); }
+.look__body .muted { font-size: var(--text-xs); line-height: 1.4; }
+.look__actions { display: flex; align-items: center; gap: var(--s-2); margin-block-start: var(--s-2); }
+.look__actions .muted { font-size: var(--text-xs); }
+
+/* Controls on one side, the page they change on the other. */
+.theme-editor {
+	display: grid;
+	grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+	gap: var(--s-5);
+	align-items: start;
+}
+
+@media (max-width: 60rem) {
+	.theme-editor { grid-template-columns: minmax(0, 1fr); }
+}
+
+.theme-editor__controls { display: flex; flex-direction: column; gap: var(--s-5); min-inline-size: 0; }
+.theme-editor__preview { position: sticky; inset-block-start: var(--s-4); }
+
+.theme-preview {
+	inline-size: 100%;
+	block-size: min(80vh, 46rem);
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+}
+
+.theme-group__fields { display: flex; flex-direction: column; gap: var(--s-3); }
+.field--swatch .field__row { display: flex; align-items: center; gap: var(--s-2); }
+.field--swatch .input--code { inline-size: 7rem; text-transform: lowercase; letter-spacing: 0; }
+
+/* A stylesheet is written, not filled in, so it gets a typewriter and room to breathe. */
+.code {
+	inline-size: 100%;
+	padding: var(--s-3);
+	border: 1px solid var(--border);
+	border-radius: var(--r-md);
+	background: var(--surface-sunken);
+	color: var(--text);
+	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+	font-size: var(--text-xs);
+	line-height: 1.6;
+	resize: vertical;
+}
+
+.code:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.versions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+
+.version {
+	display: flex;
+	align-items: center;
+	gap: var(--s-2);
+	padding-block-end: var(--s-2);
+	border-block-end: 1px solid var(--border);
+	font-size: var(--text-xs);
+}
+
+.version__what { flex: 1; min-inline-size: 0; }
+
+.subhead {
+	margin: 0 0 var(--s-3);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}

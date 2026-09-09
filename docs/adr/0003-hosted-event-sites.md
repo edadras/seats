@@ -124,3 +124,29 @@ anything the browser sent.
 - **A general page builder with arbitrary HTML for everyone.** Organiser-supplied markup on a
   domain we serve is a stored-XSS surface across tenants. Blocks are typed; raw HTML is gated.
 - **Letting the organiser upload themes.** That is the WordPress problem we chose not to have.
+
+## Amendment, 2026-09: themes an organiser writes
+
+Organisers asked for their own look, and "pick one of six" was not going to be the whole answer.
+The line is the same one as before, drawn in a different place: **a theme is tokens and a
+stylesheet, and neither can run.**
+
+- **Tokens** are a closed table (`App\Domain\Sites\ThemeTokens`): each is either a hex colour or a
+  key into a list of values written in that file, and each names the CSS custom property it sets.
+  A `font-family` an organiser typed never reaches a `<style>` block, because a font-family
+  somebody typed is an injection into a stylesheet. An unknown token is dropped, not rejected — a
+  site that is selling should lose one control rather than a save.
+
+- **The stylesheet** is the escape hatch, and it is treated as hostile input
+  (`App\Domain\Sites\ThemeCss`). Angle brackets never survive, so nothing can close the element it
+  lands in; `@import` never survives, so a page cannot fetch a third party's CSS from the visitor's
+  browser at render time; `expression(`, `behavior:` and `-moz-binding:` never survive; and a
+  `url()` that is not plainly a picture or a page is replaced with `url(about:blank)` rather than
+  deleted, so the author can see what happened. It is not a CSS parser and does not pretend to be
+  one: a rule it does not understand is a rule the browser ignores.
+
+- **Every save keeps what it replaced.** A stylesheet is the one thing an organiser can change that
+  breaks every page of a live site at once, so "put it back" is a click.
+
+The rejected alternative stands, and this is not it: uploading a theme — a bundle of files that
+runs on our server — remains the WordPress problem we chose not to have.

@@ -22,6 +22,14 @@
 
 	--font-heading: system-ui, sans-serif;
 	--font-body: system-ui, sans-serif;
+
+	/* Tokens a theme moves without a rule being edited (App\Domain\Sites\ThemeTokens). Defaults
+	   here so a page still renders if a theme says nothing about them. */
+	--heading-weight: 700;
+	--heading-case: none;
+	--heading-tracking: -0.015em;
+	--button-radius: var(--radius);
+	--shadow: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -39,8 +47,10 @@ body {
 h1, h2, h3, h4 {
 	margin: 0 0 0.4em;
 	font-family: var(--font-heading);
+	font-weight: var(--heading-weight);
 	line-height: 1.15;
-	letter-spacing: -0.015em;
+	letter-spacing: var(--heading-tracking);
+	text-transform: var(--heading-case);
 }
 
 h1 { font-size: clamp(2rem, 5vw, 3rem); }
@@ -154,7 +164,7 @@ hr { border: none; }
 	align-items: center;
 	min-block-size: 2.75rem;
 	padding-inline: 1.25rem;
-	border-radius: var(--radius);
+	border-radius: var(--button-radius);
 	border: 1px solid var(--accent);
 	background: var(--accent);
 	color: var(--on-accent);
@@ -214,6 +224,7 @@ hr { border: none; }
 	padding: 1rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
+	box-shadow: var(--shadow);
 	background: var(--surface);
 	text-decoration: none;
 	transition: border-color 140ms ease, transform 140ms ease;

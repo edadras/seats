@@ -28,6 +28,7 @@
 		{ key: 'maps', label: 'Seat maps', icon: 'map' },
 		{ key: 'venues', label: 'Venues', icon: 'building' },
 		{ key: 'sites', label: 'Websites', icon: 'globe' },
+		{ key: 'themes', label: 'Themes', icon: 'palette' },
 		{ key: 'connections', label: 'Connections', icon: 'plug' },
 		{ key: 'modules', label: 'Modules', icon: 'puzzle' },
 		{ key: 'team', label: 'Team', icon: 'users' },
@@ -356,6 +357,7 @@
 			case 'maps': return this.renderMaps();
 			case 'connections': return this.renderConnections();
 			case 'sites': return window.SeatmapSites.renderList( this );
+			case 'themes': return window.SeatmapThemes.render( this );
 			case 'modules': return window.SeatmapModules.render( this );
 			case 'team': return window.SeatmapTeam.render( this );
 			case 'audit': return window.SeatmapAudit.render( this );

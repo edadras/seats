@@ -15,6 +15,7 @@ use App\Models\SiteDomain;
 use App\Models\SiteMenu;
 use App\Models\SiteMenuItem;
 use App\Models\SitePage;
+use App\Models\SiteTheme;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,9 @@ class SiteController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:120'],
             'theme_key' => ['sometimes', 'string', 'max:40'],
+            // Null puts the site back into one of ours. The id is looked up through this tenant's
+            // own themes, so another account's theme cannot be worn by guessing an id.
+            'site_theme_id' => ['sometimes', 'nullable', 'uuid'],
             'locale' => ['sometimes', 'string', 'max:12'],
             'timezone' => ['sometimes', 'string', 'timezone'],
             'currency' => ['sometimes', 'string', 'size:3'],
@@ -84,6 +88,10 @@ class SiteController extends Controller
         ]);
 
         if (isset($data['theme_key']) && ! Themes::exists($data['theme_key'])) {
+            throw ApiException::unprocessable('unknown_theme', 'That theme does not exist.');
+        }
+
+        if (! empty($data['site_theme_id']) && ! SiteTheme::whereKey($data['site_theme_id'])->exists()) {
             throw ApiException::unprocessable('unknown_theme', 'That theme does not exist.');
         }
 
@@ -347,6 +355,18 @@ class SiteController extends Controller
 
         return response()->json([
             'themes' => array_values(Themes::all()),
+            // The account's own themes travel with ours, because a site chooses between them on
+            // one screen and should not have to know which kind it is picking.
+            'custom' => SiteTheme::orderBy('name')->get()->map(fn (SiteTheme $theme) => [
+                'id' => $theme->id,
+                'key' => $theme->key,
+                'name' => $theme->name,
+                'base_key' => $theme->base_key,
+                'tokens' => \App\Domain\Sites\ThemeTokens::resolve(
+                    Themes::tokens($theme->base_key),
+                    (array) $theme->tokens
+                ),
+            ])->values(),
             'fonts' => array_keys(Themes::FONTS),
             'radii' => array_keys(Themes::RADII),
             'blocks' => Blocks::describe(),
@@ -420,6 +440,7 @@ class SiteController extends Controller
             'id' => $site->id,
             'name' => $site->name,
             'theme_key' => $site->theme_key,
+            'site_theme_id' => $site->site_theme_id,
             'locale' => $site->locale,
             'timezone' => $site->timezone,
             'currency' => $site->currency,
