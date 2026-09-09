@@ -231,3 +231,38 @@ Consequences worth stating:
 - **It is off until an organiser turns it on**, and unavailable entirely where the platform has no
   Google credentials — in which case the panel says so instead of offering a switch that would
   lead to a Google error page.
+
+
+## Amendment, 2026-09: the parts of a site that are not for the reader
+
+An event site is not finished when it renders. Four things were missing, and all four decide
+whether anybody arrives at the page in the first place.
+
+**Structured data.** Every event page now carries schema.org `Event` JSON-LD: the date, the room,
+the organiser, and — when the event is on sale and priced — an `offers` block with the cheapest way
+in. `eventStatus` says cancelled when it is cancelled, which is the single most useful thing to
+tell a search engine still showing last month's listing. It is built from the same facts the page
+prints, in the controller, so the two cannot disagree.
+
+**Share images.** `og:image` from the event's poster, with `twitter:card` following it, so a link
+pasted into a message unfurls as the artwork rather than as a grey rectangle.
+
+**A sitemap and a robots file, per site.** These were one static `public/robots.txt` saying the
+same thing to a venue's website and to the control panel, which is the wrong answer for at least
+one of them. They are now routes that resolve the Host themselves: a site gets `Allow: /` and a
+pointer to its own sitemap, and everything else — the panel, the console, the API — gets
+`Disallow: /`. The sitemap lists published pages and events that have not happened yet; a draft is
+not in it, because a draft is not on the internet.
+
+**A calendar file.** `/events/{public_id}/calendar.ics` — a ticket bought in September is for a
+night in November, and the most useful thing a buyer can do with an event page is put it where they
+will see it again. Written by hand rather than pulled in: iCalendar is a small format with three
+sharp edges (CRLF everywhere, folding at 75 *octets*, and escaping), and a file that gets any of
+them wrong imports as nothing at all. The folding measures bytes and cuts between characters, which
+is what keeps a Persian event name from arriving as mojibake.
+
+And one thing that is for the reader: **the programme can be searched.** A text box over the event
+name and the venue, and a filter over the categories that actually have something in them. Plain
+GET, server-rendered — the results are a shareable address and the page works with JavaScript off.
+"Nothing matched what you asked for" is a different page from "nothing is on sale", because telling
+somebody the season is empty when they mistyped a name is a dead end.

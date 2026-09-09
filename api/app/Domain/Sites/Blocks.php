@@ -124,6 +124,10 @@ class Blocks
                 'title' => self::text($block['title'] ?? '', 120),
                 'limit' => max(1, min(50, (int) ($block['limit'] ?? 12))),
                 'layout' => self::choice($block['layout'] ?? 'cards', ['cards', 'list', 'spotlight'], 'cards'),
+                // On unless somebody turns it off, including on the pages that existed before this
+                // was an option: a programme of thirty dates that cannot be searched is a list
+                // people scroll past.
+                'search' => (bool) ($block['search'] ?? true),
             ],
             'eventDetail' => $out + [
                 // Empty means "the event this page is for", which is how one page serves every event.

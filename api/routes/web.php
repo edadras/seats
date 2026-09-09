@@ -5,6 +5,7 @@ use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\GoogleSignInController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\SiteFilesController;
 use App\Http\Controllers\Site\SitePageController;
 use App\Http\Controllers\Site\StoreController;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,8 @@ Route::middleware('site')->group(function () {
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
     Route::get('events/{event}', [SitePageController::class, 'event']);
+    // A file a calendar will take, because a ticket bought in September is for a night in November.
+    Route::get('events/{event}/calendar.ics', [SitePageController::class, 'calendar']);
 
     /*
      * A buyer's own page. `/account` renders for anybody — signed in it lists their orders,
@@ -68,6 +71,15 @@ Route::middleware('site')->group(function () {
  * is no site in its Host — the site it belongs to is named by the state it carries.
  */
 Route::get('auth/google/callback', GoogleSignInController::class)->middleware('throttle:60,1');
+
+/*
+ * The two files written for machines. Outside the site group and ahead of the front door, because
+ * they exist on every host this application answers on — including the panel, which is not a thing
+ * to index. `public/robots.txt` used to answer for all of them with one file, which was the wrong
+ * answer for at least one.
+ */
+Route::get('robots.txt', [SiteFilesController::class, 'robots']);
+Route::get('sitemap.xml', [SiteFilesController::class, 'sitemap']);
 
 /*
  * The platform's own console. Ahead of the front door, and a separate page from the panel: they

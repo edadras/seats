@@ -21,11 +21,29 @@
     @endif
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $site->name }}">
+    @if ($description)
+        <meta property="og:description" content="{{ $description }}">
+    @endif
+    @if (! empty($image))
+        {{-- What a link to this page looks like when it is pasted into a message. --}}
+        <meta property="og:image" content="{{ $image }}">
+        <meta name="twitter:card" content="summary_large_image">
+    @else
+        <meta name="twitter:card" content="summary">
+    @endif
     @if ($canonical)
         <link rel="canonical" href="{{ $canonical }}">
         <meta property="og:url" content="{{ $canonical }}">
     @endif
     @stack('meta')
+    @if (! empty($jsonld))
+        {{-- Structured data, so a search result can show the date and the price rather than a
+             line of prose. JSON_HEX_TAG matters: without it a description containing "</script>"
+             would close this element early, and everything after it would be markup somebody
+             typed into a form. --}}
+        <script type="application/ld+json">@json($jsonld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
+    @endif
     <link rel="stylesheet" href="{{ asset('site/css/site.css') }}">
     <link rel="stylesheet" href="{{ asset('site/css/themes/'.$brand['base_key'].'.css') }}">
     {{-- Tokens last, so a custom theme and then the organiser's own brand win over the theme file.

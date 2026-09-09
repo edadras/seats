@@ -118,6 +118,11 @@ Which site a request gets is decided by its `Host` header and nothing else — n
 parameter or path prefix, because any of those would let one visitor ask for another organiser's
 site. A hostname is claimed but not served until a TXT record proves the organiser owns it.
 
+Each site serves its own `sitemap.xml` and `robots.txt`, puts schema.org `Event` data and a share
+image on every event page, offers an `.ics` file for the buyer's calendar, and lets a visitor
+search the programme by name, venue or category — all server-rendered, so the results are an
+address somebody can send to a friend.
+
 Pages have drafts and a published copy, the same discipline seat maps have. Blocks are normalised
 once, on the way in; nothing downstream re-validates, and raw HTML is off unless an organiser has
 deliberately turned it on for their account.
@@ -224,6 +229,7 @@ node api/reports_smoke.mjs                                       # builds a repo
 node api/customers_smoke.mjs                                     # the customer directory and its CSV
 node api/messaging_smoke.mjs                                     # an announcement, its deliveries, the notice bell
 node api/embed_smoke.mjs                                         # the picker on a third-party page, through to checkout
+node api/site_smoke.mjs                                          # searching the programme, the sitemap, the .ics
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 

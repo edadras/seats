@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Site;
 use App\Models\SitePage;
+use App\Support\Calendar\IcsFile;
 use App\Support\Locale\Dates;
 use App\Support\Locale\Locales;
 use App\Support\Locale\Money;
@@ -74,6 +75,12 @@ class SitePageController extends Controller
             'title' => $event->name.' · '.$site->name,
             'description' => Str::limit((string) $event->description, 300),
             'canonical' => $site->url('/events/'.$event->public_id),
+            // What a link to this page looks like when it is pasted into a message. Without it,
+            // an event with a poster shares as a grey rectangle.
+            'image' => Themes::url($event->image_url),
+            // What a search engine is told, in the vocabulary it reads. A listing that shows the
+            // date and the price is the difference between being found and being scrolled past.
+            'jsonld' => $this->structuredData($site, $event),
             'event' => $event,
         ]);
     }
@@ -90,11 +97,16 @@ class SitePageController extends Controller
             'title' => $meta['title'],
             'description' => $meta['description'] ?? null,
             'canonical' => $meta['canonical'] ?? null,
+            'image' => $meta['image'] ?? Themes::forSite($site)['logo_url'] ?? null,
+            'jsonld' => $meta['jsonld'] ?? null,
             'headerMenu' => $site->menuFor('header'),
             'footerMenu' => $site->menuFor('footer'),
 
             // Passed as closures so a page with no event block never runs an availability query.
             'eventsFor' => fn (array $block) => $this->upcoming($site, (int) $block['limit']),
+            // The words a visitor typed, and the categories there are to choose from. Read once
+            // per page rather than per block: a page with two listings asks the same question.
+            'listFilters' => fn () => $this->filters($site),
             'eventFor' => fn (array $block) => $this->detail(
                 $site,
                 $block['event_public_id'] ?: null,
@@ -103,14 +115,167 @@ class SitePageController extends Controller
         ]);
     }
 
+    /**
+     * This event, described in schema.org's vocabulary.
+     *
+     * Only what is true. `offers` is present when the event is on sale and priced, because a price
+     * in a search result that turns out not to exist is worse for the organiser than no price; and
+     * `eventStatus` says cancelled when it is cancelled, which is the one thing a search engine
+     * showing a stale listing most needs to be told.
+     */
+    private function structuredData(Site $site, Event $event): array
+    {
+        $cheapest = $event->priceZones->min('amount');
+        $onSale = 'published' === $event->status && null !== $event->seat_map_version_id;
+
+        $data = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Event',
+            'name' => $event->name,
+            'startDate' => $event->starts_at?->toIso8601String(),
+            'eventStatus' => match ($event->status) {
+                'cancelled' => 'https://schema.org/EventCancelled',
+                default => 'https://schema.org/EventScheduled',
+            },
+            'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+            'url' => $site->url('/events/'.$event->public_id),
+            'organizer' => ['@type' => 'Organization', 'name' => $site->name, 'url' => $site->url('/')],
+        ];
+
+        if ($event->ends_at) {
+            $data['endDate'] = $event->ends_at->toIso8601String();
+        }
+
+        if ($event->description) {
+            $data['description'] = Str::limit((string) $event->description, 500);
+        }
+
+        if ($image = Themes::url($event->image_url)) {
+            $data['image'] = [$image];
+        }
+
+        if ($event->venue) {
+            $data['location'] = array_filter([
+                '@type' => 'Place',
+                'name' => $event->venue->name,
+                'address' => array_filter([
+                    '@type' => 'PostalAddress',
+                    'streetAddress' => $event->venue->address,
+                    'addressLocality' => $event->venue->city,
+                    'addressCountry' => $event->venue->country,
+                ]),
+            ]);
+        }
+
+        if ($onSale && null !== $cheapest) {
+            $data['offers'] = [
+                '@type' => 'Offer',
+                'price' => number_format(
+                    Money::toDecimal((int) $cheapest, (string) $event->currency),
+                    Money::exponent((string) $event->currency),
+                    '.',
+                    ''
+                ),
+                'priceCurrency' => $event->currency,
+                'availability' => 'https://schema.org/InStock',
+                'url' => $site->url('/events/'.$event->public_id),
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * One event, as a file a calendar will take.
+     *
+     * Offered because a ticket bought in September is for a night in November, and the single most
+     * useful thing a buyer can do with an event page is put it where they will see it again.
+     */
+    public function calendar(Request $request, string $publicId)
+    {
+        $site = $request->attributes->get('site');
+
+        $event = Event::with('venue')
+            ->where('public_id', $publicId)
+            ->whereIn('status', ['published', 'closed'])
+            ->first();
+
+        if (! $event || ! $event->starts_at) {
+            throw new NotFoundHttpException('No such event.');
+        }
+
+        $body = IcsFile::event(
+            uid: $event->public_id.'@'.($site->canonicalHost() ?: 'seatmap'),
+            summary: $event->name,
+            starts: $event->starts_at,
+            ends: $event->ends_at,
+            location: trim(implode(', ', array_filter([$event->venue?->name, $event->venue?->city]))) ?: null,
+            description: $event->description,
+            url: $site->url('/events/'.$event->public_id),
+        );
+
+        return response($body, 200, [
+            'Content-Type' => 'text/calendar; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.Str::slug($event->name).'.ics"',
+        ]);
+    }
+
+    /**
+     * What a visitor is filtering by, and what there is to filter by.
+     *
+     * The categories come from the events that are actually on: offering "Comedy" on a season with
+     * no comedy in it is a filter that returns nothing, which reads as a broken page rather than
+     * as an empty category.
+     */
+    private function filters(Site $site): array
+    {
+        $request = request();
+        $query = trim((string) $request->query('q', ''));
+
+        $categories = Event::query()
+            ->where('status', 'published')
+            ->whereNotNull('seat_map_version_id')
+            ->whereNotNull('category')
+            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->all();
+
+        return [
+            'q' => mb_substr($query, 0, 80),
+            'category' => in_array($request->query('category'), $categories, true)
+                ? (string) $request->query('category')
+                : '',
+            'categories' => $categories,
+            'active' => '' !== $query || in_array($request->query('category'), $categories, true),
+        ];
+    }
+
     private function upcoming(Site $site, int $limit): array
     {
         // `priceZones` too: the card prints a "from" price, so leaving it lazy is one query per
         // event — and, with lazy loading disabled, a 500 on the first site that has two of them.
+        $filters = $this->filters($site);
+
         $events = Event::with(['venue', 'priceZones'])
             ->where('status', 'published')
             ->whereNotNull('seat_map_version_id')
             ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->when($filters['category'], fn ($q, $category) => $q->where('category', $category))
+            ->when($filters['q'], function ($q, $term) {
+                // The name, or the room it is in — the two things somebody remembers about a night
+                // they meant to book. `ilike` because a search that is case-sensitive is a search
+                // that finds nothing.
+                $like = '%'.str_replace(['%', '_'], ['\%', '\_'], mb_strtolower($term)).'%';
+
+                $q->where(function ($where) use ($like) {
+                    $where->whereRaw('lower(events.name) like ?', [$like])
+                        ->orWhereExists(fn ($exists) => $exists->from('venues')
+                            ->whereColumn('venues.id', 'events.venue_id')
+                            ->whereRaw('lower(venues.name) like ?', [$like]));
+                });
+            })
             ->orderBy('starts_at')
             ->limit($limit)
             ->get();
@@ -180,6 +345,7 @@ class SitePageController extends Controller
                 default => __('site.closed.notYet'),
             },
             'container_id' => $containerId,
+            'calendar_url' => '/events/'.$event->public_id.'/calendar.ics',
             'boot' => $onSale ? $this->boot($site, $event, $containerId) : null,
         ] + $this->cover($event->name);
     }

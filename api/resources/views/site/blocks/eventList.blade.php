@@ -1,5 +1,8 @@
 @php
     $events = $eventsFor($block);
+    // Missing means yes, which is what the sanitiser defaults it to: blocks stored before this
+    // was an option are pages whose programme should still be searchable.
+    $filters = ($block['search'] ?? true) ? $listFilters() : null;
 
     // Spotlight only means something when there is a season to lead: with one or two dates the
     // large card leaves a hole beside it rather than making anything look important.
@@ -12,6 +15,38 @@
             <div class="section__head">
                 <h2 class="section__title">{{ $block['title'] }}</h2>
             </div>
+        @endif
+
+        {{-- A programme of thirty dates is a list people scroll past. Plain GET, server-rendered:
+             the results are a shareable address, and the page works with JavaScript switched off. --}}
+        @if ($filters && (count($events) || $filters['active']))
+            <form class="finder" method="get" role="search">
+                <label class="finder__field">
+                    <span class="finder__label">{{ __('site.searchEvents') }}</span>
+                    <input type="search" name="q" value="{{ $filters['q'] }}"
+                           placeholder="{{ __('site.searchPlaceholder') }}">
+                </label>
+
+                @if (count($filters['categories']) > 1)
+                    <label class="finder__field finder__field--narrow">
+                        <span class="finder__label">{{ __('site.kind') }}</span>
+                        <select name="category">
+                            <option value="">{{ __('site.anyCategory') }}</option>
+                            @foreach ($filters['categories'] as $category)
+                                <option value="{{ $category }}" @selected($filters['category'] === $category)>
+                                    {{ $category }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
+
+                <button class="button button--secondary" type="submit">{{ __('site.search') }}</button>
+
+                @if ($filters['active'])
+                    <a class="finder__clear" href="{{ url()->current() }}">{{ __('site.showEverything') }}</a>
+                @endif
+            </form>
         @endif
 
         @if (count($events))
@@ -61,7 +96,11 @@
                 @endforeach
             </div>
         @else
-            <p class="muted">{{ __('site.nothingOnSale') }}</p>
+            {{-- Two different empty pages: nothing is on, or nothing matches what was asked for.
+                 Telling somebody "nothing on sale" when they mistyped a name is a dead end. --}}
+            <p class="muted">
+                {{ $filters && $filters['active'] ? __('site.nothingMatched') : __('site.nothingOnSale') }}
+            </p>
         @endif
     </div>
 </section>

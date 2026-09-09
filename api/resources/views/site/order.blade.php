@@ -27,6 +27,12 @@
             <p class="done__actions">
                 <a class="button" href="/order/{{ $order->external_order_id }}/tickets"
                    download>{{ __('site.downloadTickets') }}</a>
+
+                @if ($order->event)
+                    <a class="button button--secondary"
+                       href="/events/{{ $order->event->public_id }}/calendar.ics"
+                       download>{{ __('site.addToCalendar') }}</a>
+                @endif
             </p>
 
             <div class="tickets">

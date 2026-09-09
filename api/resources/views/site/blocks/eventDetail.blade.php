@@ -49,6 +49,15 @@
                     </li>
                 @endif
             </ul>
+
+            {{-- A ticket bought in September is for a night in November. Downloaded rather than
+                 linked to a service, so it works with whatever calendar the buyer actually uses. --}}
+            <a class="event-hero__calendar" href="{{ $event['calendar_url'] }}" download>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5m0 0-2-2m2 2 2-2"/>
+                </svg>
+                {{ __('site.addToCalendar') }}
+            </a>
         </div>
     </header>
 

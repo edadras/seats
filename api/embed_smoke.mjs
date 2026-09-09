@@ -29,7 +29,13 @@ const check = ( label, ok, detail = '' ) => {
 	if ( ! ok ) failures++;
 };
 
-// The seated event, asked of the API rather than assumed: the demo has a warehouse in it too.
+/*
+ * Which event to drive.
+ *
+ * The demo contains a warehouse sold by the head as well as a theatre with chairs, and the checks
+ * below click chairs — so unless one is named, the seated one is found by asking availability
+ * rather than by taking whichever comes first.
+ */
 const events = await ( await fetch( `${ BASE }/v1/embed/events/` + process.env.SEATMAP_EVENT, {
 	headers: { Accept: 'application/json' },
 } ).catch( () => ( { json: async () => ( {} ) } ) ) ).json().catch( () => ( {} ) );

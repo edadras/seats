@@ -330,6 +330,8 @@ class CheckoutController extends Controller
             'brand' => Themes::forSite($site),
             'description' => null,
             'canonical' => null,
+            'image' => null,
+            'jsonld' => null,
             'headerMenu' => $site->menuFor('header'),
             'footerMenu' => $site->menuFor('footer'),
         ]);
