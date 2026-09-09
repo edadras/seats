@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Orders\TicketIssuer;
+use App\Domain\Orders\TicketTransfers;
 use App\Domain\Sites\Auth\GoogleIdentity;
 use App\Domain\Sites\Themes;
 use App\Http\Controllers\Controller;
@@ -161,6 +162,48 @@ class BuyerAccountController extends Controller
     }
 
     /** Every order this address bought from this organiser, newest first. */
+    /**
+     * Give one ticket to somebody else.
+     *
+     * A POST, and behind the signed-in session, because it kills a working code and mints another:
+     * a link a mail client could prefetch must never be able to do that.
+     */
+    public function transfer(Request $request, string $reference)
+    {
+        $site = $request->attributes->get('site');
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            throw new NotFoundHttpException('Not signed in.');
+        }
+
+        $data = $request->validate([
+            'allocation_id' => ['required', 'uuid'],
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:190'],
+        ]);
+
+        $order = $this->ownOrder($buyer['email'], $reference);
+
+        $allocation = $order->allocations->firstWhere('id', $data['allocation_id']);
+
+        if (! $allocation) {
+            throw new NotFoundHttpException('No such ticket on this booking.');
+        }
+
+        app(TicketTransfers::class)->give(
+            $site,
+            $order,
+            $allocation,
+            ['name' => $data['name'], 'email' => $data['email']],
+            ['name' => $buyer['name'] ?? null, 'email' => $buyer['email']],
+        );
+
+        return redirect('/account')->with('seatmap_message', __('site.transfer.done', [
+            'name' => $data['name'],
+        ]));
+    }
+
     private function orders(Site $site, string $email): array
     {
         return ExternalOrder::query()
@@ -176,12 +219,18 @@ class BuyerAccountController extends Controller
                 'total' => Money::format((int) $order->total_amount, (string) $order->currency),
                 'event' => $order->event,
                 'lines' => $order->allocations->map(fn ($allocation) => [
+                    'id' => $allocation->id,
                     'seat' => trim(implode(' · ', array_filter([
                         $allocation->section_name, $allocation->row_name,
                         $allocation->seat_id ? $allocation->seat_label : null,
                     ]))),
                     'quantity' => $allocation->seat_id ? 1 : (int) ($allocation->quantity ?: 1),
                     'used' => (bool) $allocation->ticket?->used_at,
+                    // Who is holding it now, when that is no longer the person who bought it.
+                    'holder' => $allocation->ticket?->holder_name,
+                    // A used ticket cannot be given away — somebody is already inside on it — and
+                    // a voided one is not a ticket.
+                    'transferable' => 'issued' === $allocation->ticket?->status,
                 ])->all(),
                 // Nothing to reissue once every ticket on the order has been scanned or voided.
                 'reissuable' => $order->allocations->contains(

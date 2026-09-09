@@ -116,6 +116,14 @@ return [
     'yourSeats' => 'Vos places',
     'total' => 'Total',
     'heldUntil' => 'Retenues jusqu’à :time.',
+    'transfer' => [
+        'give' => 'Donner ce billet à quelqu’un',
+        'send' => 'Le lui envoyer',
+        'warning' => 'Son billet part tout de suite et le vôtre cesse de fonctionner. Irréversible depuis ici.',
+        'done' => 'Envoyé à :name. Son billet est valable désormais ; le vôtre ne l’est plus.',
+        'heldBy' => 'au nom de :name',
+    ],
+
     'waitlist' => [
         'title' => 'Complet — mais des places reviennent',
         'lead' => 'Remboursements et paniers expirés remettent des places en vente en permanence. Laissez votre nom, nous écrivons dès qu’il y en a une.',

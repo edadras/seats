@@ -26,15 +26,31 @@ class TicketMailer
 
     public function send(Site $site, ExternalOrder $order): void
     {
-        $email = $order->buyer['email'] ?? null;
+        $this->deliver($site, $order, $order->allocations->all(), $order->buyer['email'] ?? null);
+    }
 
+    /**
+     * One ticket of an order, to somebody who is not the buyer.
+     *
+     * Transfers use this: the seat was bought by one person and is being used by another, so the
+     * email goes to the new holder and carries their ticket alone. Nothing else about the booking
+     * travels with it — the rest of the party's codes are not this person's business.
+     */
+    public function sendOne(Site $site, ExternalOrder $order, $allocation, string $email): void
+    {
+        $this->deliver($site, $order, [$allocation], $email);
+    }
+
+    /** @param  list<\App\Models\Allocation>  $allocations */
+    private function deliver(Site $site, ExternalOrder $order, array $allocations, ?string $email): void
+    {
         if (! $email) {
             return;
         }
 
         $tickets = [];
 
-        foreach ($order->allocations as $allocation) {
+        foreach ($allocations as $allocation) {
             $token = $allocation->ticket?->plainToken;
 
             if (! $token) {

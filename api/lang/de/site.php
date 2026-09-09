@@ -117,6 +117,14 @@ return [
     'yourSeats' => 'Ihre Plätze',
     'total' => 'Summe',
     'heldUntil' => 'Reserviert bis :time.',
+    'transfer' => [
+        'give' => 'Dieses Ticket weitergeben',
+        'send' => 'Ticket senden',
+        'warning' => 'Das Ticket geht sofort raus und Ihres wird ungültig. Von hier aus nicht rückgängig zu machen.',
+        'done' => 'An :name gesendet. Ab jetzt gilt das Ticket dieser Person, Ihres nicht mehr.',
+        'heldBy' => 'auf :name',
+    ],
+
     'waitlist' => [
         'title' => 'Ausverkauft — aber Plätze kommen zurück',
         'lead' => 'Rückgaben und abgelaufene Warenkörbe geben ständig Plätze frei. Hinterlassen Sie Ihren Namen, wir schreiben, sobald einer frei wird.',

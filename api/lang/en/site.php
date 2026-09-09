@@ -120,6 +120,14 @@ return [
     'yourSeats' => 'Your seats',
     'total' => 'Total',
     'heldUntil' => 'Held until :time.',
+    'transfer' => [
+        'give' => 'Give this ticket to somebody',
+        'send' => 'Send it to them',
+        'warning' => 'Their ticket is sent at once and yours stops working. It cannot be undone from here.',
+        'done' => 'Sent to :name. Their ticket works from now; the one you had does not.',
+        'heldBy' => 'held by :name',
+    ],
+
     'waitlist' => [
         'title' => 'Sold out — but seats do come back',
         'lead' => 'Refunds and expired baskets put places back on sale all the time. Leave your name and we will write the moment one does.',

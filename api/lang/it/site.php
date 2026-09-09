@@ -116,6 +116,14 @@ return [
     'yourSeats' => 'I tuoi posti',
     'total' => 'Totale',
     'heldUntil' => 'Tenuti fino alle :time.',
+    'transfer' => [
+        'give' => 'Regala questo biglietto',
+        'send' => 'Inviaglielo',
+        'warning' => 'Il suo biglietto parte subito e il tuo smette di funzionare. Da qui non si torna indietro.',
+        'done' => 'Inviato a :name. Da ora vale il suo biglietto, non più il tuo.',
+        'heldBy' => 'intestato a :name',
+    ],
+
     'waitlist' => [
         'title' => 'Esaurito — ma i posti tornano',
         'lead' => 'Rimborsi e carrelli scaduti rimettono posti in vendita di continuo. Lascia il tuo nome: ti scriviamo appena accade.',

@@ -4654,8 +4654,9 @@ components:
         name:
           type: string
           description: >
-            The name on the ticket where there is one, the buyer's otherwise. A door asks for a
-            name and does not care which of the two it is.
+            The name on the ticket where there is one — which is how a transferred ticket reads —
+            and the buyer's otherwise. A door asks for a name and does not care which of the two
+            it is.
         buyer_name: { type: string }
         email: { type: string }
         reference: { type: string }

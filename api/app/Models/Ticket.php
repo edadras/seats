@@ -17,7 +17,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'tenant_id', 'event_id', 'allocation_id', 'token_hash', 'token_prefix',
-        'status', 'holder_name', 'issued_at', 'used_at', 'voided_at',
+        'status', 'holder_name', 'holder_email', 'issued_at', 'used_at', 'voided_at',
     ];
 
     protected $hidden = ['token_hash'];

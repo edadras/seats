@@ -75,8 +75,38 @@
                                             <span class="muted">× {{ \App\Support\Locale\Money::number($line['quantity']) }}</span>
                                         @endif
                                     </span>
+                                    @if ($line['holder'])
+                                        <span class="muted">{{ __('site.transfer.heldBy', ['name' => $line['holder']]) }}</span>
+                                    @endif
                                     @if ($line['used'])
                                         <span class="pillbox pillbox--used">{{ __('site.account.used') }}</span>
+                                    @elseif ($line['transferable'])
+                                        {{-- Closed until somebody wants it: most tickets are never
+                                             given away, and a form under every seat is noise. --}}
+                                        <details class="give">
+                                            <summary>{{ __('site.transfer.give') }}</summary>
+                                            <form method="POST"
+                                                  action="/account/orders/{{ $order['reference'] }}/transfer">
+                                                @csrf
+                                                <input type="hidden" name="allocation_id" value="{{ $line['id'] }}">
+
+                                                <div class="give__fields">
+                                                    <div class="field">
+                                                        <label for="to-name-{{ $line['id'] }}">{{ __('site.name') }}</label>
+                                                        <input id="to-name-{{ $line['id'] }}" name="name"
+                                                               required maxlength="120">
+                                                    </div>
+                                                    <div class="field">
+                                                        <label for="to-email-{{ $line['id'] }}">{{ __('site.email') }}</label>
+                                                        <input id="to-email-{{ $line['id'] }}" name="email"
+                                                               type="email" required maxlength="190">
+                                                    </div>
+                                                </div>
+
+                                                <button class="button button--quiet" type="submit">{{ __('site.transfer.send') }}</button>
+                                                <span class="field__hint">{{ __('site.transfer.warning') }}</span>
+                                            </form>
+                                        </details>
                                     @endif
                                 </li>
                             @endforeach
