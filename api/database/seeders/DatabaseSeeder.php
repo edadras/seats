@@ -7,7 +7,12 @@ use App\Domain\Sites\SiteProvisioner;
 use App\Models\ApiClient;
 use App\Models\ApiKey;
 use App\Models\CheckinDevice;
+use App\Domain\Checkin\CheckinService;
+use App\Domain\Inventory\HoldService;
+use App\Domain\Orders\OrderService;
 use App\Models\Event;
+use App\Models\ExternalOrder;
+use App\Models\Seat;
 use App\Models\EventPriceZone;
 use App\Models\Plan;
 use App\Models\SeatMap;
@@ -205,6 +210,8 @@ class DatabaseSeeder extends Seeder
 
             $site->update(['status' => 'live']);
 
+            $this->seedSales($tenant, $event, $client);
+
             return [
                 'tenant' => $tenant,
                 'event' => $event,
@@ -214,6 +221,81 @@ class DatabaseSeeder extends Seeder
                 'secret' => $issued['secret'],
             ];
         });
+    }
+
+    /**
+     * A fortnight of sales, so the reports screen has something to say.
+     *
+     * Made through the real services — a hold, an order, a confirmation, a scan at the door —
+     * rather than by writing rows. Seeded numbers that could not have been produced by the
+     * software are the numbers that hide the bug where the software cannot produce them.
+     */
+    private function seedSales(Tenant $tenant, Event $event, ApiClient $client): void
+    {
+        if (ExternalOrder::where('event_id', $event->id)->exists()) {
+            return; // Re-seeding an existing demo should not double its takings.
+        }
+
+        // Read back from the database first: the model that `firstOrCreate` handed back does not
+        // carry the columns the database defaulted, and one of them is how many seats a hold may
+        // take — which is nought if you believe the in-memory copy.
+        $event = $event->fresh();
+
+        $seats = Seat::where('seat_map_id', $event->seat_map_id)->orderBy('key')->get();
+        $holds = app(HoldService::class);
+        $orders = app(OrderService::class);
+        $checkins = app(CheckinService::class);
+        $device = CheckinDevice::where('tenant_id', $tenant->id)->first();
+
+        $buyers = [
+            ['name' => 'Dana Scully', 'email' => 'dana@example.test'],
+            ['name' => 'Amir Rahimi', 'email' => 'amir@example.test'],
+            ['name' => 'Lotte Weber', 'email' => 'lotte@example.test'],
+            ['name' => 'Ines Rossi', 'email' => 'ines@example.test'],
+            ['name' => 'Karim Haddad', 'email' => 'karim@example.test'],
+            ['name' => 'Sofie Jansen', 'email' => 'sofie@example.test'],
+        ];
+
+        // Spread through the house rather than taken off the front of the list: six parties who
+        // all sat in the balcony make a demo where every report has one bar.
+        $stride = max(1, intdiv($seats->count(), count($buyers) * 4));
+
+        foreach ($buyers as $index => $buyer) {
+            $size = 1 + ($index % 3);
+            $chosen = $seats->slice($index * $stride * 3, $size)->pluck('id')->all();
+
+            if (count($chosen) < $size) {
+                break;
+            }
+
+            // Spread backwards through the last fortnight so a report grouped by day has days.
+            $when = now()->subDays(13 - $index * 2)->setTime(10 + $index, 15);
+
+            $hold = $holds->create($event, $chosen, 'seed-'.$index, $client->id, '127.0.0.1');
+
+            [$order] = $orders->register($client, 'seed-'.$tenant->slug.'-'.$index, $hold->token, $buyer);
+            $confirmed = $orders->confirm($order, $buyer, $when);
+
+            ExternalOrder::whereKey($order->id)->update(['created_at' => $when, 'updated_at' => $when]);
+
+            // The first two parties turned up and were scanned in; the rest have not arrived yet.
+            // The plaintext token exists only on the models this call just minted, which is the
+            // whole point of it — so the scan has to happen here or not at all.
+            if ($index < 2) {
+                foreach ($confirmed->allocations as $allocation) {
+                    $token = $allocation->ticket?->plainToken;
+
+                    if ($token) {
+                        $checkins->scan(
+                            $event,
+                            $token,
+                            $device,
+                            $event->starts_at->copy()->subMinutes(35 - $index * 5),
+                        );
+                    }
+                }
+            }
+        }
     }
 
     /**

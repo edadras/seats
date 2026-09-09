@@ -53,6 +53,9 @@ final class Permissions
         // Split by what they reveal, not by which screen shows them (ADR-0006 §5).
         'reports.attendance.view' => 'reports',
         'reports.orders.view' => 'reports',
+        // Building and saving reports is separate from reading them: what a report may show is
+        // still decided by its source's permission, so this widens nobody's view (ADR-0006 §5).
+        'reports.build' => 'reports',
 
         // --- Account -------------------------------------------------------------------
         'team.view' => 'account',
@@ -82,7 +85,7 @@ final class Permissions
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish', 'domains.manage',
-            'reports.attendance.view', 'reports.orders.view',
+            'reports.attendance.view', 'reports.orders.view', 'reports.build',
             'team.view', 'team.manage', 'roles.manage', 'modules.manage', 'connections.manage',
             'audit.view', 'account.manage',
         ],
@@ -92,7 +95,7 @@ final class Permissions
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish',
-            'reports.attendance.view', 'reports.orders.view',
+            'reports.attendance.view', 'reports.orders.view', 'reports.build',
             'team.view',
         ],
         'box_office' => [

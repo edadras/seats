@@ -29,6 +29,7 @@
 		{ key: 'venues', label: 'Venues', icon: 'building' },
 		{ key: 'sites', label: 'Websites', icon: 'globe' },
 		{ key: 'themes', label: 'Themes', icon: 'palette' },
+		{ key: 'reports', label: 'Reports', icon: 'chart' },
 		{ key: 'connections', label: 'Connections', icon: 'plug' },
 		{ key: 'modules', label: 'Modules', icon: 'puzzle' },
 		{ key: 'team', label: 'Team', icon: 'users' },
@@ -142,9 +143,17 @@
 
 	/* ------------------------------------------------------------------------- transport */
 
-	App.request = function ( method, path, body ) {
+	/**
+	 * Every call the panel makes.
+	 *
+	 * `options.raw` asks for the response body itself rather than JSON — an export is a file, and
+	 * a file cannot be fetched by pointing an anchor at it: an anchor carries no Authorization
+	 * header, and a token in a query string is a token in somebody's server log.
+	 */
+	App.request = function ( method, path, body, options ) {
 		var self = this;
-		var headers = { Accept: 'application/json' };
+		var raw = !! ( options && options.raw );
+		var headers = { Accept: raw ? '*/*' : 'application/json' };
 
 		// The panel's language travels with every call, so a message the *server* composes — a
 		// module's name, a refusal — comes back in the language the panel is being read in.
@@ -166,6 +175,10 @@
 			headers: headers,
 			body: body ? JSON.stringify( body ) : undefined,
 		} ).then( function ( response ) {
+			if ( raw && response.ok ) {
+				return response.blob();
+			}
+
 			return response.json().catch( function () { return {}; } ).then( function ( data ) {
 				if ( ! response.ok ) {
 					// An expired or revoked token should return someone to the sign-in screen
@@ -358,6 +371,7 @@
 			case 'connections': return this.renderConnections();
 			case 'sites': return window.SeatmapSites.renderList( this );
 			case 'themes': return window.SeatmapThemes.render( this );
+			case 'reports': return window.SeatmapReports.render( this );
 			case 'modules': return window.SeatmapModules.render( this );
 			case 'team': return window.SeatmapTeam.render( this );
 			case 'audit': return window.SeatmapAudit.render( this );

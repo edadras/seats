@@ -267,6 +267,23 @@ trait BuildsSeatingFixtures
     }
 
     /** Headers for a signed server-to-server call. */
+    /**
+     * The same headers, in the shape Laravel's `call()` wants.
+     *
+     * Here rather than in one test, because every test that registers an order server-to-server
+     * needs it, and a second copy is a second thing to keep in step with the signer.
+     */
+    protected function serverHeaders(array $headers): array
+    {
+        $server = ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'];
+
+        foreach ($headers as $name => $value) {
+            $server['HTTP_'.strtoupper(str_replace('-', '_', $name))] = $value;
+        }
+
+        return $server;
+    }
+
     protected function signedHeaders(string $keyId, string $secret, string $method, string $path, string $body = ''): array
     {
         $timestamp = (string) time();

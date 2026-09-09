@@ -73,3 +73,27 @@ wants everything gets it through export, which is queued and paginated.
   organiser's ticket sales, and that trade is not close.
 - Because sources are declarations, the same declaration drives the builder UI, validation, the
   export, the schedule and the API contract. There is one place to add a field.
+
+## Amendment, 2026-09: what was built, and what was not
+
+The engine and the builder are built as described: five first-party sources (orders, seats sold,
+tickets, door scans, programme), saved definitions, report pages of widgets, and per-source
+permissions enforced on every path — building, saving, running, exporting, and each widget on a
+page separately.
+
+Two deviations from §4, stated rather than implied:
+
+- **Export is streamed, not queued.** `GET /v1/reports/{id}/export` re-runs the same definition
+  through the same runner and streams a CSV, with a higher row cap than the screen (50,000 against
+  1,000). There is no queue worker and no signed link, because there is no queued job — one
+  implementation of what a report means, run in the request. A venue whose report exceeds 50,000
+  rows will need the queued path, and that is not built.
+
+- **Schedules are not built.** Sending a report through a messaging channel needs the channels
+  first; it belongs with messaging, not here.
+
+One thing the sources taught, which is worth writing down: **a source's grain is part of its
+declaration.** The orders source deliberately does not join allocations, because summing an
+order's total across its seats multiplies the revenue by the party size — a revenue report that is
+quietly three times too big is worse than no revenue report. Seat-level questions have their own
+source, where the grain is a seat. A test pins it.

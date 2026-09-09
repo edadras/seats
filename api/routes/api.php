@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
+use App\Http\Controllers\Api\V1\Management\ReportController;
+use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
@@ -84,6 +86,25 @@ Route::prefix('v1')->group(function () {
         Route::post('roles', [TeamController::class, 'storeRole']);
         Route::patch('roles/{role}', [TeamController::class, 'updateRole']);
         Route::delete('roles/{role}', [TeamController::class, 'destroyRole']);
+
+        // ---- Reports (ADR-0006) --------------------------------------------------------
+        // There is no query box here and there will not be one: a definition names fields a
+        // source declared, and anything else is refused before a query is built.
+        Route::get('reports/sources', [ReportController::class, 'sources']);
+        Route::post('reports/run', [ReportController::class, 'run']);
+        Route::get('reports', [ReportController::class, 'index']);
+        Route::post('reports', [ReportController::class, 'store']);
+        Route::get('reports/{report}', [ReportController::class, 'show']);
+        Route::patch('reports/{report}', [ReportController::class, 'update']);
+        Route::delete('reports/{report}', [ReportController::class, 'destroy']);
+        Route::get('reports/{report}/run', [ReportController::class, 'runSaved']);
+        Route::get('reports/{report}/export', [ReportController::class, 'export']);
+
+        Route::get('report-pages', [ReportPageController::class, 'index']);
+        Route::post('report-pages', [ReportPageController::class, 'store']);
+        Route::get('report-pages/{page}', [ReportPageController::class, 'show']);
+        Route::patch('report-pages/{page}', [ReportPageController::class, 'update']);
+        Route::delete('report-pages/{page}', [ReportPageController::class, 'destroy']);
 
         // Read-only, by construction. An audit trail an administrator can edit is a diary.
         Route::get('audit', [AuditController::class, 'index']);

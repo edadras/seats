@@ -68,6 +68,7 @@ return [
         'domains.manage' => 'Add and verify domains',
         'reports.attendance.view' => 'Attendance reports',
         'reports.orders.view' => 'Sales and revenue reports',
+        'reports.build' => 'Build and save reports',
         'team.view' => 'See who is in this account',
         'team.manage' => 'Invite, suspend and change roles',
         'roles.manage' => 'Create and edit roles',

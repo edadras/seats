@@ -67,6 +67,7 @@ return [
         'domains.manage' => 'Domains hinzufügen und bestätigen',
         'reports.attendance.view' => 'Besuchsberichte',
         'reports.orders.view' => 'Verkaufs- und Umsatzberichte',
+        'reports.build' => 'Berichte bauen und speichern',
         'team.view' => 'Sehen, wer zu diesem Konto gehört',
         'team.manage' => 'Einladen, sperren, Rollen ändern',
         'roles.manage' => 'Rollen anlegen und bearbeiten',

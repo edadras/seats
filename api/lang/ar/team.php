@@ -67,6 +67,7 @@ return [
         'domains.manage' => 'إضافة النطاقات والتحقّق منها',
         'reports.attendance.view' => 'تقارير الحضور',
         'reports.orders.view' => 'تقارير المبيعات والإيرادات',
+        'reports.build' => 'إنشاء التقارير وحفظها',
         'team.view' => 'رؤية أعضاء الحساب',
         'team.manage' => 'الدعوة والإيقاف وتغيير الأدوار',
         'roles.manage' => 'إنشاء الأدوار وتحريرها',

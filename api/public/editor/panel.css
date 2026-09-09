@@ -1623,3 +1623,66 @@
 	text-transform: uppercase;
 	color: var(--text-muted);
 }
+
+/* --- reports ----------------------------------------------------------------------------- */
+
+.widgets {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--s-4);
+}
+
+.widget {
+	padding: var(--s-4);
+	border: 1px solid var(--border);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+	min-inline-size: 0;
+}
+
+.widget--full { grid-column: 1 / -1; }
+
+@media (max-width: 60rem) {
+	.widgets { grid-template-columns: minmax(0, 1fr); }
+}
+
+.widget__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-2);
+	margin-block-end: var(--s-3);
+}
+
+.widget__head h3 { margin: 0; font-size: var(--text-md); }
+
+/* Drawn here rather than fetched: a thousand rows is not a reason to load a charting library. */
+.spark {
+	display: block;
+	max-inline-size: 100%;
+	block-size: 12rem;
+	margin-block-end: var(--s-4);
+}
+
+.spark__bar { fill: var(--accent); }
+.spark__bar:hover { opacity: 0.82; }
+.spark__dot { fill: var(--accent); }
+.spark__axis { stroke: var(--border); stroke-width: 1; }
+
+.spark__line {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 2;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.spark__label,
+.spark__value {
+	text-anchor: middle;
+	font-size: 11px;
+	font-family: inherit;
+}
+
+.spark__label { fill: var(--text-muted); }
+.spark__value { fill: var(--text); font-variant-numeric: tabular-nums; }

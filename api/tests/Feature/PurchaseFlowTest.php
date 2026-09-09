@@ -199,14 +199,4 @@ class PurchaseFlowTest extends TestCase
     }
 
     /** Turn header names into the SERVER-array form `call()` expects. */
-    private function serverHeaders(array $headers): array
-    {
-        $server = ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'];
-
-        foreach ($headers as $name => $value) {
-            $server['HTTP_'.strtoupper(str_replace('-', '_', $name))] = $value;
-        }
-
-        return $server;
-    }
 }

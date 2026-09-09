@@ -67,6 +67,7 @@ return [
         'domains.manage' => 'افزودن و تأیید دامنه',
         'reports.attendance.view' => 'گزارش حضور',
         'reports.orders.view' => 'گزارش فروش و درآمد',
+        'reports.build' => 'ساخت و ذخیرهٔ گزارش‌ها',
         'team.view' => 'دیدن اعضای این حساب',
         'team.manage' => 'دعوت، تعلیق و تغییر نقش',
         'roles.manage' => 'ساخت و ویرایش نقش',

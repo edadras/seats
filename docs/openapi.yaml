@@ -452,6 +452,299 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /reports/sources:
+    get:
+      operationId: listReportSources
+      tags: [Reports]
+      summary: The datasets you may build a report from
+      description: >
+        Each source declares its dimensions, measures and filters. The builder composes a query
+        from identifiers the source declared — never from user text — which is why there is no
+        query box and will not be one (ADR-0006). Only sources the caller's role may read are
+        listed: `reports.orders.view` is not `reports.attendance.view`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReportSource" }
+                  max_rows: { type: integer }
+                  max_export_rows: { type: integer }
+
+  /reports/run:
+    post:
+      operationId: runReportDefinition
+      tags: [Reports]
+      summary: Run a definition that has not been saved
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source, definition]
+              properties:
+                source: { type: string }
+                definition: { $ref: "#/components/schemas/ReportDefinition" }
+      responses:
+        "200":
+          description: Rows
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportResult" }
+        "422":
+          description: A field the source never declared, or nothing to measure
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [Reports]
+      summary: Saved report definitions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Report" }
+    post:
+      operationId: createReport
+      tags: [Reports]
+      summary: Save a definition
+      description: The definition is validated against its source before it is stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, source, definition]
+              properties:
+                name: { type: string, maxLength: 120 }
+                source: { type: string }
+                definition: { $ref: "#/components/schemas/ReportDefinition" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Report" }
+
+  /reports/{report}:
+    parameters:
+      - name: report
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getReport
+      tags: [Reports]
+      summary: One saved report
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Report" }
+    patch:
+      operationId: updateReport
+      tags: [Reports]
+      summary: Rename a report or change its definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                definition: { $ref: "#/components/schemas/ReportDefinition" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Report" }
+    delete:
+      operationId: deleteReport
+      tags: [Reports]
+      summary: Delete a saved report
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+
+  /reports/{report}/run:
+    parameters:
+      - name: report
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: runReport
+      tags: [Reports]
+      summary: Run a saved report
+      description: >
+        Re-run on read, never a stored result — so a report cannot go stale and cannot become a
+        copy of numbers that have since been corrected.
+      responses:
+        "200":
+          description: Rows
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportResult" }
+
+  /reports/{report}/export:
+    parameters:
+      - name: report
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: exportReport
+      tags: [Reports]
+      summary: The same definition, as a CSV
+      description: >
+        Streamed, with a higher row cap than the screen. The same runner and the same definition:
+        two implementations of what a report means is how an export and its screen start
+        disagreeing.
+      responses:
+        "200":
+          description: A CSV file
+          content:
+            text/csv:
+              schema: { type: string }
+
+  /report-pages:
+    get:
+      operationId: listReportPages
+      tags: [Reports]
+      summary: Pages of report widgets
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReportPage" }
+    post:
+      operationId: createReportPage
+      tags: [Reports]
+      summary: Create a page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                widgets:
+                  type: array
+                  items: { $ref: "#/components/schemas/ReportWidget" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportPage" }
+
+  /report-pages/{page}:
+    parameters:
+      - name: page
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getReportPage
+      tags: [Reports]
+      summary: The page, with every widget already run
+      description: >
+        Each widget runs through its own report's source permission, so a page cannot become a way
+        to see a report you may not read. A widget that is out of reach comes back with an `error`
+        in place of its rows, so the rest of the page still renders.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  slug: { type: string }
+                  widgets:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/ReportWidget"
+                        - type: object
+                          properties:
+                            error: { type: string }
+                            columns:
+                              type: array
+                              items: { $ref: "#/components/schemas/ReportColumn" }
+                            rows:
+                              type: array
+                              items: { type: object, additionalProperties: true }
+    patch:
+      operationId: updateReportPage
+      tags: [Reports]
+      summary: Rename a page or rearrange its widgets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                widgets:
+                  type: array
+                  items: { $ref: "#/components/schemas/ReportWidget" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportPage" }
+    delete:
+      operationId: deleteReportPage
+      tags: [Reports]
+      summary: Delete a page
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+
   /themes:
     get:
       operationId: listCustomThemes
@@ -2863,6 +3156,115 @@ components:
         failures: { type: integer }
         last_failure_at: { type: [string, "null"], format: date-time }
         last_message: { type: [string, "null"] }
+
+    ReportSource:
+      type: object
+      properties:
+        key: { type: string, examples: [orders, seats_sold, tickets, checkins, events] }
+        name: { type: string }
+        description: { type: string }
+        permission:
+          type: string
+          description: What a reader needs. A report inherits it, so sharing cannot widen it.
+        dimensions:
+          type: array
+          items: { $ref: "#/components/schemas/ReportField" }
+        measures:
+          type: array
+          items: { $ref: "#/components/schemas/ReportField" }
+        filters:
+          type: array
+          items: { $ref: "#/components/schemas/ReportField" }
+
+    ReportField:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        type: { type: string, examples: [string, date, datetime, number, boolean, enum, event] }
+        aggregate: { type: string, examples: [count, count_distinct, sum, avg, min, max] }
+        format: { type: string, examples: [money, number] }
+        options:
+          type: array
+          items: { type: string }
+
+    ReportDefinition:
+      type: object
+      description: >
+        Field *keys*, never expressions. Anything not declared by the source is refused before a
+        query is built.
+      properties:
+        dimensions:
+          type: array
+          items: { type: string }
+        measures:
+          type: array
+          items: { type: string }
+        filters:
+          type: object
+          additionalProperties: true
+        sort:
+          type: object
+          properties:
+            key:
+              type: string
+              description: A column alias — d0 for the first dimension, m0 for the first measure.
+            direction: { type: string, enum: [asc, desc] }
+        limit: { type: integer, minimum: 1 }
+
+    ReportColumn:
+      type: object
+      properties:
+        alias: { type: string, examples: [d0, m0] }
+        key: { type: string }
+        kind: { type: string, enum: [dimension, measure] }
+        type: { type: string }
+        format: { type: string }
+        label: { type: string }
+
+    ReportResult:
+      type: object
+      properties:
+        columns:
+          type: array
+          items: { $ref: "#/components/schemas/ReportColumn" }
+        rows:
+          type: array
+          description: Keyed by column alias.
+          items: { type: object, additionalProperties: true }
+        truncated:
+          type: boolean
+          description: There were more rows than the cap. Export for the rest.
+        limit: { type: integer }
+
+    Report:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        source: { type: string }
+        definition: { $ref: "#/components/schemas/ReportDefinition" }
+        author: { type: [string, 'null'] }
+        updated_at: { type: string, format: date-time }
+
+    ReportWidget:
+      type: object
+      properties:
+        type: { type: string, enum: [table, bar, line, stat] }
+        report_id: { type: string, format: uuid }
+        title: { type: [string, 'null'] }
+        width: { type: string, enum: [half, full] }
+
+    ReportPage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        widgets:
+          type: array
+          items: { $ref: "#/components/schemas/ReportWidget" }
+        updated_at: { type: string, format: date-time }
 
     SiteTheme:
       type: object
