@@ -240,7 +240,7 @@ for ( const scheme of [ 'light', 'dark' ] ) {
 
 		// And back out again, without a mouse: a buyer who zoomed into the wrong block must not
 		// be stranded in it.
-		await buyer.locator( '.seatmap-widget__leave' ).first().click();
+		await buyer.locator( '.seatmap-widget__back-button' ).click();
 		await buyer.waitForTimeout( 200 );
 		check( 'the way back to the venue is a button too',
 			( await buyer.locator( '.seatmap-widget__block' ).count() ) > 1 );

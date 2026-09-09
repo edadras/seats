@@ -104,6 +104,9 @@ check( 'one block’s chairs, not the building’s',
 	1 === await page.locator( '.seatmap-widget__seats h4' ).count(),
 	( await page.locator( '.seatmap-widget__seats h4' ).allInnerTexts() ).join( ', ' ) );
 check( 'the way back appeared', await page.locator( '.seatmap-widget__back' ).isVisible() );
+// Standing room and tables belong to the venue, not to the block being looked at.
+check( 'and the standing offer stepped out of the way',
+	await page.locator( '.seatmap-widget__areas' ).isHidden() );
 
 console.log( 'Choosing' );
 await page.locator( '.seatmap-widget__seat:not([disabled])' ).first().click();
@@ -118,6 +121,8 @@ await page.waitForSelector( '.seatmap-widget__block' );
 check( 'the venue is back', ( await page.locator( '.seatmap-widget__block' ).count() ) >= 2 );
 check( 'and the choice survived the trip',
 	( await page.locator( '.seatmap-widget__selection li' ).count() ) === 1 );
+check( 'and the standing offer is where it was left',
+	await page.locator( '.seatmap-widget__areas' ).isVisible() );
 
 console.log( 'Escape' );
 await page.locator( '.seatmap-widget__block:not([disabled])' ).first().click();

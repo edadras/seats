@@ -622,8 +622,7 @@
 .seatmap-widget__back-button:hover { background: var(--seatmap-surface-hover); }
 
 .seatmap-widget__back-button:focus-visible,
-.seatmap-widget__block:focus-visible,
-.seatmap-widget__leave:focus-visible {
+.seatmap-widget__block:focus-visible {
 	outline: none;
 	box-shadow: var(--seatmap-ring);
 }
@@ -661,17 +660,3 @@
 	color: var(--seatmap-muted);
 }
 
-/* The way back, for whoever is reading the list rather than the picture. */
-.seatmap-widget__leave {
-	margin-block: 0.75rem 0.25rem;
-	padding: 0.35rem 0.7rem;
-	border: 1px solid var(--seatmap-border);
-	border-radius: 999px;
-	background: var(--seatmap-surface);
-	color: inherit;
-	font: inherit;
-	font-size: 0.75rem;
-	cursor: pointer;
-}
-
-.seatmap-widget__leave:hover { background: var(--seatmap-surface-hover); }

@@ -595,9 +595,20 @@
 	};
 
 	/** Only offer the way out when there is somewhere to go back to. */
+	/**
+	 * Inside one block, with a whole venue to go back to.
+	 *
+	 * The second half matters: a room with a single block never shows the overview at all, so a
+	 * buyer there is not "inside" anything — there is nowhere else to be, and hiding things from
+	 * them would hide them for good.
+	 */
+	SeatmapWidget.prototype.insideABlock = function () {
+		return 'section' === this.mode && this.blocksOnFloor().length > 1;
+	};
+
 	SeatmapWidget.prototype.syncStageControls = function () {
 		if ( this.backEl ) {
-			this.backEl.hidden = 'section' !== this.mode || this.blocksOnFloor().length < 2;
+			this.backEl.hidden = ! this.insideABlock();
 		}
 	};
 
@@ -712,10 +723,19 @@
 			return area.floorKey === self.floorKey && area.id;
 		} );
 
-		this.areaListEl.innerHTML = '';
-		this.areaListEl.hidden = 0 === areas.length;
+		/*
+		 * Standing room and tables belong to the venue, not to one block of it.
+		 *
+		 * Once somebody has zoomed into the Stalls they are choosing a chair, and a list of tables
+		 * printed under the chairs is a different offer interrupting the one they are making. It is
+		 * still there on the way back out, which is where they met it in the first place.
+		 */
+		var hidden = 0 === areas.length || this.insideABlock();
 
-		if ( ! areas.length ) {
+		this.areaListEl.innerHTML = '';
+		this.areaListEl.hidden = hidden;
+
+		if ( hidden ) {
 			return;
 		}
 
@@ -1577,6 +1597,7 @@
 		this.fitTo( block.box );
 		this.syncStageControls();
 		this.renderSeatList();
+		this.renderAreaList();
 		this.announce( this.i18n.inSection.replace( '%s', block.name ), true );
 
 		// Focus follows the view. The button that was clicked has just been replaced by this
@@ -1599,6 +1620,7 @@
 		this.resetView();
 		this.syncStageControls();
 		this.renderSeatList();
+		this.renderAreaList();
 		this.announce( this.i18n.chooseSection, true );
 
 		var first = this.seatListEl && this.seatListEl.querySelector( '.seatmap-widget__block' );
@@ -1702,15 +1724,15 @@
 			return;
 		}
 
-		if ( this.blocksOnFloor().length > 1 ) {
-			var back = document.createElement( 'button' );
-
-			back.type = 'button';
-			back.className = 'seatmap-widget__leave';
-			back.textContent = this.i18n.backToPlan;
-			back.addEventListener( 'click', function () { self.leaveBlock(); } );
-			this.seatListEl.appendChild( back );
-		}
+		/*
+		 * There is no second way back here.
+		 *
+		 * The list used to carry its own "back to the whole venue", because it used to sit a long
+		 * way below the one floating over the plan, with the standing offer in between. It does not
+		 * any more: the two ended up stacked, and two identical buttons a centimetre apart is a
+		 * question rather than an answer. The floating one takes focus the moment a block is
+		 * opened, and Escape does the same thing, so nobody is stranded.
+		 */
 
 		// Grouped in the order the seats were published, which is the order they were drawn.
 		var groups = [];
