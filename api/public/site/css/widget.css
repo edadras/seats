@@ -513,6 +513,12 @@
 	line-height: 1.45;
 }
 
+/* Navigation is news, not a problem, so it does not wear the colour of one. */
+.seatmap-widget__message--quiet {
+	background: var(--seatmap-surface-sunken);
+	color: var(--seatmap-muted);
+}
+
 /*
  * The submit carries the theme's own `.button` class too. Its appearance is written inside
  * `:where()`, which has no specificity at all, so the shop's own button style wins without a
@@ -554,3 +560,84 @@
 		transition: none !important;
 	}
 }
+
+/* --- the venue as blocks ------------------------------------------------------------------
+ *
+ * A plan of two thousand chairs is not something a person chooses from. The first view is the
+ * venue the way the building is signposted, and the chairs appear once a block has been chosen.
+ */
+
+.seatmap-widget__back {
+	inset-block-start: 0.6rem;
+	inset-inline-start: 0.6rem;
+	padding: 2px;
+}
+
+.seatmap-widget__back-button {
+	block-size: 1.75rem;
+	padding-inline: 0.75rem;
+	border: none;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.seatmap-widget__back-button:hover { background: var(--seatmap-surface-hover); }
+
+.seatmap-widget__back-button:focus-visible,
+.seatmap-widget__block:focus-visible,
+.seatmap-widget__leave:focus-visible {
+	outline: none;
+	box-shadow: var(--seatmap-ring);
+}
+
+.seatmap-widget__blocks {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+	gap: 0.5rem;
+}
+
+.seatmap-widget__block {
+	display: grid;
+	gap: 0.15rem;
+	padding: 0.7rem 0.8rem;
+	text-align: start;
+	border: 1px solid var(--seatmap-border);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-surface);
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.seatmap-widget__block:hover:not(:disabled) { border-color: var(--seatmap-border-strong); }
+
+.seatmap-widget__block:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.seatmap-widget__block-name { font-weight: 600; }
+
+.seatmap-widget__block-meta {
+	font-size: 0.75rem;
+	color: var(--seatmap-muted);
+}
+
+/* The way back, for whoever is reading the list rather than the picture. */
+.seatmap-widget__leave {
+	margin-block: 0.75rem 0.25rem;
+	padding: 0.35rem 0.7rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: 999px;
+	background: var(--seatmap-surface);
+	color: inherit;
+	font: inherit;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.seatmap-widget__leave:hover { background: var(--seatmap-surface-hover); }

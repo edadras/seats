@@ -221,6 +221,9 @@ jobs:
           tools/sync-seat-picker.sh
           git diff --exit-code wordpress-plugin/seatmap-connect/assets api/public/site
 
+      - name: Every string the picker asks for is provided by every host
+        run: node tools/picker-strings-check.mjs
+
       - name: Check plugin JavaScript parses
         run: |
           node --check wordpress-plugin/seatmap-connect/assets/js/widget.js

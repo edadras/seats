@@ -14,6 +14,10 @@
 
 	var SEAT_SIZE = 18;
 	var SEAT_RADIUS = SEAT_SIZE / 2;
+	// A single block in a large venue can be a small part of the plan, so the ceiling has to be
+	// high enough to fill the canvas with it.
+	var MAX_ZOOM = 14;
+	var MIN_ZOOM = 0.5;
 	var POLL_INTERVAL = 15000;
 
 	function boot( config ) {
@@ -38,6 +42,10 @@
 		this.floors = [];
 		this.floorKey = null;
 		this.availability = {};
+		this.blocks = [];
+		// 'plan' shows the venue as blocks; 'section' shows the chairs inside one of them.
+		this.mode = 'plan';
+		this.blockId = null;
 		this.selected = [];
 		this.cursor = null;
 		this.view = { scale: 1, x: 0, y: 0 };
@@ -47,6 +55,7 @@
 
 	SeatmapWidget.prototype.init = function () {
 		this.flattenSeats();
+		this.buildBlocks();
 		this.render();
 		this.renderAreaList();
 		this.fetchAvailability();
@@ -125,6 +134,7 @@
 				// on a stable id rather than on array position.
 				id: seat.seat_id || null,
 				section: section ? labelOf( section ) : '',
+				sectionKey: section ? section.key : null,
 				row: labelOf( owner ) || '',
 				label: seat.label,
 				x: positions[ index ].x,
@@ -144,12 +154,132 @@
 		} );
 	};
 
+	/**
+	 * The venue as blocks.
+	 *
+	 * A plan of two thousand chairs is not something a person chooses from; it is something they
+	 * get lost in. So the first view is the venue the way the building itself is signposted —
+	 * Stalls, Balcony, Boxes — and the chairs appear once one of those has been chosen.
+	 *
+	 * Every seat belongs to exactly one block, including seats a chart left outside any section:
+	 * those get a block of their own rather than becoming unreachable, which is the failure this
+	 * view would otherwise introduce. A floor with only one block never shows the overview, for
+	 * the same reason the floor switcher only appears when there are floors to switch between.
+	 */
+	SeatmapWidget.prototype.buildBlocks = function () {
+		var self = this;
+		var index = {};
+		var blocks = [];
+		var named = {};
+
+		this.sections.forEach( function ( section ) {
+			named[ section.key ] = section;
+		} );
+
+		this.seats.forEach( function ( seat ) {
+			var id = seat.floorKey + '|' + ( seat.sectionKey || '' );
+			var section = seat.sectionKey ? named[ seat.sectionKey ] : null;
+
+			if ( ! index[ id ] ) {
+				index[ id ] = {
+					id: id,
+					floorKey: seat.floorKey,
+					sectionKey: seat.sectionKey || null,
+					name: section
+						? ( labelOf( section ) || section.key )
+						: ( self.floorName( seat.floorKey ) || self.i18n.selectSeats ),
+					colour: ( section && section.color ) || null,
+					seats: [],
+				};
+				blocks.push( index[ id ] );
+			}
+
+			index[ id ].seats.push( seat );
+		} );
+
+		blocks.forEach( function ( block ) {
+			block.box = boundsOf( block.seats );
+		} );
+
+		this.blocks = blocks;
+		this.settleMode();
+	};
+
+	/** One block on this floor means there is nothing to choose between: go straight in. */
+	SeatmapWidget.prototype.settleMode = function () {
+		var here = this.blocksOnFloor();
+
+		this.mode = here.length > 1 ? 'plan' : 'section';
+		this.blockId = here.length > 1 ? null : ( here[ 0 ] ? here[ 0 ].id : null );
+	};
+
+	SeatmapWidget.prototype.blocksOnFloor = function () {
+		var self = this;
+
+		return this.blocks.filter( function ( block ) {
+			return block.floorKey === self.floorKey && block.box;
+		} );
+	};
+
+	SeatmapWidget.prototype.currentBlock = function () {
+		var self = this;
+
+		return this.blocks.filter( function ( block ) { return block.id === self.blockId; } )[ 0 ] || null;
+	};
+
+	SeatmapWidget.prototype.floorName = function ( key ) {
+		var floor = ( this.floors || [] ).filter( function ( entry ) { return entry.key === key; } )[ 0 ];
+
+		return floor ? ( floor.name || floor.key ) : '';
+	};
+
+	/** How much of a block is still buyable, and what the cheapest seat in it costs. */
+	SeatmapWidget.prototype.blockStats = function ( block ) {
+		var available = 0;
+		var chosen = 0;
+		var cheapest = null;
+
+		block.seats.forEach( function ( seat ) {
+			if ( 'selected' === seat.state ) {
+				chosen++;
+			}
+
+			if ( 'available' !== seat.state && 'selected' !== seat.state ) {
+				return;
+			}
+
+			available++;
+
+			if ( null != seat.amount && ( null === cheapest || seat.amount < cheapest ) ) {
+				cheapest = seat.amount;
+			}
+		} );
+
+		return { available: available, chosen: chosen, cheapest: cheapest, total: block.seats.length };
+	};
+
+	/** The line under a block's name: what it costs to sit there, or that it is gone. */
+	SeatmapWidget.prototype.blockSummary = function ( block ) {
+		var stats = this.blockStats( block );
+
+		if ( ! stats.available ) {
+			return this.i18n.sectionSoldOut;
+		}
+
+		var left = this.i18n.sectionSeatsLeft.replace( '%d', stats.available );
+
+		return null === stats.cheapest
+			? left
+			: this.i18n.sectionFrom.replace( '%s', this.formatMoney( stats.cheapest ) ) + ' · ' + left;
+	};
+
 	SeatmapWidget.prototype.describeArea = function ( object, section, floorKey ) {
 		return {
 			id: object.capacity_object_id || null,
 			key: object.key,
 			label: labelOf( object ) || '',
 			section: section ? labelOf( section ) : '',
+			sectionKey: section ? section.key : null,
 			kind: object.type,
 			shape: object.shape,
 			x: object.x,
@@ -164,6 +294,31 @@
 			quantity: 0,
 		};
 	};
+
+	/** A box round a set of seats, with enough air that the outermost chair is not on the line. */
+	function boundsOf( seats ) {
+		if ( ! seats.length ) {
+			return null;
+		}
+
+		var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+		seats.forEach( function ( seat ) {
+			minX = Math.min( minX, seat.x );
+			minY = Math.min( minY, seat.y );
+			maxX = Math.max( maxX, seat.x );
+			maxY = Math.max( maxY, seat.y );
+		} );
+
+		var pad = SEAT_SIZE * 1.5;
+
+		return {
+			x: minX - pad,
+			y: minY - pad,
+			width: maxX - minX + pad * 2,
+			height: maxY - minY + pad * 2,
+		};
+	}
 
 	/** Row seat positions — the same maths the designer and the publisher use. */
 	function seatPositions( row ) {
@@ -316,6 +471,7 @@
 		this.canvas.setAttribute( 'aria-hidden', 'true' );
 		stage.appendChild( this.canvas );
 		stage.appendChild( this.buildZoomControls() );
+		stage.appendChild( this.buildBackControl() );
 
 		var floors = this.buildFloorSwitcher();
 
@@ -375,6 +531,47 @@
 		} );
 
 		return legend;
+	};
+
+	/**
+	 * The way back out of a block.
+	 *
+	 * Built once and hidden, rather than added and removed: a control that appears in a different
+	 * place each time is a control people stop trusting. Escape does the same thing, because
+	 * anyone who has just zoomed into the wrong section reaches for it.
+	 */
+	SeatmapWidget.prototype.buildBackControl = function () {
+		var self = this;
+		var wrap = document.createElement( 'div' );
+
+		wrap.className = 'seatmap-widget__float seatmap-widget__back';
+
+		var button = document.createElement( 'button' );
+
+		button.type = 'button';
+		button.className = 'seatmap-widget__back-button';
+		button.textContent = this.i18n.backToPlan;
+		button.addEventListener( 'click', function () { self.leaveBlock(); } );
+
+		wrap.appendChild( button );
+		this.backEl = wrap;
+
+		this.container.addEventListener( 'keydown', function ( event ) {
+			if ( 'Escape' === event.key && 'section' === self.mode ) {
+				self.leaveBlock();
+			}
+		} );
+
+		this.syncStageControls();
+
+		return wrap;
+	};
+
+	/** Only offer the way out when there is somewhere to go back to. */
+	SeatmapWidget.prototype.syncStageControls = function () {
+		if ( this.backEl ) {
+			this.backEl.hidden = 'section' !== this.mode || this.blocksOnFloor().length < 2;
+		}
 	};
 
 	SeatmapWidget.prototype.buildZoomControls = function () {
@@ -441,7 +638,9 @@
 		} );
 
 		// A selection made on another floor stays in the basket — only the view moves.
+		this.settleMode();
 		this.resetView();
+		this.syncStageControls();
 		this.renderAreaList();
 		this.renderSeatList();
 	};
@@ -729,7 +928,15 @@
 		this.baseScale = Math.min( width / geometryWidth, height / geometryHeight );
 		this.dpr = dpr;
 
-		this.paint();
+		var open = 'section' === this.mode ? this.currentBlock() : null;
+
+		// The view offsets were solved for the old canvas. Reframing is cheaper than leaving
+		// somebody's section half off the edge after they rotate a phone.
+		if ( open && open.box && this.blocksOnFloor().length > 1 ) {
+			this.fitTo( open.box );
+		} else {
+			this.paint();
+		}
 	};
 
 	/**
@@ -805,8 +1012,16 @@
 
 		this.paintDecorations( ctx );
 		this.paintAreas( ctx );
-		this.paintTables( ctx );
-		this.paintSeats( ctx, scale );
+
+		if ( 'plan' === this.mode ) {
+			// Blocks instead of chairs. Tables are left out too: a table is a chair-level thing,
+			// and drawing it under a block would be drawing two answers to the same question.
+			this.paintBlocks( ctx, scale );
+		} else {
+			this.paintNeighbours( ctx );
+			this.paintTables( ctx );
+			this.paintSeats( ctx, scale );
+		}
 
 		ctx.restore();
 	};
@@ -1041,7 +1256,7 @@
 		var colours = this.colours();
 
 		this.seats.filter( function ( seat ) {
-			return seat.floorKey === self.floorKey;
+			return seat.floorKey === self.floorKey && self.inOpenBlock( seat );
 		} ).forEach( function ( seat ) {
 			ctx.beginPath();
 			ctx.fillStyle = self.seatColour( seat );
@@ -1052,6 +1267,105 @@
 			ctx.fill();
 			ctx.stroke();
 		} );
+	};
+
+	SeatmapWidget.prototype.paintBlocks = function ( ctx, scale ) {
+		var self = this;
+		var colours = this.colours();
+
+		this.blocksOnFloor().forEach( function ( block ) {
+			var stats = self.blockStats( block );
+			var soldOut = 0 === stats.available;
+			var colour = block.colour || self.zoneColour( self.blockZone( block ) );
+			var box = block.box;
+
+			ctx.save();
+			ctx.beginPath();
+
+			if ( ctx.roundRect ) {
+				ctx.roundRect( box.x, box.y, box.width, box.height, 12 );
+			} else {
+				ctx.rect( box.x, box.y, box.width, box.height );
+			}
+
+			ctx.fillStyle = soldOut ? colours.areaSoldOut : withAlpha( colour, stats.chosen ? 0.42 : 0.22 );
+			ctx.fill();
+			ctx.lineWidth = ( stats.chosen ? 3 : 1.5 ) / scale * ( self.baseScale || 1 );
+			ctx.strokeStyle = stats.chosen ? colours.ink : soldOut ? colours.areaSoldOutEdge : colour;
+			ctx.stroke();
+
+			var cx = box.x + box.width / 2;
+			var cy = box.y + box.height / 2;
+
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillStyle = soldOut ? colours.muted : colours.ink;
+			ctx.font = '600 18px system-ui, sans-serif';
+			ctx.fillText( block.name, cx, cy - 11 );
+
+			ctx.font = '13px system-ui, sans-serif';
+			ctx.fillStyle = soldOut ? colours.muted : colours.text;
+			ctx.fillText( self.blockSummary( block ), cx, cy + 11 );
+
+			ctx.restore();
+		} );
+	};
+
+	/**
+	 * The other blocks, while one is open.
+	 *
+	 * Drawn as faint outlines so the chairs on screen keep their place in the building: a buyer
+	 * looking at forty seats needs to know which forty, and "somewhere in the venue" is not it.
+	 */
+	SeatmapWidget.prototype.paintNeighbours = function ( ctx ) {
+		var self = this;
+		var colours = this.colours();
+
+		this.blocksOnFloor().forEach( function ( block ) {
+			if ( block.id === self.blockId ) {
+				return;
+			}
+
+			ctx.save();
+			ctx.beginPath();
+
+			if ( ctx.roundRect ) {
+				ctx.roundRect( block.box.x, block.box.y, block.box.width, block.box.height, 12 );
+			} else {
+				ctx.rect( block.box.x, block.box.y, block.box.width, block.box.height );
+			}
+
+			ctx.fillStyle = colours.areaSoldOut;
+			ctx.fill();
+			ctx.strokeStyle = colours.areaSoldOutEdge;
+			ctx.lineWidth = 1;
+			ctx.stroke();
+
+			ctx.fillStyle = colours.muted;
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.font = '600 15px system-ui, sans-serif';
+			ctx.fillText( block.name, block.box.x + block.box.width / 2, block.box.y + block.box.height / 2 );
+			ctx.restore();
+		} );
+	};
+
+	/** The zone most of a block sits in — used only to colour it. */
+	SeatmapWidget.prototype.blockZone = function ( block ) {
+		var counts = {};
+		var best = null;
+
+		block.seats.forEach( function ( seat ) {
+			var key = seat.zoneKey || '';
+
+			counts[ key ] = ( counts[ key ] || 0 ) + 1;
+
+			if ( null === best || counts[ key ] > counts[ best ] ) {
+				best = key;
+			}
+		} );
+
+		return best;
 	};
 
 	SeatmapWidget.prototype.seatColour = function ( seat ) {
@@ -1150,13 +1464,25 @@
 		var x = ( event.clientX - rect.left - this.view.x ) / scale;
 		var y = ( event.clientY - rect.top - this.view.y ) / scale;
 
+		if ( 'plan' === this.mode ) {
+			this.blocksOnFloor().forEach( function ( block ) {
+				if ( x >= block.box.x && x <= block.box.x + block.box.width &&
+					y >= block.box.y && y <= block.box.y + block.box.height ) {
+					this.enterBlock( block.id );
+				}
+			}, this );
+
+			return;
+		}
+
 		var hit = null;
 		var best = SEAT_RADIUS * 1.6;
 		var self = this;
 
 		this.seats.forEach( function ( seat ) {
-			// Only the floor on screen can be clicked; two floors may occupy the same coordinates.
-			if ( seat.floorKey !== self.floorKey ) {
+			// Only what is on screen can be clicked: two floors may occupy the same coordinates,
+			// and a neighbouring block is drawn but not open.
+			if ( seat.floorKey !== self.floorKey || ! self.inOpenBlock( seat ) ) {
 				return;
 			}
 
@@ -1173,8 +1499,83 @@
 		}
 	};
 
+	/** Is this seat in the block currently open? In 'plan' mode nothing is. */
+	SeatmapWidget.prototype.inOpenBlock = function ( seat ) {
+		var block = this.currentBlock();
+
+		return !! block && block.floorKey === seat.floorKey && block.sectionKey === ( seat.sectionKey || null );
+	};
+
+	SeatmapWidget.prototype.enterBlock = function ( id ) {
+		var block = this.blocks.filter( function ( entry ) { return entry.id === id; } )[ 0 ];
+
+		if ( ! block ) {
+			return;
+		}
+
+		this.mode = 'section';
+		this.blockId = id;
+		this.fitTo( block.box );
+		this.syncStageControls();
+		this.renderSeatList();
+		this.announce( this.i18n.inSection.replace( '%s', block.name ), true );
+
+		// Focus follows the view. The button that was clicked has just been replaced by this
+		// block's chairs, and leaving focus on nothing means the next Tab starts at the top of
+		// the page and Escape reaches no one.
+		var back = this.backEl && ! this.backEl.hidden ? this.backEl.querySelector( 'button' ) : null;
+
+		if ( back ) {
+			back.focus();
+		}
+	};
+
+	SeatmapWidget.prototype.leaveBlock = function () {
+		if ( this.blocksOnFloor().length < 2 ) {
+			return; // Nothing to go back to.
+		}
+
+		this.mode = 'plan';
+		this.blockId = null;
+		this.resetView();
+		this.syncStageControls();
+		this.renderSeatList();
+		this.announce( this.i18n.chooseSection, true );
+
+		var first = this.seatListEl && this.seatListEl.querySelector( '.seatmap-widget__block' );
+
+		if ( first ) {
+			first.focus();
+		}
+	};
+
+	/**
+	 * Put a box on screen, centred, with a margin.
+	 *
+	 * The transform is the one `paint` uses — translate by the view, then scale — so this is that
+	 * arithmetic solved for the offset rather than a second idea about where things are.
+	 */
+	SeatmapWidget.prototype.fitTo = function ( box ) {
+		if ( ! box || ! this.canvas ) {
+			return;
+		}
+
+		var width = this.canvas.clientWidth || 800;
+		var height = this.canvas.clientHeight || 600;
+		var fit = Math.min( width / box.width, height / box.height ) * 0.88;
+
+		this.view.scale = Math.min( MAX_ZOOM, Math.max( MIN_ZOOM, fit / this.baseScale ) );
+
+		var scale = this.baseScale * this.view.scale;
+
+		this.view.x = width / 2 - ( box.x + box.width / 2 ) * scale;
+		this.view.y = height / 2 - ( box.y + box.height / 2 ) * scale;
+
+		this.paint();
+	};
+
 	SeatmapWidget.prototype.zoomBy = function ( factor ) {
-		this.view.scale = Math.min( 6, Math.max( 0.5, this.view.scale * factor ) );
+		this.view.scale = Math.min( MAX_ZOOM, Math.max( MIN_ZOOM, this.view.scale * factor ) );
 		this.paint();
 	};
 
@@ -1232,12 +1633,31 @@
 
 		this.seatListEl.innerHTML = '';
 
+		// The keyboard interface follows the plan: blocks while the plan is showing blocks, and
+		// one block's chairs while one is open. A list of every chair in the building beside a
+		// picture of six sections is two different answers to "what am I choosing from".
+		if ( 'plan' === this.mode ) {
+			this.renderBlockList();
+
+			return;
+		}
+
+		if ( this.blocksOnFloor().length > 1 ) {
+			var back = document.createElement( 'button' );
+
+			back.type = 'button';
+			back.className = 'seatmap-widget__leave';
+			back.textContent = this.i18n.backToPlan;
+			back.addEventListener( 'click', function () { self.leaveBlock(); } );
+			this.seatListEl.appendChild( back );
+		}
+
 		// Grouped in the order the seats were published, which is the order they were drawn.
 		var groups = [];
 		var index = {};
 
 		this.seats.forEach( function ( seat ) {
-			if ( seat.floorKey !== self.floorKey ) {
+			if ( seat.floorKey !== self.floorKey || ! self.inOpenBlock( seat ) ) {
 				return;
 			}
 
@@ -1284,6 +1704,51 @@
 				restored.focus();
 			}
 		}
+	};
+
+	/**
+	 * The blocks, as buttons.
+	 *
+	 * This is the whole overview for anyone not using the canvas — which is anyone on a screen
+	 * reader, and anyone who simply prefers a list. It carries the same two facts the drawn block
+	 * carries: what it costs to sit there and whether there is anything left.
+	 */
+	SeatmapWidget.prototype.renderBlockList = function () {
+		var self = this;
+		var heading = document.createElement( 'h4' );
+
+		heading.textContent = this.i18n.chooseSection;
+		this.seatListEl.appendChild( heading );
+
+		var list = document.createElement( 'div' );
+		list.className = 'seatmap-widget__blocks';
+
+		this.blocksOnFloor().forEach( function ( block ) {
+			var stats = self.blockStats( block );
+			var button = document.createElement( 'button' );
+
+			button.type = 'button';
+			button.className = 'seatmap-widget__block';
+			button.dataset.block = block.id;
+			button.disabled = 0 === stats.available;
+			button.setAttribute( 'aria-label', self.i18n.openSection.replace( '%s', block.name ) );
+
+			var name = document.createElement( 'span' );
+			name.className = 'seatmap-widget__block-name';
+			name.textContent = block.name;
+
+			var meta = document.createElement( 'span' );
+			meta.className = 'seatmap-widget__block-meta';
+			meta.textContent = self.blockSummary( block );
+
+			button.appendChild( name );
+			button.appendChild( meta );
+			button.addEventListener( 'click', function () { self.enterBlock( block.id ); } );
+
+			list.appendChild( button );
+		} );
+
+		this.seatListEl.appendChild( list );
 	};
 
 	SeatmapWidget.prototype.buildSeatButton = function ( seat ) {
@@ -1499,8 +1964,16 @@
 		return span;
 	}
 
-	SeatmapWidget.prototype.announce = function ( message ) {
+	/**
+	 * Say something in the live region beside the summary.
+	 *
+	 * `quiet` is for navigation — "In Stalls" — which is news, not a problem. Without it every
+	 * announcement wears the same red as "that seat was just taken", and a buyer who has done
+	 * nothing wrong is told twice a minute that something is wrong.
+	 */
+	SeatmapWidget.prototype.announce = function ( message, quiet ) {
 		this.messageEl.textContent = message;
+		this.messageEl.classList.toggle( 'seatmap-widget__message--quiet', !! quiet );
 	};
 
 	/**

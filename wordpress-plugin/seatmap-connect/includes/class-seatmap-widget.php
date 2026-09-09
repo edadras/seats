@@ -173,6 +173,18 @@ class Seatmap_Widget {
 							/* translators: %s: name of the standing area. */
 							'removeOne'      => __( 'Remove one place in %s', 'seatmap-connect' ),
 							'areaFull'       => __( 'That area filled up while you were choosing. Please pick a different number of places.', 'seatmap-connect' ),
+							// The block view: the plan of areas a buyer sees before zooming into one.
+							'chooseSection'  => __( 'Choose an area', 'seatmap-connect' ),
+							'backToPlan'     => __( 'Back to the whole venue', 'seatmap-connect' ),
+							/* translators: %s: the price of the cheapest seat in the area. */
+							'sectionFrom'    => __( 'From %s', 'seatmap-connect' ),
+							/* translators: %d: number of seats still available in the area. */
+							'sectionSeatsLeft' => __( '%d seats left', 'seatmap-connect' ),
+							'sectionSoldOut' => __( 'Sold out', 'seatmap-connect' ),
+							/* translators: %s: name of the area. */
+							'openSection'    => __( 'Show seats in %s', 'seatmap-connect' ),
+							/* translators: %s: name of the area. */
+							'inSection'      => __( 'In %s', 'seatmap-connect' ),
 						),
 					)
 				)

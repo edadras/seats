@@ -213,6 +213,11 @@ for ( const scheme of [ 'light', 'dark' ] ) {
 
 	await buyer.goto( `${ PREVIEW }/tools/preview.html?api=${ BASE }&event=${ eventId }`,
 		{ waitUntil: 'networkidle' } );
+
+	// The picker opens on the venue's blocks, so a section has to be chosen before there are any
+	// chairs to check. That the block list is reachable at all is itself the first check.
+	await buyer.waitForSelector( '.seatmap-widget__block' );
+	await buyer.locator( '.seatmap-widget__block:not([disabled])' ).first().click();
 	await buyer.waitForSelector( '.seatmap-widget__seat' );
 
 	console.log( `Picker contrast (${ scheme } theme)` );
@@ -232,6 +237,13 @@ for ( const scheme of [ 'light', 'dark' ] ) {
 			document.activeElement.classList.contains( 'seatmap-widget__seat' ) ) );
 		check( 'the choice is announced', await buyer.evaluate( () =>
 			!! document.querySelector( '.seatmap-widget__selection li' ) ) );
+
+		// And back out again, without a mouse: a buyer who zoomed into the wrong block must not
+		// be stranded in it.
+		await buyer.locator( '.seatmap-widget__leave' ).first().click();
+		await buyer.waitForTimeout( 200 );
+		check( 'the way back to the venue is a button too',
+			( await buyer.locator( '.seatmap-widget__block' ).count() ) > 1 );
 	}
 
 	await buyer.close();
