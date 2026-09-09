@@ -1,0 +1,29 @@
+{
+ "translation-revision-date": "2026-09-09 00:00:00+0000",
+ "generator": "tools/sync-wordpress-strings.mjs",
+ "domain": "messages",
+ "locale_data": {
+  "messages": {
+   "": {
+    "domain": "messages",
+    "lang": "de_DE",
+    "plural-forms": "nplurals=2; plural=(n != 1);"
+   },
+   "Seat map": [
+    "Saalplan"
+   ],
+   "Event public ID": [
+    "Öffentliche Veranstaltungs-ID"
+   ],
+   "Copy this from the event in your Seatmap panel. It looks like evt_xxxxxxxx.": [
+    "Kopieren Sie das aus der Veranstaltung in Ihrem Seatmap-Panel. Es sieht aus wie evt_xxxxxxxx."
+   ],
+   "Customers will pick their seats here.": [
+    "Hier wählen Ihre Kundinnen und Kunden ihre Plätze."
+   ],
+   "Enter the event ID to show its seating plan.": [
+    "Geben Sie die Veranstaltungs-ID ein, um ihren Saalplan zu zeigen."
+   ]
+  }
+ }
+}

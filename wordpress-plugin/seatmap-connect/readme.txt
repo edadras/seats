@@ -47,6 +47,17 @@ are retried automatically every five minutes.
    rejected if this server's time is more than five minutes out.
 5. Add the **Seat map** block, or `[seatmap_event id="evt_..."]`, to any page.
 
+= Languages =
+
+The plugin ships translations for English, Persian, Arabic, German, French and Italian, and follows
+whatever language WordPress is set to. Persian and Arabic are right to left, and the seat picker
+lays itself out accordingly.
+
+The translations are generated from the Seatmap platform's own catalogues rather than edited here,
+so the seat picker says the same thing on a WooCommerce shop as it does on a Seatmap-hosted site.
+Editing a `.po` file in `languages/` will be overwritten; the source is `api/lang/<locale>/site.php`
+and `api/lang/<locale>/wordpress.php` in the Seatmap repository.
+
 = Previewing without a WordPress install =
 
 `../tools/preview.html` runs this plugin's own seat picker against a live API, standing in only for

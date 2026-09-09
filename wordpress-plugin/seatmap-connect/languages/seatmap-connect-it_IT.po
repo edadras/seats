@@ -9,360 +9,361 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: seatmap-connect\n"
+"Language: it_IT\n"
 
 #: seatmap-connect.php:47
 msgid "Seatmap Connect needs WooCommerce to be installed and active."
-msgstr ""
+msgstr "Seatmap Connect ha bisogno che WooCommerce sia installato e attivo."
 
 #: seatmap-connect.php:103
 msgid "Every five minutes (Seatmap)"
-msgstr ""
+msgstr "Ogni cinque minuti (Seatmap)"
 
 #: includes/class-seatmap-cart.php:105
 msgid "This store is not finished setting up seat sales yet."
-msgstr ""
+msgstr "Questo negozio non ha ancora finito di configurare la vendita dei posti."
 
 #: includes/class-seatmap-cart.php:180
 msgid "Your seats could not be added to your cart."
-msgstr ""
+msgstr "Non è stato possibile aggiungere i posti al carrello."
 
 #. translators: 1: number of places, 2: area name.
 #: includes/class-seatmap-cart.php:233
 msgid "%1$d place in %2$s"
 msgid_plural "%1$d places in %2$s"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%1$d posto in %2$s"
+msgstr[1] "%1$d posti in %2$s"
 
 #. translators: 1: section name, 2: row name, 3: seat label.
 #: includes/class-seatmap-cart.php:241
 msgid "%1$s, row %2$s, seat %3$s"
-msgstr ""
+msgstr "%1$s, fila %2$s, posto %3$s"
 
 #: includes/class-seatmap-cart.php:258 includes/class-seatmap-cart.php:279
 msgid "Standing"
-msgstr ""
+msgstr "In piedi"
 
 #: includes/class-seatmap-cart.php:259 includes/class-seatmap-cart.php:279
 msgid "Seat"
-msgstr ""
+msgstr "Posto"
 
 #: includes/class-seatmap-cart.php:332
 msgid "Your seat reservation ran out and the seats were released. Please choose your seats again."
-msgstr ""
+msgstr "La tua prenotazione è scaduta e i posti sono tornati liberi. Scegli di nuovo i posti."
 
 #: includes/class-seatmap-client.php:108
 msgid "Seatmap Connect is not configured yet."
-msgstr ""
+msgstr "Seatmap Connect non è ancora configurato."
 
 #. translators: %d: HTTP status code.
 #: includes/class-seatmap-client.php:211
 msgid "The seating service returned status %d."
-msgstr ""
+msgstr "Il servizio dei posti ha risposto con lo stato %d."
 
 #: includes/class-seatmap-orders.php:163
 msgid "Seatmap: seats allocated and tickets issued."
-msgstr ""
+msgstr "Seatmap: posti assegnati e biglietti emessi."
 
 #: includes/class-seatmap-orders.php:171
 msgid "Seatmap: could not confirm the seats yet. This will be retried automatically."
-msgstr ""
+msgstr "Seatmap: i posti non sono ancora stati confermati. Il tentativo verrà ripetuto automaticamente."
 
 #. translators: 1: lifecycle stage, 2: error message.
 #: includes/class-seatmap-orders.php:307
 msgid "Seatmap %1$s failed: %2$s"
-msgstr ""
+msgstr "Seatmap %1$s non riuscito: %2$s"
 
 #: includes/class-seatmap-orders.php:340 includes/class-seatmap-settings.php:27 includes/class-seatmap-settings.php:28
 msgid "Seatmap"
-msgstr ""
+msgstr "Seatmap"
 
 #: includes/class-seatmap-orders.php:343
 msgid "Seats allocated and tickets issued."
-msgstr ""
+msgstr "Posti assegnati e biglietti emessi."
 
 #: includes/class-seatmap-orders.php:345
 msgid "Waiting to reach the seating service. This retries automatically every five minutes."
-msgstr ""
+msgstr "In attesa del servizio dei posti. Il tentativo si ripete automaticamente ogni cinque minuti."
 
 #: includes/class-seatmap-orders.php:347
 msgid "Seats are held, awaiting payment."
-msgstr ""
+msgstr "Posti trattenuti, in attesa del pagamento."
 
 #: includes/class-seatmap-reconciler.php:118
 msgid "Seatmap: reconciliation found this order already confirmed."
-msgstr ""
+msgstr "Seatmap: la riconciliazione ha trovato questo ordine già confermato."
 
 #: includes/class-seatmap-rest.php:103
 msgid "Choose at least one seat or place."
-msgstr ""
+msgstr "Scegli almeno un posto."
 
 #: includes/class-seatmap-rest.php:112 includes/class-seatmap-widget.php:108
 msgid "Seat booking is not available right now."
-msgstr ""
+msgstr "La prenotazione dei posti non è disponibile al momento."
 
 #: includes/class-seatmap-settings.php:85
 msgid "The API URL must use HTTPS. Requests carry your API credentials."
-msgstr ""
+msgstr "L’URL dell’API deve usare HTTPS. Le richieste portano le tue credenziali."
 
 #: includes/class-seatmap-settings.php:119
 msgid "You do not have permission to manage these settings."
-msgstr ""
+msgstr "Non hai il permesso di gestire queste impostazioni."
 
 #: includes/class-seatmap-settings.php:125
 msgid "Seatmap Connect"
-msgstr ""
+msgstr "Seatmap Connect"
 
 #: includes/class-seatmap-settings.php:126
 msgid "Connect this store to your Seatmap account. Seats, prices and availability come from Seatmap; the cart, payment and refunds stay here in WooCommerce."
-msgstr ""
+msgstr "Collega questo negozio al tuo account Seatmap. Posti, prezzi e disponibilità arrivano da Seatmap; carrello, pagamento e rimborsi restano qui in WooCommerce."
 
 #: includes/class-seatmap-settings.php:132
 msgid "API URL"
-msgstr ""
+msgstr "URL dell’API"
 
 #: includes/class-seatmap-settings.php:137
 msgid "Without the /v1 suffix."
-msgstr ""
+msgstr "Senza il suffisso /v1."
 
 #: includes/class-seatmap-settings.php:141
 msgid "Key ID"
-msgstr ""
+msgstr "ID della chiave"
 
 #: includes/class-seatmap-settings.php:148
 msgid "Secret"
-msgstr ""
+msgstr "Segreto"
 
 #: includes/class-seatmap-settings.php:154
 msgid "Shown once by Seatmap when the key was created. Leave the masked value alone to keep the current secret."
-msgstr ""
+msgstr "Mostrato una sola volta da Seatmap alla creazione della chiave. Lascia il valore mascherato com’è per mantenere il segreto attuale."
 
 #: includes/class-seatmap-settings.php:159
 msgid "Seat product"
-msgstr ""
+msgstr "Prodotto posto"
 
 #: includes/class-seatmap-settings.php:164
 msgid "A simple, virtual product used as the cart line for a seat. Its own price is ignored — the price always comes from the signed Seatmap response."
-msgstr ""
+msgstr "Un semplice prodotto virtuale, usato come riga del carrello per un posto. Il suo prezzo viene ignorato: il prezzo arriva sempre dalla risposta firmata di Seatmap."
 
 #: includes/class-seatmap-settings.php:172
 msgid "Connection"
-msgstr ""
+msgstr "Connessione"
 
 #: includes/class-seatmap-settings.php:173
 msgid "Checks the credentials and the clock. Signed requests are rejected if this server's time is more than five minutes from the API's."
-msgstr ""
+msgstr "Controlla le credenziali e l’orologio. Le richieste firmate vengono rifiutate se l’ora di questo server si discosta di oltre cinque minuti da quella dell’API."
 
 #: includes/class-seatmap-settings.php:175
 msgid "Test connection"
-msgstr ""
+msgstr "Prova la connessione"
 
 #: includes/class-seatmap-settings.php:198
 msgid "Testing…"
-msgstr ""
+msgstr "Prova in corso…"
 
 #: includes/class-seatmap-settings.php:212
 msgid "The test request itself failed."
-msgstr ""
+msgstr "La richiesta di prova stessa non è riuscita."
 
 #: includes/class-seatmap-settings.php:237
 msgid "Not permitted."
-msgstr ""
+msgstr "Non consentito."
 
 #: includes/class-seatmap-settings.php:243
 msgid "Fill in the API URL, key ID and secret first."
-msgstr ""
+msgstr "Compila prima l’URL dell’API, l’ID della chiave e il segreto."
 
 #: includes/class-seatmap-settings.php:255
 msgid "Connected. Credentials and clock are good."
-msgstr ""
+msgstr "Connesso. Credenziali e orologio sono a posto."
 
 #: includes/class-seatmap-settings.php:261
 msgid "This server's clock is out of step with the API. Fix NTP on this host."
-msgstr ""
+msgstr "L’orologio di questo server è fuori passo rispetto all’API. Sistema NTP su questo host."
 
 #: includes/class-seatmap-settings.php:263
 msgid "Check the key ID and secret, and that the key has not been revoked."
-msgstr ""
+msgstr "Controlla l’ID della chiave e il segreto, e che la chiave non sia stata revocata."
 
 #: includes/class-seatmap-settings.php:269
 msgid "Connected."
-msgstr ""
+msgstr "Connesso."
 
 #: includes/class-seatmap-widget.php:54 blocks/editor.js:30 blocks/editor.js:35
 msgid "Seat map"
-msgstr ""
+msgstr "Piantina"
 
 #: includes/class-seatmap-widget.php:57
 msgid "Let customers pick their seats for a Seatmap event."
-msgstr ""
+msgstr "Lascia che i clienti scelgano i posti per un evento Seatmap."
 
 #: includes/class-seatmap-widget.php:102
 msgid "No event was selected for this seat map."
-msgstr ""
+msgstr "Per questa piantina non è stato scelto alcun evento."
 
 #: includes/class-seatmap-widget.php:116
 msgid "This event could not be loaded."
-msgstr ""
+msgstr "Non è stato possibile caricare questo evento."
 
 #: includes/class-seatmap-widget.php:122
 msgid "The seating plan for this event is not published yet."
-msgstr ""
+msgstr "La piantina di questo evento non è ancora pubblicata."
 
 #: includes/class-seatmap-widget.php:155
 msgid "Select your seats"
-msgstr ""
+msgstr "Scegli i tuoi posti"
 
 #: includes/class-seatmap-widget.php:156
 msgid "Available"
-msgstr ""
+msgstr "Libero"
 
 #: includes/class-seatmap-widget.php:157
 msgid "Unavailable"
-msgstr ""
+msgstr "Occupato"
 
 #: includes/class-seatmap-widget.php:158
 msgid "Selected"
-msgstr ""
+msgstr "Scelto"
 
 #: includes/class-seatmap-widget.php:159
 msgid "Your selection"
-msgstr ""
+msgstr "La tua scelta"
 
 #: includes/class-seatmap-widget.php:160
 msgid "No seats selected yet."
-msgstr ""
+msgstr "Nessun posto scelto per ora."
 
 #: includes/class-seatmap-widget.php:161
 msgid "Total"
-msgstr ""
+msgstr "Totale"
 
 #: includes/class-seatmap-widget.php:162
 msgid "Reserve and add to cart"
-msgstr ""
+msgstr "Prenota e aggiungi al carrello"
 
 #: includes/class-seatmap-widget.php:163
 msgid "Reserving…"
-msgstr ""
+msgstr "Prenotazione…"
 
 #: includes/class-seatmap-widget.php:164
 msgid "Sorry, one of those seats was just taken. It has been removed from your selection."
-msgstr ""
+msgstr "Spiacenti, uno di quei posti è stato appena preso ed è stato tolto dalla tua scelta."
 
 #: includes/class-seatmap-widget.php:165
 msgid "Something went wrong. Please try again."
-msgstr ""
+msgstr "Qualcosa è andato storto. Riprova."
 
 #: includes/class-seatmap-widget.php:166
 msgid "You can select up to %d seats."
-msgstr ""
+msgstr "Puoi scegliere fino a %d posti."
 
 #: includes/class-seatmap-widget.php:167
 msgid "%1$s, row %2$s, seat %3$s — %4$s"
-msgstr ""
+msgstr "%1$s, fila %2$s, posto %3$s — %4$s"
 
 #: includes/class-seatmap-widget.php:168
 msgid "%1$s, row %2$s, seat %3$s — unavailable"
-msgstr ""
+msgstr "%1$s, fila %2$s, posto %3$s — occupato"
 
 #: includes/class-seatmap-widget.php:169
 msgid "Zoom in"
-msgstr ""
+msgstr "Ingrandisci"
 
 #: includes/class-seatmap-widget.php:170
 msgid "Zoom out"
-msgstr ""
+msgstr "Riduci"
 
 #: includes/class-seatmap-widget.php:171
 msgid "Reset view"
-msgstr ""
+msgstr "Reimposta la vista"
 
 #: includes/class-seatmap-widget.php:172
 msgid "Seats held until %s"
-msgstr ""
+msgstr "Posti tenuti fino alle %s"
 
 #: includes/class-seatmap-widget.php:173
 msgid "Your reservation expired. Please choose your seats again."
-msgstr ""
+msgstr "La tua prenotazione è scaduta. Scegli di nuovo i posti."
 
 #: includes/class-seatmap-widget.php:174
 msgid "Stage"
-msgstr ""
+msgstr "Palco"
 
 #: includes/class-seatmap-widget.php:175
 msgid "Floor"
-msgstr ""
+msgstr "Livello"
 
 #: includes/class-seatmap-widget.php:176
 msgid "Standing and tables"
-msgstr ""
+msgstr "In piedi e tavoli"
 
 #. translators: %d: number of places still available.
 #: includes/class-seatmap-widget.php:178
 msgid "%d left"
-msgstr ""
+msgstr "ne restano %d"
 
 #: includes/class-seatmap-widget.php:179 includes/class-seatmap-widget.php:192
 msgid "Sold out"
-msgstr ""
+msgstr "Esaurito"
 
 #. translators: %s: name of the standing area.
 #: includes/class-seatmap-widget.php:181
 msgid "Add one place in %s"
-msgstr ""
+msgstr "Aggiungi un posto in %s"
 
 #. translators: %s: name of the standing area.
 #: includes/class-seatmap-widget.php:183
 msgid "Remove one place in %s"
-msgstr ""
+msgstr "Togli un posto da %s"
 
 #: includes/class-seatmap-widget.php:184
 msgid "That area filled up while you were choosing. Please pick a different number of places."
-msgstr ""
+msgstr "Quest’area si è riempita mentre sceglievi. Scegli un numero di posti diverso."
 
 #: includes/class-seatmap-widget.php:186
 msgid "Choose an area"
-msgstr ""
+msgstr "Scegli un’area"
 
 #: includes/class-seatmap-widget.php:187
 msgid "Back to the whole venue"
-msgstr ""
+msgstr "Torna alla pianta della sala"
 
 #. translators: %s: the price of the cheapest seat in the area.
 #: includes/class-seatmap-widget.php:189
 msgid "From %s"
-msgstr ""
+msgstr "Da %s"
 
 #. translators: %d: number of seats still available in the area.
 #: includes/class-seatmap-widget.php:191
 msgid "%d seats left"
-msgstr ""
+msgstr "restano %d posti"
 
 #. translators: %s: name of the area.
 #: includes/class-seatmap-widget.php:194
 msgid "Show seats in %s"
-msgstr ""
+msgstr "Mostra i posti in %s"
 
 #. translators: %s: name of the area.
 #: includes/class-seatmap-widget.php:196
 msgid "In %s"
-msgstr ""
+msgstr "In %s"
 
 #: includes/class-seatmap-widget.php:207
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
-msgstr ""
+msgstr "Per scegliere i posti serve JavaScript. Attivalo, oppure contatta il botteghino."
 
 #: blocks/editor.js:19
 msgid "Event public ID"
-msgstr ""
+msgstr "ID pubblico dell’evento"
 
 #: blocks/editor.js:20
 msgid "Copy this from the event in your Seatmap panel. It looks like evt_xxxxxxxx."
-msgstr ""
+msgstr "Copialo dall’evento nel tuo pannello Seatmap. Ha la forma evt_xxxxxxxx."
 
 #: blocks/editor.js:37
 msgid "Customers will pick their seats here."
-msgstr ""
+msgstr "Qui i clienti sceglieranno i loro posti."
 
 #: blocks/editor.js:38
 msgid "Enter the event ID to show its seating plan."
-msgstr ""
+msgstr "Inserisci l’ID dell’evento per mostrarne la piantina."

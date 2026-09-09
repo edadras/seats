@@ -85,10 +85,14 @@ await page.goto( pageUrl, { waitUntil: 'networkidle' } );
 // The default theme is a block theme, which renders the page's content before
 // `wp_enqueue_scripts`. If the plugin registers its assets there, the inline configuration is
 // dropped and the buyer is left with the noscript message.
-const booted = await page.waitForSelector( '.seatmap-widget__seat', { timeout: 20000 } )
+//
+// What it waits for is the *block* list, not seats: the picker opens on the plan of areas and a
+// buyer zooms into one before there is a seat to click (ADR-0003 §5). Waiting for a seat here was
+// waiting for a screen this app no longer shows first, and reported a working picker as broken.
+const booted = await page.waitForSelector( '.seatmap-widget__block', { timeout: 20000 } )
 	.then( () => true ).catch( () => false );
 
-check( 'the seat list rendered', booted );
+check( 'the plan of areas rendered', booted );
 
 if ( ! booted ) {
 	console.log( '\n1 CHECK(S) FAILED' );
@@ -103,9 +107,16 @@ check( 'prices came from the server',
 
 console.log( 'Choosing seats and reserving them' );
 
+// Into the first area that still has seats, which is where the seats live.
+const blocks = page.locator( '.seatmap-widget__block:not([disabled])' );
+
+await blocks.first().click();
+await page.waitForSelector( '.seatmap-widget__seat', { timeout: 20000 } );
+await page.waitForTimeout( 400 );
+
 const seats = page.locator( '.seatmap-widget__seat:not([disabled])' );
-await seats.nth( 40 ).click();
-await seats.nth( 41 ).click();
+await seats.nth( 0 ).click();
+await seats.nth( 1 ).click();
 await page.waitForTimeout( 400 );
 
 const chosen = await page.evaluate( () =>

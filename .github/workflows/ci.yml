@@ -231,6 +231,15 @@ jobs:
       - name: Every string the picker asks for is provided by every host
         run: node tools/picker-strings-check.mjs
 
+      - name: The plugin's six languages are still the platform's six languages
+        run: |
+          # The .po and .mo files are generated from api/lang, not typed: a change to a msgid in the
+          # plugin, or to a word in the catalogue, has to be carried across or the plugin ships a
+          # translation for a string it no longer says. The tool also fails outright on any msgid
+          # with no translation, so a new string cannot reach a shop untranslated.
+          node tools/sync-wordpress-strings.mjs
+          git diff --exit-code wordpress-plugin/seatmap-connect/languages
+
       - name: Check plugin JavaScript parses
         run: |
           node --check wordpress-plugin/seatmap-connect/assets/js/widget.js

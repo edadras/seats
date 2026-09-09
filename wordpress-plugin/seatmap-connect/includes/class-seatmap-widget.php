@@ -75,6 +75,15 @@ class Seatmap_Widget {
 			SEATMAP_CONNECT_VERSION,
 			true
 		);
+
+		// A `.mo` is for PHP; a script wants its strings as JSON, named after the md5 of its own
+		// path. Without this the block's own panel is English no matter what the rest of the admin
+		// is set to, and it fails silently — which is why it went unnoticed until it was looked for.
+		wp_set_script_translations(
+			'seatmap-block-editor',
+			'seatmap-connect',
+			SEATMAP_CONNECT_PATH . 'languages'
+		);
 	}
 
 	/**

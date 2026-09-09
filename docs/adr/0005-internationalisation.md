@@ -225,3 +225,43 @@ Two things about the delivery are worth recording:
   its `name` cannot vary by reader without giving up that property. It is the label under a
   home-screen icon and no working screen depends on it — but it is untranslated, and pretending
   otherwise would be worse than saying so.
+
+## Amendment, 2026-09: the WordPress plugin
+
+The plugin was already written for translation — a text domain, `__()` at every call site, a `.pot`
+— and had no translations. It has five now, and they are generated rather than typed.
+
+**Generated, in a project whose convention is that translators edit `.po` files.** That is the one
+place this decision costs something, and it is worth being plain about: someone who edits
+`wordpress-plugin/seatmap-connect/languages/seatmap-connect-de_DE.po` will lose the edit on the next
+sync. The reason to accept that is the seat picker. It is one component, shipped twice — once inside
+a hosted site and once inside somebody's WooCommerce shop — and its words live in
+`api/lang/<locale>/site.php`. Translating them a second time into a `.po` would be two translations
+of one component, and `tools/sync-seat-picker.sh` exists precisely because the two copies of the
+picker's *code* had already tried to fork once.
+
+So `tools/sync-wordpress-strings.mjs` extracts every msgid from the plugin, resolves each one, and
+writes the `.pot`, the five `.po` files, the five compiled `.mo` files, and the JSON that
+`wp_set_script_translations` needs for the block editor. It fails outright on a msgid with no
+translation, so a new string cannot reach a shop untranslated, and CI fails on a diff.
+
+Three things it taught, each a rule rather than a detail:
+
+- **A shared key is not a shared string.** The first version matched the picker's strings to
+  `site.php` by key, on the reasoning that the plugin builds the same keyed array. That put the
+  hosted site's "Reserve these seats" on the plugin's button in five languages — where the English
+  deliberately says "Reserve and add to cart", because WooCommerce has a cart and a hosted site does
+  not. A translation is now shared only where the English is *identical*; where the two diverge the
+  tool says so by name and demands the plugin's own wording. It found exactly one such string, which
+  is the point: the rule is cheap and the failure was silent.
+- **`.mo` is written here, not by `msgfmt`.** The format is a header and four tables, and requiring
+  a gettext toolchain on every contributor's machine to change a word is worse than eighty lines
+  that a real WordPress then reads back.
+- **A script's translations are not in the `.mo`.** `wp_set_script_translations` wants a JSON file
+  named after the md5 of the script's path, and falls back to English in silence when it is absent.
+  The block's own panel was the last English thing on the screen, and nothing would have said so.
+
+Verified in a throwaway WordPress 7.1 with WooCommerce, in Persian: the settings screen, the seat
+picker on a page, and the block in the editor. `tools/wordpress-check.mjs` still buys a seat end to
+end — and was repaired while it was in hand, because it had been waiting for a seat element the
+picker no longer shows first (ADR-0003 §5) and had been reporting a working picker as broken.

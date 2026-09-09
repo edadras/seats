@@ -1,0 +1,29 @@
+{
+ "translation-revision-date": "2026-09-09 00:00:00+0000",
+ "generator": "tools/sync-wordpress-strings.mjs",
+ "domain": "messages",
+ "locale_data": {
+  "messages": {
+   "": {
+    "domain": "messages",
+    "lang": "ar",
+    "plural-forms": "nplurals=2; plural=(n != 1);"
+   },
+   "Seat map": [
+    "خريطة المقاعد"
+   ],
+   "Event public ID": [
+    "المعرّف العام للفعالية"
+   ],
+   "Copy this from the event in your Seatmap panel. It looks like evt_xxxxxxxx.": [
+    "انسخ هذا من الفعالية في لوحة Seatmap. شكله مثل evt_xxxxxxxx."
+   ],
+   "Customers will pick their seats here.": [
+    "سيختار الزبائن مقاعدهم هنا."
+   ],
+   "Enter the event ID to show its seating plan.": [
+    "أدخل معرّف الفعالية لعرض مخطّط مقاعدها."
+   ]
+  }
+ }
+}
