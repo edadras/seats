@@ -4,6 +4,8 @@
 /// contract changes, and a generator would be a build step to maintain for no benefit at this size.
 library;
 
+import '../l10n/strings.dart';
+
 class CheckinEvent {
   const CheckinEvent({
     required this.id,
@@ -24,7 +26,7 @@ class CheckinEvent {
   factory CheckinEvent.fromJson(Map<String, dynamic> json) => CheckinEvent(
         id: json['id'] as String,
         publicId: json['public_id'] as String? ?? '',
-        name: json['name'] as String? ?? 'Event',
+        name: json['name'] as String? ?? Strings.t('events.title'),
         startsAt: json['starts_at'] != null ? DateTime.tryParse(json['starts_at'] as String) : null,
         timezone: json['timezone'] as String?,
         status: json['status'] as String?,
@@ -63,26 +65,22 @@ enum ScanResult {
 
   bool get admits => this == ScanResult.valid;
 
-  /// What the person on the door reads, at arm's length, in the dark.
-  String get headline => switch (this) {
-        ScanResult.valid => 'Come in',
-        ScanResult.alreadyUsed => 'Already used',
-        ScanResult.cancelled => 'Cancelled',
-        ScanResult.refunded => 'Refunded',
-        ScanResult.wrongEvent => 'Wrong event',
-        ScanResult.invalid => 'Not a ticket',
-        ScanResult.queued => 'Saved offline',
+  /// The catalogue key for this answer. Named here rather than in each caller so that adding an
+  /// outcome to the enum and forgetting to translate it is one edit away from being obvious.
+  String get _key => switch (this) {
+        ScanResult.valid => 'valid',
+        ScanResult.alreadyUsed => 'alreadyUsed',
+        ScanResult.cancelled => 'cancelled',
+        ScanResult.refunded => 'refunded',
+        ScanResult.wrongEvent => 'wrongEvent',
+        ScanResult.invalid => 'invalid',
+        ScanResult.queued => 'queued',
       };
 
-  String get detail => switch (this) {
-        ScanResult.valid => 'Admitted.',
-        ScanResult.alreadyUsed => 'Someone has already come in on this ticket.',
-        ScanResult.cancelled => 'This booking was cancelled.',
-        ScanResult.refunded => 'This booking was refunded.',
-        ScanResult.wrongEvent => 'This ticket is for another performance.',
-        ScanResult.invalid => 'This code is not one of ours.',
-        ScanResult.queued => 'No connection. It will be sent when you are back online.',
-      };
+  /// What the person on the door reads, at arm's length, in the dark.
+  String get headline => Strings.t('result.$_key.headline');
+
+  String get detail => Strings.t('result.$_key.detail');
 }
 
 class ScanOutcome {
@@ -121,8 +119,8 @@ class ScanOutcome {
 
     final parts = <String>[
       if (part(seat, 'section') != null) part(seat, 'section')!,
-      if (part(seat, 'row') != null) 'row ${part(seat, 'row')}',
-      if (part(seat, 'label') != null) 'seat ${part(seat, 'label')}',
+      if (part(seat, 'row') != null) Strings.t('scan.row', {'row': part(seat, 'row')}),
+      if (part(seat, 'label') != null) Strings.t('scan.seat', {'seat': part(seat, 'label')}),
     ];
 
     // `first_scan` is an object — when, by which device, by which operator — not a timestamp.
@@ -132,7 +130,7 @@ class ScanOutcome {
     return ScanOutcome(
       result: ScanResult.parse(json['result'] is String ? json['result'] as String : null),
       holderName: part(ticket, 'holder_name'),
-      seat: parts.isEmpty ? null : parts.join(' · '),
+      seat: parts.isEmpty ? null : parts.join(Strings.t('listSeparator')),
       firstScan: scannedAt != null ? DateTime.tryParse(scannedAt) : null,
       firstScanBy: part(firstScan, 'operator') ?? part(firstScan, 'device'),
     );

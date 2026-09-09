@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/models.dart';
+import '../l10n/strings.dart';
 import '../theme.dart';
 
 /// The answer, as big as it can be.
@@ -90,8 +91,13 @@ class ResultCard extends StatelessWidget {
                       if (outcome.firstScan != null)
                         Text(
                           outcome.firstScanBy != null
-                              ? 'First scanned at ${_time(outcome.firstScan!)} · ${outcome.firstScanBy}'
-                              : 'First scanned at ${_time(outcome.firstScan!)}',
+                              ? Strings.t('scan.firstScannedBy', {
+                                  'time': Strings.time(outcome.firstScan!),
+                                  'by': outcome.firstScanBy,
+                                })
+                              : Strings.t('scan.firstScanned', {
+                                  'time': Strings.time(outcome.firstScan!),
+                                }),
                           style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.85)),
                         ),
                     ],
@@ -107,7 +113,7 @@ class ResultCard extends StatelessWidget {
                     foregroundColor: _colour,
                   ),
                   onPressed: onDismiss,
-                  child: const Text('Next'),
+                  child: Text(Strings.t('scan.next')),
                 ),
               ),
             ],
@@ -115,11 +121,5 @@ class ResultCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _time(DateTime value) {
-    final local = value.toLocal();
-
-    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 }

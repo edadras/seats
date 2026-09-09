@@ -74,11 +74,56 @@
 <div id="boot">
     <div>
         <div class="boot__mark"></div>
-        <p>Loading the scanner…</p>
+        <p id="boot-text">Loading the scanner…</p>
     </div>
 </div>
 
 <script>
+    /*
+     * The page's own language, chosen before the engine has loaded anything.
+     *
+     * The app decides this again for itself once it is running (lib/l10n/strings.dart) and reaches
+     * the same answer from the same three signals. It is repeated here because on a venue's wifi
+     * the boot screen is on the phone for seconds, and those seconds are the app as far as the
+     * volunteer holding it is concerned.
+     */
+    (function () {
+        // BEGIN GENERATED — tools/sync-checkin-strings.mjs writes this from api/lang/*/checkin.php
+        var BOOT = {"fa":{"dir":"rtl","boot":"در حال بارگذاری اسکنر…","title":"ورودی Seatmap"},"en":{"dir":"ltr","boot":"Loading the scanner…","title":"Seatmap check-in"},"ar":{"dir":"rtl","boot":"جارٍ تحميل الماسح…","title":"دخول Seatmap"},"de":{"dir":"ltr","boot":"Scanner wird geladen …","title":"Seatmap-Einlass"},"fr":{"dir":"ltr","boot":"Chargement du scanner…","title":"Contrôle Seatmap"},"it":{"dir":"ltr","boot":"Caricamento dello scanner…","title":"Ingresso Seatmap"}};
+        // END GENERATED
+
+        var stored = null;
+
+        try {
+            // The key shared_preferences actually writes: it prefixes everything with `flutter.`,
+            // and reading the unprefixed name would show a boot screen in one language and a first
+            // frame in another.
+            stored = JSON.parse(window.localStorage.getItem('flutter.seatmap.locale'));
+        } catch (error) {
+            // Storage off in a locked-down browser, or nothing stored yet. The other two signals
+            // still work.
+        }
+
+        var asked = new URLSearchParams(window.location.search).get('lang');
+        var wanted = [asked, stored].concat(navigator.languages || [navigator.language || '']);
+        var chosen = 'en';
+
+        for (var i = 0; i < wanted.length; i++) {
+            // Region is dropped rather than matched: we ship one Persian, and fa-AF should get it.
+            var code = String(wanted[i] || '').toLowerCase().split('-')[0];
+
+            if (BOOT[code]) {
+                chosen = code;
+                break;
+            }
+        }
+
+        document.documentElement.lang = chosen;
+        document.documentElement.dir = BOOT[chosen].dir;
+        document.getElementById('boot-text').textContent = BOOT[chosen].boot;
+        document.title = BOOT[chosen].title;
+    }());
+
     window.addEventListener('flutter-first-frame', function () {
         var boot = document.getElementById('boot');
         if (boot) { boot.remove(); }

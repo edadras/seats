@@ -16,12 +16,22 @@ class DeviceStore {
   static const _keyEvents = 'seatmap.events';
   static const _keyEventId = 'seatmap.event_id';
 
+  /// The language this device was told to speak.
+  ///
+  /// Named to match the panel's and the console's key, though it is not shared with them:
+  /// shared_preferences writes it as `flutter.seatmap.locale`. `web/index.html` reads that exact
+  /// key so the boot screen and the first frame cannot disagree.
+  static const _keyLocale = 'seatmap.locale';
+
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
   Future<String?> baseUrl() async => (await _prefs).getString(_keyBaseUrl);
   Future<String?> token() async => (await _prefs).getString(_keyToken);
   Future<String?> deviceName() async => (await _prefs).getString(_keyDeviceName);
   Future<String?> selectedEventId() async => (await _prefs).getString(_keyEventId);
+  Future<String?> locale() async => (await _prefs).getString(_keyLocale);
+
+  Future<void> saveLocale(String code) async => (await _prefs).setString(_keyLocale, code);
 
   Future<void> savePairing({
     required String baseUrl,
@@ -72,7 +82,8 @@ class DeviceStore {
     }
   }
 
-  /// Unpair. The queue is deliberately not cleared here — see ScanQueue.
+  /// Unpair. The queue is deliberately not cleared here — see ScanQueue, and the language is not
+  /// forgotten either: the next volunteer is standing at the same door in the same country.
   Future<void> forget() async {
     final prefs = await _prefs;
 

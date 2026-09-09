@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../api/models.dart';
+import '../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/language_button.dart';
 
 /// Which door am I on?
 ///
@@ -32,14 +34,15 @@ class EventScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Choose an event'),
+        title: Text(Strings.t('events.title')),
         actions: [
           if (onRefresh != null)
             IconButton(
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Refresh',
+              tooltip: Strings.t('events.refresh'),
             ),
+          const LanguageButton(compact: true),
         ],
       ),
       body: Column(
@@ -123,14 +126,16 @@ class EventScreen extends StatelessWidget {
                   ),
                   if (queued > 0)
                     Text(
-                      '$queued scan${queued == 1 ? '' : 's'} still to send',
+                      queued == 1
+                          ? Strings.t('events.queuedOne')
+                          : Strings.t('events.queuedMany', {'count': Strings.number(queued)}),
                       style: const TextStyle(color: ScannerTheme.warn, fontSize: 13.5),
                     ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: onUnpair,
                     icon: const Icon(Icons.logout_rounded, size: 20),
-                    label: const Text('Unpair this device'),
+                    label: Text(Strings.t('events.unpair')),
                   ),
                 ],
               ),
@@ -141,22 +146,13 @@ class EventScreen extends StatelessWidget {
     );
   }
 
+  /// The date, in this reader's calendar. Picking the wrong performance is how a scanner tells two
+  /// hundred people they are at the wrong show, and a date somebody has to convert first is a date
+  /// that gets picked wrong.
   String _when(CheckinEvent event) {
-    final starts = event.startsAt?.toLocal();
+    final starts = event.startsAt;
 
-    if (starts == null) {
-      return event.status ?? '';
-    }
-
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-
-    final time = '${starts.hour.toString().padLeft(2, '0')}:'
-        '${starts.minute.toString().padLeft(2, '0')}';
-
-    return '${starts.day} ${months[starts.month - 1]} ${starts.year} · $time';
+    return starts == null ? event.status ?? '' : Strings.dateTime(starts);
   }
 }
 
@@ -165,24 +161,24 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(32),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.event_busy_rounded, size: 40, color: ScannerTheme.muted),
-            SizedBox(height: 14),
+            const Icon(Icons.event_busy_rounded, size: 40, color: ScannerTheme.muted),
+            const SizedBox(height: 14),
             Text(
-              'This device is not allowed to scan anything yet.',
+              Strings.t('events.emptyTitle'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
-              'Give it an event in the organiser panel, then refresh.',
+              Strings.t('events.emptyBody'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: ScannerTheme.muted),
+              style: const TextStyle(color: ScannerTheme.muted),
             ),
           ],
         ),

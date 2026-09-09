@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../api/checkin_api.dart';
 import '../api/models.dart';
+import '../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/language_button.dart';
 
 /// Pairing.
 ///
@@ -31,7 +33,7 @@ class PairScreen extends StatefulWidget {
 class _PairScreenState extends State<PairScreen> {
   late final _baseUrl = TextEditingController(text: widget.initialBaseUrl);
   final _code = TextEditingController();
-  final _name = TextEditingController(text: 'Door scanner');
+  final _name = TextEditingController(text: Strings.t('defaultDeviceName'));
 
   bool _busy = false;
   String? _error;
@@ -49,7 +51,7 @@ class _PairScreenState extends State<PairScreen> {
     final code = _code.text.trim();
 
     if (base.isEmpty || code.isEmpty) {
-      setState(() => _error = 'Fill in the address and the pairing code.');
+      setState(() => _error = Strings.t('pair.incomplete'));
 
       return;
     }
@@ -62,7 +64,9 @@ class _PairScreenState extends State<PairScreen> {
     try {
       final result = await CheckinApi(baseUrl: base).pair(
         pairingCode: code,
-        deviceName: _name.text.trim().isEmpty ? 'Door scanner' : _name.text.trim(),
+        deviceName: _name.text.trim().isEmpty
+            ? Strings.t('defaultDeviceName')
+            : _name.text.trim(),
       );
 
       widget.onPaired(
@@ -73,9 +77,7 @@ class _PairScreenState extends State<PairScreen> {
       );
     } on ApiFailure catch (e) {
       setState(() {
-        _error = e.isOffline
-            ? 'Could not reach that address. Check the venue Wi-Fi and the address above.'
-            : e.message;
+        _error = e.isOffline ? Strings.t('pair.unreachable') : e.message;
       });
     } finally {
       if (mounted) {
@@ -96,39 +98,53 @@ class _PairScreenState extends State<PairScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // The language menu comes before the fields, because a volunteer who cannot read
+                  // the labels needs it before, not after.
+                  const Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: LanguageButton(),
+                  ),
+                  const SizedBox(height: 10),
                   const Icon(Icons.qr_code_scanner_rounded, size: 44, color: ScannerTheme.accent),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Pair this scanner',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+                  Text(
+                    Strings.t('pair.title'),
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Get a pairing code from the organiser panel. It works once, and it expires.',
-                    style: TextStyle(color: ScannerTheme.muted, fontSize: 15),
+                  Text(
+                    Strings.t('pair.subtitle'),
+                    style: const TextStyle(color: ScannerTheme.muted, fontSize: 15),
                   ),
                   const SizedBox(height: 28),
                   TextField(
                     controller: _baseUrl,
                     keyboardType: TextInputType.url,
                     autocorrect: false,
-                    decoration: const InputDecoration(labelText: 'Seatmap address'),
+                    // An address is never right-to-left, whichever way the screen reads.
+                    textDirection: TextDirection.ltr,
+                    decoration: InputDecoration(labelText: Strings.t('pair.address')),
                   ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: _code,
                     autocorrect: false,
                     textCapitalization: TextCapitalization.none,
-                    decoration: const InputDecoration(labelText: 'Pairing code'),
+                    textDirection: TextDirection.ltr,
+                    decoration: InputDecoration(labelText: Strings.t('pair.code')),
                     onSubmitted: (_) => _pair(),
                   ),
                   const SizedBox(height: 14),
                   TextField(
                     controller: _name,
-                    decoration: const InputDecoration(
-                      labelText: 'Name this device',
-                      helperText: 'Shown in the panel, so staff know which door is which.',
-                      helperStyle: TextStyle(color: ScannerTheme.muted),
+                    decoration: InputDecoration(
+                      labelText: Strings.t('pair.deviceName'),
+                      helperText: Strings.t('pair.deviceNameHint'),
+                      helperStyle: const TextStyle(color: ScannerTheme.muted),
                     ),
                   ),
                   if (_error != null) ...[
@@ -163,7 +179,7 @@ class _PairScreenState extends State<PairScreen> {
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                           )
-                        : const Text('Pair'),
+                        : Text(Strings.t('pair.submit')),
                   ),
                 ],
               ),

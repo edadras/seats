@@ -182,3 +182,46 @@ Arabic render digits in their own shapes, and a middle dot between two of them r
 digit: "۲۰ · سالن‌ها" is easily read as "۲۰۰". The list separator is therefore a translated string
 rather than a literal in the code — `،` in Persian and Arabic, ` · ` elsewhere. Punctuation is part
 of a language, not part of a layout.
+
+## Amendment, 2026-09: the door
+
+The consequences above said the check-in app "carries its own catalogue for the same six locales,
+because a door in Tehran is where a missing translation costs the most and where nobody can fix
+it". That was the intent and not the fact: the scanner was English, in one language, everywhere.
+It is six languages now, and the sentence describes something that exists.
+
+**The one place a second copy of a translation is correct.** Everywhere else on this platform, two
+copies is two translations and the wrong one is the one nobody is looking at. The scanner is the
+exception, and the reason is in the sentence above: it has to work with no network, so a catalogue
+it fetches is a catalogue it cannot fetch at the moment it is needed. The copy is therefore
+*generated* — `tools/sync-checkin-strings.mjs` writes `checkin-app/lib/l10n/strings.g.dart` and the
+boot strings inside `web/index.html` from `api/lang/<locale>/checkin.php` — and CI runs the tool
+and fails on a diff, the same discipline `tools/sync-seat-picker.sh` applies to the picker. There is
+still exactly one file anybody edits.
+
+**A Flutter app is not a web page, so three things had to be built rather than asked for.**
+
+- *The calendar.* `intl` does not do the Persian calendar, so the conversion is written out. It is
+  deliberately ICU's arithmetic and not Birashk's 2820-year cycle, which the other implementations
+  use: the two disagree about whether 1404 is a leap year, and the disagreement puts Nowruz a day
+  out. A scanner that names a different day from the panel that sold the ticket is worse than one
+  that shows a Gregorian date. The test reads its expectations out of ICU directly.
+- *The digits.* Persian and Arabic count in their own glyphs, and a scanner showing "3 in" on a
+  Persian screen reads as somebody else's machine. Numbers and clock times are shaped.
+- *The font.* This is the one that would have shipped broken. Roboto has no Arabic script, and the
+  engine's answer to a glyph it does not have is to fetch a fallback from `fonts.gstatic.com` —
+  which `--no-web-resources-cdn` switches off, and a venue's wifi would block anyway. The first
+  Persian build laid out perfectly and rendered every word as an empty box. Vazirmatn (SIL OFL) is
+  bundled as a fallback family, and CI asserts it is in the build alongside CanvasKit and the
+  barcode decoder, for the same reason all three are asserted.
+
+Two things about the delivery are worth recording:
+
+- The boot screen — the seconds a volunteer stares at on venue wifi before the engine has loaded
+  anything — resolves the language itself, in six lines of inline script generated from the same
+  catalogue. The app then reaches the same answer independently from the same three signals: the
+  URL's `?lang=`, the stored choice, the phone's own languages.
+- `web/manifest.json` stays English. It is a static file the web server hands out without PHP, so
+  its `name` cannot vary by reader without giving up that property. It is the label under a
+  home-screen icon and no working screen depends on it — but it is untranslated, and pretending
+  otherwise would be worse than saying so.

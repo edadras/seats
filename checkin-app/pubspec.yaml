@@ -15,6 +15,10 @@ dependencies:
   # The device token and the offline queue have to survive a reload; a door phone gets reloaded.
   shared_preferences: ^2.5.5
   http: ^1.6.0
+  # Right-to-left layout and Material's own strings — a Persian door gets a Persian "Cancel" in
+  # every dialog Flutter draws, which is not something this app's catalogue can reach.
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -35,4 +39,19 @@ flutter:
         - asset: fonts/Roboto-Medium.ttf
           weight: 500
         - asset: fonts/Roboto-Bold.ttf
+          weight: 700
+
+    # Arabic script, for the Persian and Arabic doors. Roboto has none of it, and the engine's
+    # answer to a glyph it does not have is to fetch a fallback from fonts.gstatic.com — which
+    # --no-web-resources-cdn switches off and a venue's wifi would block anyway. Without this the
+    # Persian screens render as rows of empty boxes: laid out correctly, and unreadable.
+    #
+    # Vazirmatn (SIL OFL, fonts/Vazirmatn-OFL.txt) rather than Noto Sans Arabic because it is drawn
+    # for Persian UI at small sizes, which is what this is.
+    - family: Vazirmatn
+      fonts:
+        - asset: fonts/Vazirmatn-Regular.ttf
+        - asset: fonts/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: fonts/Vazirmatn-Bold.ttf
           weight: 700

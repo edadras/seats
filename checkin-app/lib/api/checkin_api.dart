@@ -4,6 +4,7 @@ import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
+import '../l10n/strings.dart';
 import 'models.dart';
 
 /// The check-in API, as this app uses it.
@@ -32,6 +33,10 @@ class CheckinApi {
   Map<String, String> get _headers => {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        // The door's language travels with every call, so a refusal the *server* composes — an
+        // expired pairing code, a device that is not allowed on this event — comes back in the
+        // language the volunteer is reading.
+        'X-Seatmap-Locale': Strings.code,
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
@@ -96,11 +101,11 @@ class CheckinApi {
     try {
       return _decode(await _client.get(_url(path), headers: _headers).timeout(_timeout));
     } on http.ClientException {
-      throw const ApiFailure('No connection.');
+      throw ApiFailure(Strings.t('failure.offline'));
     } on TimeoutException {
-      throw const ApiFailure('No connection.');
+      throw ApiFailure(Strings.t('failure.offline'));
     } on SocketException {
-      throw const ApiFailure('No connection.');
+      throw ApiFailure(Strings.t('failure.offline'));
     }
   }
 
@@ -124,11 +129,11 @@ class CheckinApi {
 
       return _decode(response);
     } on http.ClientException {
-      throw const ApiFailure('No connection.');
+      throw ApiFailure(Strings.t('failure.offline'));
     } on TimeoutException {
-      throw const ApiFailure('No connection.');
+      throw ApiFailure(Strings.t('failure.offline'));
     } on SocketException {
-      throw const ApiFailure('No connection.');
+      throw ApiFailure(Strings.t('failure.offline'));
     }
   }
 
@@ -145,7 +150,7 @@ class CheckinApi {
       final error = body['error'] as Map<String, dynamic>?;
 
       throw ApiFailure(
-        error?['message'] as String? ?? 'That did not work.',
+        error?['message'] as String? ?? Strings.t('failure.generic'),
         code: error?['code'] as String?,
         status: response.statusCode,
       );

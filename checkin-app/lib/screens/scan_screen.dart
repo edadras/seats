@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../api/checkin_api.dart';
 import '../api/models.dart';
+import '../l10n/strings.dart';
 import '../storage/scan_queue.dart';
 import '../theme.dart';
 import '../widgets/result_card.dart';
@@ -196,20 +197,25 @@ class _ScanScreenState extends State<ScanScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: ScannerTheme.surface,
-        title: const Text('Type the code'),
+        title: Text(Strings.t('scan.typeTitle')),
         content: TextField(
           controller: controller,
           autofocus: true,
           autocorrect: false,
-          decoration: const InputDecoration(labelText: 'Ticket code'),
+          // A ticket code is Latin whichever way the screen reads.
+          textDirection: TextDirection.ltr,
+          decoration: InputDecoration(labelText: Strings.t('scan.ticketCode')),
           onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(Strings.t('cancel')),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Check'),
+            child: Text(Strings.t('scan.check')),
           ),
         ],
       ),
@@ -254,8 +260,10 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                   const IgnorePointer(child: _Reticle()),
                   if (_stats != null)
-                    Positioned(
-                      left: 16,
+                    // Directional rather than left: on a Persian door this belongs on the right,
+                    // where the eye starts.
+                    PositionedDirectional(
+                      start: 16,
                       top: 16,
                       child: _Counter(stats: _stats!),
                     ),
@@ -293,7 +301,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       child: OutlinedButton.icon(
                         onPressed: _enterByHand,
                         icon: const Icon(Icons.keyboard_rounded, size: 20),
-                        label: const Text('Type a code'),
+                        label: Text(Strings.t('scan.typeCode')),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -302,7 +310,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       iconSize: 24,
                       padding: const EdgeInsets.all(14),
                       icon: const Icon(Icons.flashlight_on_rounded),
-                      tooltip: 'Torch',
+                      tooltip: Strings.t('scan.torch'),
                     ),
                     const SizedBox(width: 8),
                     IconButton.filledTonal(
@@ -310,7 +318,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       iconSize: 24,
                       padding: const EdgeInsets.all(14),
                       icon: const Icon(Icons.cameraswitch_rounded),
-                      tooltip: 'Switch camera',
+                      tooltip: Strings.t('scan.switchCamera'),
                     ),
                   ],
                 ),
@@ -358,7 +366,7 @@ class _Counter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${stats.checkedIn} in',
+            Strings.t('scan.countedIn', {'count': Strings.number(stats.checkedIn)}),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -366,7 +374,7 @@ class _Counter extends StatelessWidget {
             ),
           ),
           Text(
-            '${stats.remaining} still to come',
+            Strings.t('scan.stillToCome', {'count': Strings.number(stats.remaining)}),
             style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
           ),
         ],
@@ -394,21 +402,21 @@ class _CameraProblem extends StatelessWidget {
           children: [
             const Icon(Icons.no_photography_rounded, size: 40, color: ScannerTheme.muted),
             const SizedBox(height: 14),
-            const Text(
-              'No camera here',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            Text(
+              Strings.t('scan.noCameraTitle'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Allow camera access in the browser, or type codes in by hand.',
+            Text(
+              Strings.t('scan.noCameraBody'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: ScannerTheme.muted),
+              style: const TextStyle(color: ScannerTheme.muted),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: onType,
               icon: const Icon(Icons.keyboard_rounded),
-              label: const Text('Type a code'),
+              label: Text(Strings.t('scan.typeCode')),
             ),
           ],
         ),

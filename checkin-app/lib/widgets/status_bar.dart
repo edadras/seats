@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../theme.dart';
 
 /// The one line that says whether this device is any use right now: which event, whether it can
@@ -49,7 +50,7 @@ class StatusBar extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                     ),
                     Text(
-                      online ? 'Online' : 'Offline — scans are being saved',
+                      Strings.t(online ? 'status.online' : 'status.offline'),
                       style: const TextStyle(color: ScannerTheme.muted, fontSize: 12.5),
                     ),
                   ],
@@ -63,7 +64,7 @@ class StatusBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '$queued waiting',
+                    Strings.t('status.waiting', {'count': Strings.number(queued)}),
                     style: const TextStyle(
                       color: ScannerTheme.warn,
                       fontWeight: FontWeight.w600,

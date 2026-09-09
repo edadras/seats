@@ -265,6 +265,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl
+          coverage: none
+
+      - name: The scanner's copy of the catalogue is still the catalogue
+        working-directory: .
+        run: |
+          # The door is the one place on the platform that carries a second copy of a translation,
+          # because it has to work with no network (ADR-0005). The copy is generated, so a change to
+          # api/lang/*/checkin.php that was not synced is a scanner shipping yesterday's words.
+          node tools/sync-checkin-strings.mjs
+          git diff --exit-code checkin-app/lib/l10n/strings.g.dart checkin-app/web/index.html
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.6'
@@ -287,6 +306,11 @@ jobs:
           test -f build/web/assets/fonts/Roboto-Regular.ttf
           test -f build/web/zxing/index.js
           test -f build/web/zxing/zxing_reader.wasm
+
+          # Arabic script. Roboto has none, and the engine's answer to a glyph it lacks is to fetch
+          # a fallback from gstatic — switched off here and blocked at a venue anyway. Without this
+          # the Persian and Arabic doors render every word as an empty box.
+          test -f build/web/assets/fonts/Vazirmatn-Regular.ttf
 
           # And the flag that makes the loader prefer the local copy is actually set. The gstatic
           # URL still appears in the loader's other branch, so its absence is not what to assert.

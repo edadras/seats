@@ -18,6 +18,16 @@ class ScannerTheme {
   static const refuse = Color(0xFFD8443C);
   static const warn = Color(0xFFCE8A21);
 
+  /// Roboto has no Arabic script, and the engine's answer to a glyph it does not have is to fetch a
+  /// fallback from fonts.gstatic.com — which `--no-web-resources-cdn` switches off and a venue's
+  /// wifi would block anyway. Without this, the Persian and Arabic screens are laid out correctly
+  /// and render as rows of empty boxes.
+  ///
+  /// It has to be repeated on every style built by a `styleFrom`: those construct a fresh TextStyle
+  /// rather than inheriting the theme's, so the family survives and the fallback does not. That is
+  /// how the one button on the pairing screen ended up as boxes while the rest of it read fine.
+  static const fallback = ['Vazirmatn'];
+
   static ThemeData build() {
     const scheme = ColorScheme.dark(
       primary: accent,
@@ -34,6 +44,7 @@ class ScannerTheme {
       // The bundled family, named explicitly. CanvasKit has no system fonts to fall back to, so a
       // family it does not hold renders nothing at all.
       fontFamily: 'Roboto',
+      fontFamilyFallback: fallback,
       appBarTheme: const AppBarTheme(
         backgroundColor: ink,
         surfaceTintColor: Colors.transparent,
@@ -63,7 +74,11 @@ class ScannerTheme {
           // 56 high: a door is not a place for a 40px button.
           minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            fontFamilyFallback: fallback,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -72,7 +87,11 @@ class ScannerTheme {
           foregroundColor: text,
           side: const BorderSide(color: border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamilyFallback: fallback,
+          ),
         ),
       ),
       snackBarTheme: const SnackBarThemeData(

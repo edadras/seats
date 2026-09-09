@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api/checkin_api.dart';
 import 'api/models.dart';
+import 'l10n/strings.dart';
 import 'screens/event_screen.dart';
 import 'screens/pair_screen.dart';
 import 'screens/scan_screen.dart';
@@ -14,19 +16,54 @@ import 'theme.dart';
 /// A web app rather than a store app on purpose: a venue hands a phone to a volunteer twenty
 /// minutes before doors, and "open this link" is a thing that can happen twenty minutes before
 /// doors. An app store review is not.
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // The language is settled before the first frame, not after it. A scanner that opens in English
+  // and turns Persian a moment later has already been handed to somebody.
+  Strings.use(Strings.resolve(
+    fromUrl: Uri.base.queryParameters['lang'],
+    stored: await DeviceStore().locale(),
+    systemLocales: WidgetsBinding.instance.platformDispatcher.locales,
+  ));
+
   runApp(const CheckinApp());
 }
 
-class CheckinApp extends StatelessWidget {
+class CheckinApp extends StatefulWidget {
   const CheckinApp({super.key});
+
+  /// Change the language of the whole running app, from anywhere in it.
+  static void speak(BuildContext context, String code) {
+    context.findAncestorStateOfType<_CheckinAppState>()?._speak(code);
+  }
+
+  @override
+  State<CheckinApp> createState() => _CheckinAppState();
+}
+
+class _CheckinAppState extends State<CheckinApp> {
+  Future<void> _speak(String code) async {
+    await DeviceStore().saveLocale(code);
+
+    if (!mounted) return;
+
+    setState(() => Strings.use(code));
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Seatmap check-in',
+      // Rebuilt when the language changes, so nothing anywhere below has to listen for it.
+      key: ValueKey(Strings.code),
+      onGenerateTitle: (context) => Strings.t('title'),
       debugShowCheckedModeBanner: false,
       theme: ScannerTheme.build(),
+      locale: Strings.locale,
+      // Flutter's own strings — the words in a dialog barrier, a text-field menu, a semantics
+      // announcement — which this app's catalogue cannot reach.
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: Strings.available.map((l) => Locale(l.code)),
       home: const _Root(),
     );
   }
@@ -81,7 +118,7 @@ class _RootState extends State<_Root> {
       _loading = false;
     });
 
-    _deviceName = await _store.deviceName() ?? 'This device';
+    _deviceName = await _store.deviceName() ?? Strings.t('thisDevice');
 
     unawaitedRefresh();
   }
@@ -158,23 +195,25 @@ class _RootState extends State<_Root> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: ScannerTheme.surface,
-        title: const Text('Unpair this device?'),
+        title: Text(Strings.t('unpair.title')),
         content: Text(
           queued > 0
               // Said plainly: those are people who are already inside.
-              ? 'There are still $queued scans waiting to be sent. They are kept, but this device '
-                  'will need pairing again before it can send them.'
-              : 'You will need a new pairing code to use this scanner again.',
+              ? Strings.t('unpair.withQueue', {'count': Strings.number(queued)})
+              : Strings.t('unpair.clean'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(Strings.t('cancel')),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(
               minimumSize: const Size(110, 44),
               backgroundColor: ScannerTheme.refuse,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Unpair'),
+            child: Text(Strings.t('unpair.confirm')),
           ),
         ],
       ),
