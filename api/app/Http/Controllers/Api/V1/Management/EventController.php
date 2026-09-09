@@ -27,7 +27,7 @@ class EventController extends Controller
     {
         $this->authorize($request, 'events.view');
 
-        $events = Event::with('venue')
+        $events = Event::with(['venue', 'priceZones'])
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('starts_at')
             ->paginate(min((int) $request->query('per_page', 25), 100));
@@ -101,7 +101,7 @@ class EventController extends Controller
         $this->authorize($request, 'pricing.manage');
 
         $data = $request->validate([
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => ['required', 'string', 'size:3', 'alpha'],
             'zones' => ['required', 'array', 'min:1'],
             'zones.*.key' => ['required', 'string', 'max:60'],
             'zones.*.name' => ['required', 'string', 'max:120'],
@@ -116,7 +116,7 @@ class EventController extends Controller
         ]);
 
         DB::transaction(function () use ($event, $data) {
-            $event->update(['currency' => $data['currency']]);
+            $event->update(['currency' => mb_strtoupper($data['currency'])]);
 
             EventPriceZone::where('event_id', $event->id)->delete();
 
@@ -131,7 +131,21 @@ class EventController extends Controller
                 ]);
             }
 
-            $overrides = $data['overrides'] ?? [];
+            /*
+             * Overrides are replaced only when the caller sent the key at all.
+             *
+             * The distinction matters: the panel's price screen knows nothing about blocked seats,
+             * and if a request without `overrides` cleared them, correcting one price would unblock
+             * the broken row somebody taped off this morning. Sending `"overrides": []` still means
+             * "there are none", which is the wholesale semantics this endpoint promises.
+             */
+            if (! array_key_exists('overrides', $data)) {
+                $event->bumpAvailabilityVersion();
+
+                return;
+            }
+
+            $overrides = $data['overrides'];
 
             if ($overrides !== []) {
                 // Reject seats from another map before writing anything, so a typo cannot half-apply.
@@ -169,7 +183,7 @@ class EventController extends Controller
 
         $this->audit->record('event.pricing_replaced', $event, [
             'zones' => count($data['zones']),
-            'overrides' => count($data['overrides'] ?? []),
+            'overrides' => array_key_exists('overrides', $data) ? count($data['overrides']) : 'unchanged',
         ]);
 
         return response()->json($this->present($event->fresh()));
@@ -248,6 +262,30 @@ class EventController extends Controller
             'max_seats_per_order' => $event->max_seats_per_order,
             'refund_policy' => $event->refund_policy,
             'availability_version' => $event->availability_version,
+
+            /*
+             * Prices travel with the event, because they are the event: a screen that had to fetch
+             * them separately would render a currency before it knew the amounts, and a price that
+             * appears a moment after its symbol is a price somebody misreads.
+             */
+            'price_zones' => $event->priceZones
+                ->map(fn ($zone) => [
+                    'key' => $zone->key,
+                    'name' => $zone->name,
+                    'amount' => $zone->amount,
+                    'color' => $zone->color,
+                ])->values(),
+
+            // What the published chart calls its categories, so the pricing screen can offer the
+            // zones the map actually has rather than asking somebody to retype them.
+            'categories' => array_values(array_map(
+                fn (array $category) => [
+                    'key' => $category['key'] ?? '',
+                    'label' => $category['label'] ?? ($category['key'] ?? ''),
+                    'color' => $category['color'] ?? null,
+                ],
+                $event->seatMapVersion?->geometry['categories'] ?? []
+            )),
         ];
     }
 }

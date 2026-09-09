@@ -116,13 +116,29 @@
 		}, value );
 	};
 
+	/**
+	 * How many decimal places a currency has, from the browser's own ICU data.
+	 *
+	 * Two for a euro, none for a rial, three for a dinar. Asked rather than assumed, because
+	 * assuming two turns 500,000 rials into 5,000 — the same hundredfold error in the other
+	 * direction that the server's minor-unit table exists to prevent.
+	 */
+	I18n.currencyDecimals = function ( currency ) {
+		try {
+			return new Intl.NumberFormat( 'en', { style: 'currency', currency: currency } )
+				.resolvedOptions().minimumFractionDigits;
+		} catch ( error ) {
+			return 2;
+		}
+	};
+
 	/** Money, in the currency charged and the shape this reader reads (ADR-0005 §5). */
 	I18n.money = function ( minorUnits, currency, decimals ) {
 		if ( null === minorUnits || undefined === minorUnits ) {
 			return '';
 		}
 
-		var places = 'number' === typeof decimals ? decimals : 2;
+		var places = 'number' === typeof decimals ? decimals : this.currencyDecimals( currency );
 		var value = minorUnits / Math.pow( 10, places );
 
 		try {

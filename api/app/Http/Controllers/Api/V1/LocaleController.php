@@ -24,7 +24,7 @@ class LocaleController extends Controller
      * Namespaces the browser needs. `errors` is here because the panel shows API failures, and
      * `mail` is not, because nothing in a browser renders an email.
      */
-    private const BROWSER_NAMESPACES = ['panel', 'site', 'errors', 'modules', 'payments', 'team'];
+    private const BROWSER_NAMESPACES = ['panel', 'site', 'errors', 'modules', 'payments', 'team', 'pricing'];
 
     /** The language menu, and which one this request resolved to. */
     public function index(Request $request)

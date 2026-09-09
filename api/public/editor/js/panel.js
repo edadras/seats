@@ -429,6 +429,30 @@
 		return '<span class="badge badge--' + ( tone || 'neutral' ) + '">' + esc( text ) + '</span>';
 	}
 
+	/**
+	 * What this event charges, at a glance.
+	 *
+	 * The cheapest and dearest zone, in the event's own currency but formatted for whoever is
+	 * reading it (ADR-0005 §5). An event with no prices says so plainly rather than showing a
+	 * confident zero, because "0" and "not priced yet" sell very differently.
+	 */
+	function priceRange( event ) {
+		var zones = event.price_zones || [];
+		var currency = event.currency || 'EUR';
+
+		if ( ! zones.length ) {
+			return '<span class="muted">' + esc( App.t( 'pricing.unpriced' ) ) + '</span>';
+		}
+
+		var amounts = zones.map( function ( zone ) { return zone.amount; } );
+		var low = Math.min.apply( null, amounts );
+		var high = Math.max.apply( null, amounts );
+
+		return esc( low === high
+			? App.money( low, currency )
+			: App.money( low, currency ) + ' – ' + App.money( high, currency ) );
+	}
+
 	function actionButton( attribute, value, label, iconName ) {
 		return '<button class="btn btn--sm" data-' + attribute + '="' + esc( value ) + '">' +
 			( iconName ? icon( iconName, { size: 14 } ) : '' ) + esc( label ) + '</button>';
@@ -714,11 +738,13 @@
 					return '<tr><td class="table__primary">' + esc( event.name ) + '</td>' +
 						'<td class="tnum">' + esc( formatDate( event.starts_at ) ) + '</td>' +
 						'<td>' + badge( titleCase( event.status ), STATUS_TONE[ event.status ] ) + '</td>' +
+						'<td class="tnum">' + priceRange( event ) + '</td>' +
 						'<td><code>' + esc( event.public_id ) + '</code>' +
 						'<button class="icon-btn icon-btn--sm" data-copy="' + esc( event.public_id ) +
 						'" data-tip="Copy" aria-label="Copy the public ID">' + icon( 'copy', { size: 14 } ) +
 						'</button></td>' +
 						'<td class="table__actions">' +
+						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
 						actionButton( 'stats', event.id, 'Inventory', 'layers' ) + '</td></tr>';
 				} ).join( '' );
 
@@ -731,7 +757,8 @@
 							icon( 'plus', { size: 15 } ) + 'New event</button>'
 						: '',
 					body: table(
-						[ 'Name', 'Starts', 'Status', 'Public ID', '' ],
+						[ 'Name', 'Starts', 'Status', { label: App.t( 'pricing.prices' ), numeric: true },
+							'Public ID', '' ],
 						rows,
 						sellable.length
 							? emptyState( 'calendar', 'No events yet',
@@ -746,6 +773,12 @@
 				if ( add ) {
 					add.addEventListener( 'click', function () { self.newEvent( sellable ); } );
 				}
+
+				self.main().querySelectorAll( '[data-prices]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						window.SeatmapPricing.open( self, button.dataset.prices );
+					} );
+				} );
 
 				self.main().querySelectorAll( '[data-stats]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
@@ -784,6 +817,16 @@
 				'if the chart is republished later.</span></div>' +
 				'<div class="field"><label class="field__label" for="e-starts">Starts</label>' +
 				'<input class="input" id="e-starts" name="starts_at" type="datetime-local" required></div>' +
+				'<div class="field"><label class="field__label" for="e-currency">' +
+				esc( self.t( 'pricing.currency' ) ) + '</label>' +
+				'<input class="input input--code" id="e-currency" name="currency" list="e-currencies" ' +
+				'maxlength="3" required value="' + esc( window.SeatmapPricing.CURRENCIES[ 0 ] ) + '">' +
+				'<datalist id="e-currencies">' +
+				window.SeatmapPricing.CURRENCIES.map( function ( code ) {
+					return '<option value="' + code + '">';
+				} ).join( '' ) +
+				'</datalist>' +
+				'<span class="field__hint">' + esc( self.t( 'pricing.currencyHint' ) ) + '</span></div>' +
 				'<div class="field"><label class="field__label" for="e-status">Status</label>' +
 				'<select class="select" id="e-status" name="status">' +
 				'<option value="draft">Draft — not on sale</option>' +
@@ -795,6 +838,7 @@
 					name: data.get( 'name' ),
 					seat_map_id: data.get( 'seat_map_id' ),
 					starts_at: data.get( 'starts_at' ),
+					currency: String( data.get( 'currency' ) || '' ).trim().toUpperCase(),
 					status: data.get( 'status' ),
 				} ).then( function () {
 					self.toast( 'Event created.' );

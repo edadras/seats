@@ -411,6 +411,15 @@ paths:
       operationId: replaceEventPricing
       tags: [Events]
       summary: Replace price zones and seat overrides
+      description: >
+        Replaces the event's currency and its complete price list. Sending everything each time
+        keeps the result unambiguous; partial edits across zones are where half a map ends up
+        priced from last season.
+
+
+        Seat overrides are replaced only when the `overrides` key is present. Omitting it leaves
+        the existing overrides untouched — so a screen that edits prices and knows nothing about
+        blocked seats cannot unblock them — while sending an empty array clears them.
       requestBody:
         required: true
         content:
@@ -419,12 +428,22 @@ paths:
               type: object
               required: [currency, zones]
               properties:
-                currency: { type: string, minLength: 3, maxLength: 3 }
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  pattern: "^[A-Za-z]{3}$"
+                  description: >
+                    ISO 4217 code, stored upper-case. Amounts everywhere are in this currency's
+                    minor unit, which is not always hundredths: 500000 IRR is five hundred
+                    thousand rials, and 1234 KWD is 1.234 dinars.
+                  example: EUR
                 zones:
                   type: array
                   items: { $ref: "#/components/schemas/PriceZone" }
                 overrides:
                   type: array
+                  description: Omit to leave existing overrides alone; send [] to clear them.
                   items: { $ref: "#/components/schemas/SeatOverride" }
       responses:
         "200":

@@ -1359,3 +1359,34 @@
 .nowrap { white-space: nowrap; }
 .is-muted td { opacity: 0.6; }
 .select--sm { block-size: 1.75rem; font-size: var(--text-xs); padding-inline-end: var(--s-5); }
+
+/* --- prices ---------------------------------------------------------------------------- */
+
+.field--inline {
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--s-2);
+	margin-block-end: var(--s-5);
+}
+
+.field--inline .field__hint { flex-basis: 100%; }
+
+.input--code {
+	inline-size: 5.5rem;
+	flex: none;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.input--amount { inline-size: 9rem; }
+
+/* A zone's colour beside its name, so a price is read against the block it prices. */
+.zone-dot {
+	display: inline-block;
+	inline-size: 0.625rem;
+	block-size: 0.625rem;
+	border-radius: 3px;
+	margin-inline-end: var(--s-2);
+	border: 1px solid rgb(0 0 0 / 0.12);
+}
