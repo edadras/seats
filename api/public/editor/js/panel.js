@@ -35,6 +35,7 @@
 			{ key: 'counter', icon: 'ticket' },
 			{ key: 'orders', icon: 'file' },
 			{ key: 'tickets', icon: 'ticket' },
+			{ key: 'doorlist', icon: 'check' },
 			{ key: 'discounts', icon: 'tag' },
 		] },
 		{ group: 'venue', items: [
@@ -544,6 +545,7 @@
 			case 'tickets': return window.SeatmapTickets.render( this );
 			case 'customers': return window.SeatmapCustomers.render( this );
 			case 'counter': return window.SeatmapCounter.render( this );
+			case 'doorlist': return window.SeatmapDoorList.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
 			case 'events': return this.renderEvents();

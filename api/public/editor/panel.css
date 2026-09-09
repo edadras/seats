@@ -1458,6 +1458,9 @@
 .on-own-line { display: block; }
 .nowrap { white-space: nowrap; }
 .is-muted td { opacity: 0.6; }
+/* A row for somebody already inside, read at arm's length across a busy door. */
+.door-row.is-in td { opacity: 0.55; }
+
 /* ---- the counter -------------------------------------------------------------------------- */
 
 /*

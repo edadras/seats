@@ -51,6 +51,7 @@ tags:
   - name: Orders
   - name: Discounts
   - name: Box office
+  - name: Door
   - name: Customers
   - name: Notifications
   - name: Sites
@@ -2648,6 +2649,88 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/door-list:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getDoorList
+      tags: [Door]
+      summary: Everybody expected tonight
+      description: |
+        Requires `checkins.view` and returns no money at all: the door needs names and seats, and a
+        volunteer on the door does not need to know what the evening took.
+
+        One row per ticket rather than per booking — a family of four arrives one at a time, and a
+        list that could only tick off whole bookings would have somebody doing arithmetic at the
+        door while a queue formed. Voided tickets are absent: somebody holding one is holding a
+        ticket that was cancelled.
+
+        `q` matches a name, an email, a booking reference or a seat like "Stalls A 5", because
+        those are the four things somebody at a door is handed.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: state
+          in: query
+          description: "`out` for those not in yet, `in` for those already through."
+          schema: { type: string, enum: [in, out] }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 10, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: The list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/DoorListRow" }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+                      last_page: { type: integer }
+                      expected: { type: integer, description: Tickets for tonight, whatever the filter. }
+                      arrived: { type: integer }
+                  event:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      starts_at: { type: [string, "null"], format: date-time }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /events/{event}/door-list/export:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: exportDoorList
+      tags: [Door]
+      summary: The same list as a file
+      description: |
+        Requires `checkins.view`. Not paginated — a door list that stops at fifty is a door list
+        that turns people away — and streamed in chunks, because a sold-out arena is twenty
+        thousand rows and holding them in memory to write a file is how an export becomes an
+        outage. The export is audited.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: state
+          in: query
+          schema: { type: string, enum: [in, out] }
+      responses:
+        "200":
+          description: CSV, with a byte-order mark so a spreadsheet opens Persian headings as text
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /customers:
     get:
       operationId: listCustomers
@@ -4422,6 +4505,25 @@ components:
         max_per_order: { type: [integer, "null"], minimum: 1 }
         proof_note: { type: [string, "null"], maxLength: 160 }
         status: { type: string, enum: [active, hidden] }
+
+    DoorListRow:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          type: string
+          description: >
+            The name on the ticket where there is one, the buyer's otherwise. A door asks for a
+            name and does not care which of the two it is.
+        buyer_name: { type: string }
+        email: { type: string }
+        reference: { type: string }
+        seat: { type: string }
+        quantity: { type: integer, description: More than one only for standing places. }
+        ticket_type: { type: [string, "null"] }
+        code: { type: string, description: The ticket code's visible prefix, for reading aloud. }
+        arrived: { type: boolean }
+        arrived_at: { type: [string, "null"], format: date-time }
 
     Money:
       type: object

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Management\BoxOfficeController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
+use App\Http\Controllers\Api\V1\Management\DoorListController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
@@ -129,6 +130,11 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}/counter', [BoxOfficeController::class, 'counter']);
         Route::post('events/{event}/sell', [BoxOfficeController::class, 'sell'])
             ->middleware('throttle:60,1');
+
+        // ---- The door ------------------------------------------------------------------------
+        // Who is expected tonight. `export` before nothing, because it is a verb and not an id.
+        Route::get('events/{event}/door-list', [DoorListController::class, 'index']);
+        Route::get('events/{event}/door-list/export', [DoorListController::class, 'export']);
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);
