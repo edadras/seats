@@ -48,6 +48,7 @@ tags:
   - name: Embed
   - name: WooCommerce
   - name: Tickets
+  - name: Customers
   - name: Sites
   - name: Modules
   - name: Team
@@ -1931,6 +1932,131 @@ paths:
               schema: { $ref: "#/components/schemas/Ticket" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [Customers]
+      summary: Who has bought, and how much
+      description: |
+        Derived from the orders rather than from a customers table, so the list cannot drift from
+        what was actually sold. A person is one email address, lowercased and trimmed; `id` is the
+        SHA-256 of that address, because an email in a path is an email in an access log.
+
+        Orders with no email address belong to nobody and are not listed. `meta.without_email`
+        counts them, so a screen can say so instead of quietly disagreeing with the orders report.
+
+        `spend` is every currency this person has paid in — there is no rate to add them with.
+        `spend_in_currency` is the same figure in `meta.currency` alone, and it is what `sort=spend`
+        orders by. Both count only orders where money arrived: confirmed and partly refunded.
+
+        Requires `orders.view`.
+      parameters:
+        - name: q
+          in: query
+          description: Matches the buyer's name, email or phone, or the order reference.
+          schema: { type: string, maxLength: 120 }
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, refunded, partially_refunded]
+        - name: currency
+          in: query
+          description: Which currency the sortable spend column is counted in.
+          schema: { type: string, minLength: 3, maxLength: 3 }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, oldest, orders, spend, name]
+            default: recent
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Customer" }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+                      last_page: { type: integer }
+                      currency: { type: [string, "null"] }
+                      currencies:
+                        type: array
+                        items: { type: string }
+                      without_email: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /customers/export:
+    get:
+      operationId: exportCustomers
+      tags: [Customers]
+      summary: The customer list as a CSV
+      description: |
+        The same filters as the list, streamed as a file and capped at twenty thousand people.
+        Audited as `customers.exported`: this is the one request that takes every buyer's address
+        out of the platform at once, and who did that is a question an organiser may have to answer
+        to somebody else.
+
+        Requires `orders.view`.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: currency
+          in: query
+          schema: { type: string, minLength: 3, maxLength: 3 }
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /customers/{customer}:
+    parameters:
+      - name: customer
+        in: path
+        required: true
+        description: The SHA-256 of the buyer's normalised email address.
+        schema: { type: string, pattern: "^[0-9a-f]{64}$" }
+    get:
+      operationId: getCustomer
+      tags: [Customers]
+      summary: One buyer, and every order they placed
+      description: |
+        Their name, address and phone as of the most recent order that filled each one in, and up
+        to five hundred orders with the seats or places on each. `checked_in` counts the allocations
+        on that order whose ticket has been scanned.
+
+        Requires `orders.view`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerProfile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /tickets:
     get:
       operationId: listTickets
@@ -3024,6 +3150,11 @@ components:
       schema: { type: string, pattern: "^[a-z0-9-]+\\.[a-z0-9-]+$" }
 
   responses:
+    Forbidden:
+      description: The caller's role does not carry the permission this needs
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     NotFound:
       description: Not found, or not visible to this tenant
       content:
@@ -3380,6 +3511,82 @@ components:
               code: { type: string }
               message: { type: string }
               path: { type: string }
+
+    Money:
+      type: object
+      properties:
+        currency: { type: string }
+        amount: { type: integer, description: Minor units. }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: string, description: SHA-256 of the normalised email. }
+        name: { type: [string, "null"] }
+        email: { type: string }
+        phone: { type: [string, "null"] }
+        orders_count: { type: integer }
+        confirmed_count: { type: integer }
+        events_count: { type: integer }
+        seats_count: { type: integer }
+        first_order_at: { type: string, format: date-time }
+        last_order_at: { type: string, format: date-time }
+        spend:
+          type: array
+          items: { $ref: "#/components/schemas/Money" }
+        spend_in_currency:
+          type: integer
+          description: The same spend in `meta.currency` alone, in minor units.
+
+    CustomerProfile:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: [string, "null"] }
+        email: { type: string }
+        phone: { type: [string, "null"] }
+        orders_count: { type: integer }
+        confirmed_count: { type: integer }
+        events_count: { type: integer }
+        seats_count: { type: integer }
+        first_order_at: { type: string, format: date-time }
+        last_order_at: { type: string, format: date-time }
+        spend:
+          type: array
+          items: { $ref: "#/components/schemas/Money" }
+        orders:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              reference: { type: string }
+              status: { type: string }
+              currency: { type: string }
+              total_amount: { type: integer }
+              placed_at: { type: string, format: date-time }
+              checked_in: { type: integer }
+              event:
+                type: [object, "null"]
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  starts_at: { type: string, format: date-time }
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    section: { type: [string, "null"] }
+                    row: { type: [string, "null"] }
+                    seat:
+                      type: [string, "null"]
+                      description: Null for a standing place, which has a quantity instead.
+                    quantity: { type: integer }
+                    amount: { type: integer }
+                    currency: { type: string }
+                    status: { type: string }
+                    used_at: { type: [string, "null"], format: date-time }
 
     Overview:
       type: object
@@ -4036,11 +4243,16 @@ components:
 
     ReportWidget:
       type: object
+      description: >
+        A card on a report page. Every type but `note` names a saved report and is run when the page
+        is read; a `note` is the organiser's own words, carries `text` instead of `report_id`, and is
+        stored as plain text because it is rendered inside the panel.
       properties:
-        type: { type: string, enum: [table, bar, line, stat] }
+        type: { type: string, enum: [table, bar, line, stat, note] }
         report_id: { type: string, format: uuid }
         title: { type: [string, 'null'] }
-        width: { type: string, enum: [half, full] }
+        text: { type: string, maxLength: 2000 }
+        width: { type: string, enum: [third, half, full] }
 
     ReportPage:
       type: object

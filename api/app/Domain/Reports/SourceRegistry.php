@@ -2,6 +2,7 @@
 
 namespace App\Domain\Reports;
 
+use App\Domain\Reports\Sources\BuyersSource;
 use App\Domain\Reports\Sources\CheckinsSource;
 use App\Domain\Reports\Sources\EventsSource;
 use App\Domain\Reports\Sources\OrdersSource;
@@ -21,6 +22,7 @@ class SourceRegistry
 {
     private const FIRST_PARTY = [
         OrdersSource::class,
+        BuyersSource::class,
         SeatsSoldSource::class,
         TicketsSource::class,
         CheckinsSource::class,

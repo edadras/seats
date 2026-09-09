@@ -18,6 +18,7 @@
     <script src="{{ asset('editor/js/inspector.js') }}"></script>
     <script src="{{ asset('editor/js/sites.js') }}"></script>
     <script src="{{ asset('editor/js/tickets.js') }}"></script>
+    <script src="{{ asset('editor/js/customers.js') }}"></script>
     <script src="{{ asset('editor/js/modules.js') }}"></script>
     <script src="{{ asset('editor/js/team.js') }}"></script>
     <script src="{{ asset('editor/js/pricing.js') }}"></script>

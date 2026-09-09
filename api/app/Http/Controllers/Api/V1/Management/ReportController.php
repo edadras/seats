@@ -85,7 +85,7 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         return response()->json([
-            'data' => Report::orderBy('name')->get()
+            'data' => Report::with('author')->orderBy('name')->get()
                 ->filter(fn (Report $report) => $this->readable($request, $report))
                 ->map(fn (Report $report) => $this->present($report))
                 ->values(),
@@ -267,6 +267,12 @@ class ReportController extends Controller
 
     private function present(Report $report): array
     {
+        // Loaded here rather than at each call site: `author` is a nullable relation on a model
+        // that arrives from four different places — a listing, a fetch, a save, an edit — and lazy
+        // loading is off, so the one path that forgot would be a 500 that appears only once an
+        // account has saved its first report.
+        $report->loadMissing('author');
+
         return [
             'id' => $report->id,
             'name' => $report->name,

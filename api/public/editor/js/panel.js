@@ -39,6 +39,7 @@
 			{ key: 'venues', icon: 'building' },
 		] },
 		{ group: 'audience', items: [
+			{ key: 'customers', icon: 'users' },
 			{ key: 'sites', icon: 'globe' },
 			{ key: 'themes', icon: 'palette' },
 			{ key: 'messaging', icon: 'mail' },
@@ -466,6 +467,7 @@
 			case 'team': return window.SeatmapTeam.render( this );
 			case 'audit': return window.SeatmapAudit.render( this );
 			case 'tickets': return window.SeatmapTickets.render( this );
+			case 'customers': return window.SeatmapCustomers.render( this );
 			case 'events': return this.renderEvents();
 			default: return this.renderOverview();
 		}
@@ -527,8 +529,18 @@
 			return '<div class="card">' + emptyMarkup + '</div>';
 		}
 
+		/*
+		 * A heading is a string, or an object saying more about the column. `html` is the one way
+		 * in for markup — the reports screen puts a sort button in a heading — and the caller that
+		 * uses it is the caller responsible for escaping what it built. Everything else is text and
+		 * is escaped here.
+		 */
 		var head = headings.map( function ( heading ) {
-			return '<th' + ( heading.numeric ? ' class="tnum"' : '' ) + '>' + esc( heading.label || heading ) + '</th>';
+			var content = heading && undefined !== heading.html
+				? heading.html
+				: esc( heading.label || heading );
+
+			return '<th' + ( heading.numeric ? ' class="tnum"' : '' ) + '>' + content + '</th>';
 		} ).join( '' );
 
 		return '<div class="table-wrap"><table class="table"><thead><tr>' + head + '</tr></thead>' +

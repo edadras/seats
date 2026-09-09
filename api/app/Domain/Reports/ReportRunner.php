@@ -82,6 +82,11 @@ class ReportRunner
             'rows' => $this->cast(array_slice($rows, 0, $plan['limit']), $plan),
             'truncated' => $truncated,
             'limit' => $plan['limit'],
+            // Which column the answer is actually in order of. The screen draws an arrow on it,
+            // and without this it would have to reimplement the default above to know where.
+            'sort' => $plan['sort']
+                ? ['alias' => $plan['sort']['expression'], 'direction' => $plan['sort']['direction']]
+                : null,
         ];
     }
 
@@ -163,18 +168,18 @@ class ReportRunner
             'measures' => $measures,
             'filters' => $filters,
             'columns' => $columns,
-            'sort' => $this->sort($definition, $dimensions, $measures),
+            'sort' => $this->sort($definition, $dimensions, $measures, $columns),
             'limit' => max(1, min((int) ($definition['limit'] ?? $cap), $cap)),
         ];
     }
 
     /* --------------------------------------------------------------------------- internals */
 
-    private function sort(array $definition, array $dimensions, array $measures): ?array
+    private function sort(array $definition, array $dimensions, array $measures, array $columns): ?array
     {
         $sort = $definition['sort'] ?? null;
 
-        if (! is_array($sort) || ! isset($sort['key'])) {
+        if (! is_array($sort) || ! isset($sort['key']) || ! is_string($sort['key'])) {
             // A measure descending is what somebody means by "the biggest first", and it is what
             // they want nine times out of ten.
             $first = array_key_first($measures);
@@ -183,15 +188,33 @@ class ReportRunner
         }
 
         $aliases = array_keys($dimensions + $measures);
-        $index = array_search($sort['key'], $aliases, true);
+        $alias = in_array($sort['key'], $aliases, true) ? $sort['key'] : null;
 
-        if (false === $index) {
+        /*
+         * A definition may name the field rather than its position.
+         *
+         * `m0` is the first measure, which is a fine thing for a screen to send about the report
+         * currently on it and a poor thing to store: drag a column in front of it and `m0` quietly
+         * means something else, so a saved report changes what it is sorted by without anybody
+         * touching the sort. `revenue` still means revenue.
+         */
+        if (null === $alias) {
+            foreach ($columns as $column) {
+                if ($column['key'] === $sort['key']) {
+                    $alias = $column['alias'];
+
+                    break;
+                }
+            }
+        }
+
+        if (null === $alias) {
             throw $this->unknown('sort', $sort['key']);
         }
 
         // The direction is chosen from two words written here, never taken from the request.
         return [
-            'expression' => $aliases[$index],
+            'expression' => $alias,
             'direction' => 'asc' === ($sort['direction'] ?? 'desc') ? 'asc' : 'desc',
         ];
     }

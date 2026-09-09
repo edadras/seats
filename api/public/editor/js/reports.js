@@ -1,30 +1,48 @@
 /**
- * Reports: pick a dataset, say what to group by and what to count, look at the answer.
+ * Reports: pick a dataset, drag what to group by and what to count, look at the answer.
  *
  * There is no query box here and there will not be one (ADR-0006). Every field on this screen came
  * from the source's own declaration, which is also what the server validates against — so the
  * builder cannot offer a field the runner would refuse, and neither can accept one nobody
- * declared.
+ * declared. Dragging changes which declared field is in which shelf; it can never invent one.
  *
- * The chart is drawn here rather than fetched: a report is at most a thousand rows, and a
- * charting library is 200KB of somebody else's opinions about tooltips.
+ * Two things about the dragging are deliberate:
+ *
+ *   - Every drag has a button that does the same thing. A field chip adds on click, a shelf pill
+ *     can be moved with its two arrows and removed with its cross. Somebody working from the
+ *     keyboard, or on a phone, builds the same report by pressing rather than dragging.
+ *   - Nothing is dropped into a shelf that the shelf did not declare: a measure dragged onto
+ *     "group by" is refused by the drop handler, not by the server afterwards.
+ *
+ * The chart is drawn here rather than fetched: a report is at most a thousand rows, and a charting
+ * library is 200KB of somebody else's opinions about tooltips.
  */
 ( function ( global ) {
 	'use strict';
 
 	var icon = global.SeatmapIcon;
 
+	var VIEWS = [ 'table', 'bar', 'line', 'stat' ];
+	var WIDTHS = [ 'third', 'half', 'full' ];
+	var LIMITS = [ 25, 100, 500, 1000 ];
+
 	var Reports = {
 		App: null,
 		sources: [],
 		saved: [],
 		pages: [],
+		events: [],
 		maxRows: 1000,
 
 		// The report being built.
 		draft: null,
 		result: null,
 		view: 'list',
+
+		// The page being arranged, and the timer that writes it back.
+		page: null,
+		saveTimer: null,
+		saveState: '',
 	};
 
 	/* ---------------------------------------------------------------------------- the list */
@@ -87,7 +105,7 @@
 						return '<button class="block-card" data-page="' + esc( page.id ) + '">' +
 							'<span class="block-card__name">' + esc( page.name ) + '</span>' +
 							'<span class="block-card__meta">' +
-								esc( App.t( 'reports.rows', {
+								esc( App.t( 'reports.widgetCount', {
 									count: App.number( ( page.widgets || [] ).length ),
 								} ) ) + '</span>' +
 						'</button>';
@@ -148,23 +166,21 @@
 			return;
 		}
 
-		Reports.draft = report
-			? {
-				id: report.id,
-				name: report.name,
-				source: report.source,
-				dimensions: ( report.definition.dimensions || [] ).slice(),
-				measures: ( report.definition.measures || [] ).slice(),
-				filters: JSON.parse( JSON.stringify( report.definition.filters || {} ) ),
-			}
-			: {
-				id: null,
-				name: '',
-				source: Reports.sources[ 0 ].key,
-				dimensions: [],
-				measures: [],
-				filters: {},
-			};
+		var definition = report ? ( report.definition || {} ) : {};
+
+		Reports.draft = {
+			id: report ? report.id : null,
+			name: report ? report.name : '',
+			source: report ? report.source : Reports.sources[ 0 ].key,
+			dimensions: ( definition.dimensions || [] ).slice(),
+			measures: ( definition.measures || [] ).slice(),
+			filters: JSON.parse( JSON.stringify( definition.filters || {} ) ),
+			sort: definition.sort ? { key: definition.sort.key, direction: definition.sort.direction } : null,
+			limit: definition.limit || 100,
+			// How this report was last looked at. The runner ignores it; a page widget decides for
+			// itself. It is here so that opening a saved report shows what its author saw.
+			view: VIEWS.indexOf( definition.view ) === -1 ? 'table' : definition.view,
+		};
 
 		Reports.result = null;
 		Reports.view = 'builder';
@@ -187,21 +203,22 @@
 
 		App.page( {
 			title: draft.name || App.t( 'reports.newReport' ),
-			description: source ? source.description : '',
+			description: source ? esc( source.description ) : '',
 			actions:
 				'<button class="btn" id="report-back">' + icon( 'back', { size: 15 } ) +
 					esc( App.t( 'reports.back' ) ) + '</button>' +
 				( draft.id
-					? '<a class="btn" id="report-export" href="#">' + icon( 'download', { size: 15 } ) +
-						esc( App.t( 'reports.export' ) ) + '</a>'
+					? '<button class="btn" id="report-export">' + icon( 'download', { size: 15 } ) +
+						esc( App.t( 'reports.export' ) ) + '</button>'
 					: '' ) +
 				'<button class="btn btn--primary" id="report-save">' +
 					esc( App.t( 'reports.save' ) ) + '</button>',
 			body:
-				'<div class="theme-editor">' +
-					'<div class="theme-editor__controls">' +
-						'<section class="theme-group">' +
-							'<h3 class="subhead">' + esc( App.t( 'reports.source' ) ) + '</h3>' +
+				'<div class="builder">' +
+					'<aside class="builder__palette">' +
+						'<div class="field">' +
+							'<label class="field__label" for="report-source">' +
+								esc( App.t( 'reports.source' ) ) + '</label>' +
 							'<select class="select" id="report-source">' +
 								Reports.sources.map( function ( entry ) {
 									return '<option value="' + esc( entry.key ) + '"' +
@@ -209,82 +226,196 @@
 										esc( entry.name ) + '</option>';
 								} ).join( '' ) +
 							'</select>' +
-						'</section>' +
-						Reports.pickerMarkup( 'groupBy', 'dimension', source ? source.dimensions : [] ) +
-						Reports.pickerMarkup( 'measure', 'measure', source ? source.measures : [] ) +
-						Reports.filtersMarkup( source ) +
-					'</div>' +
-					'<div class="theme-editor__preview" id="report-result">' +
-						'<p class="muted">' + esc( App.t( 'reports.running' ) ) + '</p>' +
+						'</div>' +
+						'<p class="builder__hint">' + esc( App.t( 'reports.dragHint' ) ) + '</p>' +
+						Reports.paletteGroup( 'dimension', source ? source.dimensions : [] ) +
+						Reports.paletteGroup( 'measure', source ? source.measures : [] ) +
+						Reports.paletteGroup( 'filter', source ? source.filters : [] ) +
+					'</aside>' +
+					'<div class="builder__main">' +
+						Reports.shelf( 'dimension', App.t( 'reports.groupBy' ), draft.dimensions ) +
+						Reports.shelf( 'measure', App.t( 'reports.measure' ), draft.measures ) +
+						Reports.filterShelf( source ) +
+						'<div class="builder__bar">' +
+							Reports.viewSwitch() +
+							'<div class="builder__spacer"></div>' +
+							'<label class="builder__limit" for="report-limit">' +
+								esc( App.t( 'reports.rowLimit' ) ) +
+								'<select class="select select--sm" id="report-limit">' +
+									LIMITS.filter( function ( limit ) {
+										return limit <= Reports.maxRows;
+									} ).map( function ( limit ) {
+										return '<option value="' + limit + '"' +
+											( limit === draft.limit ? ' selected' : '' ) + '>' +
+											esc( App.number( limit ) ) + '</option>';
+									} ).join( '' ) +
+								'</select>' +
+							'</label>' +
+						'</div>' +
+						'<div class="builder__preview" id="report-result">' +
+							'<p class="muted">' + esc( App.t( 'reports.running' ) ) + '</p>' +
+						'</div>' +
 					'</div>' +
 				'</div>',
 		} );
 
 		Reports.bindBuilder();
+
+		/*
+		 * Repainting the builder empties the preview, and not every change to it is a change to the
+		 * answer — dropping a filter in before choosing a value asks nothing new. So the last
+		 * answer is put back, and only the things that really change the question call `run()`.
+		 */
+		if ( Reports.result ) {
+			Reports.paintResult();
+		}
 	};
 
-	Reports.pickerMarkup = function ( titleKey, kind, fields ) {
+	/** One group of draggable fields. Each chip is also a button, so pressing it adds the field. */
+	Reports.paletteGroup = function ( kind, fields ) {
 		var App = Reports.App;
-		var chosen = 'dimension' === kind ? Reports.draft.dimensions : Reports.draft.measures;
+		var titles = { dimension: 'groupBy', measure: 'measure', filter: 'filters' };
+		var chosen = Reports.chosen( kind );
 
-		return '<section class="theme-group">' +
-			'<h3 class="subhead">' + esc( App.t( 'reports.' + titleKey ) ) + '</h3>' +
-			'<div class="perms">' +
-				fields.map( function ( field ) {
-					return '<label class="perms__row">' +
-						'<input type="checkbox" class="checkbox" data-field="' + esc( kind ) + '" ' +
-							'value="' + esc( field.key ) + '"' +
-							( chosen.indexOf( field.key ) !== -1 ? ' checked' : '' ) + '>' +
-						'<span>' + esc( field.label ) + '</span>' +
-					'</label>';
-				} ).join( '' ) +
-			'</div>' +
-		'</section>';
-	};
-
-	Reports.filtersMarkup = function ( source ) {
-		var App = Reports.App;
-
-		if ( ! source || ! source.filters.length ) {
+		if ( ! fields.length ) {
 			return '';
 		}
 
-		return '<section class="theme-group">' +
-			'<h3 class="subhead">' + esc( App.t( 'reports.filters' ) ) + '</h3>' +
-			'<div class="theme-group__fields">' +
-				source.filters.map( function ( filter ) {
-					return Reports.filterField( filter );
+		return '<section class="builder__group">' +
+			'<h3 class="subhead">' + esc( App.t( 'reports.' + titles[ kind ] ) ) + '</h3>' +
+			'<ul class="field-chips">' +
+				fields.map( function ( field ) {
+					var used = chosen.indexOf( field.key ) !== -1;
+
+					return '<li><button type="button" class="field-chip' + ( used ? ' is-used' : '' ) + '" ' +
+						'draggable="' + ( used ? 'false' : 'true' ) + '" ' +
+						'data-add="' + esc( kind ) + '" data-key="' + esc( field.key ) + '"' +
+						( used ? ' disabled' : '' ) + ' ' +
+						'title="' + esc( App.t( 'reports.addField', { field: field.label } ) ) + '">' +
+						icon( used ? 'check' : 'plus', { size: 13 } ) +
+						'<span>' + esc( field.label ) + '</span>' +
+					'</button></li>';
 				} ).join( '' ) +
-			'</div>' +
+			'</ul>' +
+		'</section>';
+	};
+
+	/** What is already in a shelf, whichever shelf it is. */
+	Reports.chosen = function ( kind ) {
+		if ( 'dimension' === kind ) {
+			return Reports.draft.dimensions;
+		}
+
+		if ( 'measure' === kind ) {
+			return Reports.draft.measures;
+		}
+
+		return Object.keys( Reports.draft.filters );
+	};
+
+	Reports.fieldLabel = function ( kind, key ) {
+		var source = Reports.source( Reports.draft.source );
+		var list = source ? source[ { dimension: 'dimensions', measure: 'measures', filter: 'filters' }[ kind ] ] : [];
+		var found = ( list || [] ).filter( function ( field ) { return field.key === key; } )[ 0 ];
+
+		return found ? found.label : key;
+	};
+
+	Reports.shelf = function ( kind, title, keys ) {
+		var App = Reports.App;
+
+		return '<section class="shelf" data-shelf="' + esc( kind ) + '">' +
+			'<h3 class="shelf__title">' + esc( title ) + '</h3>' +
+			'<ol class="shelf__items">' +
+				keys.map( function ( key, index ) {
+					return Reports.pill( kind, key, index, keys.length );
+				} ).join( '' ) +
+			'</ol>' +
+			( keys.length
+				? ''
+				: '<p class="shelf__empty">' + esc( App.t( 'reports.dropHere' ) ) + '</p>' ) +
+		'</section>';
+	};
+
+	Reports.pill = function ( kind, key, index, total ) {
+		var App = Reports.App;
+		var label = Reports.fieldLabel( kind, key );
+
+		return '<li class="pill" draggable="true" data-kind="' + esc( kind ) + '" ' +
+			'data-key="' + esc( key ) + '" data-index="' + index + '">' +
+			'<span class="pill__grip" aria-hidden="true">' + icon( 'layers', { size: 13 } ) + '</span>' +
+			'<span class="pill__label">' + esc( label ) + '</span>' +
+			'<span class="pill__buttons">' +
+				'<button type="button" class="icon-btn icon-btn--sm" data-move="-1" ' +
+					'data-kind="' + esc( kind ) + '" data-index="' + index + '"' +
+					( 0 === index ? ' disabled' : '' ) + ' aria-label="' +
+					esc( App.t( 'reports.moveEarlier', { field: label } ) ) + '">' +
+					icon( 'arrowUp', { size: 13 } ) + '</button>' +
+				'<button type="button" class="icon-btn icon-btn--sm" data-move="1" ' +
+					'data-kind="' + esc( kind ) + '" data-index="' + index + '"' +
+					( index === total - 1 ? ' disabled' : '' ) + ' aria-label="' +
+					esc( App.t( 'reports.moveLater', { field: label } ) ) + '">' +
+					icon( 'arrowDown', { size: 13 } ) + '</button>' +
+				'<button type="button" class="icon-btn icon-btn--sm" data-drop-field="' +
+					esc( kind ) + '" data-key="' + esc( key ) + '" aria-label="' +
+					esc( App.t( 'reports.removeField', { field: label } ) ) + '">' +
+					icon( 'close', { size: 13 } ) + '</button>' +
+			'</span>' +
+		'</li>';
+	};
+
+	/** The filter shelf holds controls rather than pills: a filter without a value filters nothing. */
+	Reports.filterShelf = function ( source ) {
+		var App = Reports.App;
+		var keys = Object.keys( Reports.draft.filters );
+
+		return '<section class="shelf shelf--filters" data-shelf="filter">' +
+			'<h3 class="shelf__title">' + esc( App.t( 'reports.filters' ) ) + '</h3>' +
+			( keys.length
+				? '<div class="shelf__fields">' + keys.map( function ( key ) {
+					var declared = ( ( source && source.filters ) || [] ).filter( function ( filter ) {
+						return filter.key === key;
+					} )[ 0 ];
+
+					return declared ? Reports.filterField( declared ) : '';
+				} ).join( '' ) + '</div>'
+				: '<p class="shelf__empty">' + esc( App.t( 'reports.dropFilter' ) ) + '</p>' ) +
 		'</section>';
 	};
 
 	Reports.filterField = function ( filter ) {
 		var App = Reports.App;
 		var value = Reports.draft.filters[ filter.key ];
+		var head = '<div class="field field--filter">' +
+			'<span class="field__row field__row--between">' +
+				'<label class="field__label" for="f-' + esc( filter.key ) + '">' +
+					esc( filter.label ) + '</label>' +
+				'<button type="button" class="icon-btn icon-btn--sm" data-drop-field="filter" ' +
+					'data-key="' + esc( filter.key ) + '" aria-label="' +
+					esc( App.t( 'reports.removeField', { field: filter.label } ) ) + '">' +
+					icon( 'close', { size: 13 } ) + '</button>' +
+			'</span>';
 
 		if ( 'date_range' === filter.type ) {
-			value = value || {};
+			value = ( value && 'object' === typeof value ) ? value : {};
 
-			return '<div class="field">' +
-				'<label class="field__label">' + esc( filter.label ) + '</label>' +
+			return head +
 				'<span class="field__row">' +
+					'<input class="input" type="date" id="f-' + esc( filter.key ) + '" ' +
+						'data-range="' + esc( filter.key ) + '" data-edge="from" ' +
+						'value="' + esc( value.from || '' ) + '" aria-label="' +
+						esc( App.t( 'reports.from' ) ) + '">' +
 					'<input class="input" type="date" data-range="' + esc( filter.key ) + '" ' +
-						'data-edge="from" value="' + esc( value.from || '' ) + '" ' +
-						'aria-label="' + esc( App.t( 'reports.from' ) ) + '">' +
-					'<input class="input" type="date" data-range="' + esc( filter.key ) + '" ' +
-						'data-edge="to" value="' + esc( value.to || '' ) + '" ' +
-						'aria-label="' + esc( App.t( 'reports.to' ) ) + '">' +
+						'data-edge="to" value="' + esc( value.to || '' ) + '" aria-label="' +
+						esc( App.t( 'reports.to' ) ) + '">' +
 				'</span>' +
 			'</div>';
 		}
 
 		if ( 'enum' === filter.type ) {
-			return '<div class="field">' +
-				'<label class="field__label" for="f-' + esc( filter.key ) + '">' +
-					esc( filter.label ) + '</label>' +
-				'<select class="select" id="f-' + esc( filter.key ) + '" ' +
-					'data-filter="' + esc( filter.key ) + '">' +
+			return head +
+				'<select class="select" id="f-' + esc( filter.key ) + '" data-filter="' +
+					esc( filter.key ) + '">' +
 					'<option value="">' + esc( App.t( 'reports.anyValue' ) ) + '</option>' +
 					( filter.options || [] ).map( function ( option ) {
 						return '<option value="' + esc( option ) + '"' +
@@ -295,9 +426,7 @@
 		}
 
 		// An event filter is a select of this account's events, not a box to type an id into.
-		return '<div class="field">' +
-			'<label class="field__label" for="f-' + esc( filter.key ) + '">' +
-				esc( filter.label ) + '</label>' +
+		return head +
 			'<select class="select" id="f-' + esc( filter.key ) + '" data-filter="' +
 				esc( filter.key ) + '">' +
 				'<option value="">' + esc( App.t( 'reports.allEvents' ) ) + '</option>' +
@@ -309,6 +438,22 @@
 		'</div>';
 	};
 
+	Reports.viewSwitch = function () {
+		var App = Reports.App;
+
+		return '<div class="segmented" role="group" aria-label="' +
+			esc( App.t( 'reports.widgetType' ) ) + '">' +
+			VIEWS.map( function ( view ) {
+				return '<button type="button" class="' +
+					( view === Reports.draft.view ? 'is-on' : '' ) + '" data-view="' + view + '"' +
+					( view === Reports.draft.view ? ' aria-pressed="true"' : ' aria-pressed="false"' ) + '>' +
+					esc( App.t( 'reports.types.' + view ) ) + '</button>';
+			} ).join( '' ) +
+		'</div>';
+	};
+
+	/* ------------------------------------------------------------------- builder behaviour */
+
 	Reports.bindBuilder = function () {
 		var App = Reports.App;
 
@@ -319,35 +464,56 @@
 			Reports.draft.dimensions = [];
 			Reports.draft.measures = [];
 			Reports.draft.filters = {};
+			Reports.draft.sort = null;
 			Reports.paintBuilder();
 			Reports.run();
 		} );
 
-		each( '[data-field]', function ( box ) {
-			box.addEventListener( 'change', function () {
-				var list = 'dimension' === box.dataset.field
-					? Reports.draft.dimensions
-					: Reports.draft.measures;
-				var at = list.indexOf( box.value );
+		document.getElementById( 'report-limit' ).addEventListener( 'change', function () {
+			Reports.draft.limit = Number( this.value );
+			Reports.run();
+		} );
 
-				if ( box.checked && at === -1 ) {
-					list.push( box.value );
-				} else if ( ! box.checked && at !== -1 ) {
-					list.splice( at, 1 );
-				}
+		each( '[data-add]', function ( chip ) {
+			chip.addEventListener( 'click', function () {
+				Reports.add( chip.dataset.add, chip.dataset.key );
+			} );
 
-				Reports.run();
+			chip.addEventListener( 'dragstart', function ( event ) {
+				event.dataTransfer.effectAllowed = 'copy';
+				event.dataTransfer.setData( 'text/plain', 'add:' + chip.dataset.add + ':' + chip.dataset.key );
 			} );
 		} );
 
+		each( '[data-drop-field]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				Reports.removeField( button.dataset.dropField, button.dataset.key );
+			} );
+		} );
+
+		each( '[data-move]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				Reports.move(
+					button.dataset.kind,
+					Number( button.dataset.index ),
+					Number( button.dataset.index ) + Number( button.dataset.move )
+				);
+			} );
+		} );
+
+		each( '.segmented [data-view]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				Reports.draft.view = button.dataset.view;
+				Reports.paintBuilder();
+				Reports.paintResult();
+			} );
+		} );
+
+		Reports.bindDragging();
+
 		each( '[data-filter]', function ( control ) {
 			control.addEventListener( 'change', function () {
-				if ( control.value ) {
-					Reports.draft.filters[ control.dataset.filter ] = control.value;
-				} else {
-					delete Reports.draft.filters[ control.dataset.filter ];
-				}
-
+				Reports.draft.filters[ control.dataset.filter ] = control.value;
 				Reports.run();
 			} );
 		} );
@@ -355,16 +521,11 @@
 		each( '[data-range]', function ( control ) {
 			control.addEventListener( 'change', function () {
 				var key = control.dataset.range;
-				var range = Reports.draft.filters[ key ] || {};
+				var range = Reports.draft.filters[ key ];
 
+				range = ( range && 'object' === typeof range ) ? range : {};
 				range[ control.dataset.edge ] = control.value;
-
-				if ( ! range.from && ! range.to ) {
-					delete Reports.draft.filters[ key ];
-				} else {
-					Reports.draft.filters[ key ] = range;
-				}
-
+				Reports.draft.filters[ key ] = range;
 				Reports.run();
 			} );
 		} );
@@ -378,26 +539,196 @@
 		var exporter = document.getElementById( 'report-export' );
 
 		if ( exporter ) {
-			exporter.addEventListener( 'click', function ( event ) {
-				event.preventDefault();
-				Reports.download();
-			} );
+			exporter.addEventListener( 'click', function () { Reports.download(); } );
 		}
 	};
 
+	/**
+	 * Dropping.
+	 *
+	 * A shelf accepts its own kind and nothing else, and a pill dropped on another pill lands in
+	 * that place rather than at the end — which is what somebody dragging a column between two
+	 * others means by it.
+	 */
+	Reports.bindDragging = function () {
+		each( '.pill', function ( pill ) {
+			pill.addEventListener( 'dragstart', function ( event ) {
+				event.dataTransfer.effectAllowed = 'move';
+				event.dataTransfer.setData( 'text/plain',
+					'move:' + pill.dataset.kind + ':' + pill.dataset.index );
+				pill.classList.add( 'is-dragging' );
+			} );
+
+			pill.addEventListener( 'dragend', function () { pill.classList.remove( 'is-dragging' ); } );
+
+			pill.addEventListener( 'dragover', function ( event ) {
+				event.preventDefault();
+				pill.classList.add( 'is-target' );
+			} );
+
+			pill.addEventListener( 'dragleave', function () { pill.classList.remove( 'is-target' ); } );
+
+			pill.addEventListener( 'drop', function ( event ) {
+				event.preventDefault();
+				event.stopPropagation();
+				pill.classList.remove( 'is-target' );
+				Reports.handleDrop( event.dataTransfer.getData( 'text/plain' ),
+					pill.dataset.kind, Number( pill.dataset.index ) );
+			} );
+		} );
+
+		each( '.shelf', function ( shelf ) {
+			shelf.addEventListener( 'dragover', function ( event ) {
+				event.preventDefault();
+				shelf.classList.add( 'is-target' );
+			} );
+
+			shelf.addEventListener( 'dragleave', function () { shelf.classList.remove( 'is-target' ); } );
+
+			shelf.addEventListener( 'drop', function ( event ) {
+				event.preventDefault();
+				shelf.classList.remove( 'is-target' );
+				Reports.handleDrop( event.dataTransfer.getData( 'text/plain' ), shelf.dataset.shelf, null );
+			} );
+		} );
+	};
+
+	Reports.handleDrop = function ( payload, shelf, index ) {
+		var parts = String( payload || '' ).split( ':' );
+
+		if ( 3 !== parts.length || parts[ 1 ] !== shelf ) {
+			// A measure dropped on "group by" is a mistake, not an instruction. Refusing it here
+			// is kinder than a validation error a second later.
+			return;
+		}
+
+		if ( 'add' === parts[ 0 ] ) {
+			Reports.add( shelf, parts[ 2 ], index );
+
+			return;
+		}
+
+		if ( 'move' === parts[ 0 ] ) {
+			Reports.move( shelf, Number( parts[ 2 ] ), null === index ? -1 : index );
+		}
+	};
+
+	Reports.add = function ( kind, key, at ) {
+		if ( 'filter' === kind ) {
+			if ( ! ( key in Reports.draft.filters ) ) {
+				Reports.draft.filters[ key ] = '';
+				Reports.paintBuilder();
+			}
+
+			return;
+		}
+
+		var list = Reports.chosen( kind );
+
+		if ( list.indexOf( key ) !== -1 ) {
+			return;
+		}
+
+		if ( null === at || undefined === at ) {
+			list.push( key );
+		} else {
+			list.splice( at, 0, key );
+		}
+
+		Reports.paintBuilder();
+		Reports.run();
+	};
+
+	Reports.removeField = function ( kind, key ) {
+		if ( 'filter' === kind ) {
+			delete Reports.draft.filters[ key ];
+		} else {
+			var list = Reports.chosen( kind );
+			var at = list.indexOf( key );
+
+			if ( -1 === at ) {
+				return;
+			}
+
+			list.splice( at, 1 );
+
+			// A sort pointing at a column that is no longer there would be refused by the runner.
+			if ( Reports.draft.sort && Reports.draft.sort.key === key ) {
+				Reports.draft.sort = null;
+			}
+		}
+
+		Reports.paintBuilder();
+		Reports.run();
+	};
+
+	Reports.move = function ( kind, from, to ) {
+		var list = Reports.chosen( kind );
+
+		if ( 'filter' === kind || from < 0 || from >= list.length ) {
+			return;
+		}
+
+		var target = ( null === to || to < 0 || to > list.length - 1 ) ? list.length - 1 : to;
+
+		if ( target === from ) {
+			return;
+		}
+
+		list.splice( target, 0, list.splice( from, 1 )[ 0 ] );
+		Reports.paintBuilder();
+		Reports.run();
+	};
+
 	Reports.definition = function () {
-		return {
+		var definition = {
 			dimensions: Reports.draft.dimensions,
 			measures: Reports.draft.measures,
-			filters: Reports.draft.filters,
+			filters: Reports.filtersForRun(),
+			limit: Reports.draft.limit,
+			view: Reports.draft.view,
 		};
+
+		if ( Reports.draft.sort ) {
+			definition.sort = Reports.draft.sort;
+		}
+
+		return definition;
+	};
+
+	/** A filter that has been dropped in but not filled in yet is not a filter. */
+	Reports.filtersForRun = function () {
+		var filters = {};
+
+		Object.keys( Reports.draft.filters ).forEach( function ( key ) {
+			var value = Reports.draft.filters[ key ];
+
+			if ( value && 'object' === typeof value ) {
+				if ( value.from || value.to ) {
+					filters[ key ] = value;
+				}
+
+				return;
+			}
+
+			if ( value ) {
+				filters[ key ] = value;
+			}
+		} );
+
+		return filters;
 	};
 
 	Reports.run = function () {
 		var App = Reports.App;
 		var host = document.getElementById( 'report-result' );
 
+		if ( ! host ) {
+			return;
+		}
+
 		if ( ! Reports.draft.measures.length ) {
+			Reports.result = null;
 			host.innerHTML = '<p class="muted">' + esc( App.t( 'reports.needMeasure' ) ) + '</p>';
 
 			return;
@@ -410,32 +741,65 @@
 			definition: Reports.definition(),
 		} ).then( function ( result ) {
 			Reports.result = result;
-			host.innerHTML = Reports.resultMarkup( result );
+			Reports.paintResult();
 		} ).catch( function ( error ) {
+			Reports.result = null;
 			host.innerHTML = '<p class="muted">' + esc( error.message ) + '</p>';
+		} );
+	};
+
+	Reports.paintResult = function () {
+		var host = document.getElementById( 'report-result' );
+
+		if ( ! host || ! Reports.result ) {
+			return;
+		}
+
+		host.innerHTML = Reports.resultMarkup( Reports.result, Reports.draft.view, true );
+
+		each( '#report-result [data-sort]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				var key = button.dataset.sort;
+				var current = Reports.draft.sort;
+
+				Reports.draft.sort = {
+					key: key,
+					direction: current && current.key === key && 'desc' === current.direction
+						? 'asc'
+						: 'desc',
+				};
+
+				Reports.run();
+			} );
 		} );
 	};
 
 	/* -------------------------------------------------------------------------- rendering */
 
-	Reports.resultMarkup = function ( result, type ) {
+	/**
+	 * The answer.
+	 *
+	 * `sortable` is only true in the builder: a column heading on a report page is a heading, not
+	 * a control, because the page's own definition is what decides its order.
+	 */
+	Reports.resultMarkup = function ( result, type, sortable ) {
 		var App = Reports.App;
 
-		if ( ! result.rows.length ) {
+		if ( ! result.rows || ! result.rows.length ) {
 			return '<p class="muted">' + esc( App.t( 'reports.noRows' ) ) + '</p>';
 		}
 
-		var chart = '';
-
-		if ( 'bar' === type || 'line' === type ) {
-			chart = Reports.chart( result, type );
-		} else if ( 'stat' === type ) {
+		if ( 'stat' === type ) {
 			return Reports.stat( result );
 		}
 
+		var chart = ( 'bar' === type || 'line' === type ) ? Reports.chart( result, type ) : '';
+
 		return chart + App.table(
 			result.columns.map( function ( column ) {
-				return { label: column.label, numeric: 'measure' === column.kind };
+				return sortable
+					? { html: Reports.sortHeading( result, column ), numeric: 'measure' === column.kind }
+					: { label: column.label, numeric: 'measure' === column.kind };
 			} ),
 			result.rows.map( function ( row ) {
 				return '<tr>' + result.columns.map( function ( column ) {
@@ -448,6 +812,29 @@
 				count: App.number( result.limit ),
 			} ) ) + '</p>'
 			: '' );
+	};
+
+	/**
+	 * A column heading that sorts.
+	 *
+	 * Handed to the table helper as `html`, which is the one field it does not escape — so
+	 * everything variable in here is escaped on the way in, and the arrow is our own icon rather
+	 * than anything the server sent.
+	 */
+	Reports.sortHeading = function ( result, column ) {
+		var App = Reports.App;
+		var active = result.sort && result.sort.alias === column.alias;
+
+		return '<button type="button" class="th-sort' + ( active ? ' is-active' : '' ) + '" ' +
+			'data-sort="' + esc( column.key ) + '" aria-label="' +
+			esc( App.t( 'reports.sortBy', { field: column.label } ) ) + '">' +
+			'<span>' + esc( column.label ) + '</span>' +
+			( active
+				? '<span class="th-sort__arrow" aria-hidden="true">' +
+					icon( 'asc' === result.sort.direction ? 'arrowUp' : 'arrowDown', { size: 12 } ) +
+				'</span>'
+				: '' ) +
+		'</button>';
 	};
 
 	/** One number, big. What a stat widget is for. */
@@ -510,7 +897,14 @@
 	 */
 	Reports.chart = function ( result, type ) {
 		var dimension = result.columns.filter( function ( c ) { return 'dimension' === c.kind; } )[ 0 ];
-		var measure = result.columns.filter( function ( c ) { return 'measure' === c.kind; } )[ 0 ];
+		var measures = result.columns.filter( function ( c ) { return 'measure' === c.kind; } );
+
+		// The column the report is in order of, when that is a measure — somebody who sorted by
+		// revenue meant revenue, and a chart of the first column instead is a chart of the wrong
+		// question. Otherwise the first, which is what a report with no sort is ordered by anyway.
+		var measure = measures.filter( function ( c ) {
+			return result.sort && result.sort.alias === c.alias;
+		} )[ 0 ] || measures[ 0 ];
 
 		if ( ! dimension || ! measure ) {
 			return '';
@@ -668,46 +1062,135 @@
 
 		App.loading( App.t( 'reports.pages' ) );
 
-		App.request( 'GET', '/report-pages/' + id ).then( function ( page ) {
-			Reports.page = page;
+		Promise.all( [
+			App.request( 'GET', '/report-pages/' + id ),
+			Reports.saved.length ? Promise.resolve( { data: Reports.saved } )
+				: App.request( 'GET', '/reports' ),
+		] ).then( function ( results ) {
+			Reports.page = results[ 0 ];
+			Reports.saved = results[ 1 ].data || [];
+			Reports.view = 'page';
+			Reports.saveState = '';
 			Reports.paintPage();
 		} ).catch( function ( error ) { App.toast( error.message, true ); } );
 	};
 
+	/**
+	 * A page, arranged by hand.
+	 *
+	 * The left column is what can go on it — the saved reports, and a note for the organiser's own
+	 * words. The right is the page itself: cards that can be dragged into any order, widened to a
+	 * third, a half or the whole row, and retitled in place. Every change writes itself back a
+	 * moment later, because a layout with a Save button is a layout somebody loses.
+	 */
 	Reports.paintPage = function () {
 		var App = Reports.App;
 		var page = Reports.page;
 
 		App.page( {
 			title: page.name,
+			description: esc( App.t( 'reports.pageHint' ) ),
 			actions:
 				'<button class="btn" id="page-back">' + icon( 'back', { size: 15 } ) +
 					esc( App.t( 'reports.back' ) ) + '</button>' +
-				'<button class="btn" id="page-add">' + icon( 'plus', { size: 15 } ) +
-					esc( App.t( 'reports.addWidget' ) ) + '</button>' +
+				'<span class="save-state" id="page-state">' + esc( Reports.saveState ) + '</span>' +
 				'<button class="btn btn--danger" id="page-delete">' +
 					esc( App.t( 'reports.delete' ) ) + '</button>',
-			body: page.widgets.length
-				? '<div class="widgets">' + page.widgets.map( function ( widget, index ) {
-					return '<section class="widget widget--' + esc( widget.width || 'full' ) + '">' +
-						'<div class="widget__head">' +
-							'<h3>' + esc( widget.title || '' ) + '</h3>' +
-							'<button class="btn btn--sm" data-remove="' + index + '">' +
-								esc( App.t( 'reports.remove' ) ) + '</button>' +
+			body:
+				'<div class="builder">' +
+					'<aside class="builder__palette">' +
+						'<p class="builder__hint">' + esc( App.t( 'reports.pageDragHint' ) ) + '</p>' +
+						'<section class="builder__group">' +
+							'<h3 class="subhead">' + esc( App.t( 'reports.saved' ) ) + '</h3>' +
+							( Reports.saved.length
+								? '<ul class="field-chips">' + Reports.saved.map( function ( report ) {
+									return '<li><button type="button" class="field-chip" draggable="true" ' +
+										'data-widget-add="' + esc( report.id ) + '">' +
+										icon( 'plus', { size: 13 } ) + '<span>' + esc( report.name ) +
+										'</span></button></li>';
+								} ).join( '' ) + '</ul>'
+								: '<p class="muted">' + esc( App.t( 'reports.noReportsHint' ) ) + '</p>' ) +
+						'</section>' +
+						'<section class="builder__group">' +
+							'<h3 class="subhead">' + esc( App.t( 'reports.blocks' ) ) + '</h3>' +
+							'<ul class="field-chips"><li>' +
+								'<button type="button" class="field-chip" draggable="true" data-widget-add="note">' +
+									icon( 'text', { size: 13 } ) + '<span>' +
+									esc( App.t( 'reports.note' ) ) + '</span>' +
+								'</button>' +
+							'</li></ul>' +
+						'</section>' +
+					'</aside>' +
+					'<div class="builder__main">' +
+						'<div class="widgets" id="page-canvas">' +
+							( page.widgets.length
+								? page.widgets.map( function ( widget, index ) {
+									return Reports.widgetMarkup( widget, index );
+								} ).join( '' )
+								: '<p class="canvas__empty">' + esc( App.t( 'reports.dropWidget' ) ) + '</p>' ) +
 						'</div>' +
-						( widget.error
-							? '<p class="muted">' + esc( App.t( 'reports.widgetError' ) ) + '</p>'
-							: Reports.resultMarkup( widget, widget.type ) ) +
-					'</section>';
-				} ).join( '' ) + '</div>'
-				: App.emptyState( 'chart', App.t( 'reports.noPages' ), App.t( 'reports.addWidget' ) ),
+					'</div>' +
+				'</div>',
 		} );
+
+		Reports.bindPage();
+	};
+
+	Reports.widgetMarkup = function ( widget, index ) {
+		var App = Reports.App;
+
+		var head = '<header class="widget__head" draggable="true" data-widget="' + index + '">' +
+			'<span class="pill__grip" aria-hidden="true">' + icon( 'layers', { size: 13 } ) + '</span>' +
+			'<input class="widget__title" data-title="' + index + '" ' +
+				'value="' + esc( widget.title || '' ) + '" maxlength="120" ' +
+				'placeholder="' + esc( App.t( 'reports.untitled' ) ) + '" aria-label="' +
+				esc( App.t( 'reports.widgetTitle' ) ) + '">' +
+			'<span class="widget__tools">' +
+				( 'note' === widget.type
+					? ''
+					: '<select class="select select--sm" data-type="' + index + '" aria-label="' +
+						esc( App.t( 'reports.widgetType' ) ) + '">' +
+						VIEWS.map( function ( view ) {
+							return '<option value="' + view + '"' +
+								( view === widget.type ? ' selected' : '' ) + '>' +
+								esc( App.t( 'reports.types.' + view ) ) + '</option>';
+						} ).join( '' ) +
+					'</select>' ) +
+				'<select class="select select--sm" data-width="' + index + '" aria-label="' +
+					esc( App.t( 'reports.width' ) ) + '">' +
+					WIDTHS.map( function ( width ) {
+						return '<option value="' + width + '"' +
+							( width === ( widget.width || 'full' ) ? ' selected' : '' ) + '>' +
+							esc( App.t( 'reports.widths.' + width ) ) + '</option>';
+					} ).join( '' ) +
+				'</select>' +
+				'<button type="button" class="icon-btn icon-btn--sm" data-remove="' + index +
+					'" aria-label="' + esc( App.t( 'reports.remove' ) ) + '">' +
+					icon( 'close', { size: 13 } ) + '</button>' +
+			'</span>' +
+		'</header>';
+
+		var body;
+
+		if ( 'note' === widget.type ) {
+			body = '<textarea class="input widget__note" data-note="' + index + '" rows="4" ' +
+				'maxlength="2000" placeholder="' + esc( App.t( 'reports.notePlaceholder' ) ) + '">' +
+				esc( widget.text || '' ) + '</textarea>';
+		} else if ( widget.error ) {
+			body = '<p class="muted">' + esc( App.t( 'reports.widgetError' ) ) + '</p>';
+		} else {
+			body = Reports.resultMarkup( widget, widget.type, false );
+		}
+
+		return '<section class="widget widget--' + esc( widget.width || 'full' ) + '" ' +
+			'data-card="' + index + '">' + head + body + '</section>';
+	};
+
+	Reports.bindPage = function () {
+		var App = Reports.App;
 
 		document.getElementById( 'page-back' )
 			.addEventListener( 'click', function () { Reports.render( App ); } );
-
-		document.getElementById( 'page-add' )
-			.addEventListener( 'click', function () { Reports.addWidget(); } );
 
 		document.getElementById( 'page-delete' ).addEventListener( 'click', function () {
 			App.modal( {
@@ -715,7 +1198,7 @@
 				submitLabel: App.t( 'reports.delete' ),
 				body: '<p>' + esc( App.t( 'reports.deletePageBody' ) ) + '</p>',
 				onSubmit: function () {
-					return App.request( 'DELETE', '/report-pages/' + page.id ).then( function () {
+					return App.request( 'DELETE', '/report-pages/' + Reports.page.id ).then( function () {
 						App.toast( App.t( 'reports.pageDeleted' ) );
 						Reports.render( App );
 					} );
@@ -723,81 +1206,227 @@
 			} );
 		} );
 
-		each( '[data-remove]', function ( button ) {
-			button.addEventListener( 'click', function () {
-				var widgets = Reports.widgetDefinitions();
+		each( '[data-widget-add]', function ( chip ) {
+			chip.addEventListener( 'click', function () {
+				Reports.addWidget( chip.dataset.widgetAdd, null );
+			} );
 
-				widgets.splice( Number( button.dataset.remove ), 1 );
-				Reports.saveWidgets( widgets );
+			chip.addEventListener( 'dragstart', function ( event ) {
+				event.dataTransfer.effectAllowed = 'copy';
+				event.dataTransfer.setData( 'text/plain', 'widget:' + chip.dataset.widgetAdd );
 			} );
 		} );
+
+		each( '[data-remove]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				Reports.page.widgets.splice( Number( button.dataset.remove ), 1 );
+				Reports.paintPage();
+				Reports.queueSave();
+			} );
+		} );
+
+		each( '[data-title]', function ( input ) {
+			input.addEventListener( 'input', function () {
+				Reports.page.widgets[ Number( input.dataset.title ) ].title = input.value;
+				Reports.queueSave();
+			} );
+		} );
+
+		each( '[data-note]', function ( area ) {
+			area.addEventListener( 'input', function () {
+				Reports.page.widgets[ Number( area.dataset.note ) ].text = area.value;
+				Reports.queueSave();
+			} );
+		} );
+
+		each( '[data-type]', function ( select ) {
+			select.addEventListener( 'change', function () {
+				var widget = Reports.page.widgets[ Number( select.dataset.type ) ];
+
+				// The rows are already here; only the shape of them changes. Asking the server
+				// again for the same numbers would be a round trip to redraw a chart.
+				widget.type = select.value;
+				Reports.paintPage();
+				Reports.queueSave();
+			} );
+		} );
+
+		each( '[data-width]', function ( select ) {
+			select.addEventListener( 'change', function () {
+				Reports.page.widgets[ Number( select.dataset.width ) ].width = select.value;
+				Reports.paintPage();
+				Reports.queueSave();
+			} );
+		} );
+
+		Reports.bindCanvasDragging();
+	};
+
+	Reports.bindCanvasDragging = function () {
+		var canvas = document.getElementById( 'page-canvas' );
+
+		if ( ! canvas ) {
+			return;
+		}
+
+		each( '.widget__head[data-widget]', function ( head ) {
+			head.addEventListener( 'dragstart', function ( event ) {
+				event.dataTransfer.effectAllowed = 'move';
+				event.dataTransfer.setData( 'text/plain', 'card:' + head.dataset.widget );
+				head.closest( '.widget' ).classList.add( 'is-dragging' );
+			} );
+
+			head.addEventListener( 'dragend', function () {
+				each( '.widget', function ( card ) { card.classList.remove( 'is-dragging' ); } );
+			} );
+		} );
+
+		each( '.widget[data-card]', function ( card ) {
+			card.addEventListener( 'dragover', function ( event ) {
+				event.preventDefault();
+				card.classList.add( 'is-target' );
+			} );
+
+			card.addEventListener( 'dragleave', function () { card.classList.remove( 'is-target' ); } );
+
+			card.addEventListener( 'drop', function ( event ) {
+				event.preventDefault();
+				event.stopPropagation();
+				card.classList.remove( 'is-target' );
+				Reports.handleCanvasDrop( event.dataTransfer.getData( 'text/plain' ),
+					Number( card.dataset.card ) );
+			} );
+		} );
+
+		canvas.addEventListener( 'dragover', function ( event ) {
+			event.preventDefault();
+			canvas.classList.add( 'is-target' );
+		} );
+
+		canvas.addEventListener( 'dragleave', function () { canvas.classList.remove( 'is-target' ); } );
+
+		canvas.addEventListener( 'drop', function ( event ) {
+			event.preventDefault();
+			canvas.classList.remove( 'is-target' );
+			Reports.handleCanvasDrop( event.dataTransfer.getData( 'text/plain' ), null );
+		} );
+	};
+
+	Reports.handleCanvasDrop = function ( payload, at ) {
+		var parts = String( payload || '' ).split( ':' );
+
+		if ( 2 !== parts.length ) {
+			return;
+		}
+
+		if ( 'widget' === parts[ 0 ] ) {
+			Reports.addWidget( parts[ 1 ], at );
+
+			return;
+		}
+
+		if ( 'card' === parts[ 0 ] ) {
+			var from = Number( parts[ 1 ] );
+			var to = null === at ? Reports.page.widgets.length - 1 : at;
+
+			if ( from === to ) {
+				return;
+			}
+
+			Reports.page.widgets.splice( to, 0, Reports.page.widgets.splice( from, 1 )[ 0 ] );
+			Reports.paintPage();
+			Reports.queueSave();
+		}
+	};
+
+	/**
+	 * Put something new on the page.
+	 *
+	 * A note is drawn straight away — there is nothing to run. A report has to come back from the
+	 * server with its rows in it, so the page is written and then read again.
+	 */
+	Reports.addWidget = function ( what, at ) {
+		var widget = 'note' === what
+			? { type: 'note', title: '', text: '', width: 'full' }
+			: { type: 'table', report_id: what, title: '', width: 'half' };
+
+		if ( null === at || undefined === at ) {
+			Reports.page.widgets.push( widget );
+		} else {
+			Reports.page.widgets.splice( at, 0, widget );
+		}
+
+		Reports.paintPage();
+
+		if ( 'note' === what ) {
+			Reports.queueSave();
+
+			return;
+		}
+
+		Reports.saveWidgets();
+	};
+
+	Reports.queueSave = function () {
+		global.clearTimeout( Reports.saveTimer );
+		Reports.setSaveState( Reports.App.t( 'reports.saving' ) );
+		Reports.saveTimer = global.setTimeout( function () { Reports.saveWidgets( true ); }, 700 );
+	};
+
+	Reports.setSaveState = function ( text ) {
+		var host = document.getElementById( 'page-state' );
+
+		Reports.saveState = text;
+
+		if ( host ) {
+			host.textContent = text;
+		}
 	};
 
 	/** The page as it is stored, rather than as it is rendered. */
 	Reports.widgetDefinitions = function () {
 		return Reports.page.widgets.map( function ( widget ) {
-			return {
-				type: widget.type,
-				report_id: widget.report_id,
-				title: widget.title,
-				width: widget.width || 'full',
-			};
+			return 'note' === widget.type
+				? { type: 'note', title: widget.title, text: widget.text || '', width: widget.width || 'full' }
+				: {
+					type: widget.type,
+					report_id: widget.report_id,
+					title: widget.title,
+					width: widget.width || 'full',
+				};
 		} );
 	};
 
-	Reports.addWidget = function () {
+	/**
+	 * Write the arrangement back.
+	 *
+	 * `quietly` means the page keeps what it already has on screen. It is the right thing for a
+	 * reorder or a retitle, where the rows have not changed and re-fetching them would make the
+	 * screen flicker; a new report widget arrives without rows, so that one reads the page back.
+	 */
+	Reports.saveWidgets = function ( quietly ) {
 		var App = Reports.App;
 
-		if ( ! Reports.saved.length ) {
-			App.toast( App.t( 'reports.noReportsHint' ), true );
+		global.clearTimeout( Reports.saveTimer );
 
-			return;
-		}
+		return App.request( 'PATCH', '/report-pages/' + Reports.page.id, {
+			widgets: Reports.widgetDefinitions(),
+		} ).then( function () {
+			if ( quietly ) {
+				Reports.setSaveState( App.t( 'reports.allSaved' ) );
 
-		App.modal( {
-			title: App.t( 'reports.addWidget' ),
-			submitLabel: App.t( 'reports.addWidget' ),
-			body:
-				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="w-report">' +
-					esc( App.t( 'reports.saved' ) ) + '</label>' +
-				'<select class="select" id="w-report" name="report_id">' +
-					Reports.saved.map( function ( report ) {
-						return '<option value="' + esc( report.id ) + '">' + esc( report.name ) +
-							'</option>';
-					} ).join( '' ) +
-				'</select></div>' +
-				'<div class="field"><label class="field__label" for="w-type">' +
-					esc( App.t( 'reports.widgetType' ) ) + '</label>' +
-				'<select class="select" id="w-type" name="type">' +
-					[ 'table', 'bar', 'line', 'stat' ].map( function ( type ) {
-						return '<option value="' + type + '">' +
-							esc( App.t( 'reports.types.' + type ) ) + '</option>';
-					} ).join( '' ) +
-				'</select></div>' +
-				'</div>',
-			onSubmit: function ( data ) {
-				var widgets = Reports.widgetDefinitions();
+				return;
+			}
 
-				widgets.push( {
-					type: data.get( 'type' ),
-					report_id: data.get( 'report_id' ),
-					width: 'full',
-				} );
-
-				return Reports.saveWidgets( widgets );
-			},
+			return App.request( 'GET', '/report-pages/' + Reports.page.id ).then( function ( page ) {
+				Reports.page = page;
+				Reports.saveState = App.t( 'reports.allSaved' );
+				Reports.paintPage();
+			} );
+		} ).catch( function ( error ) {
+			Reports.setSaveState( '' );
+			App.toast( error.message, true );
 		} );
-	};
-
-	Reports.saveWidgets = function ( widgets ) {
-		var App = Reports.App;
-
-		return App.request( 'PATCH', '/report-pages/' + Reports.page.id, { widgets: widgets } )
-			.then( function () {
-				App.toast( App.t( 'reports.pageSaved' ) );
-				Reports.openPage( Reports.page.id );
-			} ).catch( function ( error ) { App.toast( error.message, true ); } );
 	};
 
 	/* --------------------------------------------------------------------------- helpers */

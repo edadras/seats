@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scriptDir = path.join(root, 'api', 'public', 'editor', 'js');
+const phpDir = path.join(root, 'api', 'app');
 
 /*
  * The console is checked apart from the panel because it is a separate application that happens to
@@ -38,7 +39,10 @@ const scriptDir = path.join(root, 'api', 'public', 'editor', 'js');
  * console page is handed that one sub-array rather than a second translation of the same six words.
  */
 const SURFACES = [
-	{ label: 'panel', namespaces: ['panel'], scripts: (file) => file !== 'console.js' },
+	// The panel is not only JavaScript: a handful of its words are written by the server, because
+	// the thing they label is a file the server composes — a CSV heading is a panel string that a
+	// controller has to know. Those lookups are counted too, or the check would call them dead.
+	{ label: 'panel', namespaces: ['panel'], scripts: (file) => file !== 'console.js', php: true },
 	{ label: 'console', namespaces: ['console'], borrowed: ['team'], scripts: (file) => file === 'console.js' },
 ];
 
@@ -67,6 +71,19 @@ function catalogueKeys(namespace) {
 	return flatten(JSON.parse(json)).map((key) => `${namespace}.${key}`);
 }
 
+/** Every PHP file under a directory, so a server-side lookup counts as a lookup. */
+function phpFiles(directory) {
+	return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+		const full = path.join(directory, entry.name);
+
+		if (entry.isDirectory()) {
+			return phpFiles(full);
+		}
+
+		return entry.name.endsWith('.php') ? [full] : [];
+	});
+}
+
 const problems = [];
 
 for (const surface of SURFACES) {
@@ -86,6 +103,14 @@ for (const surface of SURFACES) {
 		// 'panel.a.b' followed by a + is a key being assembled; anything else is a whole key.
 		for (const match of source.matchAll(pattern)) {
 			(match[2] ? prefixes : exact).add(match[1]);
+		}
+	}
+
+	if (surface.php) {
+		for (const file of phpFiles(phpDir)) {
+			for (const match of fs.readFileSync(file, 'utf8').matchAll(pattern)) {
+				(match[2] ? prefixes : exact).add(match[1]);
+			}
 		}
 	}
 

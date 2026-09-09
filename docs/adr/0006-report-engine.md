@@ -97,3 +97,60 @@ declaration.** The orders source deliberately does not join allocations, because
 order's total across its seats multiplies the revenue by the party size — a revenue report that is
 quietly three times too big is worse than no revenue report. Seat-level questions have their own
 source, where the grain is a seat. A test pins it.
+
+## Amendment, 2026-09: dragging, notes, and a sixth source
+
+Three changes, all inside the decision above rather than around it.
+
+**The builder is a drag-and-drop surface.** Fields are dragged from a palette into shelves —
+group by, count, filter — and reordered by dragging within one. This changes nothing about what
+reaches the database: a chip carries a declared field's key and a shelf accepts only its own kind,
+so a measure dropped on "group by" is refused by the screen before the server ever sees it. Every
+drag has a button that does the same thing, because a screen that can only be used with a mouse is
+a screen somebody cannot use.
+
+**A sort may name its field.** `{sort: {key: 'm0'}}` — the first measure — is fine for a screen to
+send about the report currently on it, and a poor thing to store: drag a column in front of it and
+`m0` quietly means something else, so a saved report changes what it is sorted by without anybody
+touching the sort. The runner now accepts a declared field key as well, and stores that.
+
+**A page may carry a note.** Widgets were always "a saved report, drawn one of four ways"; a page
+of five figures with nothing saying what to do about them is a page people stop opening. A `note`
+widget holds the organiser's own words, has no report behind it and nothing to run, and is stored
+as plain text — it is rendered inside a colleague's panel, and that is not a place to accept
+markup. Widths gained a third alongside half and full, and a page writes itself back as it is
+arranged rather than behind a save button.
+
+**A sixth source: buyers.** The same orders as the `orders` source, at the same grain, but
+groupable by the person who placed them and with `customers` counting distinct addresses rather
+than orders. It takes `reports.orders.view` — the dataset carries names and addresses beside
+totals, and the role that may read the takings is the one that may already open the orders those
+came from. Orders with no email address are excluded from it: they would otherwise group under an
+empty name and read as one enormous customer.
+
+## Amendment, 2026-09: the customer directory is derived, not stored
+
+The screen an organiser asked for — everyone who has bought from them, and what each person
+bought — is worked out from `external_orders` rather than kept in a `customers` table.
+
+A buyer on this platform is not an account. They type a name and an email at a checkout, or a shop
+hands those over with an order, and nobody signs in. A customers table would have to be written by
+every path that creates an order — the hosted checkout, the WooCommerce integration, a module —
+and the first path that forgot would produce a customer list quietly missing people. Derived, the
+list cannot drift from the orders it describes.
+
+Three consequences worth stating:
+
+- **Identity is the email, lowercased and trimmed**, because it is the only thing on an order that
+  is the same person twice. Orders without one belong to nobody: they are left out of the list and
+  counted in its metadata, so the screen can say so rather than silently disagreeing with the
+  orders report.
+- **The key in a URL is the SHA-256 of that address**, not the address. An email in a path is an
+  email in an access log, a browser history and a referrer header.
+- **There is nowhere to put a note about a customer**, and that is the price. When an organiser
+  needs one, this becomes a real table, and the derivation above becomes its backfill.
+
+It sits behind `orders.view` rather than a permission of its own: this is the box office's own
+data seen from the buyer's side, and a role that may open an order may already read every name on
+this screen. The CSV export is audited as `customers.exported`, because it is the one request that
+takes every buyer's address out of the platform at once.

@@ -186,7 +186,7 @@ The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concu
 independent OS processes, because sharing a connection would not exercise what the guarantee
 actually rests on.
 
-Three further checks are run by hand against a live instance rather than in CI, since they need a
+A few further checks are run by hand against a live instance rather than in CI, since they need a
 server and a browser:
 
 ```bash
@@ -196,6 +196,8 @@ php artisan serve --port=8123 &
 
 node api/editor_smoke.mjs                                        # drives the designer in Chromium
 node api/a11y_check.mjs                                          # contrast and keyboard paths
+node api/reports_smoke.mjs                                       # builds a report by dragging, then a page
+node api/customers_smoke.mjs                                     # the customer directory and its CSV
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 

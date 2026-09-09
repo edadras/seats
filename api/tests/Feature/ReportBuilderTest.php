@@ -99,6 +99,96 @@ class ReportBuilderTest extends TestCase
     }
 
     #[Test]
+    public function a_saved_sort_names_the_field_rather_than_its_position(): void
+    {
+        $fixture = $this->sold();
+        $owner = $this->makeUser($fixture['tenant']);
+
+        // `m0` is fine for the screen to send about the report currently on it. A stored report
+        // sorted by `m0` changes what it sorts by the moment somebody drags a column in front of
+        // it, so the field's own name has to work too.
+        $body = $this->actingAs($owner)->postJson('/v1/reports/run', [
+            'source' => 'seats_sold',
+            'definition' => [
+                'dimensions' => ['row'],
+                'measures' => ['seats', 'revenue'],
+                'sort' => ['key' => 'revenue', 'direction' => 'asc'],
+            ],
+        ])->assertOk()->json();
+
+        $this->assertSame(['alias' => 'm1', 'direction' => 'asc'], $body['sort']);
+
+        // And a name nobody declared is still a refusal, not a column.
+        $this->actingAs($owner)->postJson('/v1/reports/run', [
+            'source' => 'seats_sold',
+            'definition' => [
+                'dimensions' => ['row'],
+                'measures' => ['seats'],
+                'sort' => ['key' => 'allocations.tenant_id'],
+            ],
+        ])->assertStatus(422)->assertJsonPath('error.code', 'unknown_sort');
+    }
+
+    #[Test]
+    public function the_buyers_dataset_counts_people_rather_than_orders(): void
+    {
+        $fixture = $this->sold();
+        $owner = $this->makeUser($fixture['tenant']);
+
+        $body = $this->actingAs($owner)->postJson('/v1/reports/run', [
+            'source' => 'buyers',
+            'definition' => ['dimensions' => ['buyer_email'], 'measures' => ['customers', 'orders', 'revenue']],
+        ])->assertOk()->json();
+
+        $this->assertCount(1, $body['rows']);
+        $this->assertSame('dana@example.test', $body['rows'][0]['d0']);
+        $this->assertSame(1, $body['rows'][0]['m0'], 'One person.');
+        $this->assertSame(1, $body['rows'][0]['m1'], 'One order.');
+        $this->assertSame(5000, $body['rows'][0]['m2'], 'Not multiplied by the seats on it.');
+
+        // Buyers are money, not attendance: the door may not read them.
+        $this->actingAs($this->makeUser($fixture['tenant'], 'door'))->postJson('/v1/reports/run', [
+            'source' => 'buyers',
+            'definition' => ['dimensions' => ['buyer'], 'measures' => ['orders']],
+        ])->assertForbidden();
+    }
+
+    #[Test]
+    public function a_page_can_carry_a_note_as_well_as_a_report(): void
+    {
+        $fixture = $this->sold();
+        $owner = $this->makeUser($fixture['tenant']);
+
+        $report = $this->actingAs($owner)->postJson('/v1/reports', [
+            'name' => 'Seats by section',
+            'source' => 'seats_sold',
+            'definition' => ['dimensions' => ['section'], 'measures' => ['seats']],
+        ])->assertCreated()->json();
+
+        $page = $this->actingAs($owner)->postJson('/v1/report-pages', ['name' => 'Monday'])
+            ->assertCreated()->json();
+
+        $this->actingAs($owner)->patchJson('/v1/report-pages/'.$page['id'], [
+            'widgets' => [
+                ['type' => 'note', 'title' => 'Read me', 'text' => '<b>Chase</b> the refunds.', 'width' => 'third'],
+                ['type' => 'bar', 'report_id' => $report['id'], 'width' => 'half'],
+                // No report and not a note: nothing to draw, so nothing is stored.
+                ['type' => 'table', 'title' => 'Nothing'],
+            ],
+        ])->assertOk();
+
+        $body = $this->actingAs($owner)->getJson('/v1/report-pages/'.$page['id'])->assertOk()->json();
+
+        $this->assertCount(2, $body['widgets']);
+        $this->assertSame('note', $body['widgets'][0]['type']);
+        $this->assertSame('third', $body['widgets'][0]['width']);
+        // Stored as text, because it is rendered inside somebody else's panel.
+        $this->assertSame('Chase the refunds.', $body['widgets'][0]['text']);
+        $this->assertSame('bar', $body['widgets'][1]['type']);
+        $this->assertArrayHasKey('rows', $body['widgets'][1]);
+    }
+
+    #[Test]
     public function a_report_has_to_count_something(): void
     {
         $fixture = $this->sold();

@@ -25,7 +25,10 @@ use Illuminate\Support\Str;
 class ReportPageController extends Controller
 {
     /** The shapes a widget can take. Not a free string: the panel renders on this. */
-    private const WIDGET_TYPES = ['table', 'bar', 'line', 'stat'];
+    private const WIDGET_TYPES = ['table', 'bar', 'line', 'stat', 'note'];
+
+    /** How wide a widget sits on the page's twelve-column grid. */
+    private const WIDGET_WIDTHS = ['third', 'half', 'full'];
 
     public function __construct(
         private readonly SourceRegistry $sources,
@@ -132,7 +135,15 @@ class ReportPageController extends Controller
             'type' => $widget['type'] ?? 'table',
             'title' => $widget['title'] ?? null,
             'report_id' => $widget['report_id'] ?? null,
+            'width' => $widget['width'] ?? 'full',
         ];
+
+        // A note is the organiser's own words — a heading over a row of figures, or the sentence
+        // that says what the person reading this on Monday is supposed to do about it. There is no
+        // report behind it and nothing to run.
+        if ('note' === $shape['type']) {
+            return $shape + ['text' => $widget['text'] ?? ''];
+        }
 
         $report = Report::whereKey($shape['report_id'])->first();
 
@@ -166,7 +177,33 @@ class ReportPageController extends Controller
         $clean = [];
 
         foreach (array_slice(array_values($widgets), 0, 24) as $widget) {
-            if (! is_array($widget) || empty($widget['report_id']) || ! is_string($widget['report_id'])) {
+            if (! is_array($widget)) {
+                continue;
+            }
+
+            $type = in_array($widget['type'] ?? '', self::WIDGET_TYPES, true)
+                ? $widget['type']
+                : 'table';
+            $width = in_array($widget['width'] ?? '', self::WIDGET_WIDTHS, true)
+                ? $widget['width']
+                : 'full';
+            $title = isset($widget['title']) ? mb_substr((string) $widget['title'], 0, 120) : null;
+
+            if ('note' === $type) {
+                $clean[] = [
+                    'type' => 'note',
+                    'title' => $title,
+                    // Stored as text and rendered as text. A note is not a place to put markup:
+                    // it is shown inside the panel, where the panel's own escaping is the only
+                    // thing standing between an organiser's words and their colleague's session.
+                    'text' => mb_substr(strip_tags((string) ($widget['text'] ?? '')), 0, 2000),
+                    'width' => $width,
+                ];
+
+                continue;
+            }
+
+            if (empty($widget['report_id']) || ! is_string($widget['report_id'])) {
                 continue;
             }
 
@@ -177,14 +214,10 @@ class ReportPageController extends Controller
             }
 
             $clean[] = [
-                'type' => in_array($widget['type'] ?? '', self::WIDGET_TYPES, true)
-                    ? $widget['type']
-                    : 'table',
+                'type' => $type,
                 'report_id' => $widget['report_id'],
-                'title' => isset($widget['title']) ? mb_substr((string) $widget['title'], 0, 120) : null,
-                'width' => in_array($widget['width'] ?? '', ['half', 'full'], true)
-                    ? $widget['width']
-                    : 'full',
+                'title' => $title,
+                'width' => $width,
             ];
         }
 

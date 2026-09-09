@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\SignupController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
+use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
@@ -85,6 +86,14 @@ Route::prefix('v1')->group(function () {
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);
         Route::get('events/{event}/checkins', [EventController::class, 'checkins']);
+
+        // ---- Who bought ------------------------------------------------------------------
+        // Derived from the orders rather than stored beside them, so the list cannot drift from
+        // what was actually sold. `export` is declared before `{customer}` on purpose: otherwise
+        // the word "export" is a customer key that matches nobody.
+        Route::get('customers', [CustomerController::class, 'index']);
+        Route::get('customers/export', [CustomerController::class, 'export']);
+        Route::get('customers/{customer}', [CustomerController::class, 'show']);
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);
