@@ -154,7 +154,7 @@ class OrderService
             }
 
             $event = $order->event;
-            $items = HoldItem::with(['seat.section', 'seat.row', 'capacityObject'])
+            $items = HoldItem::with(['seat.section', 'seat.row', 'capacityObject', 'ticketType'])
                 ->where('hold_id', $hold->id)
                 ->whereNull('released_at')
                 ->get();
@@ -170,6 +170,10 @@ class OrderService
                     'event_id' => $event->id,
                     'seat_id' => $item->seat_id,
                     'capacity_object_id' => $item->capacity_object_id,
+                    'ticket_type_id' => $item->ticket_type_id,
+                    // Denormalised for the same reason the section name is: a type renamed next
+                    // season must not change what a ticket sold this season says it is.
+                    'ticket_type_name' => $item->ticketType?->name,
                     'quantity' => $item->quantity,
                     'hold_id' => $hold->id,
                     'external_order_row_id' => $order->id,

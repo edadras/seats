@@ -63,8 +63,91 @@
 		this.cursor = null;
 		this.view = { scale: 1, x: 0, y: 0 };
 		this.maxSeats = config.event.max_seats_per_order || 10;
+		/*
+		 * Who the tickets are for.
+		 *
+		 * An event with none, or with one, gets no chooser at all: a select with a single option
+		 * is a question with one answer, and asking it makes every buyer slower for nothing. The
+		 * server applies the default in that case, so the request looks exactly as it did before
+		 * concessions existed.
+		 */
+		this.ticketTypes = ( config.event.ticket_types || [] ).slice();
+		this.defaultType = this.ticketTypes.filter( function ( type ) {
+			return type.is_default;
+		} )[ 0 ] || this.ticketTypes[ 0 ] || null;
+		this.hasTypes = this.ticketTypes.length > 1;
 		this.busy = false;
 	}
+
+	/**
+	 * What one place costs at a given type.
+	 *
+	 * The same arithmetic as App\Models\TicketType::priceFrom, deliberately: the buyer watches the
+	 * total change as they choose, and the server prices the hold from its own copy a moment later.
+	 * If these two ever disagree the buyer is shown one number and charged another, so the
+	 * rounding matches — floor, in both — and a discount never takes a price below zero or above
+	 * what the seat itself costs.
+	 */
+	SeatmapWidget.prototype.priceForType = function ( base, type ) {
+		base = base || 0;
+
+		if ( ! type ) {
+			return base;
+		}
+
+		if ( 'fixed' === type.kind ) {
+			return Math.max( 0, type.value || 0 );
+		}
+
+		var amount = base;
+
+		if ( 'percent_off' === type.kind ) {
+			var percent = Math.max( 0, Math.min( 100, type.value || 0 ) );
+			amount = base - Math.floor( ( base * percent ) / 100 );
+		} else if ( 'amount_off' === type.kind ) {
+			amount = base - Math.max( 0, type.value || 0 );
+		}
+
+		return Math.max( 0, Math.min( base, amount ) );
+	};
+
+	SeatmapWidget.prototype.typeById = function ( id ) {
+		if ( ! id ) {
+			return this.defaultType;
+		}
+
+		return this.ticketTypes.filter( function ( type ) {
+			return type.id === id;
+		} )[ 0 ] || this.defaultType;
+	};
+
+	/**
+	 * A chooser for who a ticket is for, wired to one line of the summary.
+	 *
+	 * A `select` and not a row of chips: the list is written by the organiser and can hold six
+	 * entries as easily as two, and a native control is the one every browser and every screen
+	 * reader already knows how to drive.
+	 */
+	SeatmapWidget.prototype.typeSelect = function ( chosenId, onChange ) {
+		var self = this;
+		var select = document.createElement( 'select' );
+
+		select.className = 'seatmap-widget__type';
+		select.setAttribute( 'aria-label', this.i18n.ticketTypeFor || this.i18n.ticketTypes );
+
+		this.ticketTypes.forEach( function ( type ) {
+			var option = document.createElement( 'option' );
+
+			option.value = type.id;
+			option.textContent = type.name;
+			option.selected = type.id === ( chosenId || ( self.defaultType && self.defaultType.id ) );
+			select.appendChild( option );
+		} );
+
+		select.addEventListener( 'change', function () { onChange( select.value ); } );
+
+		return select;
+	};
 
 	SeatmapWidget.prototype.init = function () {
 		this.flattenSeats();
@@ -317,6 +400,8 @@
 			remaining: 0,
 			amount: null,
 			quantity: 0,
+			// Places chosen, keyed by ticket type. The empty key is "no types on this event".
+			byType: {},
 		};
 	};
 
@@ -786,37 +871,111 @@
 				: self.i18n.soldOut;
 			row.appendChild( left );
 
-			var stepper = document.createElement( 'div' );
-			stepper.className = 'seatmap-widget__stepper';
+			/*
+			 * One stepper per kind of ticket, or one stepper when there is only one kind.
+			 *
+			 * The alternative — a single stepper and a type chooser beside it — cannot express
+			 * "two adults and a child", which is the commonest thing anybody asks a standing
+			 * event for.
+			 */
+			var kinds = self.hasTypes
+				? self.ticketTypes
+				: [ self.defaultType || { id: '', name: '' } ];
 
-			var minus = iconButton( 'minus', self.i18n.removeOne.replace( '%s', area.label ),
-				function () { self.changeAreaQuantity( area, -1 ); } );
-			minus.disabled = area.quantity <= 0;
+			kinds.forEach( function ( type, index ) {
+				var key = self.hasTypes ? type.id : '';
+				var held = ( area.byType || {} )[ key ] || 0;
+				var typed = self.priceForType( area.amount, self.hasTypes ? type : null );
+				var host = row;
 
-			var count = document.createElement( 'output' );
-			count.textContent = self.formatCount( area.quantity );
-			// The raw number as well as the shaped one: the row is highlighted from CSS when it
-			// holds anything, and Persian digits are not something a stylesheet can compare.
-			count.dataset.chosen = String( area.quantity );
-			count.setAttribute( 'aria-live', 'polite' );
+				if ( self.hasTypes ) {
+					host = document.createElement( 'div' );
+					host.className = 'seatmap-widget__area-kind';
 
-			var plus = iconButton( 'plus', self.i18n.addOne.replace( '%s', area.label ),
-				function () { self.changeAreaQuantity( area, 1 ); } );
-			plus.disabled = area.quantity >= area.remaining || area.quantity >= self.maxSeats;
+					var kindName = document.createElement( 'span' );
+					kindName.className = 'seatmap-widget__area-kind-name';
+					kindName.setAttribute( 'dir', 'auto' );
+					kindName.textContent = type.name +
+						( area.amount != null ? ' — ' + self.formatMoney( typed ) : '' );
+					host.appendChild( kindName );
 
-			stepper.appendChild( minus );
-			stepper.appendChild( count );
-			stepper.appendChild( plus );
-			row.appendChild( stepper );
+					if ( type.proof_note ) {
+						var note = document.createElement( 'span' );
+						note.className = 'seatmap-widget__area-kind-note';
+						note.setAttribute( 'dir', 'auto' );
+						note.textContent = type.proof_note;
+						host.appendChild( note );
+					}
+				}
+
+				var stepper = document.createElement( 'div' );
+				stepper.className = 'seatmap-widget__stepper';
+
+				var forWhat = self.hasTypes ? area.label + ' · ' + type.name : area.label;
+
+				var minus = iconButton( 'minus', self.i18n.removeOne.replace( '%s', forWhat ),
+					function () { self.changeAreaQuantity( area, -1, key ); } );
+				minus.disabled = held <= 0;
+
+				var count = document.createElement( 'output' );
+				count.textContent = self.formatCount( held );
+				// The raw number as well as the shaped one: the row is highlighted from CSS when
+				// it holds anything, and Persian digits are not something a stylesheet can compare.
+				count.dataset.chosen = String( held );
+				count.setAttribute( 'aria-live', 'polite' );
+
+				var plus = iconButton( 'plus', self.i18n.addOne.replace( '%s', forWhat ),
+					function () { self.changeAreaQuantity( area, 1, key ); } );
+				plus.disabled = area.quantity >= area.remaining || area.quantity >= self.maxSeats;
+
+				stepper.appendChild( minus );
+				stepper.appendChild( count );
+				stepper.appendChild( plus );
+				host.appendChild( stepper );
+
+				if ( host !== row ) {
+					row.appendChild( host );
+				}
+			} );
 
 			self.areaListEl.appendChild( row );
 		} );
 	};
 
-	SeatmapWidget.prototype.changeAreaQuantity = function ( area, delta ) {
-		var next = area.quantity + delta;
+	/**
+	 * One area's chosen places, split by who they are for.
+	 *
+	 * An area holds a map of type id to quantity rather than a single number, because two children
+	 * and one adult standing in the same pit are three places at two prices. With no types the map
+	 * has one entry under the empty key and everything reads as it did before.
+	 *
+	 * @return {Array} [{ typeId, type, quantity }]
+	 */
+	SeatmapWidget.prototype.areaLines = function ( area ) {
+		var self = this;
+		var byType = area.byType || {};
 
-		if ( next < 0 || next > area.remaining ) {
+		return Object.keys( byType )
+			.filter( function ( key ) { return byType[ key ] > 0; } )
+			.map( function ( key ) {
+				return {
+					typeId: key || null,
+					type: key ? self.typeById( key ) : self.defaultType,
+					quantity: byType[ key ],
+				};
+			} );
+	};
+
+	SeatmapWidget.prototype.changeAreaQuantity = function ( area, delta, typeId ) {
+		var key = typeId || ( this.hasTypes && this.defaultType ? this.defaultType.id : '' );
+
+		area.byType = area.byType || {};
+
+		var held = area.byType[ key ] || 0;
+		var next = held + delta;
+		var total = area.quantity + delta;
+
+		if ( next < 0 || total > area.remaining ) {
 			return;
 		}
 
@@ -829,7 +988,12 @@
 			return;
 		}
 
-		area.quantity = next;
+		area.byType[ key ] = next;
+		// The running total stays a plain number, because everything that counts places — the
+		// per-order cap, the sold-out check, the highlight on a chosen row — asks that question
+		// and not "how many children".
+		area.quantity = total;
+
 		this.paint();
 		this.renderAreaList();
 		this.renderSelection();
@@ -973,7 +1137,22 @@
 			area.capacityType = update.capacity_type;
 
 			// Never offer more than is left, and drop a chosen quantity that has been taken while
-			// the buyer was deciding.
+			// the buyer was deciding. Trimmed from the largest kind first, so a family losing one
+			// place loses the ticket they have most of rather than their only child's ticket.
+			while ( area.quantity > area.remaining ) {
+				var keys = Object.keys( area.byType || {} ).filter( function ( key ) {
+					return area.byType[ key ] > 0;
+				} );
+
+				if ( ! keys.length ) {
+					break;
+				}
+
+				keys.sort( function ( a, b ) { return area.byType[ b ] - area.byType[ a ]; } );
+				area.byType[ keys[ 0 ] ] -= 1;
+				area.quantity -= 1;
+			}
+
 			if ( area.quantity > area.remaining ) {
 				area.quantity = area.remaining;
 			}
@@ -1818,6 +1997,8 @@
 				return;
 			}
 
+			// A seat arrives at full price; the buyer changes that in the summary if they want to.
+			seat.ticketTypeId = this.defaultType ? this.defaultType.id : null;
 			this.selected.push( seat );
 			seat.state = 'selected';
 		}
@@ -2063,12 +2244,20 @@
 		 * again — and after zooming into another section you cannot. A booking is undone here,
 		 * where it was made, at any point before it is paid for.
 		 */
-		function line( description, amount, drop ) {
+		function line( description, amount, drop, chooser ) {
 			var item = document.createElement( 'li' );
 			var left = document.createElement( 'span' );
 			var right = document.createElement( 'span' );
 
 			left.textContent = description;
+
+			if ( chooser ) {
+				// Under the seat it belongs to, not beside it: on a phone the summary is a narrow
+				// column, and a select sharing a line with a seat name and a price fits nowhere.
+				left.appendChild( chooser );
+				left.classList.add( 'seatmap-widget__line-start' );
+			}
+
 			right.className = 'seatmap-widget__line-end';
 			right.appendChild( textSpan( amount ) );
 
@@ -2083,23 +2272,37 @@
 		}
 
 		this.selected.forEach( function ( seat ) {
-			total += seat.amount || 0;
+			var type = self.typeById( seat.ticketTypeId );
+			var amount = self.priceForType( seat.amount, type );
+
+			total += amount;
 
 			self.selectionEl.appendChild( line(
 				[ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ),
-				self.formatMoney( seat.amount ),
-				function () { self.toggleSeat( seat ); }
+				self.formatMoney( amount ),
+				function () { self.toggleSeat( seat ); },
+				self.hasTypes
+					? self.typeSelect( seat.ticketTypeId, function ( id ) {
+						seat.ticketTypeId = id;
+						self.renderSelection();
+					} )
+					: null
 			) );
 		} );
 
 		chosenAreas.forEach( function ( area ) {
-			total += ( area.amount || 0 ) * area.quantity;
+			self.areaLines( area ).forEach( function ( part ) {
+				var amount = self.priceForType( area.amount, part.type ) * part.quantity;
 
-			self.selectionEl.appendChild( line(
-				self.formatCount( area.quantity ) + ' × ' + area.label,
-				self.formatMoney( ( area.amount || 0 ) * area.quantity ),
-				function () { self.changeAreaQuantity( area, -area.quantity ); }
-			) );
+				total += amount;
+
+				self.selectionEl.appendChild( line(
+					self.formatCount( part.quantity ) + ' × ' + area.label +
+						( part.type && self.hasTypes ? ' · ' + part.type.name : '' ),
+					self.formatMoney( amount ),
+					function () { self.changeAreaQuantity( area, -part.quantity, part.typeId ); }
+				) );
+			} );
 		} );
 
 		this.totalEl.innerHTML = '';
@@ -2123,10 +2326,40 @@
 		} );
 
 		var areas = {};
+		var seatTypes = {};
+		var areaTypes = {};
+
+		if ( this.hasTypes ) {
+			this.selected.forEach( function ( seat ) {
+				if ( seat.ticketTypeId ) {
+					seatTypes[ seat.id ] = seat.ticketTypeId;
+				}
+			} );
+		}
 
 		this.areas.forEach( function ( area ) {
-			if ( area.quantity > 0 && area.id ) {
-				areas[ area.id ] = area.quantity;
+			if ( ! ( area.quantity > 0 && area.id ) ) {
+				return;
+			}
+
+			areas[ area.id ] = area.quantity;
+
+			if ( ! self.hasTypes ) {
+				return;
+			}
+
+			// The split, not the total: the server re-adds the parts and checks the sum against
+			// what the area has left, so a request cannot claim one number and mean another.
+			var split = {};
+
+			self.areaLines( area ).forEach( function ( part ) {
+				if ( part.typeId ) {
+					split[ part.typeId ] = ( split[ part.typeId ] || 0 ) + part.quantity;
+				}
+			} );
+
+			if ( Object.keys( split ).length ) {
+				areaTypes[ area.id ] = split;
 			}
 		} );
 
@@ -2140,6 +2373,8 @@
 				event_public_id: this.config.eventPublicId,
 				seat_ids: seatIds,
 				areas: areas,
+				seat_types: seatTypes,
+				area_types: areaTypes,
 				// Only the public embed API asks for this — it has no session to know a browser
 				// by. A shop's own route already knows whose cart this is and ignores it.
 				session_id: this.config.sessionId,

@@ -59,6 +59,10 @@
                             @endif
                         </p>
 
+                        @if ($allocation->ticket_type_name)
+                            <p class="ticket__type" dir="auto">{{ $allocation->ticket_type_name }}</p>
+                        @endif
+
                         <p class="ticket__code">
                             {{ $tokens[$allocation->id] ?? ($allocation->ticket?->token_prefix.'…') }}
                         </p>

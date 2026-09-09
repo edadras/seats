@@ -47,6 +47,7 @@ return [
         'inSection' => 'In %s',
         'chooseTickets' => 'Scegliete i biglietti',
         'ticketTypes' => 'Biglietti',
+        'ticketTypeFor' => 'Per chi è questo biglietto?',
         'noneChosen' => 'Ancora nulla di scelto.',
         'reserveTickets' => 'Prenota questi biglietti',
         'maxTickets' => 'Potete prendere fino a %d biglietti.',

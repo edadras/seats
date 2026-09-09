@@ -188,6 +188,10 @@ class CheckinController extends Controller
                     'row' => $ticket->allocation?->row_name,
                     'label' => $ticket->allocation?->seat_label,
                 ],
+                // What kind of ticket this is, so the door knows to ask for the student card the
+                // discount was given for. Null on an event that sells one kind, and the scanner
+                // then shows nothing rather than an empty field.
+                'ticket_type' => $ticket->allocation?->ticket_type_name,
             ] : null,
             'first_scan' => $result['first_scan'],
         ], fn ($v) => $v !== null);

@@ -8,6 +8,7 @@ use App\Models\Hold;
 use App\Models\HoldItem;
 use App\Models\CapacityObject;
 use App\Models\Seat;
+use App\Models\TicketType;
 use App\Support\Signing\PriceSigner;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -43,6 +44,13 @@ class HoldService
      * @param  list<string>  $seatIds     Named seats.
      * @param  array<string, int>  $capacity  Capacity object id => quantity, for standing areas
      *                                        and whole tables.
+     * @param  array<string, string>  $seatTypes  Seat id => ticket type id. Seats not named here
+     *                                            take the event's default type, which is how a
+     *                                            caller that knows nothing about types still sells.
+     * @param  array<string, array<string, int>>  $areaTypes  Capacity object id => (ticket type id
+     *                                            => quantity), splitting one area's places between
+     *                                            types. Where present it replaces `$capacity`'s
+     *                                            plain number for that object.
      */
     public function create(
         Event $event,
@@ -51,6 +59,8 @@ class HoldService
         ?string $apiClientId = null,
         ?string $ip = null,
         array $capacity = [],
+        array $seatTypes = [],
+        array $areaTypes = [],
     ): Hold {
         if (! $event->isSellable()) {
             throw ApiException::conflict('event_not_sellable', 'This event is not currently on sale.');
@@ -58,6 +68,20 @@ class HoldService
 
         $seatIds = array_values(array_unique($seatIds));
         $capacity = array_filter($capacity, fn ($quantity) => (int) $quantity > 0);
+
+        // A split area's total is the sum of its parts, so everything downstream — the limit
+        // check, the availability check, the advisory lock — sees one number per object.
+        $areaTypes = array_map(
+            fn ($split) => array_filter((array) $split, fn ($quantity) => (int) $quantity > 0),
+            $areaTypes,
+        );
+        $areaTypes = array_filter($areaTypes);
+
+        foreach ($areaTypes as $objectId => $split) {
+            $capacity[$objectId] = array_sum(array_map('intval', $split));
+        }
+
+        $types = $this->resolveTypes($event, $seatIds, $seatTypes, $areaTypes);
 
         if ($seatIds === [] && $capacity === []) {
             throw ApiException::unprocessable('no_seats', 'At least one seat or place must be requested.');
@@ -78,7 +102,9 @@ class HoldService
         sort($seatIds);
 
         try {
-            return DB::transaction(function () use ($event, $seatIds, $capacity, $sessionId, $apiClientId, $ip) {
+            return DB::transaction(function () use (
+                $event, $seatIds, $capacity, $sessionId, $apiClientId, $ip, $areaTypes, $types
+            ) {
                 $seats = $seatIds === [] ? collect() : $this->lockSeats($event, $seatIds);
 
                 if ($seatIds !== []) {
@@ -92,9 +118,11 @@ class HoldService
                     throw ApiException::seatsUnavailable($unavailable);
                 }
 
-                $capacityLines = $this->reserveCapacity($event, $capacity);
+                $capacityLines = $this->reserveCapacity($event, $capacity, $areaTypes, $types);
 
-                $hold = $this->insertHold($event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines);
+                $hold = $this->insertHold(
+                    $event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines, $types
+                );
 
                 $event->bumpAvailabilityVersion();
 
@@ -105,6 +133,99 @@ class HoldService
             // report which seats went, so the widget can grey them out and let the buyer re-pick.
             throw ApiException::seatsUnavailable($this->stillUnavailable($event, $seatIds));
         }
+    }
+
+    /**
+     * Which ticket type every requested place is being bought at.
+     *
+     * Everything about types is settled here, before a row is locked: an unknown type, a hidden
+     * one, one belonging to another event, or a count outside what the organiser allows. Doing it
+     * before the transaction means a mistyped request fails without ever holding a seat, and doing
+     * it in one place means the seat path and the standing path cannot disagree about what is
+     * allowed.
+     *
+     * An event with no types at all returns an empty map and nothing downstream changes.
+     *
+     * @return array{by_id: array<string, TicketType>, seats: array<string, ?TicketType>, default: ?TicketType}
+     */
+    private function resolveTypes(Event $event, array $seatIds, array $seatTypes, array $areaTypes): array
+    {
+        $all = TicketType::where('event_id', $event->id)->orderBy('position')->get();
+
+        if ($all->isEmpty()) {
+            // No concessions on this event. Nothing is named, nothing is checked, nothing is
+            // written — the same rows this made before types existed.
+            foreach (array_merge(array_values($seatTypes), ...array_map('array_keys', array_values($areaTypes))) as $named) {
+                if ($named) {
+                    throw ApiException::unprocessable(
+                        'unknown_ticket_type',
+                        'This event does not sell ticket types.',
+                    );
+                }
+            }
+
+            return ['by_id' => [], 'seats' => [], 'default' => null];
+        }
+
+        $byId = $all->keyBy('id');
+        $default = $all->firstWhere('is_default', true) ?? $all->first();
+
+        $take = function (?string $id) use ($byId): TicketType {
+            $type = $id ? ($byId[$id] ?? null) : null;
+
+            if (! $type) {
+                throw ApiException::unprocessable(
+                    'unknown_ticket_type',
+                    'One of the ticket types requested is not sold for this event.',
+                    ['ticket_type_id' => $id],
+                );
+            }
+
+            if (! $type->isSellable()) {
+                throw ApiException::conflict(
+                    'ticket_type_not_on_sale',
+                    'One of the ticket types requested is not on sale.',
+                );
+            }
+
+            return $type;
+        };
+
+        $seats = [];
+        $counts = [];
+
+        foreach ($seatIds as $seatId) {
+            $type = isset($seatTypes[$seatId]) ? $take((string) $seatTypes[$seatId]) : $default;
+            $seats[$seatId] = $type;
+            $counts[$type->id] = ($counts[$type->id] ?? 0) + 1;
+        }
+
+        foreach ($areaTypes as $split) {
+            foreach ($split as $typeId => $quantity) {
+                $type = $take((string) $typeId);
+                $counts[$type->id] = ($counts[$type->id] ?? 0) + (int) $quantity;
+            }
+        }
+
+        foreach ($counts as $typeId => $count) {
+            $type = $byId[$typeId];
+
+            // "At least two" and "at most four" are the organiser's rules about their own house.
+            // Refused here rather than at the checkout, so nobody holds seats they cannot buy.
+            if ($type->min_per_order && $count < $type->min_per_order) {
+                throw ApiException::unprocessable('ticket_type_min', sprintf(
+                    'At least %d "%s" tickets must be bought together.', $type->min_per_order, $type->name
+                ), ['ticket_type_id' => $type->id, 'min_per_order' => $type->min_per_order]);
+            }
+
+            if ($type->max_per_order && $count > $type->max_per_order) {
+                throw ApiException::unprocessable('ticket_type_max', sprintf(
+                    'At most %d "%s" tickets may be bought at once.', $type->max_per_order, $type->name
+                ), ['ticket_type_id' => $type->id, 'max_per_order' => $type->max_per_order]);
+            }
+        }
+
+        return ['by_id' => $byId->all(), 'seats' => $seats, 'default' => $default];
     }
 
     public function extend(Hold $hold): Hold
@@ -227,8 +348,12 @@ class HoldService
      * @param  array<string, int>  $requested  capacity object id => quantity
      * @return list<array{object: CapacityObject, quantity: int, amount: int, zone_key: ?string}>
      */
-    private function reserveCapacity(Event $event, array $requested): array
-    {
+    private function reserveCapacity(
+        Event $event,
+        array $requested,
+        array $areaTypes = [],
+        array $types = [],
+    ): array {
         if ($requested === []) {
             return [];
         }
@@ -282,11 +407,36 @@ class HoldService
                 continue;
             }
 
+            // One line per ticket type, because two children and one adult standing in the same
+            // area are three places at two prices — and a single line could only carry one.
+            $split = $areaTypes[$id] ?? null;
+
+            if ($split && ! $object->isSoldWhole()) {
+                foreach ($split as $typeId => $part) {
+                    $lines[] = [
+                        'object' => $object,
+                        'quantity' => (int) $part,
+                        'amount' => $this->typedAmount($types, (string) $typeId, (int) $state['amount']),
+                        'zone_key' => $state['zone_key'],
+                        'type' => $types['by_id'][$typeId] ?? null,
+                    ];
+                }
+
+                continue;
+            }
+
             $lines[] = [
                 'object' => $object,
                 'quantity' => $quantity,
-                'amount' => $state['amount'],
+                'amount' => $this->typedAmount(
+                    $types,
+                    $split ? (string) array_key_first($split) : null,
+                    (int) $state['amount'],
+                ),
                 'zone_key' => $state['zone_key'],
+                'type' => $split
+                    ? ($types['by_id'][array_key_first($split)] ?? null)
+                    : ($types['default'] ?? null),
             ];
         }
 
@@ -447,6 +597,16 @@ class HoldService
         return $unavailable;
     }
 
+    /** What one place costs at a given type, from the seat's or area's own price. */
+    private function typedAmount(array $types, ?string $typeId, int $base): int
+    {
+        $type = $typeId
+            ? ($types['by_id'][$typeId] ?? null)
+            : ($types['default'] ?? null);
+
+        return $type ? $type->priceFrom($base) : $base;
+    }
+
     private function insertHold(
         Event $event,
         $seats,
@@ -455,11 +615,18 @@ class HoldService
         ?string $apiClientId,
         ?string $ip,
         array $capacityLines = [],
+        array $types = [],
     ): Hold {
         $total = 0;
+        $seatAmounts = [];
 
         foreach ($seats as $seat) {
-            $total += $prices[$seat->id]['amount'];
+            $type = $types['seats'][$seat->id] ?? null;
+            $seatAmounts[$seat->id] = $type
+                ? $type->priceFrom((int) $prices[$seat->id]['amount'])
+                : (int) $prices[$seat->id]['amount'];
+
+            $total += $seatAmounts[$seat->id];
         }
 
         foreach ($capacityLines as $line) {
@@ -492,8 +659,9 @@ class HoldService
                 'event_id' => $event->id,
                 'seat_id' => $seat->id,
                 'capacity_object_id' => null,
+                'ticket_type_id' => ($types['seats'][$seat->id] ?? null)?->id,
                 'quantity' => 1,
-                'amount' => $prices[$seat->id]['amount'],
+                'amount' => $seatAmounts[$seat->id],
                 'zone_key' => $prices[$seat->id]['zone_key'],
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -508,6 +676,7 @@ class HoldService
                 'event_id' => $event->id,
                 'seat_id' => null,
                 'capacity_object_id' => $line['object']->id,
+                'ticket_type_id' => ($line['type'] ?? null)?->id,
                 'quantity' => $line['quantity'],
                 'amount' => $line['amount'] * $line['quantity'],
                 'zone_key' => $line['zone_key'],
@@ -532,7 +701,7 @@ class HoldService
     {
         $hold->loadMissing(['items.seat.section', 'items.seat.row']);
 
-        $hold->loadMissing('items.capacityObject');
+        $hold->loadMissing(['items.capacityObject', 'items.ticketType']);
 
         $seats = $hold->items->reject(fn (HoldItem $item) => $item->isCapacity())
             ->map(fn (HoldItem $item) => [
@@ -542,6 +711,10 @@ class HoldService
                 'label' => $item->seat?->label ?? '',
                 'amount' => $item->amount,
                 'zone_key' => $item->zone_key,
+                'ticket_type_id' => $item->ticket_type_id,
+                // The name travels with the price. A checkout that had to look it up again could
+                // print a type that was renamed between the hold and the payment.
+                'ticket_type' => $item->ticketType?->name,
             ])->values()->all();
 
         // Standing room is described by how many places were taken, not by which ones.
@@ -553,6 +726,8 @@ class HoldService
                 'quantity' => $item->quantity,
                 'amount' => $item->amount,
                 'zone_key' => $item->zone_key,
+                'ticket_type_id' => $item->ticket_type_id,
+                'ticket_type' => $item->ticketType?->name,
             ])->values()->all();
 
         $payload = [

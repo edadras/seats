@@ -104,6 +104,7 @@ return [
         'status' => 'الحالة',
         'created_at' => 'وقت الطلب',
         'section' => 'القسم',
+        'ticket_type' => 'نوع التذكرة',
         'row' => 'الصف',
         'allocation_status' => 'حالة المقعد',
         'allocated_at' => 'وقت البيع',

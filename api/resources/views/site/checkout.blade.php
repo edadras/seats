@@ -59,7 +59,14 @@
 
                 <ul class="summary-lines">
                     @foreach ($lines as $line)
-                        <li><span>{{ $line['label'] }}</span><span>{{ $money($line['amount']) }}</span></li>
+                        <li>
+                            <span>{{ $line['label'] }}
+                                @if (! empty($line['note']))
+                                    <span class="summary-lines__note">{{ $line['note'] }}</span>
+                                @endif
+                            </span>
+                            <span>{{ $money($line['amount']) }}</span>
+                        </li>
                     @endforeach
 
                     @if ($discount)

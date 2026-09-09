@@ -47,6 +47,7 @@ return [
         'inSection' => 'في %s',
         'chooseTickets' => 'اختر تذاكرك',
         'ticketTypes' => 'التذاكر',
+        'ticketTypeFor' => 'لمن هذه التذكرة؟',
         'noneChosen' => 'لم تختر شيئًا بعد.',
         'reserveTickets' => 'احجز هذه التذاكر',
         'maxTickets' => 'يمكنك أخذ %d تذكرة كحد أقصى.',

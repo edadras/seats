@@ -51,6 +51,12 @@ class StoreController extends Controller
             'seat_ids.*' => ['uuid'],
             'areas' => ['sometimes', 'array', 'max:20'],
             'areas.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
+            // Who each ticket is for; see EmbedController::hold, which this mirrors on purpose.
+            'seat_types' => ['sometimes', 'array', 'max:'.config('seatmap.hold.max_seats')],
+            'seat_types.*' => ['uuid'],
+            'area_types' => ['sometimes', 'array', 'max:20'],
+            'area_types.*' => ['array', 'max:20'],
+            'area_types.*.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
         ]);
 
         $event = $this->event($data['event_public_id']);
@@ -62,6 +68,8 @@ class StoreController extends Controller
             null,
             $request->ip(),
             $data['areas'] ?? [],
+            $data['seat_types'] ?? [],
+            $data['area_types'] ?? [],
         );
 
         // The token goes in the session, not to the browser as an identifier it could swap: the

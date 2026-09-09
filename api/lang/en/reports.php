@@ -104,6 +104,7 @@ return [
         'status' => 'Status',
         'created_at' => 'Ordered',
         'section' => 'Section',
+        'ticket_type' => 'Ticket type',
         'row' => 'Row',
         'allocation_status' => 'Seat status',
         'allocated_at' => 'Sold',

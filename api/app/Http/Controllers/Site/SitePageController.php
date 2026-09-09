@@ -384,6 +384,9 @@ class SitePageController extends Controller
                     'color' => $zone->color,
                 ])->values()->all(),
                 'max_seats_per_order' => $event->max_seats_per_order,
+                // Empty on an event that sells one kind of ticket, and the picker then shows no
+                // chooser at all rather than a chooser with one option in it.
+                'ticket_types' => \App\Domain\Events\TicketTypes::forEvent($event),
             ],
             // Enriched with the platform-wide seat ids, not the raw chart: without them the
             // picker has nothing to place a hold against and every seat is inert.

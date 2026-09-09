@@ -63,6 +63,7 @@ class EmbedController extends Controller
                 'amount' => $zone->amount,
                 'color' => $zone->color,
             ])->values(),
+            'ticket_types' => \App\Domain\Events\TicketTypes::forEvent($event),
         ]);
     }
 
@@ -134,6 +135,15 @@ class EmbedController extends Controller
             // Standing room is asked for by quantity: { "<capacity object id>": 3 }.
             'areas' => ['sometimes', 'array', 'max:20'],
             'areas.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
+            // Who each ticket is for. Seats not named here are sold at the event's default type,
+            // so a caller that has never heard of concessions keeps selling full-price tickets.
+            'seat_types' => ['sometimes', 'array', 'max:'.config('seatmap.hold.max_seats')],
+            'seat_types.*' => ['uuid'],
+            // The same for standing room, where a type is a share of an area's quantity:
+            // { "<capacity object id>": { "<ticket type id>": 2 } }.
+            'area_types' => ['sometimes', 'array', 'max:20'],
+            'area_types.*' => ['array', 'max:20'],
+            'area_types.*.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
             'session_id' => ['required', 'string', 'max:100'],
         ]);
 
@@ -144,6 +154,8 @@ class EmbedController extends Controller
             null,
             $request->ip(),
             $data['areas'] ?? [],
+            $data['seat_types'] ?? [],
+            $data['area_types'] ?? [],
         );
 
         /*

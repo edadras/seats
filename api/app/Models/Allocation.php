@@ -17,6 +17,7 @@ class Allocation extends Model
 
     protected $fillable = [
         'tenant_id', 'event_id', 'seat_id', 'capacity_object_id', 'quantity', 'hold_id',
+        'ticket_type_id', 'ticket_type_name',
         'external_order_row_id', 'api_client_id',
         'external_order_id', 'status', 'amount', 'currency', 'seat_map_version_id',
         'section_name', 'row_name', 'seat_label', 'allocated_at', 'released_at',
@@ -37,6 +38,11 @@ class Allocation extends Model
     public function capacityObject()
     {
         return $this->belongsTo(CapacityObject::class);
+    }
+
+    public function ticketType()
+    {
+        return $this->belongsTo(TicketType::class);
     }
 
     public function ticket()

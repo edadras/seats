@@ -29,6 +29,9 @@ class SeatsSoldSource extends BaseSource
             'event' => $this->dimension('event', 'events.name'),
             'section' => $this->dimension('section', 'allocations.section_name'),
             'row' => $this->dimension('row', 'allocations.row_name'),
+            // The name written at sale time, not a join to the types table: "how many children
+            // came in September" must keep answering the same thing after the type is renamed.
+            'ticket_type' => $this->dimension('ticket_type', "coalesce(allocations.ticket_type_name, '')"),
             'allocation_status' => $this->dimension('allocation_status', 'allocations.status'),
             'currency' => $this->dimension('currency', 'allocations.currency'),
             'day' => $this->dimension('day', "date_trunc('day', allocations.allocated_at)", 'date'),

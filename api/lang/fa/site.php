@@ -47,6 +47,7 @@ return [
         'inSection' => 'در %s',
         'chooseTickets' => 'بلیت‌هایتان را انتخاب کنید',
         'ticketTypes' => 'بلیت‌ها',
+        'ticketTypeFor' => 'این بلیت برای چه کسی است؟',
         'noneChosen' => 'هنوز چیزی انتخاب نشده است.',
         'reserveTickets' => 'رزرو این بلیت‌ها',
         'maxTickets' => 'تا %d بلیت می‌توانید بردارید.',

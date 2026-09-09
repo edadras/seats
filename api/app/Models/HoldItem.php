@@ -18,7 +18,7 @@ class HoldItem extends Model
     use BelongsToTenant, HasFactory, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'hold_id', 'event_id', 'seat_id', 'capacity_object_id',
+        'tenant_id', 'hold_id', 'event_id', 'seat_id', 'capacity_object_id', 'ticket_type_id',
         'quantity', 'amount', 'zone_key', 'released_at',
     ];
 
@@ -37,6 +37,11 @@ class HoldItem extends Model
     public function capacityObject()
     {
         return $this->belongsTo(CapacityObject::class);
+    }
+
+    public function ticketType()
+    {
+        return $this->belongsTo(TicketType::class);
     }
 
     /** A hold item is either a named seat or a quantity of a capacity object, never both. */

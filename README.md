@@ -231,6 +231,7 @@ node api/messaging_smoke.mjs                                     # an announceme
 node api/embed_smoke.mjs                                         # the picker on a third-party page, through to checkout
 node api/site_smoke.mjs                                          # searching the programme, the sitemap, the .ics
 node api/discount_smoke.mjs                                      # a code made in the panel, then spent at a checkout
+node api/ticket_types_smoke.mjs                                  # a concession priced in the panel, chosen by a buyer
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 

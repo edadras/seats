@@ -104,6 +104,7 @@ return [
         'status' => 'Statut',
         'created_at' => 'Commandé',
         'section' => 'Espace',
+        'ticket_type' => 'Type de billet',
         'row' => 'Rangée',
         'allocation_status' => 'Statut de la place',
         'allocated_at' => 'Vendu',

@@ -409,6 +409,10 @@ class CheckoutController extends Controller
                 'label' => trim(implode(' · ', array_filter([
                     $seat['section'] ?? null, $seat['row'] ?? null, $seat['label'] ?? null,
                 ]))),
+                // Who it is for, on its own line under the seat. The name comes from the snapshot
+                // rather than from the types table: it is what the buyer was shown when they chose,
+                // and a type renamed since then must not change this receipt.
+                'note' => $seat['ticket_type'] ?? null,
                 'amount' => (int) ($seat['amount'] ?? 0),
             ];
         }
@@ -420,6 +424,7 @@ class CheckoutController extends Controller
                 // "€۴۸٬۰۰" is two writing systems in one summary.
                 'label' => Money::number($area['quantity'] ?? 1).' × '
                     .($area['label'] ?? __('site.standing')),
+                'note' => $area['ticket_type'] ?? null,
                 'amount' => (int) ($area['amount'] ?? 0),
             ];
         }

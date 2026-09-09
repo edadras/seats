@@ -26,16 +26,26 @@
 	 */
 	var COMMON = [ 'IRR', 'EUR', 'GBP', 'USD', 'AED', 'TRY', 'CHF', 'SEK', 'CAD', 'AUD' ];
 
-	var Pricing = { eventId: null, event: null, zones: [], CURRENCIES: COMMON };
+	var Pricing = { eventId: null, event: null, zones: [], types: [], CURRENCIES: COMMON };
+
+	/** The four ways a ticket type can relate to the seat's own price. */
+	var KINDS = [ 'standard', 'percent_off', 'amount_off', 'fixed' ];
 
 	Pricing.open = function ( App, eventId ) {
 		Pricing.eventId = eventId;
 
 		App.loading( App.t( 'pricing.title' ) );
 
-		App.request( 'GET', '/events/' + eventId ).then( function ( event ) {
-			Pricing.event = event;
-			Pricing.zones = Pricing.seed( event );
+		Promise.all( [
+			App.request( 'GET', '/events/' + eventId ),
+			// A missing types list is an event that sells one kind of ticket, not an error: this
+			// screen has to open on an account that has never touched concessions.
+			App.request( 'GET', '/events/' + eventId + '/ticket-types' )
+				.catch( function () { return { data: [] }; } ),
+		] ).then( function ( answers ) {
+			Pricing.event = answers[ 0 ];
+			Pricing.zones = Pricing.seed( answers[ 0 ] );
+			Pricing.types = answers[ 1 ].data || [];
 			Pricing.paint( App );
 		} ).catch( function ( error ) { App.toast( error.message, true ); } );
 	};
@@ -114,7 +124,28 @@
 							return Pricing.row( App, zone, index, currency );
 						} ).join( '' )
 					)
-					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ) ) ),
+					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ) ) ) +
+
+				'<h3 class="subhead">' + esc( App.t( 'pricing.types.title' ) ) + '</h3>' +
+				'<p class="hint">' + esc( App.t( 'pricing.types.subtitle' ) ) + '</p>' +
+				( Pricing.types.length
+					? App.table(
+						[
+							App.t( 'pricing.types.name' ),
+							App.t( 'pricing.types.takesOff' ),
+							App.t( 'pricing.types.limits' ),
+							App.t( 'pricing.types.sold' ),
+							'',
+						],
+						Pricing.types.map( function ( type, index ) {
+							return Pricing.typeRow( App, type, index, currency );
+						} ).join( '' )
+					)
+					: '<p class="hint">' + esc( App.t( 'pricing.types.none' ) ) + '</p>' ) +
+				'<p class="spaced">' +
+					'<button class="btn" id="pricing-type-add">' + icon( 'plus', { size: 15 } ) +
+						esc( App.t( 'pricing.types.add' ) ) + '</button>' +
+				'</p>',
 		} );
 
 		Pricing.bind( App );
@@ -146,6 +177,203 @@
 				esc( null === zone.amount ? '' : App.money( zone.amount, currency, decimals ) ) +
 			'</td>' +
 		'</tr>';
+	};
+
+	/**
+	 * One ticket type, said in terms of the seat's price rather than in terms of itself.
+	 *
+	 * "25% off" and not "75%": an organiser thinks in what they are giving away, and a table that
+	 * makes them do the subtraction is a table somebody mis-reads at the end of a long day.
+	 */
+	Pricing.typeRow = function ( App, type, index, currency ) {
+		var decimals = Pricing.decimals( currency );
+
+		var takesOff = 'percent_off' === type.kind
+			? App.t( 'pricing.types.percentOff', { value: App.number( type.value ) } )
+			: ( 'amount_off' === type.kind
+				? App.t( 'pricing.types.amountOff', { amount: App.money( type.value, currency, decimals ) } )
+				: ( 'fixed' === type.kind
+					? App.t( 'pricing.types.flat', { amount: App.money( type.value, currency, decimals ) } )
+					: App.t( 'pricing.types.fullPrice' ) ) );
+
+		var limits = [];
+
+		if ( type.min_per_order ) {
+			limits.push( App.t( 'pricing.types.atLeast', { count: App.number( type.min_per_order ) } ) );
+		}
+
+		if ( type.max_per_order ) {
+			limits.push( App.t( 'pricing.types.atMost', { count: App.number( type.max_per_order ) } ) );
+		}
+
+		return '<tr' + ( 'hidden' === type.status ? ' class="is-muted"' : '' ) + '>' +
+			'<td class="table__primary">' + esc( type.name ) +
+				( type.is_default
+					? ' <span class="badge badge--neutral">' + esc( App.t( 'pricing.types.default' ) ) + '</span>'
+					: '' ) +
+				( 'hidden' === type.status
+					? ' <span class="badge badge--neutral">' + esc( App.t( 'pricing.types.hidden' ) ) + '</span>'
+					: '' ) +
+				( type.proof_note
+					? '<span class="muted on-own-line">' + esc( type.proof_note ) + '</span>'
+					: '' ) +
+			'</td>' +
+			'<td>' + esc( takesOff ) + '</td>' +
+			'<td class="muted">' + esc( limits.join( ' · ' ) || '—' ) + '</td>' +
+			'<td class="tnum">' + esc( App.number( type.sold || 0 ) ) + '</td>' +
+			'<td class="table__actions">' +
+				'<button class="btn btn--sm" data-type-edit="' + index + '">' +
+					esc( App.t( 'pricing.types.edit' ) ) + '</button>' +
+				( type.sold
+					? ''
+					: '<button class="btn btn--sm" data-type-drop="' + index + '">' +
+						esc( App.t( 'pricing.types.remove' ) ) + '</button>' ) +
+			'</td>' +
+		'</tr>';
+	};
+
+	/**
+	 * The form for one type.
+	 *
+	 * `value` is asked for in the currency's own minor unit for the two money kinds and as a plain
+	 * number for the percentage — the same trick the zone rows use, and for the same reason.
+	 */
+	Pricing.typeForm = function ( App, index ) {
+		var currency = normaliseCode( document.getElementById( 'pricing-currency' ).value );
+		var decimals = Pricing.decimals( currency );
+		var type = null === index ? {
+			name: '', kind: 'percent_off', value: 0, is_default: ! Pricing.types.length,
+			min_per_order: 0, max_per_order: null, proof_note: '', status: 'active',
+		} : Pricing.types[ index ];
+
+		var asMoney = function ( minor ) {
+			return decimals ? ( ( minor || 0 ) / Math.pow( 10, decimals ) ).toFixed( decimals ) : String( minor || 0 );
+		};
+
+		App.modal( {
+			title: App.t( null === index ? 'pricing.types.add' : 'pricing.types.edit' ),
+			submitLabel: App.t( 'panel.common.save' ),
+			body:
+				'<div class="stack">' +
+				'<div class="field"><label class="field__label" for="t-name">' +
+					esc( App.t( 'pricing.types.name' ) ) + '</label>' +
+					'<input class="input" id="t-name" maxlength="80" required value="' +
+						esc( type.name ) + '"></div>' +
+				'<div class="field"><label class="field__label" for="t-note">' +
+					esc( App.t( 'pricing.types.proof' ) ) + '</label>' +
+					'<input class="input" id="t-note" maxlength="160" value="' +
+						esc( type.proof_note || '' ) + '">' +
+					'<span class="field__hint">' + esc( App.t( 'pricing.types.proofHint' ) ) + '</span></div>' +
+				'<div class="field-duo">' +
+					'<div class="field"><label class="field__label" for="t-kind">' +
+						esc( App.t( 'pricing.types.takesOff' ) ) + '</label>' +
+						'<select class="select" id="t-kind">' +
+							KINDS.map( function ( kind ) {
+								return '<option value="' + kind + '"' +
+									( kind === type.kind ? ' selected' : '' ) + '>' +
+									esc( App.t( 'pricing.types.kinds.' + kind ) ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+					'<div class="field" id="t-value-field"><label class="field__label" for="t-value">' +
+						esc( App.t( 'pricing.types.value' ) ) + '</label>' +
+						'<input class="input tnum" id="t-value" type="number" min="0" value="' +
+							esc( 'percent_off' === type.kind ? ( type.value || 0 ) : asMoney( type.value ) ) +
+						'"><span class="field__hint" id="t-value-hint"></span></div>' +
+				'</div>' +
+				'<div class="field-duo">' +
+					'<div class="field"><label class="field__label" for="t-min">' +
+						esc( App.t( 'pricing.types.min' ) ) + '</label>' +
+						'<input class="input tnum" id="t-min" type="number" min="0" value="' +
+							esc( type.min_per_order || 0 ) + '"></div>' +
+					'<div class="field"><label class="field__label" for="t-max">' +
+						esc( App.t( 'pricing.types.max' ) ) + '</label>' +
+						'<input class="input tnum" id="t-max" type="number" min="1" value="' +
+							esc( type.max_per_order || '' ) + '"></div>' +
+				'</div>' +
+				'<label class="perms__row"><input type="checkbox" class="checkbox" id="t-default"' +
+					( type.is_default ? ' checked' : '' ) + '>' +
+					'<span>' + esc( App.t( 'pricing.types.isDefault' ) ) + '</span></label>' +
+				'<label class="perms__row"><input type="checkbox" class="checkbox" id="t-hidden"' +
+					( 'hidden' === type.status ? ' checked' : '' ) + '>' +
+					'<span>' + esc( App.t( 'pricing.types.isHidden' ) ) + '</span></label>' +
+				'</div>',
+			onSubmit: function () {
+				var kind = document.getElementById( 't-kind' ).value;
+				var raw = Number( document.getElementById( 't-value' ).value || 0 );
+				var next = {
+					id: type.id || null,
+					name: document.getElementById( 't-name' ).value.trim(),
+					kind: kind,
+					value: 'percent_off' === kind
+						? Math.round( raw )
+						: Math.round( raw * Math.pow( 10, decimals ) ),
+					is_default: document.getElementById( 't-default' ).checked,
+					min_per_order: Number( document.getElementById( 't-min' ).value || 0 ),
+					max_per_order: document.getElementById( 't-max' ).value
+						? Number( document.getElementById( 't-max' ).value )
+						: null,
+					proof_note: document.getElementById( 't-note' ).value.trim() || null,
+					status: document.getElementById( 't-hidden' ).checked ? 'hidden' : 'active',
+					sold: type.sold || 0,
+				};
+
+				if ( ! next.name ) {
+					App.toast( App.t( 'pricing.types.needName' ), true );
+
+					return true;
+				}
+
+				if ( next.is_default ) {
+					Pricing.types.forEach( function ( other ) { other.is_default = false; } );
+				}
+
+				if ( null === index ) {
+					Pricing.types.push( next );
+				} else {
+					Pricing.types[ index ] = next;
+				}
+
+				return Pricing.saveTypes( App );
+			},
+		} );
+
+		var kindField = document.getElementById( 't-kind' );
+
+		function shape() {
+			var isPercent = 'percent_off' === kindField.value;
+
+			document.getElementById( 't-value-field' ).hidden = 'standard' === kindField.value;
+			document.getElementById( 't-value-hint' ).textContent = App.t( isPercent
+				? 'pricing.types.valuePercent'
+				: 'pricing.types.valueMoney' );
+		}
+
+		kindField.addEventListener( 'change', shape );
+		shape();
+	};
+
+	/** The whole list, every time — the same contract the zone prices are saved under. */
+	Pricing.saveTypes = function ( App ) {
+		return App.request( 'PUT', '/events/' + Pricing.eventId + '/ticket-types', {
+			types: Pricing.types.map( function ( type ) {
+				return {
+					id: type.id || null,
+					name: type.name,
+					description: type.description || null,
+					kind: type.kind,
+					value: type.value,
+					is_default: !! type.is_default,
+					min_per_order: type.min_per_order || 0,
+					max_per_order: type.max_per_order,
+					proof_note: type.proof_note,
+					status: type.status || 'active',
+				};
+			} ),
+		} ).then( function ( response ) {
+			Pricing.types = response.data || [];
+			App.toast( App.t( 'pricing.types.saved' ) );
+			Pricing.paint( App );
+		} );
 	};
 
 	Pricing.bind = function ( App ) {
@@ -190,6 +418,23 @@
 
 		document.getElementById( 'pricing-save' )
 			.addEventListener( 'click', function () { Pricing.save( App ); } );
+
+		document.getElementById( 'pricing-type-add' ).addEventListener( 'click', function () {
+			Pricing.typeForm( App, null );
+		} );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-type-edit]' ), function ( button ) {
+			button.addEventListener( 'click', function () {
+				Pricing.typeForm( App, Number( button.dataset.typeEdit ) );
+			} );
+		} );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-type-drop]' ), function ( button ) {
+			button.addEventListener( 'click', function () {
+				Pricing.types.splice( Number( button.dataset.typeDrop ), 1 );
+				Pricing.saveTypes( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
 	};
 
 	/** Take whatever is in the boxes right now, in the currency they were typed under. */

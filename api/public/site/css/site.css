@@ -898,6 +898,13 @@ hr { border: none; }
 	font-size: 0.85rem;
 }
 
+/* Who a ticket is for, under the seat it belongs to. */
+.summary-lines__note {
+	display: block;
+	font-size: 0.8125rem;
+	color: var(--text-muted);
+}
+
 /* A discount code, in the summary where the total it changes is. */
 .summary-lines__off { color: var(--ok, var(--accent)); font-weight: 600; }
 
@@ -995,6 +1002,13 @@ hr { border: none; }
 .ticket::after { inset-inline-end: -0.6rem; }
 
 .ticket__seat { margin: 0 0 0.35rem; font-weight: 700; font-family: var(--font-heading); }
+
+/* Whose ticket it is, when the event sells more than one kind. */
+.ticket__type {
+	margin: 0 0 0.35rem;
+	font-size: 0.8125rem;
+	color: var(--text-muted);
+}
 
 .ticket__code {
 	margin: 0;

@@ -352,6 +352,66 @@
 	font-weight: 600;
 }
 
+/*
+ * One row per kind of ticket inside an area.
+ *
+ * A standing event with concessions is asking three questions of one area — how many adults, how
+ * many children, how many students — so each gets its own line and its own stepper. With one kind
+ * of ticket none of this renders and the area keeps the single row it always had.
+ */
+.seatmap-widget__area-kind {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem 1rem;
+	flex-wrap: wrap;
+	inline-size: 100%;
+	padding-block-start: 0.5rem;
+	border-block-start: 1px solid var(--seatmap-border);
+}
+
+.seatmap-widget__area-kind-name {
+	flex: 1;
+	min-inline-size: 7rem;
+	font-size: 0.9375rem;
+	font-weight: 500;
+}
+
+.seatmap-widget__area-kind-note {
+	flex-basis: 100%;
+	order: 3;
+	font-size: 0.8125rem;
+	color: var(--seatmap-muted);
+}
+
+/* Who the ticket is for, under the seat it belongs to. */
+.seatmap-widget__line-start {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.25rem;
+	min-inline-size: 0;
+}
+
+.seatmap-widget__type {
+	max-inline-size: 100%;
+	padding: 0.15rem 1.6rem 0.15rem 0.4rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-surface);
+	color: inherit;
+	font: inherit;
+	font-size: 0.8125rem;
+	line-height: 1.3;
+}
+
+.seatmap-widget__type:focus-visible {
+	outline: none;
+	border-color: var(--seatmap-accent);
+	box-shadow: var(--seatmap-ring);
+}
+
+[dir="rtl"] .seatmap-widget__type { padding-inline: 0.4rem 1.6rem; }
+
 /* ============================================================================ the tooltip */
 
 /*
@@ -544,6 +604,7 @@
 .seatmap-widget__selection li {
 	display: flex;
 	justify-content: space-between;
+	align-items: flex-start;
 	gap: 0.75rem;
 	padding-block: 0.3rem;
 	border-block-end: 1px solid var(--seatmap-border);

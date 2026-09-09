@@ -104,6 +104,7 @@ return [
         'status' => 'Stato',
         'created_at' => 'Ordinato',
         'section' => 'Settore',
+        'ticket_type' => 'Tipo di biglietto',
         'row' => 'Fila',
         'allocation_status' => 'Stato del posto',
         'allocated_at' => 'Venduto',

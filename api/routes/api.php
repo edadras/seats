@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
+use App\Http\Controllers\Api\V1\Management\TicketTypeController;
 use App\Http\Controllers\Api\V1\Management\VenueController;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +84,10 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}', [EventController::class, 'show']);
         Route::patch('events/{event}', [EventController::class, 'update']);
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
+        // Who the tickets are for. Beside pricing because that is what a concession is: an
+        // adjustment to the price the seat already has.
+        Route::get('events/{event}/ticket-types', [TicketTypeController::class, 'index']);
+        Route::put('events/{event}/ticket-types', [TicketTypeController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty
         // thousand seats and a repricing usually touches eight.
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);

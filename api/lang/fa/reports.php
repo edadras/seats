@@ -104,6 +104,7 @@ return [
         'status' => 'وضعیت',
         'created_at' => 'زمان سفارش',
         'section' => 'سکشن',
+        'ticket_type' => 'نوع بلیت',
         'row' => 'ردیف',
         'allocation_status' => 'وضعیت صندلی',
         'allocated_at' => 'زمان فروش',

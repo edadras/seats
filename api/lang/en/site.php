@@ -50,6 +50,7 @@ return [
         'inSection' => 'In %s',
         'chooseTickets' => 'Choose your tickets',
         'ticketTypes' => 'Tickets',
+        'ticketTypeFor' => 'Who is this ticket for?',
         'noneChosen' => 'Nothing chosen yet.',
         'reserveTickets' => 'Reserve these tickets',
         'maxTickets' => 'You can take up to %d tickets.',

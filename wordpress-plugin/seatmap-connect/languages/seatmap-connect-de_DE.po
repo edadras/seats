@@ -237,7 +237,7 @@ msgstr "Noch keine Plätze ausgewählt."
 msgid "Total"
 msgstr "Summe"
 
-#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:201
+#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:202
 msgid "Reserve and add to cart"
 msgstr "Reservieren und in den Warenkorb"
 
@@ -357,24 +357,28 @@ msgid "Tickets"
 msgstr "Tickets"
 
 #: includes/class-seatmap-widget.php:200
+msgid "Who is this ticket for?"
+msgstr "Für wen ist dieses Ticket?"
+
+#: includes/class-seatmap-widget.php:201
 msgid "Nothing chosen yet."
 msgstr "Noch nichts ausgewählt."
 
 #. translators: %d: the largest number of tickets one order may hold.
-#: includes/class-seatmap-widget.php:203
+#: includes/class-seatmap-widget.php:204
 msgid "You can take up to %d tickets."
 msgstr "Sie können bis zu %d Tickets nehmen."
 
 #. translators: %s: the seat or area being taken off the order.
-#: includes/class-seatmap-widget.php:205
+#: includes/class-seatmap-widget.php:206
 msgid "Remove %s"
 msgstr "%s entfernen"
 
-#: includes/class-seatmap-widget.php:207
+#: includes/class-seatmap-widget.php:208
 msgid "Seat list"
 msgstr "Sitzplatzliste"
 
-#: includes/class-seatmap-widget.php:218
+#: includes/class-seatmap-widget.php:219
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "Für die Platzwahl wird JavaScript gebraucht. Bitte schalten Sie es ein oder wenden Sie sich an die Kasse."
 

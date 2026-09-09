@@ -197,6 +197,7 @@ class Seatmap_Widget {
 							// A room sold by the head: areas with a capacity and no chair to click.
 							'chooseTickets'  => __( 'Choose your tickets', 'seatmap-connect' ),
 							'ticketTypes'    => __( 'Tickets', 'seatmap-connect' ),
+							'ticketTypeFor'  => __( 'Who is this ticket for?', 'seatmap-connect' ),
 							'noneChosen'     => __( 'Nothing chosen yet.', 'seatmap-connect' ),
 							'reserveTickets' => __( 'Reserve and add to cart', 'seatmap-connect' ),
 							/* translators: %d: the largest number of tickets one order may hold. */

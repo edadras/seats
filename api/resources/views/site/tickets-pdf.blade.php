@@ -16,6 +16,7 @@
         .event { font-size: 15pt; font-weight: bold; margin: 1mm 0 0; }
         .when { font-size: 10pt; color: #3f4756; margin: 1mm 0 0; }
         .seat { font-size: 13pt; font-weight: bold; margin: 4mm 0 0; }
+		.kind { font-size: 10pt; color: #555; margin-block-end: 2mm; }
         .meta { font-size: 8.5pt; color: #5f6878; margin: 1mm 0 0; }
         .code { font-family: monospace; font-size: 7.5pt; color: #5f6878; margin: 3mm 0 0; }
         .qr { width: 34mm; }
@@ -39,6 +40,12 @@
                         × {{ \App\Support\Locale\Money::number($allocation->quantity ?: 1) }}
                     @endif
                 </div>
+
+                @if ($allocation->ticket_type_name)
+                    {{-- Printed on the ticket because it is what the door will ask about: a
+                         concession the holder cannot show proof for is a concession refused. --}}
+                    <div class="kind">{{ $allocation->ticket_type_name }}</div>
+                @endif
 
                 <div class="meta">{{ __('site.orderReference', ['reference' => $order->external_order_id]) }}</div>
                 <div class="code">{{ $tokens[$allocation->id] ?? ($allocation->ticket?->token_prefix.'…') }}</div>

@@ -104,6 +104,7 @@ return [
         'status' => 'Status',
         'created_at' => 'Bestellt',
         'section' => 'Bereich',
+        'ticket_type' => 'Ticketart',
         'row' => 'Reihe',
         'allocation_status' => 'Platzstatus',
         'allocated_at' => 'Verkauft',

@@ -456,6 +456,79 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /events/{event}/ticket-types:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: listTicketTypes
+      tags: [Events]
+      summary: Who this event sells tickets to
+      description: |
+        Requires `events.view`. An empty list is an event that sells one kind of ticket, which is
+        not a state to fix: nothing in the picker, the checkout or the ticket then mentions a type
+        at all.
+
+        `sold` counts tickets already issued at each type. It is the reason a row cannot be
+        removed, said on the row rather than in an error afterwards.
+      responses:
+        "200":
+          description: The types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/TicketType" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: replaceTicketTypes
+      tags: [Events]
+      summary: Replace the whole set of ticket types
+      description: |
+        Requires `pricing.manage`. Saved as a whole list, like the price zones it sits beside: a
+        concession set is one decision about the event, and editing a row at a time is how an event
+        ends up with a child rate from last season and a student rate from this one.
+
+        A type is an adjustment to the seat's own price — `percent_off`, `amount_off`, or `fixed`
+        for the flat rate that genuinely is one — so re-pricing a section re-prices every
+        concession in it. `standard` is full price and ignores `value`.
+
+        Exactly one type is the default whatever the caller sends: it is what a seat costs before
+        the buyer chooses anything, and what an integration that has never heard of concessions
+        sells at. A type that has sold a ticket cannot be left out of the list; hide it instead,
+        or the order it paid for would describe a ticket nobody can explain.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [types]
+              properties:
+                types:
+                  type: array
+                  maxItems: 20
+                  items: { $ref: "#/components/schemas/TicketTypeWrite" }
+      responses:
+        "200":
+          description: The types, as saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/TicketType" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A type that has been sold was left out of the list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /admin/login:
     post:
       operationId: consoleLogin
@@ -1865,6 +1938,26 @@ paths:
                     Standing room and whole tables, asked for by quantity: capacity object id to
                     number of places. Counted against the same per-order limit as named seats.
                   additionalProperties: { type: integer, minimum: 1 }
+                seat_types:
+                  type: object
+                  description: |
+                    Who each seat is for: seat id to ticket type id. Seats left out are sold at the
+                    event's default type, so a caller that has never heard of concessions keeps
+                    selling full-price tickets and does not have to be taught about them.
+
+                    A type belonging to another event, or one that is hidden, is refused before any
+                    seat is locked.
+                  additionalProperties: { type: string, format: uuid }
+                area_types:
+                  type: object
+                  description: |
+                    The same for standing room, where a type is a share of an area's quantity:
+                    capacity object id to (ticket type id to number of places). The server re-adds
+                    the parts and checks the sum against what the area has left, so a request
+                    cannot claim one number and mean another.
+                  additionalProperties:
+                    type: object
+                    additionalProperties: { type: integer, minimum: 1 }
                 session_id:
                   type: string
                   description: Opaque per-browser identifier, used for rate limiting and re-hold.
@@ -4126,6 +4219,44 @@ components:
                   order_id: { type: [string, "null"] }
                   order_status: { type: [string, "null"] }
                   buyer: { type: [string, "null"] }
+
+    TicketType:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        kind: { type: string, enum: [standard, percent_off, amount_off, fixed] }
+        value:
+          type: integer
+          description: "Per cent for `percent_off`; minor units for `amount_off` and `fixed`; ignored for `standard`."
+        is_default: { type: boolean }
+        min_per_order: { type: integer }
+        max_per_order: { type: [integer, "null"] }
+        proof_note:
+          type: [string, "null"]
+          description: "What the buyer must bring. Shown when they choose it and printed on the ticket."
+        position: { type: integer }
+        status: { type: string, enum: [active, hidden] }
+        sold: { type: integer, description: "Tickets already issued at this type." }
+
+    TicketTypeWrite:
+      type: object
+      required: [name, kind]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+          description: "Present to update an existing type; absent to create one."
+        name: { type: string, maxLength: 80 }
+        description: { type: [string, "null"], maxLength: 200 }
+        kind: { type: string, enum: [standard, percent_off, amount_off, fixed] }
+        value: { type: [integer, "null"], minimum: 0 }
+        is_default: { type: boolean }
+        min_per_order: { type: [integer, "null"], minimum: 0 }
+        max_per_order: { type: [integer, "null"], minimum: 1 }
+        proof_note: { type: [string, "null"], maxLength: 160 }
+        status: { type: string, enum: [active, hidden] }
 
     Money:
       type: object
