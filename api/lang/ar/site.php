@@ -50,6 +50,8 @@ return [
         'noneChosen' => 'لم تختر شيئًا بعد.',
         'reserveTickets' => 'احجز هذه التذاكر',
         'maxTickets' => 'يمكنك أخذ %d تذكرة كحد أقصى.',
+        'removeLine' => 'إزالة %s',
+        'seatList' => 'قائمة المقاعد',
     ],
 
 
@@ -121,6 +123,9 @@ return [
     'payAtDoor' => 'ادفع في شبّاك التذاكر عند وصولك.',
     'addToCalendar' => 'أضف إلى التقويم',
     'printTickets' => 'اطبع التذاكر',
+    'downloadTickets' => 'تنزيل التذاكر (PDF)',
+    'savePdfHint' => 'اختر «حفظ بصيغة PDF» في نافذة الطباعة للاحتفاظ بنسخة.',
+    'yourTickets' => 'تذاكرك',
     'seat' => 'مقعد',
     'section' => 'منطقة',
     'row' => 'صف',

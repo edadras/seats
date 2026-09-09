@@ -24,6 +24,13 @@
                 <p class="prose">{{ __('site.codesByEmail') }}</p>
             @endif
 
+            <p class="done__actions">
+                {{-- A new tab, and it opens the browser's print dialogue on load: the browser is
+                     the only thing here that can lay out a Persian ticket and write it to PDF. --}}
+                <a class="button" href="/order/{{ $order->external_order_id }}/tickets"
+                   target="_blank" rel="noopener">{{ __('site.downloadTickets') }}</a>
+            </p>
+
             <div class="tickets">
                 @foreach ($order->allocations as $allocation)
                     <article class="ticket">

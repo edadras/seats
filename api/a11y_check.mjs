@@ -218,7 +218,7 @@ for ( const scheme of [ 'light', 'dark' ] ) {
 	// chairs to check. That the block list is reachable at all is itself the first check.
 	await buyer.waitForSelector( '.seatmap-widget__block' );
 	await buyer.locator( '.seatmap-widget__block:not([disabled])' ).first().click();
-	await buyer.waitForSelector( '.seatmap-widget__seat' );
+	await buyer.waitForSelector( '.seatmap-widget__list' );
 
 	console.log( `Picker contrast (${ scheme } theme)` );
 	report( await measure( buyer, PICKER_PAIRS, '.seatmap-widget' ) );
@@ -226,7 +226,10 @@ for ( const scheme of [ 'light', 'dark' ] ) {
 	if ( 'light' === scheme ) {
 		console.log( 'Picker keyboard' );
 
-		// Every seat is a real button, which is what makes the plan usable without seeing it.
+		// Every seat is a real button, which is what makes the plan usable without seeing it. They
+		// are folded into a disclosure, because the plan is where a sighted buyer picks; opening it
+		// is the first thing anybody reading rather than pointing does.
+		await buyer.locator( '.seatmap-widget__list > summary' ).click();
 		await buyer.locator( '.seatmap-widget__seat:not([disabled])' ).first().focus();
 		await buyer.keyboard.press( 'Enter' );
 		await buyer.waitForTimeout( 300 );

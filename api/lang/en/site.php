@@ -53,6 +53,8 @@ return [
         'noneChosen' => 'Nothing chosen yet.',
         'reserveTickets' => 'Reserve these tickets',
         'maxTickets' => 'You can take up to %d tickets.',
+        'removeLine' => 'Remove %s',
+        'seatList' => 'Seat list',
     ],
 
     /* The block vocabulary, as the panel's block picker names it (Blocks::describe). */
@@ -125,6 +127,9 @@ return [
     'payAtDoor' => 'Pay at the box office when you arrive.',
     'addToCalendar' => 'Add to calendar',
     'printTickets' => 'Print tickets',
+    'downloadTickets' => 'Download tickets (PDF)',
+    'savePdfHint' => 'Choose “Save as PDF” in the print dialogue to keep a copy.',
+    'yourTickets' => 'Your tickets',
     'seat' => 'Seat',
     'section' => 'Section',
     'row' => 'Row',

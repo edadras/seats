@@ -29,6 +29,8 @@ Route::middleware('site')->group(function () {
     Route::get('checkout', [CheckoutController::class, 'show']);
     Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1');
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
+    // The same tickets, laid out for paper and for the browser's own "Save as PDF".
+    Route::get('order/{reference}/tickets', [CheckoutController::class, 'tickets']);
 
     // Where a redirect gateway sends the buyer back to. Both verbs, because gateways disagree
     // about which one a return is, and the handler settles by asking the gateway rather than by

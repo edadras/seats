@@ -111,16 +111,33 @@ console.log( 'Choosing seats and reserving them' );
 const blocks = page.locator( '.seatmap-widget__block:not([disabled])' );
 
 await blocks.first().click();
-await page.waitForSelector( '.seatmap-widget__seat', { timeout: 20000 } );
+await page.waitForSelector( '.seatmap-widget__list', { timeout: 20000 } );
 await page.waitForTimeout( 400 );
 
+/*
+ * Chosen by keyboard, on purpose.
+ *
+ * The chairs are picked on the plan now, and the grid of buttons under it is the accessible
+ * interface — clipped out of the picture until focus reaches it. Driving the plan means computing
+ * where the picker drew each circle, which is the picker's own smoke test's job. What this check is
+ * about is the shop: that two seats chosen by whatever means end up in a WooCommerce cart with
+ * their names on them. The keyboard path is a real buyer's path and it does not move.
+ */
+await page.locator( '.seatmap-widget__list > summary' ).click();
+
 const seats = page.locator( '.seatmap-widget__seat:not([disabled])' );
-await seats.nth( 0 ).click();
-await seats.nth( 1 ).click();
+
+for ( const index of [ 0, 1 ] ) {
+	await seats.nth( index ).focus();
+	await page.keyboard.press( 'Enter' );
+	await page.waitForTimeout( 200 );
+}
+
 await page.waitForTimeout( 400 );
 
 const chosen = await page.evaluate( () =>
-	[ ...document.querySelectorAll( '.seatmap-widget__selection li span:first-child' ) ]
+	// A direct child: the price beside it is a span too, and so is the one inside it.
+	[ ...document.querySelectorAll( '.seatmap-widget__selection li > span:first-child' ) ]
 		.map( ( s ) => s.textContent ) );
 
 check( 'both seats are in the summary', 2 === chosen.length, chosen.join( ' | ' ) );

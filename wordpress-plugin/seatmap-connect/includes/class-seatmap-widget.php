@@ -201,6 +201,10 @@ class Seatmap_Widget {
 							'reserveTickets' => __( 'Reserve and add to cart', 'seatmap-connect' ),
 							/* translators: %d: the largest number of tickets one order may hold. */
 							'maxTickets'     => __( 'You can take up to %d tickets.', 'seatmap-connect' ),
+							/* translators: %s: the seat or area being taken off the order. */
+							'removeLine'     => __( 'Remove %s', 'seatmap-connect' ),
+							// The disclosure the chairs are folded into; the plan is where they are picked.
+							'seatList'       => __( 'Seat list', 'seatmap-connect' ),
 						),
 					)
 				)

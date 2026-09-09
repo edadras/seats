@@ -23,9 +23,23 @@
 	function boot( config ) {
 		var container = document.getElementById( config.containerId );
 
-		if ( container ) {
-			new SeatmapWidget( container, config ).init();
+		if ( ! container ) {
+			return;
 		}
+
+		var widget = new SeatmapWidget( container, config );
+
+		/*
+		 * Hung off the element it was given.
+		 *
+		 * The plan is the picking interface now — the list under it is there for keyboards and
+		 * screen readers — so anything that needs to know where a seat is on screen has to ask the
+		 * widget, including the checks that drive it. A host page that wants to do something with
+		 * the picker has the same handle rather than a private one.
+		 */
+		container.seatmapWidget = widget;
+
+		widget.init();
 	}
 
 	function SeatmapWidget( container, config ) {
@@ -417,6 +431,7 @@
 		plus: '<path d="M12 5v14M5 12h14"/>',
 		minus: '<path d="M5 12h14"/>',
 		reset: '<path d="M4 9a8 8 0 1 1 .6 6"/><path d="M3.5 4v5h5"/>',
+		close: '<path d="M6 6l12 12M18 6 6 18"/>',
 	};
 
 	function iconMarkup( name ) {
@@ -486,6 +501,14 @@
 		stage.appendChild( this.canvas );
 		stage.appendChild( this.buildZoomControls() );
 		stage.appendChild( this.buildBackControl() );
+
+		// Decorative: everything it says is already on the seat's own button, which is what a
+		// screen reader reads. Announcing it twice would be worse than not announcing it.
+		this.tipEl = document.createElement( 'div' );
+		this.tipEl.className = 'seatmap-widget__tip';
+		this.tipEl.setAttribute( 'aria-hidden', 'true' );
+		this.tipEl.hidden = true;
+		stage.appendChild( this.tipEl );
 
 		var floors = this.buildFloorSwitcher();
 
@@ -1503,9 +1526,27 @@
 			self.canvas.setPointerCapture( event.pointerId );
 		} );
 
+		this.canvas.addEventListener( 'pointerleave', function () {
+			if ( self.tipEl ) {
+				self.tipEl.hidden = true;
+			}
+
+			self.canvas.style.cursor = '';
+		} );
+
 		this.canvas.addEventListener( 'pointermove', function ( event ) {
 			if ( ! dragging ) {
+				// A pen or a finger has no hover: the tooltip would appear under the fingertip
+				// that is about to tap, which is the one place it cannot be read.
+				if ( 'mouse' === event.pointerType ) {
+					self.hover( event );
+				}
+
 				return;
+			}
+
+			if ( self.tipEl ) {
+				self.tipEl.hidden = true;
 			}
 
 			var dx = event.clientX - last.x;
@@ -1538,35 +1579,31 @@
 		);
 	};
 
-	SeatmapWidget.prototype.handleCanvasClick = function ( event ) {
+	/** Where a pointer event landed, in the chart's own coordinates. */
+	SeatmapWidget.prototype.pointOn = function ( event ) {
 		var rect = this.canvas.getBoundingClientRect();
 		var scale = this.baseScale * this.view.scale;
-		var x = ( event.clientX - rect.left - this.view.x ) / scale;
-		var y = ( event.clientY - rect.top - this.view.y ) / scale;
 
-		if ( 'plan' === this.mode ) {
-			this.blocksOnFloor().forEach( function ( block ) {
-				if ( x >= block.box.x && x <= block.box.x + block.box.width &&
-					y >= block.box.y && y <= block.box.y + block.box.height ) {
-					this.enterBlock( block.id );
-				}
-			}, this );
+		return {
+			x: ( event.clientX - rect.left - this.view.x ) / scale,
+			y: ( event.clientY - rect.top - this.view.y ) / scale,
+		};
+	};
 
-			return;
-		}
-
+	/** The seat under a point, if there is one close enough to have been meant. */
+	SeatmapWidget.prototype.seatAt = function ( point ) {
 		var hit = null;
 		var best = SEAT_RADIUS * 1.6;
 		var self = this;
 
 		this.seats.forEach( function ( seat ) {
-			// Only what is on screen can be clicked: two floors may occupy the same coordinates,
-			// and a neighbouring block is drawn but not open.
+			// Only what is on screen can be hit: two floors may occupy the same coordinates, and a
+			// neighbouring block is drawn but not open.
 			if ( seat.floorKey !== self.floorKey || ! self.inOpenBlock( seat ) ) {
 				return;
 			}
 
-			var distance = Math.hypot( seat.x - x, seat.y - y );
+			var distance = Math.hypot( seat.x - point.x, seat.y - point.y );
 
 			if ( distance < best ) {
 				best = distance;
@@ -1574,9 +1611,83 @@
 			}
 		} );
 
+		return hit;
+	};
+
+	SeatmapWidget.prototype.blockAt = function ( point ) {
+		return this.blocksOnFloor().filter( function ( block ) {
+			return point.x >= block.box.x && point.x <= block.box.x + block.box.width &&
+				point.y >= block.box.y && point.y <= block.box.y + block.box.height;
+		} )[ 0 ] || null;
+	};
+
+	SeatmapWidget.prototype.handleCanvasClick = function ( event ) {
+		var point = this.pointOn( event );
+
+		if ( 'plan' === this.mode ) {
+			var block = this.blockAt( point );
+
+			if ( block ) {
+				this.enterBlock( block.id );
+			}
+
+			return;
+		}
+
+		var hit = this.seatAt( point );
+
 		if ( hit ) {
 			this.toggleSeat( hit );
 		}
+	};
+
+	/**
+	 * What is under the pointer, said in words.
+	 *
+	 * The plan is a picture, and a picture of four hundred circles cannot label any of them at a
+	 * size anybody could read. So the label follows the pointer instead — the same sentence the
+	 * seat's button carries for a screen reader.
+	 */
+	SeatmapWidget.prototype.hover = function ( event ) {
+		if ( ! this.tipEl ) {
+			return;
+		}
+
+		var point = this.pointOn( event );
+		var text = '';
+
+		if ( 'plan' === this.mode ) {
+			var block = this.blockAt( point );
+
+			text = block ? block.name + ' — ' + this.blockSummary( block ) : '';
+		} else {
+			var seat = this.seatAt( point );
+
+			text = seat ? this.describeSeat( seat ) : '';
+		}
+
+		this.canvas.style.cursor = text ? 'pointer' : '';
+
+		if ( ! text ) {
+			this.tipEl.hidden = true;
+
+			return;
+		}
+
+		var rect = this.canvas.getBoundingClientRect();
+
+		this.tipEl.textContent = text;
+		this.tipEl.hidden = false;
+
+		// Placed against the stage rather than the page, and kept inside it: a tooltip that hangs
+		// off the edge of the plan is a tooltip half of which cannot be read.
+		var left = event.clientX - rect.left;
+		var top = event.clientY - rect.top;
+		var width = this.tipEl.offsetWidth;
+
+		this.tipEl.style.insetInlineStart = 'auto';
+		this.tipEl.style.left = Math.max( 4, Math.min( left - width / 2, rect.width - width - 4 ) ) + 'px';
+		this.tipEl.style.top = Math.max( 4, top - this.tipEl.offsetHeight - 12 ) + 'px';
 	};
 
 	/** Is this seat in the block currently open? In 'plan' mode nothing is. */
@@ -1716,9 +1827,22 @@
 
 		this.seatListEl.innerHTML = '';
 
-		// The keyboard interface follows the plan: blocks while the plan is showing blocks, and
-		// one block's chairs while one is open. A list of every chair in the building beside a
-		// picture of six sections is two different answers to "what am I choosing from".
+		/*
+		 * The keyboard interface follows the plan: blocks while the plan is showing blocks, and one
+		 * block's chairs while one is open. A list of every chair in the building beside a picture
+		 * of six sections is two different answers to "what am I choosing from".
+		 *
+		 * The two are presented differently, though. The block list names things the picture cannot
+		 * say legibly — what a section costs, how much of it is left — so it stays on the page. The
+		 * chairs *are* the picture: four hundred numbered buttons under the plan is the same offer
+		 * made a second time, and worse. So they go behind a disclosure.
+		 *
+		 * Behind a disclosure rather than clipped out of sight. Something that folds itself away
+		 * when focus leaves it moves the page between a mouse going down and coming up, and a click
+		 * then lands where nobody aimed — which is exactly what happened when this was tried. A
+		 * <summary> is a real, named, focusable control that opens when a person asks it to and at
+		 * no other time.
+		 */
 		if ( 'plan' === this.mode ) {
 			this.renderBlockList();
 
@@ -1734,6 +1858,24 @@
 		 * question rather than an answer. The floating one takes focus the moment a block is
 		 * opened, and Escape does the same thing, so nobody is stranded.
 		 */
+		var disclosure = document.createElement( 'details' );
+		var summary = document.createElement( 'summary' );
+		var body = document.createElement( 'div' );
+
+		disclosure.className = 'seatmap-widget__list';
+		// Whether it is open survives a repaint: a buyer who opened the list and then chose a seat
+		// from it would otherwise have it shut in their face, with their focus inside it.
+		disclosure.open = !! this.listOpen;
+		summary.textContent = this.i18n.seatList;
+		body.className = 'seatmap-widget__list-body';
+
+		disclosure.addEventListener( 'toggle', function () {
+			self.listOpen = disclosure.open;
+		} );
+
+		disclosure.appendChild( summary );
+		disclosure.appendChild( body );
+		this.seatListEl.appendChild( disclosure );
 
 		// Grouped in the order the seats were published, which is the order they were drawn.
 		var groups = [];
@@ -1760,7 +1902,7 @@
 			if ( group.section !== lastSection ) {
 				var title = document.createElement( 'h4' );
 				title.textContent = group.section || self.i18n.selectSeats;
-				self.seatListEl.appendChild( title );
+				body.appendChild( title );
 				lastSection = group.section;
 			}
 
@@ -1776,7 +1918,7 @@
 				rowEl.appendChild( self.buildSeatButton( seat ) );
 			} );
 
-			self.seatListEl.appendChild( rowEl );
+			body.appendChild( rowEl );
 		} );
 
 		if ( activeKey ) {
@@ -1834,6 +1976,24 @@
 		this.seatListEl.appendChild( list );
 	};
 
+	/**
+	 * A seat in words: where it is, what it costs, or that it is gone.
+	 *
+	 * One sentence, used by the button's label and by the tooltip that follows the pointer over the
+	 * plan — so what a screen reader is told and what a sighted buyer reads are the same sentence,
+	 * and neither can quietly fall behind the other.
+	 */
+	SeatmapWidget.prototype.describeSeat = function ( seat ) {
+		var unavailable = 'available' !== seat.state && 'selected' !== seat.state;
+		var template = unavailable ? this.i18n.seatUnavailable : this.i18n.seatLabel;
+
+		return template
+			.replace( '%1$s', seat.section || '' )
+			.replace( '%2$s', seat.row || '' )
+			.replace( '%3$s', seat.label )
+			.replace( '%4$s', null == seat.amount ? '' : this.formatMoney( seat.amount ) );
+	};
+
 	SeatmapWidget.prototype.buildSeatButton = function ( seat ) {
 		var self = this;
 		var button = document.createElement( 'button' );
@@ -1846,16 +2006,7 @@
 		button.disabled = unavailable;
 		button.setAttribute( 'aria-pressed', 'selected' === seat.state ? 'true' : 'false' );
 
-		var template = unavailable ? this.i18n.seatUnavailable : this.i18n.seatLabel;
-
-		button.setAttribute(
-			'aria-label',
-			template
-				.replace( '%1$s', seat.section || '' )
-				.replace( '%2$s', seat.row || '' )
-				.replace( '%3$s', seat.label )
-				.replace( '%4$s', null == seat.amount ? '' : this.formatMoney( seat.amount ) )
-		);
+		button.setAttribute( 'aria-label', this.describeSeat( seat ) );
 
 		if ( seat.accessible ) {
 			button.classList.add( 'is-accessible' );
@@ -1888,14 +2039,26 @@
 
 		var total = 0;
 
-		// Description on one side, money on the other: a column of prices is read down, not across.
-		function line( description, amount ) {
+		/*
+		 * Description on one side, money on the other, and a way to take the line back.
+		 *
+		 * Clicking the chair again on the plan already removes it, but only if you can find it
+		 * again — and after zooming into another section you cannot. A booking is undone here,
+		 * where it was made, at any point before it is paid for.
+		 */
+		function line( description, amount, drop ) {
 			var item = document.createElement( 'li' );
 			var left = document.createElement( 'span' );
 			var right = document.createElement( 'span' );
 
 			left.textContent = description;
-			right.textContent = amount;
+			right.className = 'seatmap-widget__line-end';
+			right.appendChild( textSpan( amount ) );
+
+			var remove = iconButton( 'close', self.i18n.removeLine.replace( '%s', description ), drop );
+			remove.classList.add( 'seatmap-widget__drop' );
+			right.appendChild( remove );
+
 			item.appendChild( left );
 			item.appendChild( right );
 
@@ -1907,7 +2070,8 @@
 
 			self.selectionEl.appendChild( line(
 				[ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ),
-				self.formatMoney( seat.amount )
+				self.formatMoney( seat.amount ),
+				function () { self.toggleSeat( seat ); }
 			) );
 		} );
 
@@ -1916,7 +2080,8 @@
 
 			self.selectionEl.appendChild( line(
 				self.formatCount( area.quantity ) + ' × ' + area.label,
-				self.formatMoney( ( area.amount || 0 ) * area.quantity )
+				self.formatMoney( ( area.amount || 0 ) * area.quantity ),
+				function () { self.changeAreaQuantity( area, -area.quantity ); }
 			) );
 		} );
 

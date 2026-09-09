@@ -107,6 +107,7 @@
 }
 
 .seatmap-widget__main {
+	position: relative;
 	flex: 1 1 30rem;
 	min-inline-size: 0;
 }
@@ -351,6 +352,28 @@
 	font-weight: 600;
 }
 
+/* ============================================================================ the tooltip */
+
+/*
+ * What is under the pointer, in words.
+ *
+ * The plan cannot label four hundred circles at a size anybody could read, so the label follows the
+ * pointer instead. Positioned from script against the stage; everything else about it is here.
+ */
+.seatmap-widget__tip {
+	position: absolute;
+	z-index: 3;
+	max-inline-size: 16rem;
+	padding: 0.4rem 0.6rem;
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-accent);
+	color: var(--seatmap-on-accent);
+	font-size: 0.8125rem;
+	line-height: 1.4;
+	pointer-events: none;
+	box-shadow: var(--seatmap-shadow);
+}
+
 /* ========================================================================= the seat list */
 
 /*
@@ -358,10 +381,38 @@
  * reachable by keyboard. It is visually compact rather than hidden, because "available to screen
  * readers only" would leave keyboard users navigating an invisible grid.
  */
+/*
+ * The chairs as a list, folded away.
+ *
+ * The plan is where seats are picked; this is the same offer in words, for anyone reading or
+ * tabbing rather than pointing. It is a disclosure and not something clipped out of sight, because
+ * a panel that folds itself away when focus leaves moves the page between a mouse going down and
+ * coming up — and the click then lands where nobody aimed.
+ */
+.seatmap-widget__list > summary {
+	cursor: pointer;
+	padding: 0.4rem 0.2rem;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__list > summary:focus-visible {
+	outline: none;
+	border-radius: var(--seatmap-radius-sm);
+	box-shadow: var(--seatmap-ring);
+}
+
+.seatmap-widget__list[open] > summary { color: var(--seatmap-text); }
+
+.seatmap-widget__list-body {
+	max-block-size: 20rem;
+	overflow: auto;
+	padding-block-end: 0.5rem;
+}
+
 .seatmap-widget__seats {
 	margin-block-start: 1rem;
-	max-block-size: 22rem;
-	overflow: auto;
 	padding: 0.25rem 0.9rem 0.9rem;
 	border: 1px solid var(--seatmap-border);
 	border-radius: var(--seatmap-radius);
@@ -498,6 +549,29 @@
 	border-block-end: 1px solid var(--seatmap-border);
 	font-variant-numeric: tabular-nums;
 }
+
+/* The money and the way to take the line back, kept together at the end of the line. */
+.seatmap-widget__line-end {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex: none;
+}
+
+.seatmap-widget__drop {
+	inline-size: 1.5rem;
+	block-size: 1.5rem;
+	border-radius: 999px;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__drop:hover:not(:disabled) {
+	background: var(--seatmap-danger-soft);
+	color: var(--seatmap-danger);
+	border-color: var(--seatmap-danger);
+}
+
+.seatmap-widget__drop svg { inline-size: 0.75rem; block-size: 0.75rem; }
 
 .seatmap-widget__selection li:last-child {
 	border-block-end: none;

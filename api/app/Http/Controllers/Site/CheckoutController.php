@@ -89,10 +89,17 @@ class CheckoutController extends Controller
         $request->session()->forget('seatmap_hold');
         $request->session()->put('seatmap_order', $order->external_order_id);
 
-        // A ticket's QR token exists in plaintext exactly once, on the models that just issued it.
-        // Flash it to the next request so the buyer can see their own codes; nothing writes it
-        // down, and a reload shows the page without them rather than re-minting anything.
-        $request->session()->flash('seatmap_tokens', $this->issuedTokens($order));
+        /*
+         * A ticket's QR token exists in plaintext exactly once, on the models that just issued it:
+         * the database keeps only a hash, and nothing can recover the code afterwards.
+         *
+         * So it is kept in this buyer's own session rather than flashed to the next request. It has
+         * to be: the confirmation page is not the only thing that needs it — the printable sheet
+         * behind "Download tickets" is a second request, and a ticket without its code is not a
+         * ticket. Nothing is given away by this that was not already given away: the same codes go
+         * out by email a moment later, and this session is what guards the confirmation page too.
+         */
+        $request->session()->put('seatmap_tokens', $this->issuedTokens($order));
 
         $this->mail->send($site, $order);
 
@@ -137,7 +144,7 @@ class CheckoutController extends Controller
         $request->session()->put('seatmap_order', $order->external_order_id);
 
         if ('confirmed' === $order->status) {
-            $request->session()->flash('seatmap_tokens', $this->issuedTokens($order));
+            $request->session()->put('seatmap_tokens', $this->issuedTokens($order));
             $this->mail->send($site, $order);
         }
 
@@ -150,15 +157,44 @@ class CheckoutController extends Controller
      * Reachable only from the session that placed the order: an order id in a URL is a guessable
      * thing, and a ticket token is a bearer credential for getting into a building.
      */
-    public function confirmation(Request $request, string $reference)
+    /**
+     * The tickets on their own, laid out for paper.
+     *
+     * A sheet rather than a file the server built: a ticket carries the name of an event somebody
+     * typed, and that name can be in Persian or Arabic. Writing a PDF with text in those scripts
+     * means embedding a font *and* shaping it — choosing the right form of every letter from its
+     * neighbours, and laying the line out right to left — which is a text engine, not a feature.
+     * The browser already has one, and its "Save as PDF" produces a real PDF from this page in
+     * every language the platform speaks.
+     */
+    public function tickets(Request $request, string $reference)
     {
         $site = $request->attributes->get('site');
+        $order = $this->ownOrder($request, $reference);
 
+        return response()->view('site.tickets', [
+            'site' => $site,
+            'brand' => Themes::forSite($site),
+            'order' => $order,
+            'tokens' => (array) $request->session()->get('seatmap_tokens', []),
+            'qr' => fn (string $token) => $this->qr->dataUri($token, 320),
+        ]);
+    }
+
+    /**
+     * The order this browser bought, or nothing.
+     *
+     * A booking reference is short and printed on the confirmation page, so it is not a secret.
+     * What makes this page the buyer's own is the session that made the purchase — the same check
+     * the confirmation itself uses, because the two show the same thing.
+     */
+    private function ownOrder(Request $request, string $reference): ExternalOrder
+    {
         if ($request->session()->get('seatmap_order') !== $reference) {
             throw new NotFoundHttpException('No such order.');
         }
 
-        $order = ExternalOrder::with(['allocations.ticket', 'event'])
+        $order = ExternalOrder::with(['allocations.ticket', 'event.venue'])
             ->where('external_order_id', $reference)
             ->first();
 
@@ -166,6 +202,13 @@ class CheckoutController extends Controller
             throw new NotFoundHttpException('No such order.');
         }
 
+        return $order;
+    }
+
+    public function confirmation(Request $request, string $reference)
+    {
+        $site = $request->attributes->get('site');
+        $order = $this->ownOrder($request, $reference);
         $tokens = (array) $request->session()->get('seatmap_tokens', []);
 
         return $this->view($site, 'site.order', [

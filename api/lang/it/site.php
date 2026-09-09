@@ -50,6 +50,8 @@ return [
         'noneChosen' => 'Ancora nulla di scelto.',
         'reserveTickets' => 'Prenota questi biglietti',
         'maxTickets' => 'Potete prendere fino a %d biglietti.',
+        'removeLine' => 'Rimuovi %s',
+        'seatList' => 'Elenco dei posti',
     ],
 
 
@@ -121,6 +123,9 @@ return [
     'payAtDoor' => 'Pagherai al botteghino quando arrivi.',
     'addToCalendar' => 'Aggiungi al calendario',
     'printTickets' => 'Stampa i biglietti',
+    'downloadTickets' => 'Scarica i biglietti (PDF)',
+    'savePdfHint' => 'Scegliete “Salva come PDF” nella finestra di stampa per conservarne una copia.',
+    'yourTickets' => 'I vostri biglietti',
     'seat' => 'Posto',
     'section' => 'Area',
     'row' => 'Fila',

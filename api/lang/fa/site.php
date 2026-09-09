@@ -50,6 +50,8 @@ return [
         'noneChosen' => 'هنوز چیزی انتخاب نشده است.',
         'reserveTickets' => 'رزرو این بلیت‌ها',
         'maxTickets' => 'تا %d بلیت می‌توانید بردارید.',
+        'removeLine' => 'حذف %s',
+        'seatList' => 'فهرست صندلی‌ها',
     ],
 
 
@@ -121,6 +123,9 @@ return [
     'payAtDoor' => 'هنگام ورود، در گیشه پرداخت کنید.',
     'addToCalendar' => 'افزودن به تقویم',
     'printTickets' => 'چاپ بلیط‌ها',
+    'downloadTickets' => 'دانلود بلیت‌ها (PDF)',
+    'savePdfHint' => 'در پنجرهٔ چاپ، گزینهٔ «ذخیره به‌صورت PDF» را انتخاب کنید.',
+    'yourTickets' => 'بلیت‌های شما',
     'seat' => 'صندلی',
     'section' => 'بخش',
     'row' => 'ردیف',

@@ -184,10 +184,16 @@ class HostedSiteTest extends TestCase
 
         $reference = basename((string) $redirect->headers->get('Location'));
 
+        // The printable sheet is the same tickets, so it answers to the same session.
+        $this->get('http://northgate.test/order/'.$reference.'/tickets')
+            ->assertOk()
+            ->assertSee('window.print()', false);
+
         // A ticket token is a credential for getting into a building, and an order reference in a
         // URL is a guessable thing. Somebody else's session must not be able to read it.
         $this->flushSession();
         $this->get('http://northgate.test/order/'.$reference)->assertNotFound();
+        $this->get('http://northgate.test/order/'.$reference.'/tickets')->assertNotFound();
     }
 
     private function makeSite($tenant, string $hostname): Site

@@ -50,6 +50,28 @@ page.on( 'console', ( m ) => {
 	if ( 'error' === m.type() && ! m.text().includes( '404' ) ) errors.push( m.text() );
 } );
 
+/**
+ * Where a seat is on screen.
+ *
+ * The chairs are chosen on the plan now — the list under it is there for keyboards and screen
+ * readers, clipped out of the picture — so a check that drives a mouse has to ask the picker where
+ * it drew things, exactly as a buyer's eye does.
+ */
+const seatPoint = ( index ) => page.evaluate( ( i ) => {
+	const widget = document.querySelector( '.seatmap-widget' ).seatmapWidget;
+	const seats = widget.seats.filter( ( seat ) =>
+		seat.floorKey === widget.floorKey && widget.inOpenBlock( seat ) && 'available' === seat.state );
+	const seat = seats[ i ];
+	const rect = widget.canvas.getBoundingClientRect();
+	const scale = widget.baseScale * widget.view.scale;
+
+	return {
+		x: rect.left + seat.x * scale + widget.view.x,
+		y: rect.top + seat.y * scale + widget.view.y,
+		name: [ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ),
+	};
+}, index );
+
 const open = async ( publicId ) => {
 	await page.goto( `${ PREVIEW }/tools/preview.html?api=${ BASE }&event=${ publicId }`,
 		{ waitUntil: 'networkidle' } );
@@ -97,7 +119,7 @@ check( 'and there is no way back from where nobody has gone',
 console.log( 'Into a block, from the plan itself' );
 const box = await page.locator( '.seatmap-widget__canvas' ).boundingBox();
 await page.mouse.click( box.x + box.width / 2, box.y + box.height / 2 );
-await page.waitForSelector( '.seatmap-widget__seat' );
+await page.waitForSelector( '.seatmap-widget__list' );
 check( 'the chairs are there', ( await page.locator( '.seatmap-widget__seat' ).count() ) > 20,
 	`${ await page.locator( '.seatmap-widget__seat' ).count() } seats` );
 check( 'one block’s chairs, not the building’s',
@@ -108,12 +130,42 @@ check( 'the way back appeared', await page.locator( '.seatmap-widget__back' ).is
 check( 'and the standing offer stepped out of the way',
 	await page.locator( '.seatmap-widget__areas' ).isHidden() );
 
-console.log( 'Choosing' );
-await page.locator( '.seatmap-widget__seat:not([disabled])' ).first().click();
+check( 'the grid of chairs is folded away, not printed under the plan',
+	await page.locator( '.seatmap-widget__list' ).evaluate( ( el ) => ! el.open ) );
+check( 'and it opens for whoever wants to read it',
+	await page.locator( '.seatmap-widget__list > summary' ).isVisible() );
+
+console.log( 'Hovering' );
+const first = await seatPoint( 0 );
+await page.mouse.move( first.x, first.y );
+await page.waitForTimeout( 200 );
+check( 'the plan says what is under the pointer',
+	await page.locator( '.seatmap-widget__tip' ).isVisible() );
+check( 'and names that seat and its price',
+	/row/.test( await page.locator( '.seatmap-widget__tip' ).innerText() ) &&
+	/\d/.test( await page.locator( '.seatmap-widget__tip' ).innerText() ),
+	await page.locator( '.seatmap-widget__tip' ).innerText() );
+
+console.log( 'Choosing, on the plan' );
+await page.mouse.click( first.x, first.y );
 await page.waitForTimeout( 250 );
 check( 'the seat is in the summary',
 	( await page.locator( '.seatmap-widget__selection li' ).count() ) === 1,
-	await page.locator( '.seatmap-widget__selection' ).innerText() );
+	await page.locator( '.seatmap-widget__selection' ).innerText().then( ( t ) => t.replace( /\s+/g, ' ' ) ) );
+
+console.log( 'Changing your mind' );
+const second = await seatPoint( 0 );
+await page.mouse.click( second.x, second.y );
+await page.waitForTimeout( 250 );
+check( 'two seats are held', 2 === await page.locator( '.seatmap-widget__selection li' ).count() );
+
+// The plan is not the only way back out of a choice: after zooming into another section the chair
+// you picked is nowhere to be found, and the summary is where the order actually lives.
+await page.locator( '.seatmap-widget__drop' ).first().click();
+await page.waitForTimeout( 250 );
+check( 'and one can be dropped from the summary itself',
+	1 === await page.locator( '.seatmap-widget__selection li' ).count(),
+	await page.locator( '.seatmap-widget__selection' ).innerText().then( ( t ) => t.replace( /\s+/g, ' ' ) ) );
 
 console.log( 'Back out' );
 await page.click( '.seatmap-widget__back-button' );
@@ -126,7 +178,7 @@ check( 'and the standing offer is where it was left',
 
 console.log( 'Escape' );
 await page.locator( '.seatmap-widget__block:not([disabled])' ).first().click();
-await page.waitForSelector( '.seatmap-widget__seat' );
+await page.waitForSelector( '.seatmap-widget__list' );
 await page.keyboard.press( 'Escape' );
 await page.waitForTimeout( 200 );
 check( 'Escape leaves the block too',
