@@ -475,6 +475,8 @@
 
 		var stage = document.createElement( 'div' );
 		stage.className = 'seatmap-widget__stage';
+		// Kept, because the canvas takes its palette from the colour of the box it is drawn in.
+		this.stageEl = stage;
 
 		this.canvas = document.createElement( 'canvas' );
 		this.canvas.className = 'seatmap-widget__canvas';
@@ -1022,7 +1024,32 @@
 		},
 	};
 
+	/**
+	 * Which palette the plan is drawn in — measured, not asked for.
+	 *
+	 * It used to ask the operating system. That is right for a picker sitting on a shop that
+	 * follows the reader's preference, and wrong for every site that has committed to a look of its
+	 * own: a venue running a dark theme, read in a browser set to light, got a dark stage with
+	 * light-mode ink painted on it, and the section labels disappeared.
+	 *
+	 * The colour of the box the canvas sits in already answers the question, whoever set it —
+	 * the system preference, a site theme, or an organiser's own brand colour. So read that.
+	 */
 	SeatmapWidget.prototype.colours = function () {
+		var background = this.stageEl
+			? window.getComputedStyle( this.stageEl ).backgroundColor
+			: '';
+		var channels = background.match( /\d+(?:\.\d+)?/g );
+
+		if ( channels && channels.length >= 3 ) {
+			// Rec. 709 luma. Precise enough for the only question being asked of it.
+			var luma = ( 0.2126 * channels[ 0 ] + 0.7152 * channels[ 1 ] + 0.0722 * channels[ 2 ] ) / 255;
+
+			return luma < 0.5 ? PALETTES.dark : PALETTES.light;
+		}
+
+		// A transparent or unreadable background — fall back to what the reader asked their
+		// browser for, which is what this did before it could measure anything.
 		var query = window.matchMedia && window.matchMedia( '(prefers-color-scheme: dark)' );
 
 		return query && query.matches ? PALETTES.dark : PALETTES.light;

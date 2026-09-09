@@ -567,8 +567,19 @@
 	cursor: pointer;
 }
 
+/*
+ * Nothing chosen yet.
+ *
+ * Half opacity was enough on a pale shop and not on a dark one: a crimson button at 50% over a
+ * dark surface is still a crimson button, and a primary action that looks ready but does nothing
+ * is worse than no button at all. Emptied out instead, which reads the same everywhere.
+ */
 .seatmap-widget__submit:disabled {
-	opacity: 0.5;
+	background: var(--seatmap-surface-sunken);
+	border-color: var(--seatmap-border);
+	color: var(--seatmap-muted);
+	box-shadow: none;
+	opacity: 1;
 	cursor: not-allowed;
 }
 
