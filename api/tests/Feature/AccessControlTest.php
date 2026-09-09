@@ -259,6 +259,31 @@ class AccessControlTest extends TestCase
     }
 
     #[Test]
+    public function the_first_screen_shows_the_door_what_it_may_see_and_nothing_else(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $door = $this->makeUser($fixture['tenant'], 'door');
+        $owner = $this->makeUser($fixture['tenant'], 'owner');
+
+        $seen = $this->actingAs($door)->getJson('/v1/overview')->assertOk();
+
+        // The overview is the one screen where numbers from four permissions meet, so it is the
+        // one most likely to hand a volunteer the takings by accident.
+        $this->assertNull($seen->json('money'));
+        $this->assertNull($seen->json('activity'));
+        $this->assertNotNull($seen->json('door'));
+        $this->assertNull($seen->json('next.0.gross_amount'));
+        // What they are there for is still there.
+        $this->assertIsInt($seen->json('next.0.allocated'));
+
+        $all = $this->actingAs($owner)->getJson('/v1/overview')->assertOk();
+
+        $this->assertNotNull($all->json('money'));
+        $this->assertNotNull($all->json('activity'));
+        $this->assertIsInt($all->json('next.0.gross_amount'));
+    }
+
+    #[Test]
     public function the_audit_log_records_what_changed_and_not_only_that_something_did(): void
     {
         $fixture = $this->makeSellableEvent();

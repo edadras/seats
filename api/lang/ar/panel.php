@@ -10,6 +10,7 @@ return [
     'brand' => 'Seatmap',
 
     'nav' => [
+        'overview' => 'نظرة عامة',
         'sections' => 'الأقسام',
         'events' => 'الفعاليات',
         'tickets' => 'التذاكر',
@@ -23,6 +24,31 @@ return [
         'modules' => 'الوحدات',
         'team' => 'الفريق',
         'audit' => 'النشاط',
+    ],
+
+    'navGroups' => [
+        'programme' => 'البرنامج',
+        'venue' => 'المكان',
+        'audience' => 'الجمهور',
+        'insight' => 'التحليل',
+        'account' => 'الحساب',
+    ],
+
+    'overview' => [
+        'description' => 'أين تقف الأمور: ما هو معروض للبيع، وما بِيع، وما تغيّر.',
+        'onSale' => 'فعاليات قيد البيع',
+        'inDraft' => ':count مسودة',
+        'soldThisMonth' => 'مقاعد بِيعت هذا الشهر',
+        'takenThisMonth' => 'الإيراد هذا الشهر',
+        'checkedIn' => 'دخلوا',
+        'ofIssued' => ':checked من :issued',
+        'sitesLive' => 'مواقع على الهواء',
+        'nextUp' => 'القادم',
+        'soldOf' => ':sold من :total',
+        'nothingOn' => 'لا شيء معروض للبيع بعد',
+        'nothingOnBody' => 'تُعرض الفعالية للبيع حين تُنشر على مخطط منشور.',
+        'recent' => 'النشاط الأخير',
+        'nothingYet' => 'لم يحدث شيء بعد.',
     ],
 
     'auth' => [

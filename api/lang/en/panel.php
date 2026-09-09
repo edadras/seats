@@ -21,6 +21,7 @@ return [
     'brand' => 'Seatmap',
 
     'nav' => [
+        'overview' => 'Overview',
         'sections' => 'Sections',
         'events' => 'Events',
         'tickets' => 'Tickets',
@@ -34,6 +35,31 @@ return [
         'modules' => 'Modules',
         'team' => 'Team',
         'audit' => 'Activity',
+    ],
+
+    'navGroups' => [
+        'programme' => 'Programme',
+        'venue' => 'Venue',
+        'audience' => 'Audience',
+        'insight' => 'Insight',
+        'account' => 'Account',
+    ],
+
+    'overview' => [
+        'description' => 'Where things stand: what is on sale, what has sold, and what changed.',
+        'onSale' => 'Events on sale',
+        'inDraft' => ':count in draft',
+        'soldThisMonth' => 'Seats sold this month',
+        'takenThisMonth' => 'Taken this month',
+        'checkedIn' => 'Checked in',
+        'ofIssued' => ':checked of :issued',
+        'sitesLive' => 'Websites live',
+        'nextUp' => 'Next up',
+        'soldOf' => ':sold of :total',
+        'nothingOn' => 'Nothing on sale yet',
+        'nothingOnBody' => 'An event goes on sale once it is published against a chart.',
+        'recent' => 'Recent activity',
+        'nothingYet' => 'Nothing has happened yet.',
     ],
 
     'auth' => [

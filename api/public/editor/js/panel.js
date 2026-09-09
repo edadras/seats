@@ -29,18 +29,29 @@
 	 * label captured then would be English for the rest of the session.
 	 */
 	var NAV = [
-		{ key: 'events', icon: 'calendar' },
-		{ key: 'tickets', icon: 'ticket' },
-		{ key: 'maps', icon: 'map' },
-		{ key: 'venues', icon: 'building' },
-		{ key: 'sites', icon: 'globe' },
-		{ key: 'themes', icon: 'palette' },
-		{ key: 'reports', icon: 'chart' },
-		{ key: 'messaging', icon: 'mail' },
-		{ key: 'connections', icon: 'plug' },
-		{ key: 'modules', icon: 'puzzle' },
-		{ key: 'team', icon: 'users' },
-		{ key: 'audit', icon: 'history' },
+		{ group: null, items: [ { key: 'overview', icon: 'grid' } ] },
+		{ group: 'programme', items: [
+			{ key: 'events', icon: 'calendar' },
+			{ key: 'tickets', icon: 'ticket' },
+		] },
+		{ group: 'venue', items: [
+			{ key: 'maps', icon: 'map' },
+			{ key: 'venues', icon: 'building' },
+		] },
+		{ group: 'audience', items: [
+			{ key: 'sites', icon: 'globe' },
+			{ key: 'themes', icon: 'palette' },
+			{ key: 'messaging', icon: 'mail' },
+		] },
+		{ group: 'insight', items: [
+			{ key: 'reports', icon: 'chart' },
+		] },
+		{ group: 'account', items: [
+			{ key: 'connections', icon: 'plug' },
+			{ key: 'modules', icon: 'puzzle' },
+			{ key: 'team', icon: 'users' },
+			{ key: 'audit', icon: 'history' },
+		] },
 	];
 
 	var STATUS_TONE = {
@@ -359,7 +370,7 @@
 		// code box is in it, and everything else on the panel still works.
 		window.SeatmapSignup.banner( this );
 
-		this.route( 'events' );
+		this.route( 'overview' );
 	};
 
 	/**
@@ -404,20 +415,37 @@
 
 		host.innerHTML = '';
 
-		NAV.forEach( function ( entry ) {
-			var button = node( 'button', 'nav-item' );
-			button.type = 'button';
-			button.dataset.view = entry.key;
-			button.innerHTML = icon( entry.icon, { size: 16 } ) +
-				'<span>' + esc( self.t( 'panel.nav.' + entry.key ) ) + '</span>';
+		/*
+		 * Grouped, because twelve unlabelled rows is a list somebody reads every time rather than
+		 * learns once. The headings name the job, not the table: "Venue" is where the room lives,
+		 * whether that is a chart or the building it is in.
+		 */
+		NAV.forEach( function ( section ) {
+			var group = node( 'div', 'nav-group' );
 
-			if ( self.current === entry.key ) {
-				button.classList.add( 'is-active' );
-				button.setAttribute( 'aria-current', 'page' );
+			if ( section.group ) {
+				var heading = node( 'p', 'nav-group__label' );
+				heading.textContent = self.t( 'panel.navGroups.' + section.group );
+				group.appendChild( heading );
 			}
 
-			button.addEventListener( 'click', function () { self.route( entry.key ); } );
-			host.appendChild( button );
+			section.items.forEach( function ( entry ) {
+				var button = node( 'button', 'nav-item' );
+				button.type = 'button';
+				button.dataset.view = entry.key;
+				button.innerHTML = icon( entry.icon, { size: 16 } ) +
+					'<span>' + esc( self.t( 'panel.nav.' + entry.key ) ) + '</span>';
+
+				if ( self.current === entry.key ) {
+					button.classList.add( 'is-active' );
+					button.setAttribute( 'aria-current', 'page' );
+				}
+
+				button.addEventListener( 'click', function () { self.route( entry.key ); } );
+				group.appendChild( button );
+			} );
+
+			host.appendChild( group );
 		} );
 	};
 
@@ -426,6 +454,7 @@
 		this.renderNav();
 
 		switch ( view ) {
+			case 'overview': return this.renderOverview();
 			case 'venues': return this.renderVenues();
 			case 'maps': return this.renderMaps();
 			case 'connections': return this.renderConnections();
@@ -437,7 +466,8 @@
 			case 'team': return window.SeatmapTeam.render( this );
 			case 'audit': return window.SeatmapAudit.render( this );
 			case 'tickets': return window.SeatmapTickets.render( this );
-			default: return this.renderEvents();
+			case 'events': return this.renderEvents();
+			default: return this.renderOverview();
 		}
 	};
 
@@ -828,6 +858,188 @@
 			},
 		} );
 	};
+
+	/**
+	 * The first screen: where the account stands.
+	 *
+	 * Not a dashboard of everything — a dashboard of everything is a screen nobody reads. Four
+	 * numbers somebody would otherwise go and look up, the next few nights with how full each one
+	 * is, and what changed lately. Everything on it is a door into the screen that owns it.
+	 *
+	 * What appears depends on what the reader may see: money, the door's numbers and the activity
+	 * list are each absent from the payload for a role without the permission, so this renders what
+	 * it was given rather than deciding again and getting it slightly different.
+	 */
+	App.renderOverview = function () {
+		var self = this;
+
+		this.loading( this.t( 'panel.nav.overview' ) );
+
+		this.request( 'GET', '/overview' )
+			.then( function ( data ) {
+				self.page( {
+					title: self.t( 'panel.nav.overview' ),
+					description: self.t( 'panel.overview.description' ),
+					body: '<div class="stat-strip">' + overviewStats( self, data ) + '</div>' +
+						'<div class="split">' +
+							'<section class="card card--pad">' +
+								'<h2 class="card__title">' + esc( self.t( 'panel.overview.nextUp' ) ) + '</h2>' +
+								overviewNights( self, data.next || [] ) +
+							'</section>' +
+							( data.activity
+								? '<section class="card card--pad">' +
+									'<h2 class="card__title">' + esc( self.t( 'panel.overview.recent' ) ) + '</h2>' +
+									overviewActivity( self, data.activity ) +
+									'</section>'
+								: '' ) +
+						'</div>',
+				} );
+
+				self.main().querySelectorAll( '[data-goto]' ).forEach( function ( element ) {
+					element.addEventListener( 'click', function () { self.route( element.dataset.goto ); } );
+				} );
+			} )
+			.catch( function ( error ) { self.error( error ); } );
+	};
+
+	/** A number worth walking across the room for, and the word that says what it is. */
+	function statTile( app, value, label, meta, view ) {
+		return '<button type="button" class="tile" data-goto="' + esc( view ) + '">' +
+			'<span class="tile__value tnum">' + esc( value ) + '</span>' +
+			'<span class="tile__label">' + esc( label ) + '</span>' +
+			( meta ? '<span class="tile__meta">' + esc( meta ) + '</span>' : '' ) +
+			'</button>';
+	}
+
+	function overviewStats( app, data ) {
+		var tiles = [
+			statTile(
+				app,
+				app.number( data.events.on_sale ),
+				app.t( 'panel.overview.onSale' ),
+				data.events.draft
+					? app.t( 'panel.overview.inDraft', { count: app.number( data.events.draft ) } )
+					: '',
+				'events'
+			),
+			statTile(
+				app,
+				app.number( data.seats.sold_this_month ),
+				app.t( 'panel.overview.soldThisMonth' ),
+				'',
+				'tickets'
+			),
+		];
+
+		if ( data.money ) {
+			// One line per currency: an account may sell an evening in euros and another in rials,
+			// and adding those together would be a number that means nothing.
+			var takings = ( data.money.this_month || [] );
+
+			tiles.push( statTile(
+				app,
+				takings.length
+					? app.money( takings[ 0 ].gross_amount, takings[ 0 ].currency )
+					: app.money( 0, 'EUR' ),
+				app.t( 'panel.overview.takenThisMonth' ),
+				takings.length > 1
+					? takings.slice( 1 ).map( function ( row ) {
+						return app.money( row.gross_amount, row.currency );
+					} ).join( ' · ' )
+					: '',
+				'reports'
+			) );
+		}
+
+		if ( data.door ) {
+			tiles.push( statTile(
+				app,
+				app.number( Math.round( data.door.rate * 100 ) ) + '%',
+				app.t( 'panel.overview.checkedIn' ),
+				app.t( 'panel.overview.ofIssued', {
+					checked: app.number( data.door.checked_in ),
+					issued: app.number( data.door.issued ),
+				} ),
+				'reports'
+			) );
+		}
+
+		tiles.push( statTile(
+			app,
+			app.number( data.sites.live ),
+			app.t( 'panel.overview.sitesLive' ),
+			'',
+			'sites'
+		) );
+
+		return tiles.join( '' );
+	}
+
+	function overviewNights( app, nights ) {
+		if ( ! nights.length ) {
+			return emptyState( 'calendar', app.t( 'panel.overview.nothingOn' ),
+				esc( app.t( 'panel.overview.nothingOnBody' ) ) );
+		}
+
+		return '<ul class="nights">' + nights.map( function ( night ) {
+			var percent = Math.round( night.sold_ratio * 100 );
+
+			return '<li class="night">' +
+				'<div class="night__when"><span class="night__day tnum">' +
+					esc( app.date( night.starts_at, { day: 'numeric' } ) ) + '</span>' +
+					'<span class="night__month">' +
+					esc( app.date( night.starts_at, { month: 'short' } ) ) + '</span></div>' +
+				'<div class="night__body">' +
+					'<p class="night__name">' + esc( night.name ) + '</p>' +
+					'<p class="night__meta">' + esc( app.date( night.starts_at, {
+						hour: '2-digit', minute: '2-digit',
+					} ) ) + ( night.venue ? ' · ' + esc( night.venue ) : '' ) + '</p>' +
+					'<div class="meter" role="img" aria-label="' +
+						esc( app.t( 'panel.overview.soldOf', {
+							sold: app.number( night.allocated ),
+							total: app.number( night.seats_total ),
+						} ) ) + '">' +
+						'<span class="meter__fill" style="inline-size: ' + percent + '%"></span>' +
+					'</div>' +
+				'</div>' +
+				'<div class="night__figures">' +
+					'<span class="night__sold tnum">' + esc( app.t( 'panel.overview.soldOf', {
+						sold: app.number( night.allocated ),
+						total: app.number( night.seats_total ),
+					} ) ) + '</span>' +
+					( null === night.gross_amount || undefined === night.gross_amount
+						? ''
+						: '<span class="night__gross tnum">' +
+							esc( app.money( night.gross_amount, night.currency ) ) + '</span>' ) +
+				'</div>' +
+				'</li>';
+		} ).join( '' ) + '</ul>';
+	}
+
+	function overviewActivity( app, entries ) {
+		if ( ! entries.length ) {
+			return '<p class="muted">' + esc( app.t( 'panel.overview.nothingYet' ) ) + '</p>';
+		}
+
+		return '<ul class="feed">' + entries.map( function ( entry ) {
+			// The same names the Activity screen uses; borrowed rather than restated, so a
+			// device does not become a "Device" here and a "Scanner" there.
+			var who = entry.actor.name || app.t( 'team.' + ( {
+				api_key: 'apiKey', device: 'device', system: 'system',
+			}[ entry.actor.type ] || 'system' ) );
+
+			return '<li class="feed__item">' +
+				'<span class="feed__what">' + esc( entry.action ) + '</span>' +
+				( entry.subject_label
+					? '<span class="feed__subject">' + esc( entry.subject_label ) + '</span>'
+					: '' ) +
+				'<span class="feed__who">' + esc( who ) + ' · ' +
+					esc( app.date( entry.created_at, {
+						month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+					} ) ) + '</span>' +
+				'</li>';
+		} ).join( '' ) + '</ul>';
+	}
 
 	App.renderEvents = function () {
 		var self = this;

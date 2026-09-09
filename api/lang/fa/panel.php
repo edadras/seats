@@ -10,6 +10,7 @@ return [
     'brand' => 'Seatmap',
 
     'nav' => [
+        'overview' => 'نمای کلی',
         'sections' => 'بخش‌ها',
         'events' => 'رویدادها',
         'tickets' => 'بلیت‌ها',
@@ -23,6 +24,31 @@ return [
         'modules' => 'ماژول‌ها',
         'team' => 'تیم',
         'audit' => 'فعالیت',
+    ],
+
+    'navGroups' => [
+        'programme' => 'برنامه',
+        'venue' => 'سالن',
+        'audience' => 'مخاطب',
+        'insight' => 'تحلیل',
+        'account' => 'حساب',
+    ],
+
+    'overview' => [
+        'description' => 'وضعیت فعلی: چه چیزی در فروش است، چه فروخته شده و چه چیزی تغییر کرده.',
+        'onSale' => 'رویدادهای در حال فروش',
+        'inDraft' => ':count پیش‌نویس',
+        'soldThisMonth' => 'صندلی فروخته‌شده این ماه',
+        'takenThisMonth' => 'درآمد این ماه',
+        'checkedIn' => 'واردشده',
+        'ofIssued' => ':checked از :issued',
+        'sitesLive' => 'وب‌سایت روی خط',
+        'nextUp' => 'رویدادهای بعدی',
+        'soldOf' => ':sold از :total',
+        'nothingOn' => 'هنوز چیزی در فروش نیست',
+        'nothingOnBody' => 'یک رویداد وقتی به فروش می‌رود که روی یک نقشهٔ منتشرشده منتشر شود.',
+        'recent' => 'فعالیت اخیر',
+        'nothingYet' => 'هنوز اتفاقی نیفتاده است.',
     ],
 
     'auth' => [

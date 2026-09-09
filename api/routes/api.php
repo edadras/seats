@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
+use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
@@ -118,6 +119,10 @@ Route::prefix('v1')->group(function () {
         Route::get('report-pages/{page}', [ReportPageController::class, 'show']);
         Route::patch('report-pages/{page}', [ReportPageController::class, 'update']);
         Route::delete('report-pages/{page}', [ReportPageController::class, 'destroy']);
+
+        // The panel's first screen, in one request: six spinners settling at different times is
+        // not a first impression. What it may include is decided permission by permission inside.
+        Route::get('overview', [OverviewController::class, 'index']);
 
         // Read-only, by construction. An audit trail an administrator can edit is a diary.
         Route::get('audit', [AuditController::class, 'index']);

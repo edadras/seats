@@ -10,6 +10,7 @@ return [
     'brand' => 'Seatmap',
 
     'nav' => [
+        'overview' => 'Panoramica',
         'sections' => 'Sezioni',
         'events' => 'Eventi',
         'tickets' => 'Biglietti',
@@ -23,6 +24,31 @@ return [
         'modules' => 'Moduli',
         'team' => 'Squadra',
         'audit' => 'Attività',
+    ],
+
+    'navGroups' => [
+        'programme' => 'Programma',
+        'venue' => 'Sede',
+        'audience' => 'Pubblico',
+        'insight' => 'Analisi',
+        'account' => 'Account',
+    ],
+
+    'overview' => [
+        'description' => 'A che punto siamo: cosa è in vendita, cosa è stato venduto e cosa è cambiato.',
+        'onSale' => 'Eventi in vendita',
+        'inDraft' => ':count in bozza',
+        'soldThisMonth' => 'Posti venduti questo mese',
+        'takenThisMonth' => 'Incasso di questo mese',
+        'checkedIn' => 'Entrati',
+        'ofIssued' => ':checked su :issued',
+        'sitesLive' => 'Siti online',
+        'nextUp' => 'Prossimi',
+        'soldOf' => ':sold su :total',
+        'nothingOn' => 'Ancora nulla in vendita',
+        'nothingOnBody' => 'Un evento va in vendita quando è pubblicato su una pianta pubblicata.',
+        'recent' => 'Attività recente',
+        'nothingYet' => 'Non è ancora successo nulla.',
     ],
 
     'auth' => [

@@ -11,6 +11,7 @@ return [
     'brand' => 'Seatmap',
 
     'nav' => [
+        'overview' => 'Vue d’ensemble',
         'sections' => 'Sections',
         'events' => 'Événements',
         'tickets' => 'Billets',
@@ -24,6 +25,31 @@ return [
         'modules' => 'Modules',
         'team' => 'Équipe',
         'audit' => 'Activité',
+    ],
+
+    'navGroups' => [
+        'programme' => 'Programmation',
+        'venue' => 'Salle',
+        'audience' => 'Public',
+        'insight' => 'Analyse',
+        'account' => 'Compte',
+    ],
+
+    'overview' => [
+        'description' => 'Où en sont les choses : ce qui est en vente, ce qui s’est vendu, ce qui a changé.',
+        'onSale' => 'Événements en vente',
+        'inDraft' => ':count en brouillon',
+        'soldThisMonth' => 'Places vendues ce mois-ci',
+        'takenThisMonth' => 'Recettes ce mois-ci',
+        'checkedIn' => 'Entrés',
+        'ofIssued' => ':checked sur :issued',
+        'sitesLive' => 'Sites en ligne',
+        'nextUp' => 'À venir',
+        'soldOf' => ':sold sur :total',
+        'nothingOn' => 'Rien en vente pour l’instant',
+        'nothingOnBody' => 'Un événement part en vente une fois publié sur un plan publié.',
+        'recent' => 'Activité récente',
+        'nothingYet' => 'Rien ne s’est encore passé.',
     ],
 
     'auth' => [

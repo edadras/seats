@@ -2238,6 +2238,26 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /overview:
+    get:
+      operationId: overview
+      tags: [Audit]
+      summary: What is selling, what is coming, and what changed
+      description: |
+        The panel's first screen, in one request: a screen that fanned out to six endpoints would
+        settle in six stages.
+
+        It is the only place where numbers governed by four different permissions meet, so each
+        part is asked for separately rather than assembled and filtered afterwards. `money` is
+        `null` without `reports.orders.view`, `door` without `checkins.view`, `activity` without
+        `audit.view`, and `next[].gross_amount` follows `money`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Overview" }
+
   /audit:
     get:
       operationId: listAudit
@@ -3360,6 +3380,72 @@ components:
               code: { type: string }
               message: { type: string }
               path: { type: string }
+
+    Overview:
+      type: object
+      properties:
+        events:
+          type: object
+          properties:
+            on_sale: { type: integer }
+            draft: { type: integer }
+        seats:
+          type: object
+          properties:
+            sold_this_month: { type: integer }
+        money:
+          type: [object, "null"]
+          description: "Null unless the caller holds reports.orders.view."
+          properties:
+            this_month:
+              type: array
+              items:
+                type: object
+                properties:
+                  currency: { type: string }
+                  gross_amount: { type: integer }
+        door:
+          type: [object, "null"]
+          description: "Null unless the caller holds checkins.view."
+          properties:
+            issued: { type: integer }
+            checked_in: { type: integer }
+            rate: { type: number }
+        sites:
+          type: object
+          properties:
+            live: { type: integer }
+        next:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              public_id: { type: string }
+              name: { type: string }
+              starts_at: { type: [string, "null"], format: date-time }
+              timezone: { type: string }
+              venue: { type: [string, "null"] }
+              seats_total: { type: integer }
+              allocated: { type: integer }
+              available: { type: integer }
+              sold_ratio: { type: number }
+              gross_amount: { type: [integer, "null"] }
+              currency: { type: string }
+        activity:
+          type: [array, "null"]
+          description: "Null unless the caller holds audit.view."
+          items:
+            type: object
+            properties:
+              action: { type: string }
+              subject_label: { type: [string, "null"] }
+              actor:
+                type: object
+                properties:
+                  type: { type: string }
+                  name: { type: [string, "null"] }
+              created_at: { type: [string, "null"], format: date-time }
 
     Event:
       type: object

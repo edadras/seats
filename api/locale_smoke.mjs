@@ -119,8 +119,9 @@ for ( const language of LANGUAGES ) {
 	check( 'the sidebar is translated', missingNav.length === 0,
 		missingNav.join( ', ' ) || sidebar.split( '\n' ).join( ' · ' ) );
 
-	// Seat maps → the designer, which is where most of the newly moved strings live.
-	await page.click( '.nav-item:nth-child(3)' );
+	// Seat maps → the designer, which is where most of the newly moved strings live. Named
+	// rather than counted: the sidebar is grouped, so a position is not a destination.
+	await page.click( '[data-view=maps]' );
 	await page.waitForSelector( '[data-map]', { timeout: 10000 } );
 	await page.click( '[data-map]' );
 	await page.waitForSelector( '#dz-canvas', { timeout: 10000 } );
@@ -152,7 +153,7 @@ for ( const language of LANGUAGES ) {
 	await page.waitForTimeout( 600 );
 
 	// Websites → the site editor, then tickets.
-	await page.click( '.nav-item:nth-child(5)' );
+	await page.click( '[data-view=sites]' );
 	await page.waitForSelector( '[data-site]', { timeout: 10000 } );
 	await page.waitForTimeout( 300 );
 	await page.click( '[data-site]' );
@@ -165,7 +166,7 @@ for ( const language of LANGUAGES ) {
 
 	await page.click( '#site-back' );
 	await page.waitForSelector( '.sidebar', { timeout: 10000 } );
-	await page.click( '.nav-item:nth-child(2)' );
+	await page.click( '[data-view=tickets]' );
 	await page.waitForSelector( '#ticket-status', { timeout: 10000 } );
 	await page.waitForTimeout( 400 );
 

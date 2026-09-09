@@ -41,6 +41,8 @@ await page.click( '#login button[type=submit]' );
 await page.waitForSelector( '.sidebar' );
 
 console.log( 'Events list' );
+// The panel opens on the overview now, so the events screen is a click away.
+await page.click( '[data-view=events]' );
 await page.waitForSelector( priceButton );
 check( 'a price column', ( await page.locator( 'th', { hasText: 'Prices' } ).count() ) === 1 );
 console.log( '   row now reads:', ( await page.locator( 'tbody tr' ).first().innerText() ).replace( /\n/g, ' | ' ) );
@@ -81,6 +83,7 @@ check( 'the list shows the saved price, undivided', /500,000/.test( row ), row.r
 console.log( 'Persian' );
 await page.evaluate( () => window.localStorage.setItem( 'seatmap.locale', 'fa' ) );
 await page.reload( { waitUntil: 'networkidle' } );
+await page.click( '[data-view=events]' );
 await page.waitForSelector( priceButton );
 await page.waitForTimeout( 400 );
 
@@ -98,6 +101,7 @@ check( 'the price screen is Persian', heading.includes( 'قیمت' ), heading.re
 console.log( 'Individual seats' );
 await page.evaluate( () => window.localStorage.setItem( 'seatmap.locale', 'en' ) );
 await page.reload( { waitUntil: 'networkidle' } );
+await page.click( '[data-view=events]' );
 await page.waitForSelector( priceButton );
 await page.locator( priceButton ).click();
 await page.waitForSelector( '#pricing-seats' );
