@@ -28,6 +28,9 @@ Route::middleware('site')->group(function () {
         Route::post('release', [StoreController::class, 'release'])->middleware('throttle:60,1');
     });
 
+    // Where a picker embedded on somebody else's website sends the buyer to pay. It carries a
+    // hold token this application issued and nothing else.
+    Route::get('checkout/resume', [CheckoutController::class, 'resume'])->middleware('throttle:30,1');
     Route::get('checkout', [CheckoutController::class, 'show']);
     Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1');
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);

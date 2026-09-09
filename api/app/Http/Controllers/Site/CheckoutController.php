@@ -37,7 +37,7 @@ class CheckoutController extends Controller
         $hold = $this->heldSeats($request);
 
         if (! $hold) {
-            return redirect('/')->with('seatmap_message', 'Your seats are no longer held. Please choose again.');
+            return redirect('/')->with('seatmap_message', __('site.holdGone'));
         }
 
         $snapshot = $hold->price_snapshot['decoded'] ?? [];
@@ -53,13 +53,42 @@ class CheckoutController extends Controller
         ]);
     }
 
+    /**
+     * Adopt a hold made somewhere else and go and pay for it.
+     *
+     * This is how a website with no server of its own sells a ticket: the widget on that page
+     * makes the hold against the public embed API, and hands the buyer here to pay. Nothing about
+     * the price travels in the URL — only the hold's token, which this application issued, and
+     * which it prices itself.
+     *
+     * A token for another organiser's hold does not resolve: `Hold` is tenant-scoped and this
+     * request's tenant came from the Host. An expired one is not adopted either, because the seats
+     * behind it are already back on sale.
+     */
+    public function resume(Request $request)
+    {
+        $token = (string) $request->query('hold');
+        $hold = $token ? Hold::with('event')->where('token', $token)->first() : null;
+
+        if (! $hold || ! $hold->isActive()) {
+            return redirect('/')->with('seatmap_message', __('site.holdGone'));
+        }
+
+        // A new session id: whoever pressed "reserve" on somebody's website is starting a purchase
+        // here, and inheriting whatever this browser was doing on this domain before is not it.
+        $request->session()->regenerate();
+        $request->session()->put('seatmap_hold', $hold->token);
+
+        return redirect('/checkout');
+    }
+
     public function place(Request $request)
     {
         $site = $request->attributes->get('site');
         $hold = $this->heldSeats($request);
 
         if (! $hold) {
-            return redirect('/')->with('seatmap_message', 'Your seats are no longer held. Please choose again.');
+            return redirect('/')->with('seatmap_message', __('site.holdGone'));
         }
 
         $data = $request->validate([

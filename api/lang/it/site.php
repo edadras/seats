@@ -140,6 +140,7 @@ return [
     'showCodeAtDoor' => 'Mostra un codice all’ingresso — uno per posto. Te li abbiamo mandati anche per email.',
     'codesByEmail' => 'I tuoi biglietti stanno arrivando per email. I codici compaiono qui una sola volta, quindi controlla la posta.',
     'bookingStatus' => 'Questa prenotazione è :status. Se ti sembra sbagliato, contatta il botteghino citando :reference.',
+    'holdGone' => 'Quei posti non sono più tenuti. Sceglietene altri.',
     'standing' => 'In piedi',
     'emptyPage' => 'In questa pagina non c’è ancora nulla.',
     'nothingOnSale' => 'Al momento non c’è nulla in vendita. Torna presto.',

@@ -126,6 +126,30 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## Selling from somebody else's website
+
+Three ways to sell, and the same seat picker in all of them:
+
+1. **A hosted site** on the organiser's own domain, above.
+2. **WordPress and WooCommerce**, through the plugin — the shop keeps its own cart, tax and
+   coupons, and the platform keeps the seats.
+3. **Any other website at all**, with two lines pasted into a page:
+
+```html
+<div data-seatmap-event="evt_xxxxxxxx"></div>
+<script src="https://api.example.com/embed/v1/seatmap.js" async></script>
+```
+
+That third path is for somebody with a page and no toolchain. There is no key in it, because there
+is nothing in the public embed API worth protecting: it reads what a venue already shows publicly
+and holds seats, rate-limited per address. There is no payment on that page either — the widget
+holds the seats against the API and hands the buyer to the organiser's own hosted checkout, so a
+site that pastes this in never sees a card or a price it could argue with.
+
+`docs/embed-example.html` is a complete working page; `api/embed_smoke.mjs` drives it from a
+separate origin, all the way to a priced checkout. The panel's Connections screen shows the exact
+snippet with the event already filled in.
+
 ## The door
 
 `checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and
@@ -199,6 +223,7 @@ node api/a11y_check.mjs                                          # contrast and 
 node api/reports_smoke.mjs                                       # builds a report by dragging, then a page
 node api/customers_smoke.mjs                                     # the customer directory and its CSV
 node api/messaging_smoke.mjs                                     # an announcement, its deliveries, the notice bell
+node api/embed_smoke.mjs                                         # the picker on a third-party page, through to checkout
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 

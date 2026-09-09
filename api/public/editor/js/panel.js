@@ -1457,8 +1457,15 @@
 
 		this.loading( this.t( 'panel.nav.connections' ) );
 
-		this.request( 'GET', '/api-clients' )
-			.then( function ( response ) {
+		Promise.all( [
+			this.request( 'GET', '/api-clients' ),
+			// The snippet below needs an event to point at, and an organiser reading this screen
+			// should not have to go and fetch an id from another one.
+			this.request( 'GET', '/events?per_page=50' ).catch( function () { return { data: [] }; } ),
+		] )
+			.then( function ( results ) {
+				var response = results[ 0 ];
+				var events = results[ 1 ].data || [];
 				var rows = response.data.map( function ( client ) {
 					var keys = client.keys.map( function ( key ) {
 						return '<div class="row"><code>' + esc( key.key_id ) + '</code>' +
@@ -1503,8 +1510,10 @@
 						rows,
 						emptyState( 'plug', self.t( 'panel.connections.emptyTitle' ),
 							esc( self.t( 'panel.connections.emptyBody' ) ) )
-					),
+					) + self.embedMarkup( events ),
 				} );
+
+				self.bindEmbed( events );
 
 				document.getElementById( 'add-client' ).addEventListener( 'click', function () {
 					self.newClient();
@@ -1523,6 +1532,68 @@
 				} );
 			} )
 			.catch( function ( error ) { self.error( error ); } );
+	};
+
+	/**
+	 * The picker, on a website that is not a shop and not one of ours.
+	 *
+	 * Two lines somebody pastes into their own page. There is no key in it, and there is nothing
+	 * to configure: the script is served by this API, so it knows where the API is, and everything
+	 * it needs about the event is public. Payment happens on the organiser's own hosted checkout,
+	 * which is why a page that pastes this in takes on nothing it cannot honour.
+	 */
+	App.embedMarkup = function ( events ) {
+		var self = this;
+
+		if ( ! events.length ) {
+			return '';
+		}
+
+		return '<h3 class="subhead">' + esc( this.t( 'panel.connections.embedTitle' ) ) + '</h3>' +
+			'<div class="card card--pad">' +
+				'<p class="hint spaced-none">' + esc( this.t( 'panel.connections.embedHint' ) ) + '</p>' +
+				'<div class="filters spaced">' +
+					'<select class="select" id="embed-event" aria-label="' +
+						esc( this.t( 'panel.connections.embedEvent' ) ) + '">' +
+						events.map( function ( event ) {
+							return '<option value="' + esc( event.public_id ) + '">' +
+								esc( event.name ) + '</option>';
+						} ).join( '' ) +
+					'</select>' +
+					'<button class="btn" id="embed-copy">' + icon( 'copy', { size: 15 } ) +
+						esc( this.t( 'panel.common.copy' ) ) + '</button>' +
+				'</div>' +
+				'<pre class="snippet" id="embed-snippet">' +
+					esc( this.embedSnippet( events[ 0 ].public_id ) ) + '</pre>' +
+			'</div>';
+	};
+
+	App.embedSnippet = function ( publicId ) {
+		// The API's own origin, taken from where this panel is talking to it, so the snippet is
+		// right on every deployment without anybody typing a URL.
+		var api = String( this.api || '' ).replace( /\/v1\/?$/, '' );
+
+		return '<div data-seatmap-event="' + publicId + '"></div>\n' +
+			'<script src="' + api + '/embed/v1/seatmap.js" async></' + 'script>';
+	};
+
+	App.bindEmbed = function ( events ) {
+		var self = this;
+		var chooser = document.getElementById( 'embed-event' );
+		var snippet = document.getElementById( 'embed-snippet' );
+
+		if ( ! chooser || ! snippet ) {
+			return;
+		}
+
+		chooser.addEventListener( 'change', function () {
+			snippet.textContent = self.embedSnippet( chooser.value );
+		} );
+
+		document.getElementById( 'embed-copy' ).addEventListener( 'click', function () {
+			copyText( snippet.textContent );
+			self.toast( self.t( 'panel.connections.embedCopied' ) );
+		} );
 	};
 
 	App.newClient = function () {

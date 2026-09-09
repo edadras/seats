@@ -2084,6 +2084,22 @@
 .th-sort.is-active { color: var(--text-accent); }
 .th-sort__arrow { display: inline-flex; }
 
+/* Something to be copied, shown as what it is. Scrolls rather than wraps: a line break somebody
+   cannot see is a line break they paste. */
+.snippet {
+	margin: var(--s-3) 0 0;
+	padding: var(--s-3) var(--s-4);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--r-md);
+	background: var(--surface-sunken);
+	color: var(--text);
+	font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+	font-size: var(--text-xs);
+	line-height: 1.7;
+	overflow-x: auto;
+	white-space: pre;
+}
+
 /* --- notices ------------------------------------------------------------------------------ */
 
 /* The bell sits in the brand row beside the theme switch; the count is a dot with a number in it,

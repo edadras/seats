@@ -1871,7 +1871,19 @@ paths:
           description: Held
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Hold" }
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Hold"
+                  - type: object
+                    properties:
+                      cart_url:
+                        type: [string, "null"]
+                        description: |
+                          Where to send the buyer to pay: the organiser's own hosted checkout,
+                          carrying this hold's token and nothing else. It is null when the
+                          organiser has no site on the internet yet — the seats are still held, and
+                          a widget that has nowhere to send anybody says so rather than navigating
+                          to nothing. A shop that made this hold has its own cart and ignores it.
         "409":
           description: One or more seats, or an area, are no longer available
           content:
@@ -3856,6 +3868,12 @@ components:
         ends_at: { type: [string, "null"], format: date-time }
         timezone: { type: string }
         currency: { type: string }
+        currency_decimals:
+          type: integer
+          description: >
+            Decimal places that currency has. Sent because the picker formats money in the browser,
+            and a table of currency exponents copied into JavaScript is one that goes out of date
+            somewhere nobody is looking.
         venue_id: { type: string, format: uuid }
         seat_map_version_id: { type: [string, "null"], format: uuid }
         hold_ttl_seconds: { type: integer }

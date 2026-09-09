@@ -144,6 +144,7 @@ return [
     'showCodeAtDoor' => 'Show a code at the door — one for each seat. We’ve emailed them to you as well.',
     'codesByEmail' => 'Your tickets are on their way by email. The codes are shown only once here, so check your inbox.',
     'bookingStatus' => 'This booking is :status. If that looks wrong, contact the box office and quote :reference.',
+    'holdGone' => 'Those seats are no longer held. Please choose again.',
     'standing' => 'Standing',
     'emptyPage' => 'This page has nothing on it yet.',
     'nothingOnSale' => 'Nothing on sale just now. Check back soon.',

@@ -140,6 +140,7 @@ return [
     'showCodeAtDoor' => 'Présentez un code à l’entrée — un par place. Nous vous les avons aussi envoyés par e-mail.',
     'codesByEmail' => 'Vos billets arrivent par e-mail. Les codes ne s’affichent ici qu’une seule fois, pensez à vérifier votre boîte.',
     'bookingStatus' => 'Cette réservation est :status. Si cela vous semble faux, contactez le guichet en indiquant :reference.',
+    'holdGone' => 'Ces places ne sont plus retenues. Choisissez à nouveau.',
     'standing' => 'Debout',
     'emptyPage' => 'Cette page est encore vide.',
     'nothingOnSale' => 'Rien en vente pour l’instant. Revenez bientôt.',

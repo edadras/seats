@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seatmap on your own website</title>
+
+<!--
+	Everything a website needs to sell seats: a container that names the event, and one script.
+
+	There is no key, no server code and no build step. The script fetches the event and its chart
+	from the platform's public API, runs the same picker the hosted sites run, holds the seats a
+	visitor chooses, and sends them to the organiser's own checkout to pay — so this page never
+	sees a card, a price it could argue with, or a secret worth stealing.
+
+	Serve this file from anywhere and open it. Replace the event id with one of your own; the
+	`data-api` attribute is only needed when the script and the API are not on the same host, which
+	is the case here because this page is served from a plain static server.
+-->
+
+<style>
+	body {
+		margin: 0;
+		padding: 2.5rem 1.25rem;
+		font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+		color: #1b2030;
+		background: #f6f7f9;
+	}
+
+	main { max-inline-size: 62rem; margin: 0 auto; }
+	h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin: 0 0 0.4rem; }
+	p.lede { margin: 0 0 2rem; color: #5a6376; }
+	.card { padding: 1.25rem; border-radius: 14px; background: #fff; box-shadow: 0 1px 3px rgb(16 24 40 / 0.08); }
+	code { background: #eef0f4; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+	footer { margin-block-start: 2rem; color: #5a6376; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+	<h1>The Autumn Season</h1>
+	<p class="lede">Choose your seats below. You will be taken to the box office to pay.</p>
+
+	<div class="card">
+		<!-- This is the whole integration. -->
+		<div data-seatmap-event="evt_replace_me" data-seatmap-locale="en"></div>
+	</div>
+
+	<footer>
+		Seats and prices come from the venue's own system; this page holds nothing but the words
+		around them. Change <code>data-seatmap-event</code> to another event and nothing else moves.
+	</footer>
+</main>
+
+<script src="http://127.0.0.1:8123/embed/v1/seatmap.js" async></script>
+</body>
+</html>

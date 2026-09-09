@@ -141,6 +141,7 @@ return [
     'showCodeAtDoor' => 'Zeigen Sie am Einlass einen Code – einen je Platz. Wir haben sie Ihnen auch per E-Mail geschickt.',
     'codesByEmail' => 'Ihre Tickets sind per E-Mail unterwegs. Die Codes erscheinen hier nur dieses eine Mal, sehen Sie also in Ihr Postfach.',
     'bookingStatus' => 'Diese Buchung ist :status. Falls das falsch aussieht, wenden Sie sich an die Kasse und nennen Sie :reference.',
+    'holdGone' => 'Diese Plätze sind nicht mehr reserviert. Bitte wählen Sie erneut.',
     'standing' => 'Stehplatz',
     'emptyPage' => 'Auf dieser Seite steht noch nichts.',
     'nothingOnSale' => 'Gerade ist nichts im Verkauf. Schauen Sie bald wieder vorbei.',

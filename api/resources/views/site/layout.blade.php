@@ -99,6 +99,14 @@
 </header>
 
 <main id="main">
+    {{-- Something the last request needs to say — a hold that expired while the buyer was away.
+         Rendered here so it is said once, wherever they were sent. --}}
+    @if (session('seatmap_message'))
+        <div class="shell section section--tight">
+            <p class="notice">{{ session('seatmap_message') }}</p>
+        </div>
+    @endif
+
     @yield('content')
 </main>
 

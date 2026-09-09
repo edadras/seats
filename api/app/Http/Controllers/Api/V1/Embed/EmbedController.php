@@ -10,6 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\HoldResource;
 use App\Models\Event;
 use App\Models\Hold;
+use App\Models\Site;
+use App\Support\Locale\Money;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +44,10 @@ class EmbedController extends Controller
             'ends_at' => $event->ends_at?->toIso8601String(),
             'timezone' => $event->timezone,
             'currency' => $event->currency,
+            // How many decimal places that currency has. Sent because the picker formats money in
+            // the browser, and a table of currency exponents copied into JavaScript is a table
+            // that goes out of date somewhere nobody is looking.
+            'currency_decimals' => Money::exponent((string) $event->currency),
             'status' => $event->status,
             'venue' => [
                 'name' => $event->venue?->name,
@@ -140,7 +146,35 @@ class EmbedController extends Controller
             $data['areas'] ?? [],
         );
 
-        return response()->json(new HoldResource($hold->load('event')), 201);
+        /*
+         * Where to send the buyer to pay.
+         *
+         * A shop that made this hold has its own cart and ignores this. A website with no server
+         * — somebody's own page with the widget pasted into it — has nowhere to take a payment,
+         * and this is the answer: the organiser's own hosted checkout, which already knows how to
+         * price a hold, take the money and issue the tickets. Decided here rather than in the
+         * browser because which site an event belongs to is a fact this server holds.
+         */
+        return response()->json(
+            (new HoldResource($hold->load('event')))->toArray($request)
+                + ['cart_url' => $this->checkoutUrl($hold)],
+            201
+        );
+    }
+
+    /** The hosted checkout for this event's organiser, if they have a site on the internet. */
+    private function checkoutUrl(Hold $hold): ?string
+    {
+        $site = Site::query()
+            ->where('status', 'live')
+            ->whereHas('domains', fn ($query) => $query->whereNotNull('verified_at'))
+            ->with('primaryDomain')
+            ->orderByDesc('created_at')
+            ->first();
+
+        return $site?->canonicalHost()
+            ? $site->url('/checkout/resume?hold='.urlencode($hold->token))
+            : null;
     }
 
     public function extendHold(string $token)

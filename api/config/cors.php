@@ -13,7 +13,10 @@
  */
 
 return [
-    'paths' => ['v1/embed/*'],
+    // `v1/i18n/*` is here for the same reason: a widget pasted into somebody's own website asks
+    // for its words in the reader's language, and that request is cross-origin too. It is a
+    // catalogue of interface strings and it is already public.
+    'paths' => ['v1/embed/*', 'v1/i18n/*'],
 
     'allowed_methods' => ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 

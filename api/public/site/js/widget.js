@@ -879,12 +879,30 @@
 		return summary;
 	};
 
+	/**
+	 * Where availability and holds live.
+	 *
+	 * A shop puts its own routes in front of the seating API, because the price a buyer is charged
+	 * has to be set by a server. A page with no server of its own — somebody's own website with
+	 * this widget pasted into it — talks to the platform's public embed API instead, and is handed
+	 * to the organiser's hosted checkout to pay. Both are given as whole URLs by whoever boots the
+	 * widget; the widget does not know which kind of host it is in.
+	 */
+	SeatmapWidget.prototype.availabilityEndpoint = function () {
+		return this.config.availabilityUrl ||
+			this.config.restUrl + '/availability/' + encodeURIComponent( this.config.eventPublicId );
+	};
+
+	SeatmapWidget.prototype.holdEndpoint = function () {
+		return this.config.holdUrl || this.config.restUrl + '/hold';
+	};
+
 	SeatmapWidget.prototype.fetchAvailability = function () {
 		var self = this;
-		var url = this.config.restUrl + '/availability/' + encodeURIComponent( this.config.eventPublicId );
+		var url = this.availabilityEndpoint();
 
 		if ( this.cursor ) {
-			url += '?since=' + encodeURIComponent( this.cursor );
+			url += ( url.indexOf( '?' ) === -1 ? '?' : '&' ) + 'since=' + encodeURIComponent( this.cursor );
 		}
 
 		fetch( url, { credentials: 'same-origin' } )
@@ -2113,7 +2131,7 @@
 			}
 		} );
 
-		fetch( this.config.restUrl + '/hold', {
+		fetch( this.holdEndpoint(), {
 			method: 'POST',
 			credentials: 'same-origin',
 			// The header is named by whoever booted the widget: WordPress wants X-WP-Nonce, a
@@ -2123,6 +2141,9 @@
 				event_public_id: this.config.eventPublicId,
 				seat_ids: seatIds,
 				areas: areas,
+				// Only the public embed API asks for this — it has no session to know a browser
+				// by. A shop's own route already knows whose cart this is and ignores it.
+				session_id: this.config.sessionId,
 			} ),
 		} )
 			.then( function ( response ) {
@@ -2131,8 +2152,22 @@
 				} );
 			} )
 			.then( function ( result ) {
-				if ( result.ok ) {
+				if ( result.ok && result.body.cart_url ) {
 					window.location.href = result.body.cart_url;
+
+					return;
+				}
+
+				if ( result.ok ) {
+					/*
+					 * Held, with nowhere to send them.
+					 *
+					 * An organiser whose event has no website yet can still put this widget on a
+					 * page; the seats are genuinely held, and saying so is better than navigating
+					 * to nothing. What they cannot do here is pay, and that is the organiser's
+					 * missing checkout rather than the buyer's mistake.
+					 */
+					self.announce( self.i18n.held.replace( '%s', formatClock( result.body.expires_at ) ) );
 
 					return;
 				}
@@ -2195,6 +2230,21 @@
 		this.renderAreaList();
 		this.renderSelection();
 	};
+
+	/** A time a person reads, in their own locale, from an ISO string a server wrote. */
+	function formatClock( iso ) {
+		var when = new Date( iso );
+
+		if ( isNaN( when.getTime() ) ) {
+			return '';
+		}
+
+		try {
+			return when.toLocaleTimeString( undefined, { hour: '2-digit', minute: '2-digit' } );
+		} catch ( error ) {
+			return when.toISOString().slice( 11, 16 );
+		}
+	}
 
 	function nonceHeaders( config, headers ) {
 		if ( config.nonce ) {
