@@ -292,7 +292,13 @@
 			description: esc( person.email ) +
 				( person.phone ? ' · ' + esc( person.phone ) : '' ),
 			actions: '<button class="btn" id="customer-back">' + icon( 'back', { size: 15 } ) +
-				esc( App.t( 'panel.customers.back' ) ) + '</button>',
+				esc( App.t( 'panel.customers.back' ) ) + '</button>' +
+				// The two things a person may ask for about themselves. Both are refused to
+				// anybody without account.manage, so both buttons simply fail for a box office.
+				'<button class="btn" id="customer-data">' + icon( 'download', { size: 15 } ) +
+					esc( App.t( 'panel.privacy.download' ) ) + '</button>' +
+				'<button class="btn btn--danger" id="customer-erase">' +
+					esc( App.t( 'panel.privacy.erase' ) ) + '</button>',
 			body:
 				'<div class="stat-strip">' +
 					tile( App.t( 'panel.customers.orders' ), App.number( person.orders_count ),
@@ -315,6 +321,14 @@
 
 		document.getElementById( 'customer-back' ).addEventListener( 'click', function () {
 			Customers.render( App );
+		} );
+
+		document.getElementById( 'customer-data' ).addEventListener( 'click', function () {
+			Customers.personalData( person );
+		} );
+
+		document.getElementById( 'customer-erase' ).addEventListener( 'click', function () {
+			Customers.erase( person );
 		} );
 	};
 
@@ -379,6 +393,70 @@
 	 * Fetched with the panel's own credentials and handed to the browser as a blob: an anchor
 	 * carries no Authorization header, and this particular file is every buyer's address.
 	 */
+	/**
+	 * Everything held about one person, as a file.
+	 *
+	 * Fetched with the session's own token and handed over as a blob rather than opened as a link:
+	 * the route is authenticated, and a plain href carries no token.
+	 */
+	Customers.personalData = function ( person ) {
+		var App = Customers.App;
+
+		App.request( 'GET', '/customers/' + person.id + '/personal-data', null, { raw: true } )
+			.then( function ( blob ) {
+				var url = global.URL.createObjectURL( blob );
+				var link = document.createElement( 'a' );
+
+				link.href = url;
+				link.download = 'personal-data.json';
+				document.body.appendChild( link );
+				link.click();
+				link.remove();
+				global.URL.revokeObjectURL( url );
+				App.toast( App.t( 'panel.privacy.downloaded' ) );
+			} )
+			.catch( function ( error ) { App.toast( error.message, true ); } );
+	};
+
+	/**
+	 * Take the person out of the record and leave the record.
+	 *
+	 * The word is typed rather than a button clicked, because this cannot be undone and a
+	 * confirmation dialogue is not a decision.
+	 */
+	Customers.erase = function ( person ) {
+		var App = Customers.App;
+
+		App.modal( {
+			title: App.t( 'panel.privacy.eraseTitle' ),
+			submitLabel: App.t( 'panel.privacy.erase' ),
+			body:
+				'<div class="stack">' +
+					'<p>' + esc( App.t( 'panel.privacy.eraseBody', {
+						name: person.name || person.email,
+					} ) ) + '</p>' +
+					'<p class="field__hint">' + esc( App.t( 'panel.privacy.eraseKeeps' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="erase-confirm">' +
+						esc( App.t( 'panel.privacy.typeErase' ) ) + '</label>' +
+						'<input class="input input--code" id="erase-confirm" ' +
+							'autocomplete="off" required></div>' +
+				'</div>',
+			onSubmit: function () {
+				if ( 'erase' !== document.getElementById( 'erase-confirm' ).value.trim().toLowerCase() ) {
+					App.toast( App.t( 'panel.privacy.typeErase' ), true );
+
+					return true;
+				}
+
+				return App.request( 'POST', '/customers/' + person.id + '/erase', { confirm: 'erase' } )
+					.then( function () {
+						App.toast( App.t( 'panel.privacy.erased' ) );
+						Customers.render( App );
+					} );
+			},
+		} );
+	};
+
 	Customers.download = function () {
 		var App = Customers.App;
 		var query = Customers.query();

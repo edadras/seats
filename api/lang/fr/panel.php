@@ -607,6 +607,17 @@ return [
         'noEventsBody' => 'Créez un événement et sa liste d’attente apparaîtra ici.',
     ],
 
+    'privacy' => [
+        'download' => 'Télécharger ses données',
+        'downloaded' => 'Ses données ont été téléchargées.',
+        'erase' => 'Effacer cette personne',
+        'eraseTitle' => 'Effacer cette personne ?',
+        'eraseBody' => 'Tout ce qui dit que c’était :name disparaît : le nom, l’adresse, le téléphone et tout ce qui a été saisi au paiement.',
+        'eraseKeeps' => 'Les réservations restent, sans personne : les montants, les dates, les places et les billets. Vos comptes tiennent toujours et un contrôle reste possible à satisfaire.',
+        'typeErase' => 'Tapez « erase » pour confirmer',
+        'erased' => 'La personne a été effacée de ces enregistrements.',
+    ],
+
     'questions' => [
         'title' => 'Questions au paiement',
         'description' => 'Ce que vous demandez en plus du nom. Les réponses figurent sur la réservation et sur la liste d’entrée, là où elles servent.',

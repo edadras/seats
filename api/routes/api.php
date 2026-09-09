@@ -117,6 +117,18 @@ Route::prefix('v1')->group(function () {
         Route::get('customers', [CustomerController::class, 'index']);
         Route::get('customers/export', [CustomerController::class, 'export']);
         Route::get('customers/{customer}', [CustomerController::class, 'show']);
+        /*
+         * The two things a person may ask for about themselves.
+         *
+         * Behind `account.manage` rather than `orders.view`: finding a booking and being handed
+         * somebody's whole history are different things to be trusted with. Erasure takes the
+         * person out of the record and leaves the record — an organiser still has to be able to
+         * tell a tax authority what last March came to.
+         */
+        Route::get('customers/{customer}/personal-data', [CustomerController::class, 'personalData'])
+            ->middleware('throttle:20,1');
+        Route::post('customers/{customer}/erase', [CustomerController::class, 'erase'])
+            ->middleware('throttle:10,1');
 
         // ---- The box office ---------------------------------------------------------------
         // Refunding was reachable only over the signed integration API, which is the right answer

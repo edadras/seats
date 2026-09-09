@@ -607,6 +607,17 @@ return [
         'noEventsBody' => 'Legen Sie eine Veranstaltung an, dann erscheint hier ihre Warteliste.',
     ],
 
+    'privacy' => [
+        'download' => 'Ihre Daten herunterladen',
+        'downloaded' => 'Die Daten wurden heruntergeladen.',
+        'erase' => 'Diese Person löschen',
+        'eraseTitle' => 'Diese Person löschen?',
+        'eraseBody' => 'Alles, was besagt, dass dies :name war, verschwindet: Name, Anschrift, Telefonnummer und alles, was an der Kasse eingetippt wurde.',
+        'eraseKeeps' => 'Die Buchungen bleiben, ohne Person: Beträge, Daten, Plätze und Tickets. Ihre Bücher gehen weiter auf, und eine Prüfung lässt sich beantworten.',
+        'typeErase' => 'Tippen Sie „erase“ zur Bestätigung',
+        'erased' => 'Die Person wurde aus diesen Aufzeichnungen gelöscht.',
+    ],
+
     'questions' => [
         'title' => 'Fragen an der Kasse',
         'description' => 'Was Sie Käufern über den Namen hinaus stellen. Die Antworten stehen auf der Buchung und auf der Einlassliste, wo sie gebraucht werden.',

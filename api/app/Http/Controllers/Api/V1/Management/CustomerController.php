@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Management;
 
 use App\Domain\Customers\CustomerDirectory;
+use App\Domain\Privacy\PersonalData;
 use App\Http\Controllers\Controller;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Http\Request;
@@ -131,6 +132,58 @@ class CustomerController extends Controller
     }
 
     /* --------------------------------------------------------------------------- helpers */
+
+    /**
+     * Everything held about one person, as a file they can be handed.
+     *
+     * Behind `account.manage` rather than `orders.view`: a box office needs to find a booking, and
+     * this is every address, answer and message in one document — a different thing to be trusted
+     * with.
+     */
+    public function personalData(Request $request, string $customer)
+    {
+        $this->authorize($request, 'account.manage');
+
+        $person = $this->directory->find($customer);
+
+        if (! $person) {
+            throw new NotFoundHttpException('No such customer.');
+        }
+
+        $data = app(PersonalData::class)->export($person['email']);
+
+        $this->audit->record('privacy.exported', null, ['orders' => count($data['orders'])]);
+
+        return response()->json($data, 200, [
+            'Content-Disposition' => 'attachment; filename="personal-data.json"',
+            // Somebody's whole history with this organiser. Nothing in between keeps a copy.
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
+     * Take the person out of the record and leave the record.
+     *
+     * Not deletion: the amounts, the dates and the seats stay, because an organiser still has to be
+     * able to tell a tax authority what last March came to, and "somebody asked us to delete it" is
+     * not an answer a tax authority takes. What goes is everything that says who it was.
+     */
+    public function erase(Request $request, string $customer)
+    {
+        $this->authorize($request, 'account.manage');
+
+        // Typed back rather than clicked through: this cannot be undone, and a confirmation
+        // dialogue is not a decision.
+        $request->validate(['confirm' => ['required', 'in:erase']]);
+
+        $person = $this->directory->find($customer);
+
+        if (! $person) {
+            throw new NotFoundHttpException('No such customer.');
+        }
+
+        return response()->json(['erased' => app(PersonalData::class)->erase($person['email'])]);
+    }
 
     private function filters(Request $request): array
     {

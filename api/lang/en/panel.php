@@ -619,6 +619,17 @@ return [
         'noEventsBody' => 'Create an event and its waiting list appears here.',
     ],
 
+    'privacy' => [
+        'download' => 'Download their data',
+        'downloaded' => 'Their data was downloaded.',
+        'erase' => 'Erase this person',
+        'eraseTitle' => 'Erase this person?',
+        'eraseBody' => 'Everything that says this was :name goes: the name, the address, the phone number, and everything they typed at a checkout.',
+        'eraseKeeps' => 'The bookings stay, attached to nobody: the amounts, the dates, the seats and the tickets. Your books still add up, and an auditor can still be answered.',
+        'typeErase' => 'Type “erase” to confirm',
+        'erased' => 'The person has been erased from these records.',
+    ],
+
     'questions' => [
         'title' => 'Checkout questions',
         'description' => 'What to ask a buyer beyond their name. Answers appear on the booking and on the door list, where they get acted on.',

@@ -606,6 +606,17 @@ return [
         'noEventsBody' => 'Crea un evento e qui comparirà la sua lista d’attesa.',
     ],
 
+    'privacy' => [
+        'download' => 'Scarica i suoi dati',
+        'downloaded' => 'I suoi dati sono stati scaricati.',
+        'erase' => 'Cancella questa persona',
+        'eraseTitle' => 'Cancellare questa persona?',
+        'eraseBody' => 'Sparisce tutto ciò che dice che era :name: il nome, l’indirizzo, il telefono e tutto quello che ha scritto al pagamento.',
+        'eraseKeeps' => 'Le prenotazioni restano, senza intestatario: importi, date, posti e biglietti. I conti tornano ancora e a un controllo si può rispondere.',
+        'typeErase' => 'Scrivi «erase» per confermare',
+        'erased' => 'La persona è stata cancellata da questi registri.',
+    ],
+
     'questions' => [
         'title' => 'Domande al pagamento',
         'description' => 'Cosa chiedere oltre al nome. Le risposte compaiono sulla prenotazione e sulla lista d’ingresso, dove servono.',

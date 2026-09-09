@@ -2868,6 +2868,92 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /customers/{customer}/personal-data:
+    parameters:
+      - name: customer
+        in: path
+        required: true
+        description: The SHA-256 of the buyer's address, as the directory reports it.
+        schema: { type: string }
+    get:
+      operationId: exportPersonalData
+      tags: [Customers]
+      summary: Everything held about one person
+      description: |
+        Requires `account.manage`, not `orders.view`: a box office needs to find a booking, and this
+        is every address, answer and message in one document — a different thing to be trusted with.
+
+        Deliberately not a summary. The point of the exercise is that somebody can see what is
+        held, so this returns the rows themselves: every order, every seat, every answer they typed,
+        every message sent to them and whether it arrived. The export is audited.
+      responses:
+        "200":
+          description: The data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exported_at: { type: string, format: date-time }
+                  person: { type: object }
+                  orders: { type: array, items: { type: object } }
+                  answers: { type: array, items: { type: object } }
+                  messages: { type: array, items: { type: object } }
+                  waiting_lists: { type: array, items: { type: object } }
+                  tickets_given_away: { type: array, items: { type: object } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /customers/{customer}/erase:
+    parameters:
+      - name: customer
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: erasePerson
+      tags: [Customers]
+      summary: Take the person out of the record and leave the record
+      description: |
+        Requires `account.manage`.
+
+        Not deletion. The name, the address, the phone number, the invoice details and everything
+        they typed at a checkout are removed; the amounts, the dates, the seats and the tickets
+        stay, attached to nobody. An organiser still has to be able to tell a tax authority what
+        last March came to, and "somebody asked us to delete it" is not an answer a tax authority
+        takes.
+
+        The address is nulled rather than replaced with a placeholder, so an erased buyer falls out
+        of the customer directory instead of becoming one anonymous person who bought forty times.
+        `confirm` must be the literal word `erase`: this cannot be undone, and a confirmation
+        dialogue is not a decision.
+
+        The audit entry names no address — a log recording who was erased would be a list of
+        exactly the people who asked not to be on one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm: { type: string, enum: [erase] }
+      responses:
+        "200":
+          description: What was changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  erased:
+                    type: object
+                    additionalProperties: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/counter:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
