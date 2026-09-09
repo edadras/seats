@@ -120,6 +120,12 @@ return [
     'yourSeats' => 'Your seats',
     'total' => 'Total',
     'heldUntil' => 'Held until :time.',
+    'questions' => [
+        'title' => 'A few questions',
+        'choose' => 'Choose one',
+        'required' => '“:label” is needed.',
+    ],
+
     'transfer' => [
         'give' => 'Give this ticket to somebody',
         'send' => 'Send it to them',

@@ -115,6 +115,18 @@ class OrderController extends Controller
             // or tax rate changed since must not rewrite an old booking's history.
             'totals' => $order->metadata['totals'] ?? null,
             'discount' => $order->metadata['discount'] ?? null,
+            // What the buyer was asked at checkout. The label is the one they saw, not the one the
+            // question carries now — an organiser rewording it must not change what a past answer
+            // appears to be an answer to.
+            'answers' => \App\Models\QuestionAnswer::where('external_order_row_id', $order->id)
+                ->orderBy('created_at')
+                ->get()
+                ->map(fn ($answer) => [
+                    'label' => $answer->label,
+                    'value' => $answer->value,
+                    'allocation_id' => $answer->allocation_id,
+                ])
+                ->values(),
         ]);
     }
 

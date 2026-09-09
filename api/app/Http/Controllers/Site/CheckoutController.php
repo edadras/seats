@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Site;
 use App\Domain\Discounts\DiscountOffer;
 use App\Domain\Discounts\Discounts;
 use App\Domain\Invoicing\InvoiceIssuer;
+use App\Domain\Questions\CheckoutQuestions;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\StorefrontCheckout;
 use App\Domain\Sites\Themes;
@@ -87,7 +88,80 @@ class CheckoutController extends Controller
             // Only asked for where an invoice can actually be issued. A company address field on a
             // site that cannot produce the document is a question with no purpose.
             'invoices' => $site->offersInvoices(),
+            // The organiser's own questions, expanded per seat where they are asked per seat.
+            'questions' => app(CheckoutQuestions::class)->fields($hold->event, $this->places($hold)),
         ]);
+    }
+
+    /**
+     * One entry per ticket being bought, named the way a person would name it.
+     *
+     * A named seat is its own place; a standing area sold four at a time is four places, numbered,
+     * because "guest 2 of 4 in the pit" is a thing somebody at a door has to be able to find.
+     *
+     * @return list<array{key: string, label: string}>
+     */
+    private function places(Hold $hold): array
+    {
+        $snapshot = $hold->price_snapshot['decoded'] ?? [];
+        $places = [];
+
+        foreach ($snapshot['seats'] ?? [] as $seat) {
+            $places[] = [
+                'key' => (string) $seat['seat_id'],
+                'label' => trim(implode(' · ', array_filter([
+                    $seat['section'] ?? null, $seat['row'] ?? null, $seat['label'] ?? null,
+                ]))),
+            ];
+        }
+
+        foreach ($snapshot['areas'] ?? [] as $index => $area) {
+            for ($n = 1; $n <= max(1, (int) ($area['quantity'] ?? 1)); $n++) {
+                $places[] = [
+                    'key' => 'a'.$index.'p'.$n,
+                    'label' => ($area['label'] ?? __('site.standing')).' · '.Money::number($n),
+                ];
+            }
+        }
+
+        return $places;
+    }
+
+    /**
+     * Which allocation each place turned into, once the order exists.
+     *
+     * Standing places share an allocation — four in the pit is one row of quantity four — so the
+     * same allocation appears against several place keys, which is right: four guests, one line.
+     *
+     * @return array<string, string>
+     */
+    private function placeAllocations(Hold $hold, ExternalOrder $order): array
+    {
+        $order->loadMissing('allocations');
+        $map = [];
+        $areas = $order->allocations->whereNull('seat_id')->values();
+
+        foreach ($order->allocations as $allocation) {
+            if ($allocation->seat_id) {
+                $map[(string) $allocation->seat_id] = $allocation->id;
+            }
+        }
+
+        $snapshot = $hold->price_snapshot['decoded'] ?? [];
+
+        foreach ($snapshot['areas'] ?? [] as $index => $area) {
+            $allocation = $areas[$index] ?? null;
+
+            if (! $allocation) {
+                continue;
+            }
+
+            for ($n = 1; $n <= max(1, (int) ($area['quantity'] ?? 1)); $n++) {
+                $map['a'.$index.'p'.$n] = $allocation->id;
+            }
+        }
+
+        return $map;
     }
 
     /**
@@ -190,6 +264,16 @@ class CheckoutController extends Controller
         // typing the code and pressing pay is time in which it could have run out.
         $offer = $this->offerFor($request, $hold);
 
+        /*
+         * The organiser's own questions, checked before the money moves.
+         *
+         * A required answer left blank has to stop a purchase — otherwise it is collected on a page
+         * nobody comes back to — and it has to stop it before the gateway is involved rather than
+         * after, when the seats are sold and the answer is still missing.
+         */
+        $questions = app(CheckoutQuestions::class);
+        $answers = $questions->validate($hold->event, $this->places($hold), $request->all());
+
         $billing = ($site->offersInvoices() && $request->boolean('invoice')) ? array_filter([
             'company' => $data['company'] ?? null,
             'tax_number' => $data['tax_number'] ?? null,
@@ -220,6 +304,10 @@ class CheckoutController extends Controller
         }
 
         $request->session()->forget('seatmap_discount');
+
+        // Written once the allocations exist: an answer about a seat, with no seat to point at, is
+        // an answer nobody can find again.
+        $questions->store($hold->event, $order, $answers, $this->placeAllocations($hold, $order));
 
         $request->session()->forget('seatmap_hold');
         $request->session()->put('seatmap_order', $order->external_order_id);

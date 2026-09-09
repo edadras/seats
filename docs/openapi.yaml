@@ -550,6 +550,75 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /events/{event}/questions:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: listEventQuestions
+      tags: [Events]
+      summary: What this event asks a buyer at checkout
+      description: |
+        Requires `events.view`. `answered` counts the answers already given, which is the reason a
+        question cannot be removed — said on the row rather than in an error afterwards.
+      responses:
+        "200":
+          description: The questions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EventQuestion" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: replaceEventQuestions
+      tags: [Events]
+      summary: Replace the whole set of checkout questions
+      description: |
+        Requires `events.manage`. Saved as a whole list, like the ticket types and the price zones:
+        what a checkout asks is one decision about the event, and editing it a row at a time is how
+        a form ends up with last season's question still on it.
+
+        `scope` is the decision that matters. An `order` question is asked once of whoever is
+        booking — "any access requirements" has one answer. A `ticket` question is asked of every
+        place, because "what is this guest's name" has one answer per seat, and the door list reads
+        it beside that seat.
+
+        A question somebody has answered cannot be left out of the list: the answers point at it,
+        and removing it would leave a door list full of answers to a question nobody can read. Hide
+        it instead — that stops it being asked and leaves what people said intact.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questions]
+              properties:
+                questions:
+                  type: array
+                  maxItems: 20
+                  items: { $ref: "#/components/schemas/EventQuestionWrite" }
+      responses:
+        "200":
+          description: The questions, as saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EventQuestion" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A question somebody has answered was left out of the list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/ticket-types:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -4666,6 +4735,17 @@ components:
         code: { type: string, description: "The ticket code's visible prefix, for reading aloud." }
         arrived: { type: boolean }
         arrived_at: { type: [string, "null"], format: date-time }
+        answers:
+          type: array
+          description: >
+            What this person was asked at checkout and said — a dietary requirement, a car
+            registration, the name of the guest this seat is for. The door is where those get
+            acted on.
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              value: { type: string }
 
     WaitingListEntry:
       type: object
@@ -4684,6 +4764,43 @@ components:
             Told, and their window has not run out. "Notified" alone would be a half-truth an hour
             later, and an organiser deciding whether to release more seats needs to know which of
             the two it is.
+
+    EventQuestion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        help: { type: [string, "null"] }
+        kind: { type: string, enum: [text, choice, checkbox] }
+        options:
+          type: array
+          items: { type: string }
+          description: "Present for `choice`; empty otherwise."
+        required: { type: boolean }
+        scope:
+          type: string
+          enum: [order, ticket]
+          description: "`order` is asked once of the booking; `ticket` once of every place."
+        position: { type: integer }
+        status: { type: string, enum: [active, hidden] }
+        answered: { type: integer, description: "Answers already given." }
+
+    EventQuestionWrite:
+      type: object
+      required: [label, kind, scope]
+      properties:
+        id: { type: [string, "null"], format: uuid }
+        label: { type: string, maxLength: 160 }
+        help: { type: [string, "null"], maxLength: 240 }
+        kind: { type: string, enum: [text, choice, checkbox] }
+        options:
+          type: array
+          maxItems: 40
+          items: { type: string, maxLength: 120 }
+          description: "Kept for `choice` and discarded otherwise."
+        required: { type: boolean }
+        scope: { type: string, enum: [order, ticket] }
+        status: { type: string, enum: [active, hidden] }
 
     Money:
       type: object

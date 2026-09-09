@@ -116,6 +116,12 @@ return [
     'yourSeats' => 'I tuoi posti',
     'total' => 'Totale',
     'heldUntil' => 'Tenuti fino alle :time.',
+    'questions' => [
+        'title' => 'Qualche domanda',
+        'choose' => 'Scegli',
+        'required' => '«:label» è obbligatorio.',
+    ],
+
     'transfer' => [
         'give' => 'Regala questo biglietto',
         'send' => 'Inviaglielo',

@@ -116,6 +116,12 @@ return [
     'yourSeats' => 'Vos places',
     'total' => 'Total',
     'heldUntil' => 'Retenues jusqu’à :time.',
+    'questions' => [
+        'title' => 'Quelques questions',
+        'choose' => 'Choisissez',
+        'required' => '« :label » est requis.',
+    ],
+
     'transfer' => [
         'give' => 'Donner ce billet à quelqu’un',
         'send' => 'Le lui envoyer',

@@ -219,6 +219,7 @@
 				'</div>' +
 
 				Orders.breakdown( App, order ) +
+				Orders.answers( App, order ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'panel.orders.whatWasBought' ) ) + '</h3>' +
 				App.table(
@@ -427,6 +428,27 @@
 						'<td>' + esc( row[ 0 ] ) + '</td>' +
 						'<td class="tnum">' + esc( App.money( row[ 1 ], order.currency ) ) + '</td>' +
 					'</tr>';
+				} ).join( '' )
+			);
+	};
+
+	/**
+	 * What this buyer was asked at checkout, and said.
+	 *
+	 * Shown with the wording they saw rather than the wording the question carries now: an
+	 * organiser who rewords a question must not change what a past answer appears to answer.
+	 */
+	Orders.answers = function ( App, order ) {
+		if ( ! order.answers || ! order.answers.length ) {
+			return '';
+		}
+
+		return '<h3 class="subhead">' + esc( App.t( 'panel.orders.answers' ) ) + '</h3>' +
+			App.table(
+				[ App.t( 'panel.orders.question' ), App.t( 'panel.orders.answer' ) ],
+				order.answers.map( function ( answer ) {
+					return '<tr><td>' + esc( answer.label ) + '</td>' +
+						'<td>' + esc( answer.value || '—' ) + '</td></tr>';
 				} ).join( '' )
 			);
 	};

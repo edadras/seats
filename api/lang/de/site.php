@@ -117,6 +117,12 @@ return [
     'yourSeats' => 'Ihre Plätze',
     'total' => 'Summe',
     'heldUntil' => 'Reserviert bis :time.',
+    'questions' => [
+        'title' => 'Ein paar Fragen',
+        'choose' => 'Bitte wählen',
+        'required' => '„:label“ wird benötigt.',
+    ],
+
     'transfer' => [
         'give' => 'Dieses Ticket weitergeben',
         'send' => 'Ticket senden',

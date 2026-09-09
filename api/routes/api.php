@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\DoorListController;
 use App\Http\Controllers\Api\V1\Management\EventController;
+use App\Http\Controllers\Api\V1\Management\EventQuestionController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
@@ -91,6 +92,10 @@ Route::prefix('v1')->group(function () {
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
         // Who the tickets are for. Beside pricing because that is what a concession is: an
         // adjustment to the price the seat already has.
+        // What the checkout asks. Beside the ticket types because both are decisions about what a
+        // buyer is put through, saved as a whole list for the same reason.
+        Route::get('events/{event}/questions', [EventQuestionController::class, 'index']);
+        Route::put('events/{event}/questions', [EventQuestionController::class, 'replace']);
         Route::get('events/{event}/ticket-types', [TicketTypeController::class, 'index']);
         Route::put('events/{event}/ticket-types', [TicketTypeController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty

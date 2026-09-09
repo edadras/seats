@@ -35,6 +35,7 @@ class DoorList
             ->whereIn('tickets.status', ['issued', 'used'])
             ->select([
                 'tickets.id',
+                'allocations.id as allocation_id',
                 'tickets.status',
                 'tickets.used_at',
                 'tickets.token_prefix',
@@ -97,8 +98,43 @@ class DoorList
         ];
     }
 
+    /**
+     * What each person on tonight's list was asked, and said.
+     *
+     * Fetched for a page of rows at once rather than per row: a door list of twenty thousand with
+     * a query per row is a door list that does not load.
+     *
+     * @param  list<object>  $rows
+     * @return array<string, list<array{label: string, value: string}>> allocation id => answers
+     */
+    public function answersFor(Event $event, array $rows): array
+    {
+        $allocationIds = array_values(array_filter(array_map(
+            fn (object $row) => $row->allocation_id ?? null,
+            $rows,
+        )));
+
+        if ($allocationIds === []) {
+            return [];
+        }
+
+        $answers = [];
+
+        $found = DB::table('question_answers')
+            ->where('event_id', $event->id)
+            ->whereIn('allocation_id', $allocationIds)
+            ->orderBy('created_at')
+            ->get(['allocation_id', 'label', 'value']);
+
+        foreach ($found as $row) {
+            $answers[$row->allocation_id][] = ['label' => $row->label, 'value' => (string) $row->value];
+        }
+
+        return $answers;
+    }
+
     /** One row, shaped the same for every surface that shows it. */
-    public function present(object $row): array
+    public function present(object $row, array $answers = []): array
     {
         return [
             'id' => $row->id,
@@ -116,6 +152,9 @@ class DoorList
             'code' => $row->token_prefix,
             'arrived' => 'used' === $row->status,
             'arrived_at' => $row->used_at,
+            // What this person was asked at checkout — a dietary requirement, a car registration,
+            // the name of the guest this seat is for. The door is where those get acted on.
+            'answers' => $answers[$row->allocation_id ?? ''] ?? [],
         ];
     }
 }

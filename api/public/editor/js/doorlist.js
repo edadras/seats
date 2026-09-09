@@ -180,7 +180,13 @@
 					'<td class="table__primary">' + esc( row.name || '—' ) +
 						( row.ticket_type
 							? '<span class="muted on-own-line">' + esc( row.ticket_type ) + '</span>'
-							: '' ) + '</td>' +
+							: '' ) +
+						// What they were asked at checkout: a dietary requirement, a car
+						// registration, a guest's name. The door is where those get acted on.
+						( row.answers || [] ).map( function ( answer ) {
+							return '<span class="muted on-own-line">' + esc( answer.label ) + ': ' +
+								esc( answer.value ) + '</span>';
+						} ).join( '' ) + '</td>' +
 					'<td>' + esc( row.seat || '—' ) +
 						( row.quantity > 1
 							? ' <span class="muted">× ' + esc( App.number( row.quantity ) ) + '</span>'

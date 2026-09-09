@@ -35,6 +35,56 @@
                     </div>
                 </div>
 
+                @if (count($questions))
+                    {{-- The organiser's own questions. Their shape is data, not code, so the venue
+                         that needs car registrations and the one that needs dietary requirements
+                         get the same feature rather than two bespoke ones. --}}
+                    <div class="checkout__step">
+                        <h2>{{ __('site.questions.title') }}</h2>
+
+                        @foreach ($questions as $question)
+                            <div class="field">
+                                <label for="{{ $question['name'] }}">
+                                    {{ $question['label'] }}
+                                    @if ($question['about'])
+                                        <span class="muted">· {{ $question['about'] }}</span>
+                                    @endif
+                                    @unless ($question['required'])
+                                        <span class="muted">{{ __('site.optional') }}</span>
+                                    @endunless
+                                </label>
+
+                                @if ('choice' === $question['kind'])
+                                    <select id="{{ $question['name'] }}" name="{{ $question['name'] }}"
+                                            @required($question['required'])>
+                                        <option value="">{{ __('site.questions.choose') }}</option>
+                                        @foreach ($question['choices'] as $choice)
+                                            <option value="{{ $choice }}"
+                                                    @selected(old($question['name']) === $choice)>{{ $choice }}</option>
+                                        @endforeach
+                                    </select>
+                                @elseif ('checkbox' === $question['kind'])
+                                    <label class="pay">
+                                        <input type="checkbox" name="{{ $question['name'] }}" value="1"
+                                               @checked(old($question['name'])) @required($question['required'])>
+                                        <span>{{ $question['help'] ?: $question['label'] }}</span>
+                                    </label>
+                                @else
+                                    <input id="{{ $question['name'] }}" name="{{ $question['name'] }}"
+                                           maxlength="2000" value="{{ old($question['name']) }}"
+                                           @required($question['required'])>
+                                @endif
+
+                                @if ($question['help'] && 'checkbox' !== $question['kind'])
+                                    <p class="field__hint">{{ $question['help'] }}</p>
+                                @endif
+
+                                @error($question['name']) <p class="field__error">{{ $message }}</p> @enderror
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
                 @if ($invoices)
                     {{-- A company address is a question most buyers cannot answer, so it is behind
                          a checkbox and closed by default. Native <details>: no JavaScript, and it

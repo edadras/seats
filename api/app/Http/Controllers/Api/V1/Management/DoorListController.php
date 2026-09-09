@@ -41,8 +41,12 @@ class DoorListController extends Controller
         $rows = $this->list->query($event, $filters)
             ->paginate(min(200, (int) ($filters['per_page'] ?? 50)));
 
+        $answers = $this->list->answersFor($event, $rows->items());
+
         return response()->json([
-            'data' => collect($rows->items())->map(fn ($row) => $this->list->present($row))->values(),
+            'data' => collect($rows->items())
+                ->map(fn ($row) => $this->list->present($row, $answers))
+                ->values(),
             'meta' => [
                 'page' => $rows->currentPage(),
                 'per_page' => $rows->perPage(),
@@ -89,11 +93,15 @@ class DoorListController extends Controller
             __('panel.doorList.code'),
             __('panel.doorList.arrived'),
             __('panel.doorList.arrivedAt'),
+            // One column for everything they were asked, rather than a column per question: the
+            // questions differ per event, and a file whose shape changes with the event is a file
+            // nobody can build a spreadsheet against.
+            __('panel.doorList.answers'),
         ];
 
         $filename = 'door-list-'.preg_replace('/[^A-Za-z0-9-]+/', '-', mb_strtolower($event->name)).'.csv';
 
-        return response()->streamDownload(function () use ($query, $list, $headings) {
+        return response()->streamDownload(function () use ($query, $list, $headings, $event) {
             $handle = fopen('php://output', 'wb');
 
             // The same BOM the other exports write: a spreadsheet on Windows opens Persian and
@@ -103,9 +111,11 @@ class DoorListController extends Controller
 
             // Chunked, because a sold-out arena is twenty thousand rows and holding them all in
             // memory to write a file is how an export becomes an outage.
-            $query->orderBy('tickets.id')->chunk(500, function ($rows) use ($handle, $list) {
+            $query->orderBy('tickets.id')->chunk(500, function ($rows) use ($handle, $list, $event) {
+                $answers = $list->answersFor($event, $rows->all());
+
                 foreach ($rows as $raw) {
-                    $row = $list->present($raw);
+                    $row = $list->present($raw, $answers);
 
                     fputcsv($handle, [
                         $row['name'],
@@ -116,6 +126,10 @@ class DoorListController extends Controller
                         $row['code'],
                         $row['arrived'] ? __('panel.doorList.yes') : __('panel.doorList.no'),
                         $row['arrived_at'] ? Dates::shortWhen(new \DateTimeImmutable($row['arrived_at'])) : '',
+                        implode('; ', array_map(
+                            fn (array $answer) => $answer['label'].': '.$answer['value'],
+                            $row['answers'],
+                        )),
                     ]);
                 }
             });

@@ -116,6 +116,12 @@ return [
     'yourSeats' => 'مقاعدك',
     'total' => 'الإجمالي',
     'heldUntil' => 'محجوزة حتى :time.',
+    'questions' => [
+        'title' => 'بضعة أسئلة',
+        'choose' => 'اختر واحدًا',
+        'required' => '«:label» مطلوب.',
+    ],
+
     'transfer' => [
         'give' => 'امنح هذه التذكرة لشخص',
         'send' => 'أرسلها إليه',
