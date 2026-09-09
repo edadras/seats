@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
+use App\Http\Controllers\Api\V1\Management\SettlementController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
@@ -208,6 +209,13 @@ Route::prefix('v1')->group(function () {
         Route::delete('reports/{report}', [ReportController::class, 'destroy']);
         Route::get('reports/{report}/run', [ReportController::class, 'runSaved']);
         Route::get('reports/{report}/export', [ReportController::class, 'export']);
+
+        // What the organiser is owed, and what the platform kept. Its own screen rather than a
+        // report definition: the arithmetic of a refund and a commission is not a sum over a
+        // column, and a builder that could express it would be a query box.
+        Route::get('settlement', [SettlementController::class, 'index']);
+        Route::get('settlement/export', [SettlementController::class, 'export']);
+        Route::get('settlement/statement', [SettlementController::class, 'statement']);
 
         Route::get('report-pages', [ReportPageController::class, 'index']);
         Route::post('report-pages', [ReportPageController::class, 'store']);

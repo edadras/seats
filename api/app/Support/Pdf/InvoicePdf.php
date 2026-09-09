@@ -3,9 +3,6 @@
 namespace App\Support\Pdf;
 
 use App\Models\Invoice;
-use Mpdf\Config\ConfigVariables;
-use Mpdf\Config\FontVariables;
-use Mpdf\Mpdf;
 use Mpdf\MpdfException;
 
 /**
@@ -18,6 +15,8 @@ use Mpdf\MpdfException;
  */
 class InvoicePdf
 {
+    public function __construct(private readonly PdfEngine $engine) {}
+
     /**
      * @throws MpdfException
      */
@@ -34,51 +33,12 @@ class InvoicePdf
             ),
         ])->render();
 
-        $pdf = $this->engine($rtl);
+        $pdf = $this->engine->make($rtl, 18);
         $pdf->SetTitle(__('site.invoice.title').' '.$invoice->number);
         $pdf->SetAuthor($invoice->issuer['name'] ?? '');
         $pdf->SetCreator('Seatmap');
         $pdf->WriteHTML($html);
 
         return $pdf->Output('', 'S');
-    }
-
-    /**
-     * @throws MpdfException
-     */
-    private function engine(bool $rtl): Mpdf
-    {
-        $temp = storage_path('app/mpdf');
-
-        if (! is_dir($temp)) {
-            mkdir($temp, 0775, true);
-        }
-
-        $pdf = new Mpdf([
-            'tempDir' => $temp,
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'margin_left' => 18,
-            'margin_right' => 18,
-            'margin_top' => 18,
-            'margin_bottom' => 18,
-            'fontDir' => array_merge(
-                (new ConfigVariables())->getDefaults()['fontDir'],
-                [resource_path('fonts')]
-            ),
-            'fontdata' => (new FontVariables())->getDefaults()['fontdata'] + [
-                'vazirmatn' => [
-                    'R' => 'Vazirmatn-Regular.ttf',
-                    'B' => 'Vazirmatn-Bold.ttf',
-                    'useOTL' => 0xFF,
-                    'useKashida' => 75,
-                ],
-            ],
-            'default_font' => 'vazirmatn',
-        ]);
-
-        $pdf->SetDirectionality($rtl ? 'rtl' : 'ltr');
-
-        return $pdf;
     }
 }

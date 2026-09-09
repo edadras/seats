@@ -10,9 +10,15 @@ class Plan extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $fillable = ['key', 'name', 'price_amount', 'currency', 'interval', 'limits', 'is_active'];
+    protected $fillable = ['key', 'name', 'price_amount', 'commission_rate', 'currency', 'interval', 'limits', 'is_active'];
 
-    protected $casts = ['limits' => 'array', 'is_active' => 'boolean', 'price_amount' => 'integer'];
+    protected $casts = [
+        'limits' => 'array',
+        'is_active' => 'boolean',
+        'price_amount' => 'integer',
+        // Basis points: 250 is 2.5%. The platform's share of what an organiser keeps.
+        'commission_rate' => 'integer',
+    ];
 
     /** Null means "no limit" for this metric. */
     public function limit(string $key): ?int

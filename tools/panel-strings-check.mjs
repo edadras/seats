@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scriptDir = path.join(root, 'api', 'public', 'editor', 'js');
 const phpDir = path.join(root, 'api', 'app');
+const viewDir = path.join(root, 'api', 'resources', 'views');
 
 /*
  * The console is checked apart from the panel because it is a separate application that happens to
@@ -40,8 +41,9 @@ const phpDir = path.join(root, 'api', 'app');
  */
 const SURFACES = [
 	// The panel is not only JavaScript: a handful of its words are written by the server, because
-	// the thing they label is a file the server composes — a CSV heading is a panel string that a
-	// controller has to know. Those lookups are counted too, or the check would call them dead.
+	// the thing they label is a file the server composes — a CSV heading, or the settlement
+	// statement's Blade template, is a panel string that the server has to know. Controllers and
+	// views are read too, or the check would call those keys dead.
 	{ label: 'panel', namespaces: ['panel'], scripts: (file) => file !== 'console.js', php: true },
 	{ label: 'console', namespaces: ['console'], borrowed: ['team'], scripts: (file) => file === 'console.js' },
 ];
@@ -107,7 +109,7 @@ for (const surface of SURFACES) {
 	}
 
 	if (surface.php) {
-		for (const file of phpFiles(phpDir)) {
+		for (const file of [...phpFiles(phpDir), ...phpFiles(viewDir)]) {
 			for (const match of fs.readFileSync(file, 'utf8').matchAll(pattern)) {
 				(match[2] ? prefixes : exact).add(match[1]);
 			}

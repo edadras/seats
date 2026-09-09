@@ -52,6 +52,7 @@
 		] },
 		{ group: 'insight', items: [
 			{ key: 'reports', icon: 'chart' },
+			{ key: 'settlement', icon: 'wallet' },
 		] },
 		{ group: 'account', items: [
 			{ key: 'connections', icon: 'plug' },
@@ -601,6 +602,7 @@
 			case 'sites': return window.SeatmapSites.renderList( this );
 			case 'themes': return window.SeatmapThemes.render( this );
 			case 'reports': return window.SeatmapReports.render( this );
+			case 'settlement': return window.SeatmapSettlement.render( this );
 			case 'messaging': return window.SeatmapMessaging.render( this );
 			case 'modules': return window.SeatmapModules.render( this );
 			case 'team': return window.SeatmapTeam.render( this );

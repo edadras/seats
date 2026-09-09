@@ -94,6 +94,9 @@ class DatabaseSeeder extends Seeder
             'starter' => Plan::firstOrCreate(['key' => 'starter'], [
                 'name' => 'Starter',
                 'price_amount' => 4900,
+                // Basis points: 500 is 5% of what an organiser keeps. A smaller plan pays a
+                // larger share, which is how ticketing is actually priced.
+                'commission_rate' => 500,
                 'currency' => 'EUR',
                 'interval' => 'month',
                 'limits' => [
@@ -103,6 +106,7 @@ class DatabaseSeeder extends Seeder
             'pro' => Plan::firstOrCreate(['key' => 'pro'], [
                 'name' => 'Professional',
                 'price_amount' => 14900,
+                'commission_rate' => 250,
                 'currency' => 'EUR',
                 'interval' => 'month',
                 'limits' => [

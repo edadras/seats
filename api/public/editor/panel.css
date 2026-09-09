@@ -1217,6 +1217,24 @@
    read as a form to fill in rather than as a way to narrow a list. */
 .filters > .select { flex: 0 1 16rem; min-inline-size: 0; }
 
+/* A date is the one filter that cannot say what it is on its own: an empty date field reads as
+   "mm/dd/yyyy" and nothing else, so "From" and "To" are written beside it rather than only in an
+   aria-label. */
+.filters__dated {
+	display: flex;
+	align-items: center;
+	gap: var(--s-2);
+	flex: 0 1 15rem;
+}
+
+.filters__dated > span {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	white-space: nowrap;
+}
+
+.filters__dated .input { flex: 1 1 auto; }
+
 /* ============================================================================== modules
  *
  * A card per module, each carrying its own switch and its own settings. Deliberately not a table:
@@ -2313,6 +2331,10 @@
 /* The overview's tile without its hover: on a customer's page these are facts, not doors. */
 .tile--static { cursor: default; }
 .tile--static:hover { border-color: var(--border-subtle); box-shadow: var(--shadow-xs); transform: none; }
+
+/* The figure at the end of the arithmetic — what is actually owed — carries the eye. */
+.tile--accent { border-color: var(--accent); background: var(--accent-soft); }
+.tile--accent .tile__value { color: var(--text-accent); }
 
 .order-card {
 	padding: var(--s-4) var(--s-5);

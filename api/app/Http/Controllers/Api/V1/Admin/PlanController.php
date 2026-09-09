@@ -38,6 +38,7 @@ class PlanController extends Controller
                 'key' => $plan->key,
                 'name' => $plan->name,
                 'price_amount' => $plan->price_amount,
+                'commission_rate' => (int) $plan->commission_rate,
                 'currency' => $plan->currency,
                 'interval' => $plan->interval,
                 'limits' => $plan->limits ?? [],
@@ -58,6 +59,7 @@ class PlanController extends Controller
             'key' => Str::slug($data['key']),
             'name' => $data['name'],
             'price_amount' => $data['price_amount'],
+            'commission_rate' => $data['commission_rate'] ?? 0,
             'currency' => mb_strtoupper($data['currency']),
             'interval' => $data['interval'],
             'limits' => $this->limits($data['limits'] ?? []),
@@ -83,11 +85,16 @@ class PlanController extends Controller
          * thing somebody should be able to find out later. So the old price is in the log, not
          * just the new one.
          */
-        $before = ['price_amount' => $plan->price_amount, 'currency' => $plan->currency];
+        $before = [
+            'price_amount' => $plan->price_amount,
+            'currency' => $plan->currency,
+            'commission_rate' => (int) $plan->commission_rate,
+        ];
 
         $plan->fill(array_filter([
             'name' => $data['name'] ?? null,
             'price_amount' => $data['price_amount'] ?? null,
+            'commission_rate' => $data['commission_rate'] ?? null,
             'currency' => isset($data['currency']) ? mb_strtoupper($data['currency']) : null,
             'interval' => $data['interval'] ?? null,
         ], fn ($value) => null !== $value));
@@ -105,7 +112,11 @@ class PlanController extends Controller
         PlatformAuditLog::write($request->user()->id, 'plan.updated', null, [
             'key' => $plan->key,
             'from' => $before,
-            'to' => ['price_amount' => $plan->price_amount, 'currency' => $plan->currency],
+            'to' => [
+                'price_amount' => $plan->price_amount,
+                'currency' => $plan->currency,
+                'commission_rate' => (int) $plan->commission_rate,
+            ],
             'active' => $plan->is_active,
         ], $request->ip());
 
@@ -146,6 +157,9 @@ class PlanController extends Controller
             'key' => [$creating ? 'required' : 'prohibited', 'string', 'max:40', 'regex:/^[a-z0-9-]+$/'],
             'name' => [$required, 'string', 'max:80'],
             'price_amount' => [$required, 'integer', 'min:0'],
+            // Basis points, capped at half: a commission over 50% is a typo, and a plan saved
+            // with one settles every event on it wrongly until somebody notices.
+            'commission_rate' => ['sometimes', 'integer', 'min:0', 'max:5000'],
             'currency' => [$required, 'string', 'size:3', 'alpha'],
             'interval' => [$required, 'in:month,year'],
             'limits' => ['sometimes', 'array'],
@@ -185,6 +199,7 @@ class PlanController extends Controller
             'key' => $plan->key,
             'name' => $plan->name,
             'price_amount' => $plan->price_amount,
+            'commission_rate' => (int) $plan->commission_rate,
             'currency' => $plan->currency,
             'interval' => $plan->interval,
             'limits' => $plan->limits ?? [],

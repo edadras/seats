@@ -545,6 +545,11 @@
 				return '<tr><td class="table__primary">' + esc( plan.name ) +
 						'<span class="muted on-own-line">' + esc( plan.key ) + '</span></td>' +
 					'<td class="tnum">' + esc( price( plan ) ) + '</td>' +
+					'<td class="tnum">' + ( plan.commission_rate
+						? esc( t( 'console.plans.commissionAt', {
+							rate: number( plan.commission_rate / 100 ),
+						} ) )
+						: '<span class="muted">—</span>' ) + '</td>' +
 					'<td class="muted">' + esc( limits( plan.limits ) ) + '</td>' +
 					'<td class="tnum">' + esc( number( plan.subscribers ) ) + '</td>' +
 					'<td>' + ( plan.is_active ? badge( 'active' ) : badge( 'draft' ) ) + '</td>' +
@@ -560,6 +565,7 @@
 				Console.table( [
 					t( 'console.plans.plan' ),
 					t( 'console.plans.price' ),
+					t( 'console.plans.commission' ),
 					t( 'console.plans.limits' ),
 					t( 'console.plans.subscribers' ),
 					t( 'console.plans.status' ),
@@ -610,6 +616,12 @@
 					'<input class="input tnum" id="p-price" type="number" min="0" required value="' +
 					esc( editing ? plan.price_amount : 0 ) + '">' +
 					'<span class="field__hint">' + esc( t( 'console.plans.priceHint' ) ) + '</span></div>' +
+				'<div class="field"><label class="field__label" for="p-commission">' +
+					esc( t( 'console.plans.commissionField' ) ) + '</label>' +
+					'<input class="input tnum" id="p-commission" type="number" min="0" max="5000" ' +
+					'value="' + esc( editing ? plan.commission_rate || 0 : 0 ) + '">' +
+					'<span class="field__hint">' + esc( t( 'console.plans.commissionHint' ) ) +
+					'</span></div>' +
 				'<div class="field"><label class="field__label" for="p-currency">' +
 					esc( t( 'console.plans.currency' ) ) + '</label>' +
 					'<input class="input input--code" id="p-currency" maxlength="3" required value="' +
@@ -648,6 +660,7 @@
 			var payload = {
 				name: value( 'p-name' ),
 				price_amount: Number( value( 'p-price' ) ),
+				commission_rate: Number( value( 'p-commission' ) ),
 				currency: value( 'p-currency' ).toUpperCase(),
 				interval: value( 'p-interval' ),
 				is_active: document.getElementById( 'p-active' ).checked,

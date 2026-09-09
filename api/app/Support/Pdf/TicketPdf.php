@@ -5,9 +5,6 @@ namespace App\Support\Pdf;
 use App\Models\ExternalOrder;
 use App\Models\Site;
 use App\Support\Qr\QrRenderer;
-use Mpdf\Config\ConfigVariables;
-use Mpdf\Config\FontVariables;
-use Mpdf\Mpdf;
 use Mpdf\MpdfException;
 
 /**
@@ -29,10 +26,15 @@ use Mpdf\MpdfException;
  */
 class TicketPdf
 {
-    public function __construct(private readonly QrRenderer $qr) {}
+    public function __construct(
+        private readonly QrRenderer $qr,
+        private readonly PdfEngine $engine,
+    ) {}
 
     /**
      * @param  array<string, string>  $tokens  plaintext ticket codes, keyed by allocation id
+     *
+     * @throws MpdfException
      */
     public function render(Site $site, ExternalOrder $order, array $tokens): string
     {
@@ -49,7 +51,7 @@ class TicketPdf
             'qr' => fn (string $token) => $this->qr->pngDataUri($token),
         ])->render();
 
-        $pdf = $this->engine($rtl);
+        $pdf = $this->engine->make($rtl, 14);
         $pdf->SetTitle(__('site.yourTickets').' · '.$site->name);
         $pdf->SetAuthor($site->name);
         // Nothing in here is a secret the file should carry beyond its purpose, but the codes are
@@ -58,48 +60,5 @@ class TicketPdf
         $pdf->WriteHTML($html);
 
         return $pdf->Output('', 'S');
-    }
-
-    /**
-     * @throws MpdfException
-     */
-    private function engine(bool $rtl): Mpdf
-    {
-        $temp = storage_path('app/mpdf');
-
-        if (! is_dir($temp)) {
-            mkdir($temp, 0775, true);
-        }
-
-        $pdf = new Mpdf([
-            'tempDir' => $temp,
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'margin_left' => 14,
-            'margin_right' => 14,
-            'margin_top' => 14,
-            'margin_bottom' => 14,
-            'fontDir' => array_merge(
-                (new ConfigVariables())->getDefaults()['fontDir'],
-                [resource_path('fonts')]
-            ),
-            'fontdata' => (new FontVariables())->getDefaults()['fontdata'] + [
-                'vazirmatn' => [
-                    'R' => 'Vazirmatn-Regular.ttf',
-                    'B' => 'Vazirmatn-Bold.ttf',
-                    // OpenType layout on: this is what turns a string of Arabic letters into
-                    // joined-up writing rather than a row of isolated forms.
-                    'useOTL' => 0xFF,
-                    'useKashida' => 75,
-                ],
-            ],
-            'default_font' => 'vazirmatn',
-        ]);
-
-        // The page's own direction. Text inside it still decides for itself, which is how an
-        // English event name sits correctly inside a Persian ticket.
-        $pdf->SetDirectionality($rtl ? 'rtl' : 'ltr');
-
-        return $pdf;
     }
 }

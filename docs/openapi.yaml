@@ -54,6 +54,7 @@ tags:
   - name: Box office
   - name: Door
   - name: Waiting list
+  - name: Settlement
   - name: Customers
   - name: Notifications
   - name: Sites
@@ -3170,6 +3171,91 @@ paths:
               schema: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /settlement:
+    get:
+      operationId: getSettlement
+      tags: [Settlement]
+      summary: What the organiser is owed, and what the platform kept
+      description: |
+        Requires `reports.orders.view` — the same permission as every other screen that shows
+        money, so a volunteer given the door list still cannot see the takings.
+
+        Nothing here is recomputed from a live event. The arithmetic of a booking was frozen onto
+        the order at the moment it was paid, and this reads that back: an organiser who raises
+        their booking fee in March must not find that February settles differently than it did in
+        February.
+
+        Rows are per event and totals are per currency. Events carry their own currency, and a
+        column that added rial to euro would be a number nobody could bank.
+
+        Two ways to cut a period, and they answer different questions. `paid` is the bank's view —
+        when the money moved — and settles a payout. `event` is the venue's view, which nights the
+        takings belong to, and settles a run.
+
+        A full refund returns everything the buyer paid, the fee and the tax with it. A part refund
+        returns the seats named and nothing else: whether a booking fee survives a partial refund
+        is the organiser's own refund policy, and the platform does not invent an answer to it.
+        Commission is charged on what the organiser keeps, never on the tax — that money is
+        collected on behalf of a tax authority and is not theirs to share.
+      parameters:
+        - { $ref: "#/components/parameters/SettlementFrom" }
+        - { $ref: "#/components/parameters/SettlementTo" }
+        - { $ref: "#/components/parameters/SettlementEvent" }
+        - { $ref: "#/components/parameters/SettlementBasis" }
+      responses:
+        "200":
+          description: The settlement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settlement" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /settlement/export:
+    get:
+      operationId: exportSettlement
+      tags: [Settlement]
+      summary: The settlement as a spreadsheet
+      description: |
+        Requires `reports.orders.view`. One row per event, with amounts as decimals and a full
+        stop rather than in minor units or in the reader's own numerals: this file is opened by
+        accounting software, and a localised amount is text rather than a number. The export is
+        audited.
+      parameters:
+        - { $ref: "#/components/parameters/SettlementFrom" }
+        - { $ref: "#/components/parameters/SettlementTo" }
+        - { $ref: "#/components/parameters/SettlementEvent" }
+        - { $ref: "#/components/parameters/SettlementBasis" }
+      responses:
+        "200":
+          description: CSV, with a byte-order mark so a spreadsheet opens Persian headings as text
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /settlement/statement:
+    get:
+      operationId: printSettlementStatement
+      tags: [Settlement]
+      summary: The statement a venue is sent
+      description: |
+        Requires `reports.orders.view`. The same figures as the screen, as a document that stands
+        on its own — the period it covers, every event in it, and the arithmetic that reaches the
+        figure at the bottom, in the reader's language and currency. Printing it is audited.
+      parameters:
+        - { $ref: "#/components/parameters/SettlementFrom" }
+        - { $ref: "#/components/parameters/SettlementTo" }
+        - { $ref: "#/components/parameters/SettlementEvent" }
+        - { $ref: "#/components/parameters/SettlementBasis" }
+      responses:
+        "200":
+          description: A PDF statement
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /events/{event}/waiting-list:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -4419,6 +4505,28 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    SettlementFrom:
+      name: from
+      in: query
+      description: "The first day of the period, inclusive. Omit for everything up to `to`."
+      schema: { type: string, format: date }
+    SettlementTo:
+      name: to
+      in: query
+      description: "The last day of the period, inclusive."
+      schema: { type: string, format: date }
+    SettlementEvent:
+      name: event_id
+      in: query
+      description: "One event rather than all of them."
+      schema: { type: string, format: uuid }
+    SettlementBasis:
+      name: basis
+      in: query
+      description: >-
+        Which date the period is cut by: `paid` is when the money moved and settles a payout,
+        `event` is which nights the takings belong to and settles a run.
+      schema: { type: string, enum: [paid, event], default: paid }
     EventId:
       name: event
       in: path
@@ -4496,6 +4604,67 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    Settlement:
+      type: object
+      properties:
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/SettlementRow" }
+        totals:
+          type: array
+          description: "One entry per currency. Never one entry adding them together."
+          items:
+            allOf:
+              - type: object
+                properties:
+                  currency: { type: string, minLength: 3, maxLength: 3 }
+                  events: { type: integer }
+              - $ref: "#/components/schemas/SettlementAmounts"
+        period:
+          type: object
+          properties:
+            from: { type: [string, "null"], format: date-time }
+            to: { type: [string, "null"], format: date-time }
+            basis: { type: string, enum: [paid, event] }
+        commission_rate:
+          type: integer
+          description: "The platform's share in basis points: 250 is 2.5%."
+
+    SettlementRow:
+      allOf:
+        - type: object
+          properties:
+            event:
+              type: object
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string }
+                starts_at: { type: [string, "null"], format: date-time }
+            currency: { type: string, minLength: 3, maxLength: 3 }
+        - $ref: "#/components/schemas/SettlementAmounts"
+
+    SettlementAmounts:
+      type: object
+      description: "Every amount is in the row's own currency, in minor units."
+      properties:
+        orders: { type: integer }
+        seats: { type: integer, description: "Seats still sold." }
+        seats_refunded: { type: integer }
+        tickets: { type: integer, description: "What the seats came to, before any discount." }
+        discount: { type: integer }
+        fee: { type: integer, description: "Booking fees the organiser charged." }
+        tax: { type: integer, description: "Tax charged, before any refund." }
+        charged: { type: integer, description: "What the buyers actually paid." }
+        refunded: { type: integer }
+        kept: { type: integer, description: "`charged` less `refunded`." }
+        tax_kept:
+          type: integer
+          description: >-
+            The tax on the money that stayed. A part refund returns seats and the tax on them goes
+            with them; nothing records that split, so it is apportioned to what is left.
+        commission: { type: integer, description: "Charged on `kept` less `tax_kept`." }
+        payable: { type: integer, description: "`kept` less `commission`." }
+
     Error:
       type: object
       required: [error]
