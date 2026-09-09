@@ -150,3 +150,23 @@ stylesheet, and neither can run.**
 
 The rejected alternative stands, and this is not it: uploading a theme — a bundle of files that
 runs on our server — remains the WordPress problem we chose not to have.
+
+## Amendment, 2026-09: gateways that redirect
+
+The offline gateway settles inline, so the first version of the hosted checkout never needed the
+half that matters with a real gateway: the buyer leaves, money moves elsewhere, and they come back
+— or they never do.
+
+- `GET|POST /pay/{gateway}/return/{reference}` on the site's own host is where a gateway sends the
+  buyer. It believes nothing in the request: settlement asks the gateway, over its own API, using
+  the reference written onto the order when the payment began. The gateway must also be one the
+  site actually offers, or the return path would be a way to ask any installed module to settle
+  anybody's order.
+
+- `payments:reconcile`, every ten minutes, asks about pending orders whose buyer never came back.
+  Their seats are protected either way — the hold expires — but their money has moved and their
+  order has not, and learning that from a support email is not good enough. `settle()` is
+  idempotent by contract, which is what makes asking again safe.
+
+Webhooks are **not** implemented, and the reconciliation job is why that is a delay rather than a
+hole: every gateway here is settled by asking it, not by being told.

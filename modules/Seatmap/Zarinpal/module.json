@@ -1,0 +1,31 @@
+{
+    "key": "seatmap/zarinpal",
+    "name": "Zarinpal",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\Zarinpal\\Provider",
+    "extends": ["payments"],
+    "settings": [
+        {
+            "key": "merchant_id",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.zarinpal.settings.merchant_id",
+            "hint_key": "modules.seatmap.zarinpal.settings.merchant_id_hint"
+        },
+        {
+            "key": "amount_unit",
+            "type": "select",
+            "required": true,
+            "options": ["rial", "toman"],
+            "label_key": "modules.seatmap.zarinpal.settings.amount_unit",
+            "hint_key": "modules.seatmap.zarinpal.settings.amount_unit_hint"
+        },
+        {
+            "key": "sandbox",
+            "type": "boolean",
+            "required": false,
+            "label_key": "modules.seatmap.zarinpal.settings.sandbox",
+            "hint_key": "modules.seatmap.zarinpal.settings.sandbox_hint"
+        }
+    ]
+}

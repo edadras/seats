@@ -1,0 +1,31 @@
+{
+    "key": "seatmap/idpay",
+    "name": "IDPay",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\IdPay\\Provider",
+    "extends": ["payments"],
+    "settings": [
+        {
+            "key": "api_key",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.idpay.settings.api_key",
+            "hint_key": "modules.seatmap.idpay.settings.api_key_hint"
+        },
+        {
+            "key": "amount_unit",
+            "type": "select",
+            "required": true,
+            "options": ["rial", "toman"],
+            "label_key": "modules.seatmap.idpay.settings.amount_unit",
+            "hint_key": "modules.seatmap.idpay.settings.amount_unit_hint"
+        },
+        {
+            "key": "sandbox",
+            "type": "boolean",
+            "required": false,
+            "label_key": "modules.seatmap.idpay.settings.sandbox",
+            "hint_key": "modules.seatmap.idpay.settings.sandbox_hint"
+        }
+    ]
+}

@@ -1,0 +1,24 @@
+{
+    "key": "seatmap/nextpay",
+    "name": "NextPay",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\NextPay\\Provider",
+    "extends": ["payments"],
+    "settings": [
+        {
+            "key": "api_key",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.nextpay.settings.api_key",
+            "hint_key": "modules.seatmap.nextpay.settings.api_key_hint"
+        },
+        {
+            "key": "amount_unit",
+            "type": "select",
+            "required": true,
+            "options": ["rial", "toman"],
+            "label_key": "modules.seatmap.nextpay.settings.amount_unit",
+            "hint_key": "modules.seatmap.nextpay.settings.amount_unit_hint"
+        }
+    ]
+}

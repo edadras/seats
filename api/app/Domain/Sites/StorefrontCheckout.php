@@ -85,9 +85,30 @@ class StorefrontCheckout
         $intent = $gateway->begin($order, [
             'amount' => (int) $hold->total_amount,
             'currency' => (string) $hold->currency,
+            // Where the buyer ends up, and where the *gateway* should send them on the way: the
+            // second is built here rather than in each module, so five modules cannot have five
+            // opinions about what this site's address is.
             'return_url' => $returnUrl,
+            'callback_url' => $site->url('/pay/'.$gateway->key().'/return/'.$order->external_order_id),
             'buyer' => $buyer,
+            'reference' => $order->external_order_id,
         ]);
+
+        /*
+         * Whatever the gateway called this attempt is written down here.
+         *
+         * A redirect gateway hands back an authority, a session id or a token, and asks for it
+         * again when the buyer comes back. Without somewhere to keep it, the return is a stranger
+         * holding a receipt for a payment we cannot look up — and the money has already moved.
+         */
+        if ($intent->reference) {
+            $order->forceFill([
+                'metadata' => ($order->metadata ?? []) + [
+                    'gateway' => $gateway->key(),
+                    'payment_reference' => $intent->reference,
+                ],
+            ])->save();
+        }
 
         if ($intent->hasFailed()) {
             $this->orders->cancel($order, 'payment_failed');

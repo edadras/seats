@@ -1,0 +1,30 @@
+{
+    "key": "seatmap/paypal",
+    "name": "PayPal",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\PayPal\\Provider",
+    "extends": ["payments"],
+    "settings": [
+        {
+            "key": "client_id",
+            "type": "string",
+            "required": true,
+            "label_key": "modules.seatmap.paypal.settings.client_id",
+            "hint_key": "modules.seatmap.paypal.settings.client_id_hint"
+        },
+        {
+            "key": "client_secret",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.paypal.settings.client_secret",
+            "hint_key": "modules.seatmap.paypal.settings.client_secret_hint"
+        },
+        {
+            "key": "sandbox",
+            "type": "boolean",
+            "required": false,
+            "label_key": "modules.seatmap.paypal.settings.sandbox",
+            "hint_key": "modules.seatmap.paypal.settings.sandbox_hint"
+        }
+    ]
+}

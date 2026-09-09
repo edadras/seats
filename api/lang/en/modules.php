@@ -42,6 +42,62 @@ return [
         'not_configured' => 'Fill in what this module needs before turning it on.',
     ],
     'seatmap' => [
+        'zarinpal' => [
+            'name' => 'Zarinpal',
+            'description' => 'Take Iranian bank cards through Zarinpal. Prices in rials or tomans — say which, because the difference is a factor of ten.',
+            'settings' => [
+                'merchant_id' => 'Merchant ID',
+                'merchant_id_hint' => 'The UUID from your Zarinpal panel.',
+                'amount_unit' => 'Your prices are in',
+                'amount_unit_hint' => 'Zarinpal is paid in rials. If you price in tomans, choose tomans and we multiply.',
+                'sandbox' => 'Use the sandbox',
+                'sandbox_hint' => 'Test payments against Zarinpal’s sandbox. No money moves.',
+            ],
+        ],
+        'idpay' => [
+            'name' => 'IDPay',
+            'description' => 'Take Iranian bank cards through IDPay, which sits in front of the bank PSPs.',
+            'settings' => [
+                'api_key' => 'API key',
+                'api_key_hint' => 'From your IDPay dashboard, for this website.',
+                'amount_unit' => 'Your prices are in',
+                'amount_unit_hint' => 'IDPay is paid in rials. If you price in tomans, choose tomans and we multiply.',
+                'sandbox' => 'Use the sandbox',
+                'sandbox_hint' => 'Sends the sandbox header. No money moves.',
+            ],
+        ],
+        'nextpay' => [
+            'name' => 'NextPay',
+            'description' => 'Take Iranian bank cards through NextPay.',
+            'settings' => [
+                'api_key' => 'API key',
+                'api_key_hint' => 'From your NextPay panel.',
+                'amount_unit' => 'Your prices are in',
+                'amount_unit_hint' => 'NextPay is paid in rials. If you price in tomans, choose tomans and we multiply.',
+            ],
+        ],
+        'stripe' => [
+            'name' => 'Stripe',
+            'description' => 'Take cards worldwide through Stripe Checkout. Card details go to Stripe, never to this server.',
+            'settings' => [
+                'secret_key' => 'Secret key',
+                'secret_key_hint' => 'Starts with sk_live_ or sk_test_. Write-only: it is stored encrypted and never shown again.',
+                'statement_descriptor' => 'On the buyer’s statement',
+                'statement_descriptor_hint' => 'Up to 22 characters after your business name. Blank uses your Stripe default.',
+            ],
+        ],
+        'paypal' => [
+            'name' => 'PayPal',
+            'description' => 'Take PayPal balances and cards through PayPal Orders.',
+            'settings' => [
+                'client_id' => 'Client ID',
+                'client_id_hint' => 'From your PayPal app credentials.',
+                'client_secret' => 'Client secret',
+                'client_secret_hint' => 'Write-only: stored encrypted and never shown again.',
+                'sandbox' => 'Use the sandbox',
+                'sandbox_hint' => 'Talks to PayPal’s sandbox instead of the live API.',
+            ],
+        ],
         'offline_payments' => [
             'name' => 'Pay at the box office',
             'description' => 'Let buyers reserve online and pay when they arrive. Seats are held and tickets issued exactly as for a card sale; only the money is collected elsewhere.',

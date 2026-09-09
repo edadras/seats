@@ -104,6 +104,47 @@ class CheckoutController extends Controller
     }
 
     /**
+     * Where a redirect gateway sends the buyer back to.
+     *
+     * Nothing in this request is believed. The gateway is asked whether the money moved, over its
+     * own API, with the reference we wrote down when the payment began — because the thing that
+     * arrives here is a URL the buyer's browser followed, and a URL is something anybody can type.
+     */
+    public function paymentReturn(Request $request, string $gateway, string $reference)
+    {
+        $site = $request->attributes->get('site');
+
+        $order = ExternalOrder::where('external_order_id', $reference)
+            ->where('tenant_id', $site->tenant_id)
+            ->first();
+
+        if (! $order) {
+            throw new NotFoundHttpException('No such order.');
+        }
+
+        // A gateway the site does not offer is not a gateway. Otherwise the return path would be
+        // a way to ask any installed module to settle anybody's order.
+        $allowed = array_map(fn ($entry) => $entry->key(), $this->gateways->enabledFor($site));
+
+        if (! in_array($gateway, $allowed, true)) {
+            throw new NotFoundHttpException('No such payment method.');
+        }
+
+        $order = $this->checkout->settle($order, $gateway, $request->all());
+
+        // The buyer is put back where they would have been if the payment had settled inline. The
+        // confirmation page is session-guarded, and this is that session.
+        $request->session()->put('seatmap_order', $order->external_order_id);
+
+        if ('confirmed' === $order->status) {
+            $request->session()->flash('seatmap_tokens', $this->issuedTokens($order));
+            $this->mail->send($site, $order);
+        }
+
+        return redirect('/order/'.$order->external_order_id);
+    }
+
+    /**
      * The confirmation page, and the only place a buyer sees their ticket tokens.
      *
      * Reachable only from the session that placed the order: an order id in a URL is a guessable

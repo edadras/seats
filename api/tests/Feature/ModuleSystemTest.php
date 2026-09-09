@@ -153,10 +153,11 @@ class ModuleSystemTest extends TestCase
         $fixture = $this->makeSellableEvent();
         $owner = $this->makeUser($fixture['tenant']);
 
-        $this->actingAs($owner)
-            ->getJson('/v1/modules')
-            ->assertOk()
-            ->assertJsonPath('data.0.key', self::OFFLINE);
+        // By key, not by position: this list grows every time a module is added, and a test that
+        // pins the order fails for the wrong reason.
+        $keys = $this->actingAs($owner)->getJson('/v1/modules')->assertOk()->json('data.*.key');
+
+        $this->assertContains(self::OFFLINE, $keys);
 
         $response = $this->actingAs($owner)
             ->getJson('/v1/modules/seatmap.offline-payments');

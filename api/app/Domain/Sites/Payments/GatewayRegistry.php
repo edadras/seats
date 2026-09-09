@@ -52,6 +52,18 @@ class GatewayRegistry
         return $this->gateways = $gateways;
     }
 
+    /**
+     * Drop the built set.
+     *
+     * The registry caches per tenant for the length of a request, which is right in production and
+     * wrong in a test that turns a module on halfway through. Nothing else needs it.
+     */
+    public function forget(): void
+    {
+        $this->gateways = null;
+        $this->builtFor = null;
+    }
+
     /** Used by tests and by a module that wants to add a gateway without a manifest. */
     public function register(PaymentGateway $gateway): void
     {

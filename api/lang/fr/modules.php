@@ -42,6 +42,62 @@ return [
         'not_configured' => 'Renseignez ce dont ce module a besoin avant de l’activer.',
     ],
     'seatmap' => [
+        'zarinpal' => [
+            'name' => 'Zarinpal',
+            'description' => 'Accepter les cartes bancaires iraniennes via Zarinpal. Prix en rials ou en tomans — précisez-le, l’écart est d’un facteur dix.',
+            'settings' => [
+                'merchant_id' => 'Identifiant marchand',
+                'merchant_id_hint' => 'L’UUID de votre panneau Zarinpal.',
+                'amount_unit' => 'Vos prix sont en',
+                'amount_unit_hint' => 'Zarinpal règle en rials. Si vous affichez en tomans, choisissez tomans et nous multiplions.',
+                'sandbox' => 'Utiliser le bac à sable',
+                'sandbox_hint' => 'Paiements de test. Aucun argent ne circule.',
+            ],
+        ],
+        'idpay' => [
+            'name' => 'IDPay',
+            'description' => 'Accepter les cartes bancaires iraniennes via IDPay.',
+            'settings' => [
+                'api_key' => 'Clé d’API',
+                'api_key_hint' => 'Depuis votre tableau de bord IDPay, pour ce site.',
+                'amount_unit' => 'Vos prix sont en',
+                'amount_unit_hint' => 'IDPay règle en rials. Si vous affichez en tomans, choisissez tomans.',
+                'sandbox' => 'Utiliser le bac à sable',
+                'sandbox_hint' => 'Envoie l’en-tête bac à sable. Aucun argent ne circule.',
+            ],
+        ],
+        'nextpay' => [
+            'name' => 'NextPay',
+            'description' => 'Accepter les cartes bancaires iraniennes via NextPay.',
+            'settings' => [
+                'api_key' => 'Clé d’API',
+                'api_key_hint' => 'Depuis votre panneau NextPay.',
+                'amount_unit' => 'Vos prix sont en',
+                'amount_unit_hint' => 'NextPay règle en rials. Si vous affichez en tomans, choisissez tomans.',
+            ],
+        ],
+        'stripe' => [
+            'name' => 'Stripe',
+            'description' => 'Accepter les cartes dans le monde entier via Stripe Checkout. Les données de carte vont à Stripe, jamais à ce serveur.',
+            'settings' => [
+                'secret_key' => 'Clé secrète',
+                'secret_key_hint' => 'Commence par sk_live_ ou sk_test_. En écriture seule : stockée chiffrée, jamais réaffichée.',
+                'statement_descriptor' => 'Sur le relevé de l’acheteur',
+                'statement_descriptor_hint' => 'Jusqu’à 22 caractères après votre raison sociale. Vide reprend votre réglage Stripe.',
+            ],
+        ],
+        'paypal' => [
+            'name' => 'PayPal',
+            'description' => 'Accepter les soldes PayPal et les cartes via PayPal Orders.',
+            'settings' => [
+                'client_id' => 'Client ID',
+                'client_id_hint' => 'Depuis les identifiants de votre application PayPal.',
+                'client_secret' => 'Client secret',
+                'client_secret_hint' => 'En écriture seule : stocké chiffré, jamais réaffiché.',
+                'sandbox' => 'Utiliser le bac à sable',
+                'sandbox_hint' => 'Parle au bac à sable PayPal plutôt qu’à l’API réelle.',
+            ],
+        ],
         'offline_payments' => [
             'name' => 'Payer au guichet',
             'description' => 'L’acheteur réserve en ligne et paie en arrivant. Les places sont retenues et les billets émis exactement comme pour un paiement par carte ; seul l’encaissement se fait ailleurs.',

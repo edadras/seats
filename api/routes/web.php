@@ -30,6 +30,13 @@ Route::middleware('site')->group(function () {
     Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1');
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
 
+    // Where a redirect gateway sends the buyer back to. Both verbs, because gateways disagree
+    // about which one a return is, and the handler settles by asking the gateway rather than by
+    // believing anything in the request.
+    Route::match(['get', 'post'], 'pay/{gateway}/return/{reference}', [CheckoutController::class, 'paymentReturn'])
+        ->middleware('throttle:60,1')
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
     Route::get('events/{event}', [SitePageController::class, 'event']);
 });
 

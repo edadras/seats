@@ -1,0 +1,23 @@
+{
+    "key": "seatmap/stripe",
+    "name": "Stripe",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\Stripe\\Provider",
+    "extends": ["payments"],
+    "settings": [
+        {
+            "key": "secret_key",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.stripe.settings.secret_key",
+            "hint_key": "modules.seatmap.stripe.settings.secret_key_hint"
+        },
+        {
+            "key": "statement_descriptor",
+            "type": "string",
+            "required": false,
+            "label_key": "modules.seatmap.stripe.settings.statement_descriptor",
+            "hint_key": "modules.seatmap.stripe.settings.statement_descriptor_hint"
+        }
+    ]
+}

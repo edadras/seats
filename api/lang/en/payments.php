@@ -12,4 +12,32 @@ return [
         'label' => 'Pay at the box office',
         'description' => 'Your seats are reserved now. Pay when you collect your tickets.',
     ],
+    'zarinpal' => [
+        'label' => 'Zarinpal',
+        'description' => 'Pay by Iranian bank card through Zarinpal.',
+    ],
+    'idpay' => [
+        'label' => 'IDPay',
+        'description' => 'Pay by Iranian bank card through IDPay.',
+    ],
+    'nextpay' => [
+        'label' => 'NextPay',
+        'description' => 'Pay by Iranian bank card through NextPay.',
+    ],
+    'stripe' => [
+        'label' => 'Card',
+        'description' => 'Pay by card. Your card details go straight to Stripe and never touch this site.',
+    ],
+    'paypal' => [
+        'label' => 'PayPal',
+        'description' => 'Pay with your PayPal balance or a card, through PayPal.',
+    ],
+    'orderDescription' => 'Tickets — order :reference',
+    'errors' => [
+        'declined' => ':gateway could not take the payment (code :code). Nothing has been charged.',
+        'currency_not_supported' => ':gateway cannot take payments in :currency.',
+        'not_configured' => ':gateway has not been set up yet. Choose another way to pay.',
+        'no_reference' => 'We could not find this payment. If money left your account, contact the box office and quote your order number.',
+        'cancelled_by_buyer' => 'The payment was cancelled. Your seats have been released.',
+    ],
 ];

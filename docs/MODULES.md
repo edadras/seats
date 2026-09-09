@@ -124,6 +124,35 @@ A third-party module registers its own namespace and ships its own catalogues. E
 platform claims must be present, for the same reason: a module whose name renders as
 `modules.acme.sms_gateway.name` is a module nobody translated.
 
+## Writing a payment gateway
+
+A gateway implements `App\Domain\Sites\Payments\PaymentGateway`: `begin()` starts a payment and
+returns a `PaymentIntent`, `settle()` says what happened. Five first-party ones ship in `modules/`
+— Zarinpal, IDPay, NextPay, Stripe, PayPal — and they are the worked examples.
+
+Four things the platform does for you, and one it insists on:
+
+- **Talking out.** Use `App\Domain\Sites\Payments\GatewayHttp`. A module gets a context, not a
+  container, so it cannot reach for an HTTP client with whatever timeout it felt like; this one is
+  bounded, retried once at the connection level only, and logs failures against your module's key.
+
+- **Coming back.** `$context['callback_url']` is a URL on the organiser's own site that lands in
+  `settle()` for your gateway. Do not build it yourself: five modules would have five opinions
+  about what a site's address is.
+
+- **Remembering.** Whatever `PaymentIntent` carries as its `reference` — an authority, a session
+  id, a token — is written onto the order, and is in `$order->metadata['payment_reference']` when
+  `settle()` is called. Settle from *that*, never from what the return request says: a return is a
+  URL the buyer's browser followed, and a URL is something anybody can type.
+
+- **Asking again.** `payments:reconcile` runs every ten minutes and calls `settle()` for pending
+  orders whose buyer never came back. That is why the contract says settle must be safe to call
+  twice — and why "already verified" from a gateway means **paid**, not failed.
+
+- **Money.** Amounts arrive in the currency's minor unit, which is what this platform stores.
+  Convert if your gateway wants something else, through `App\Support\Locale\Money`, and never
+  by dividing by a hundred: the rial has no minor unit and the dinar has three.
+
 ## Installing one
 
 There is no upload. A module is installed by putting it in `modules/` and deploying — an operator's
