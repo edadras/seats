@@ -63,6 +63,13 @@ return [
         'nothingYet' => 'Nothing has happened yet.',
     ],
 
+    'notices' => [
+        'title' => 'Notices',
+        'markRead' => 'Mark them read',
+        'none' => 'Nothing to report',
+        'noneHint' => 'Refunds, failed messages and sold-out nights turn up here.',
+    ],
+
     'auth' => [
         'signIn' => 'Sign in',
         'subtitle' => 'Manage your venues, seating charts and events.',

@@ -53,6 +53,13 @@ return [
         'nothingYet' => 'Bisher ist nichts passiert.',
     ],
 
+    'notices' => [
+        'title' => 'Meldungen',
+        'markRead' => 'Als gelesen markieren',
+        'none' => 'Nichts zu melden',
+        'noneHint' => 'Erstattungen, nicht zugestellte Nachrichten und ausverkaufte Abende erscheinen hier.',
+    ],
+
     'auth' => [
         'signIn' => 'Anmelden',
         'subtitle' => 'Verwalten Sie Ihre Spielstätten, Saalpläne und Veranstaltungen.',

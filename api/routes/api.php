@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
+use App\Http\Controllers\Api\V1\Management\NotificationController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
@@ -140,7 +141,18 @@ Route::prefix('v1')->group(function () {
         // ---- Messaging -----------------------------------------------------------------
         // The wording is the organiser's; the fallback is ours, translated. The log is here
         // because "did the buyer get their confirmation" is asked with somebody waiting.
+        // ---- What the platform is telling this account ---------------------------------
+        // Every member may ask; which notices they are shown is decided by the permission each
+        // kind is governed by, on the way out.
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::post('notifications/read', [NotificationController::class, 'read']);
+
         Route::get('messaging', [MessagingController::class, 'index']);
+        // Ahead of the {kind} routes below, which would otherwise match the word "announcements".
+        Route::get('messaging/announcements', [MessagingController::class, 'announcements']);
+        Route::get('messaging/announcements/audience', [MessagingController::class, 'audience']);
+        Route::post('messaging/announcements', [MessagingController::class, 'announce'])
+            ->middleware('throttle:10,1');
         Route::get('messaging/log', [MessagingController::class, 'log']);
         Route::post('messaging/test', [MessagingController::class, 'test'])->middleware('throttle:20,1');
         Route::put('messaging/{kind}/channels/{channel}', [MessagingController::class, 'setChannel']);

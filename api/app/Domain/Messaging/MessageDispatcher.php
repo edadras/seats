@@ -86,6 +86,36 @@ class MessageDispatcher
     }
 
     /**
+     * Send a message somebody wrote, on a delivery row that already exists.
+     *
+     * The announcement path uses this: its rows are written up front, as an ordinary queue, and
+     * sent in batches afterwards. The wording is the organiser's own rather than a template's —
+     * everything else about it, including how a failure is recorded and retried, is identical.
+     */
+    public function sendComposed(MessageDelivery $delivery, string $subject, string $body): MessageDelivery
+    {
+        $channel = $this->channels->find($delivery->channel);
+
+        if (! $channel) {
+            return $this->finish($delivery, DeliveryResult::refused('channel_unavailable'), '');
+        }
+
+        $delivery->forceFill(['preview' => mb_substr($body, 0, 200)])->save();
+
+        try {
+            $result = $channel->send($delivery->recipient, $body, [
+                'subject' => $subject,
+                'locale' => $delivery->locale,
+                'reference' => $delivery->id,
+            ]);
+        } catch (Throwable $e) {
+            $result = DeliveryResult::unavailable($e->getMessage());
+        }
+
+        return $this->finish($delivery, $result, $body);
+    }
+
+    /**
      * Send on every channel this organiser has turned on for this kind, to the addresses they
      * have. A buyer with no phone number simply is not sent an SMS.
      *
@@ -204,6 +234,22 @@ class MessageDispatcher
 
     private function finish(MessageDelivery $delivery, DeliveryResult $result, string $body): MessageDelivery
     {
+        /*
+         * A refusal is permanent: a bad address, a channel with no credentials, a provider saying
+         * no. `messages:retry` will never touch it, so nobody finds out unless somebody is told —
+         * and once is enough, because a channel refusing is refusing for everything it is handed.
+         *
+         * Resolved here rather than injected: the notifier sends email, which is this class, and
+         * asking the container for it at the point of use is what keeps that from being a cycle.
+         */
+        if ('refused' === $result->status && 'system.notice' !== $delivery->kind) {
+            app(\App\Domain\Notifications\Notifier::class)->raiseOnce(
+                'message.refused',
+                $delivery->channel.'|'.(string) $result->reason,
+                ['channel' => $delivery->channel, 'reason' => (string) ($result->reason ?? '')],
+            );
+        }
+
         $delivery->forceFill([
             'status' => $result->status,
             'reference' => $result->reference,

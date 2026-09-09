@@ -49,6 +49,7 @@ tags:
   - name: WooCommerce
   - name: Tickets
   - name: Customers
+  - name: Notifications
   - name: Sites
   - name: Modules
   - name: Team
@@ -876,6 +877,157 @@ paths:
                 type: object
                 properties:
                   sent: { type: boolean }
+
+  /messaging/announcements:
+    get:
+      operationId: listAnnouncements
+      tags: [Messaging]
+      summary: What has been said to buyers, and how it went
+      description: |
+        Requires `messages.send` — writing to everybody who bought is a different act from
+        configuring the platform, so a manager who runs the programme can do it without also being
+        able to change the account's settings.
+
+        `sent`, `failed` and `total` are counted from the deliveries themselves rather than kept on
+        the announcement: there is one record of whether a message arrived, and it is the delivery
+        log.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Announcement" }
+                  channels:
+                    type: array
+                    items: { $ref: "#/components/schemas/MessageChannel" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: sendAnnouncement
+      tags: [Messaging]
+      summary: Say something to everybody who bought
+      description: |
+        The audience is resolved once, into queued deliveries, at the moment this is called —
+        orders keep arriving while an announcement is going out, and re-resolving "everybody who
+        bought" on each batch would send some people two copies and skip others.
+
+        One message per person per channel, deduplicated by address: a buyer with four orders gets
+        one email. Only orders where money actually arrived count. The first batch is sent inline,
+        so a small announcement is finished by the time this responds; anything larger is finished
+        by `messages:announce`, through the same code.
+
+        `{buyer}`, `{event}` and `{site}` in the subject or body are substituted per recipient.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channels, body]
+              properties:
+                event_id:
+                  type: [string, "null"]
+                  format: uuid
+                  description: Buyers of one event. Omit for everybody who has bought.
+                channels:
+                  type: array
+                  minItems: 1
+                  items: { type: string }
+                subject: { type: [string, "null"], maxLength: 200 }
+                body: { type: string, maxLength: 2000 }
+                locale: { type: string, maxLength: 12 }
+      responses:
+        "201":
+          description: On its way
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Announcement" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /messaging/announcements/audience:
+    get:
+      operationId: announcementAudience
+      tags: [Messaging]
+      summary: How many people an announcement would reach
+      description: >
+        Counted without sending anything, so "everybody who bought" can be a number before it is a
+        decision. `people` counts humans; `messages` counts what would actually be sent, which is
+        higher when more than one channel is chosen and lower when people have no address for one.
+      parameters:
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: channels
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  people: { type: integer }
+                  messages: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [Notifications]
+      summary: What the platform is telling this account
+      description: |
+        Refunds, messages a channel refused, announcements that finished, addresses that verified,
+        nights that sold out. Each kind is governed by the permission that governs the thing it is
+        about — a refund by `orders.view`, a failed message by `account.manage` — and that is
+        applied on the way out rather than when the row was written, because roles change.
+
+        `title` and `body` are composed here in the reader's own language from facts stored on the
+        row. A notification stored as prose is a notification a colleague reads in a language they
+        do not have.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Notification" }
+                  unread: { type: integer }
+
+  /notifications/read:
+    post:
+      operationId: readNotifications
+      tags: [Notifications]
+      summary: Mark what this person can see as read
+      description: >
+        Everything currently visible to the caller, and nothing else: marking as read what somebody
+        was never shown is how a notice disappears before anybody reads it. Read marks are per
+        person — one colleague reading a notice does not read it for the rest of the account.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread: { type: integer }
 
   /messaging:
     get:
@@ -3511,6 +3663,43 @@ components:
               code: { type: string }
               message: { type: string }
               path: { type: string }
+
+    Announcement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        audience: { type: string, enum: [event, everyone] }
+        event: { type: [string, "null"] }
+        channels:
+          type: array
+          items: { type: string }
+        subject: { type: [string, "null"] }
+        body: { type: string }
+        status: { type: string, enum: [draft, sending, sent] }
+        recipients: { type: integer, description: "People, not messages." }
+        sent: { type: integer }
+        failed: { type: integer }
+        total: { type: integer, description: Messages queued for it in all. }
+        created_at: { type: string, format: date-time }
+
+    MessageChannel:
+      type: object
+      properties:
+        key: { type: string }
+        name: { type: string }
+        address_kind: { type: string, enum: [email, phone, handle] }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string }
+        level: { type: string, enum: [info, warn, danger] }
+        title: { type: string }
+        body: { type: string }
+        subject: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        read: { type: boolean }
 
     Money:
       type: object

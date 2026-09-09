@@ -68,6 +68,7 @@ return [
         'reports.attendance.view' => 'تقارير الحضور',
         'reports.orders.view' => 'تقارير المبيعات والإيرادات',
         'reports.build' => 'إنشاء التقارير وحفظها',
+        'messages.send' => 'مراسلة كل من اشترى',
         'team.view' => 'رؤية أعضاء الحساب',
         'team.manage' => 'الدعوة والإيقاف وتغيير الأدوار',
         'roles.manage' => 'إنشاء الأدوار وتحريرها',

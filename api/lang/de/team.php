@@ -68,6 +68,7 @@ return [
         'reports.attendance.view' => 'Besuchsberichte',
         'reports.orders.view' => 'Verkaufs- und Umsatzberichte',
         'reports.build' => 'Berichte bauen und speichern',
+        'messages.send' => 'Allen schreiben, die gekauft haben',
         'team.view' => 'Sehen, wer zu diesem Konto gehört',
         'team.manage' => 'Einladen, sperren, Rollen ändern',
         'roles.manage' => 'Rollen anlegen und bearbeiten',

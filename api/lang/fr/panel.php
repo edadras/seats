@@ -53,6 +53,13 @@ return [
         'nothingYet' => 'Rien ne s’est encore passé.',
     ],
 
+    'notices' => [
+        'title' => 'Avis',
+        'markRead' => 'Marquer comme lus',
+        'none' => 'Rien à signaler',
+        'noneHint' => 'Remboursements, messages non distribués et soirées complètes apparaissent ici.',
+    ],
+
     'auth' => [
         'signIn' => 'Se connecter',
         'subtitle' => 'Gérez vos lieux, vos plans de salle et vos événements.',

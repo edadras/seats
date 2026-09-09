@@ -68,6 +68,7 @@ return [
         'reports.attendance.view' => 'Report sulle presenze',
         'reports.orders.view' => 'Report su vendite e incassi',
         'reports.build' => 'Creare e salvare report',
+        'messages.send' => 'Scrivere a chi ha comprato',
         'team.view' => 'Vedere chi fa parte dell’account',
         'team.manage' => 'Invitare, sospendere, cambiare ruoli',
         'roles.manage' => 'Creare e modificare ruoli',

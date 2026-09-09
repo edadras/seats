@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
+use App\Domain\Messaging\Announcements\AnnouncementSender;
 use App\Domain\Messaging\ChannelRegistry;
 use App\Domain\Messaging\MessageDispatcher;
 use App\Domain\Messaging\MessageKinds;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
+use App\Models\Event;
 use App\Models\MessageChannelSetting;
 use App\Models\MessageDelivery;
 use App\Models\MessageTemplate;
@@ -29,6 +32,7 @@ class MessagingController extends Controller
         private readonly MessageDispatcher $dispatcher,
         private readonly TenantContext $tenants,
         private readonly AuditLogger $audit,
+        private readonly AnnouncementSender $announcements,
     ) {}
 
     public function index(Request $request)
@@ -203,7 +207,141 @@ class MessagingController extends Controller
         ]);
     }
 
+    /* ------------------------------------------------------------------- announcements */
+
+    /**
+     * What has been said to buyers, and how it went.
+     *
+     * `messages.send` rather than `account.manage`: writing to everybody who bought is a different
+     * act from configuring the platform, and a manager who runs the programme should be able to
+     * say "tonight is moved" without also being able to change the account's settings.
+     */
+    public function announcements(Request $request)
+    {
+        $this->authorize($request, 'messages.send');
+
+        return response()->json([
+            'data' => Announcement::with('event:id,name')
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get()
+                ->map(fn (Announcement $announcement) => $this->presentAnnouncement($announcement))
+                ->values(),
+            'channels' => $this->channels->describe(),
+        ]);
+    }
+
+    /** How many people this would reach, before anybody is written to. */
+    public function audience(Request $request)
+    {
+        $this->authorize($request, 'messages.send');
+
+        $data = $request->validate([
+            'event_id' => ['nullable', 'uuid'],
+            'channels' => ['required', 'array', 'min:1'],
+            'channels.*' => ['string', 'max:40'],
+        ]);
+
+        return response()->json($this->announcements->preview(
+            $data['event_id'] ?? null,
+            $this->assertChannels($data['channels']),
+        ));
+    }
+
+    /**
+     * Say it.
+     *
+     * The queue is written in full, then the first batch is sent inline so that a small
+     * announcement is finished by the time the screen comes back. The rest is finished by
+     * `messages:announce`, through the same method — one implementation, called from two places,
+     * because two ways of sending the same announcement is how two of them start disagreeing.
+     */
+    public function announce(Request $request)
+    {
+        $this->authorize($request, 'messages.send');
+
+        $data = $request->validate([
+            'event_id' => ['nullable', 'uuid'],
+            'channels' => ['required', 'array', 'min:1'],
+            'channels.*' => ['string', 'max:40'],
+            'subject' => ['nullable', 'string', 'max:200'],
+            'body' => ['required', 'string', 'max:2000'],
+            'locale' => ['nullable', 'string', 'max:12'],
+        ]);
+
+        $channels = $this->assertChannels($data['channels']);
+        $event = ! empty($data['event_id']) ? Event::whereKey($data['event_id'])->first() : null;
+
+        if (! empty($data['event_id']) && ! $event) {
+            throw ApiException::unprocessable('unknown_event', 'There is no such event.');
+        }
+
+        $announcement = Announcement::create([
+            'event_id' => $event?->id,
+            'audience' => $event ? 'event' : 'everyone',
+            'channels' => $channels,
+            'locale' => Locales::normalise($data['locale'] ?? app()->getLocale()),
+            'subject' => $data['subject'] ?? null,
+            'body' => $data['body'],
+            'status' => 'draft',
+            'created_by' => $request->user()->id,
+        ]);
+
+        $queued = $this->announcements->prepare($announcement);
+
+        $this->audit->record('announcement.sent', $announcement, [
+            'audience' => $announcement->audience,
+            'event' => $event?->name,
+            'channels' => $channels,
+            'messages' => $queued,
+        ]);
+
+        $this->announcements->sendBatch($announcement);
+
+        return response()->json($this->presentAnnouncement($announcement->fresh('event')), 201);
+    }
+
     /* --------------------------------------------------------------------------- helpers */
+
+    private function presentAnnouncement(Announcement $announcement): array
+    {
+        $counts = $announcement->deliveries()
+            ->selectRaw("count(*) as total, count(*) filter (where status = 'sent') as sent, ".
+                "count(*) filter (where status in ('refused', 'unavailable')) as failed")
+            ->first();
+
+        return [
+            'id' => $announcement->id,
+            'audience' => $announcement->audience,
+            'event' => $announcement->event?->name,
+            'channels' => $announcement->channels ?? [],
+            'subject' => $announcement->subject,
+            'body' => $announcement->body,
+            'status' => $announcement->status,
+            'recipients' => (int) $announcement->recipients,
+            'sent' => (int) ($counts->sent ?? 0),
+            'failed' => (int) ($counts->failed ?? 0),
+            'total' => (int) ($counts->total ?? 0),
+            'created_at' => $announcement->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Channels this account actually has, and nothing else.
+     *
+     * @return list<string>
+     */
+    private function assertChannels(array $channels): array
+    {
+        $clean = [];
+
+        foreach ($channels as $key) {
+            $this->assertChannel((string) $key);
+            $clean[(string) $key] = (string) $key;
+        }
+
+        return array_values($clean);
+    }
 
     private function assertKind(string $kind): void
     {

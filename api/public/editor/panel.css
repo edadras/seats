@@ -2084,6 +2084,49 @@
 .th-sort.is-active { color: var(--text-accent); }
 .th-sort__arrow { display: inline-flex; }
 
+/* --- notices ------------------------------------------------------------------------------ */
+
+/* The bell sits in the brand row beside the theme switch; the count is a dot with a number in it,
+   which is the only thing on the sidebar allowed to shout. */
+.bell { position: relative; }
+
+.bell__count {
+	position: absolute;
+	inset-block-start: 1px;
+	inset-inline-end: 1px;
+	min-inline-size: 0.95rem;
+	padding-inline: 2px;
+	border-radius: var(--r-full);
+	background: var(--danger);
+	color: #fff;
+	font-size: 0.6rem;
+	font-weight: 700;
+	line-height: 0.95rem;
+	text-align: center;
+}
+
+.notices { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-2); }
+
+.notice-row {
+	padding: var(--s-3);
+	border: 1px solid var(--border-subtle);
+	border-inline-start: 3px solid var(--border-strong);
+	border-radius: var(--r-md);
+	background: var(--surface);
+}
+
+.notice-row__head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--s-3);
+}
+
+.notice-row p { margin: 0.25rem 0 0; font-size: var(--text-sm); color: var(--text-secondary); }
+.notice-row--warn { border-inline-start-color: var(--warn); }
+.notice-row--danger { border-inline-start-color: var(--danger); }
+.notice-row.is-unread { background: var(--accent-soft); }
+
 /* --- customers --------------------------------------------------------------------------- */
 
 /* The overview's tile without its hover: on a customer's page these are facts, not doors. */

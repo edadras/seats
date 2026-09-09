@@ -57,6 +57,12 @@ final class Permissions
         // still decided by its source's permission, so this widens nobody's view (ADR-0006 §5).
         'reports.build' => 'reports',
 
+        // --- Messages ------------------------------------------------------------------
+        // Writing to everybody who bought is a different act from configuring the platform, so it
+        // is a different permission: a manager who runs the programme can say "tonight is moved"
+        // without also being able to change the account's settings.
+        'messages.send' => 'account',
+
         // --- Account -------------------------------------------------------------------
         'team.view' => 'account',
         'team.manage' => 'account',
@@ -86,6 +92,7 @@ final class Permissions
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish', 'domains.manage',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
+            'messages.send',
             'team.view', 'team.manage', 'roles.manage', 'modules.manage', 'connections.manage',
             'audit.view', 'account.manage',
         ],
@@ -96,6 +103,7 @@ final class Permissions
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
+            'messages.send',
             'team.view',
         ],
         'box_office' => [

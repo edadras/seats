@@ -33,6 +33,7 @@ class OrderService
         private readonly TenantContext $tenantContext,
         private readonly WebhookDispatcher $webhooks,
         private readonly \App\Domain\Messaging\OrderMessages $messages,
+        private readonly \App\Domain\Notifications\Notifier $notifier,
     ) {}
 
     /** Register an order against a hold — called as soon as WooCommerce creates the order. */
@@ -377,6 +378,14 @@ class OrderService
                 'reason' => $reason,
                 'remaining_active' => $remaining,
             ]);
+
+            // Money going back out is worth telling the box office about without them having to
+            // go looking. The audit log records it either way; this is the part that arrives.
+            $this->notifier->raise('order.refunded', [
+                'reference' => $order->external_order_id,
+                'event' => (string) ($order->event?->name ?? ''),
+                'seats' => $allocations->count(),
+            ], $order);
 
             $this->webhooks->dispatch($order->tenant_id, 'order.refunded', [
                 'external_order_id' => $order->external_order_id,

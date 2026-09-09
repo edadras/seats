@@ -30,6 +30,27 @@ class MessageKinds
             'placeholders' => ['buyer', 'event', 'venue', 'starts', 'seats', 'reference', 'site'],
             'optional' => true,
         ],
+        /*
+         * An announcement carries the organiser's own words rather than a template's, so there is
+         * nothing here to write wording for — but it is a kind, because everything it sends is a
+         * delivery, and a delivery has to say what it was. Its channels are chosen per
+         * announcement, which is why it is not in the channel-settings screen.
+         */
+        'announcement' => [
+            'placeholders' => ['buyer', 'event', 'site'],
+            'optional' => true,
+            'composed' => true,
+        ],
+        /*
+         * The platform talking to the organiser rather than to a buyer: something went wrong that
+         * should not wait for somebody to open the panel. Email only, and not switchable off —
+         * an alarm somebody turned off is not an alarm.
+         */
+        'system.notice' => [
+            'placeholders' => ['title', 'body', 'account'],
+            'optional' => false,
+            'internal' => true,
+        ],
     ];
 
     public static function keys(): array
@@ -52,6 +73,16 @@ class MessageKinds
         return (bool) (self::KINDS[$kind]['optional'] ?? false);
     }
 
+    /** Kinds an organiser writes wording for, which is not all of them. */
+    public static function editable(): array
+    {
+        return array_values(array_filter(
+            self::keys(),
+            fn (string $kind) => empty(self::KINDS[$kind]['composed'])
+                && empty(self::KINDS[$kind]['internal'])
+        ));
+    }
+
     /** What the panel needs to draw the screen, without a second copy of this table. */
     public static function describe(): array
     {
@@ -61,6 +92,6 @@ class MessageKinds
             'description' => __('messaging.kinds.'.str_replace('.', '_', $kind).'.description'),
             'placeholders' => self::placeholders($kind),
             'optional' => self::isOptional($kind),
-        ], self::keys());
+        ], self::editable());
     }
 }

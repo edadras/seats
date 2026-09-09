@@ -68,6 +68,7 @@ return [
         'reports.attendance.view' => 'Rapports de fréquentation',
         'reports.orders.view' => 'Rapports de ventes et de recettes',
         'reports.build' => 'Créer et enregistrer des rapports',
+        'messages.send' => 'Écrire à tous ceux qui ont acheté',
         'team.view' => 'Voir qui fait partie du compte',
         'team.manage' => 'Inviter, suspendre, changer les rôles',
         'roles.manage' => 'Créer et modifier des rôles',

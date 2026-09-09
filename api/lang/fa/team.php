@@ -68,6 +68,7 @@ return [
         'reports.attendance.view' => 'گزارش حضور',
         'reports.orders.view' => 'گزارش فروش و درآمد',
         'reports.build' => 'ساخت و ذخیرهٔ گزارش‌ها',
+        'messages.send' => 'نوشتن به همهٔ کسانی که خرید کرده‌اند',
         'team.view' => 'دیدن اعضای این حساب',
         'team.manage' => 'دعوت، تعلیق و تغییر نقش',
         'roles.manage' => 'ساخت و ویرایش نقش',

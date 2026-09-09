@@ -52,6 +52,13 @@ return [
         'nothingYet' => 'Non è ancora successo nulla.',
     ],
 
+    'notices' => [
+        'title' => 'Avvisi',
+        'markRead' => 'Segna come letti',
+        'none' => 'Niente da segnalare',
+        'noneHint' => 'Rimborsi, messaggi non consegnati e serate esaurite compaiono qui.',
+    ],
+
     'auth' => [
         'signIn' => 'Accedi',
         'subtitle' => 'Gestisci le tue sedi, le piantine e gli eventi.',

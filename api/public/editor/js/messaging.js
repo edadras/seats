@@ -21,6 +21,9 @@
 		locales: [],
 		log: [],
 		filter: '',
+		announcements: [],
+		events: [],
+		mayAnnounce: false,
 
 		// What the editor is looking at.
 		kind: null,
@@ -37,11 +40,18 @@
 		Promise.all( [
 			App.request( 'GET', '/messaging' ),
 			App.request( 'GET', '/messaging/log' ),
+			// Both are allowed to be refused: writing to buyers and configuring the platform are
+			// different permissions, and somebody may hold one without the other.
+			App.request( 'GET', '/messaging/announcements' ).catch( function () { return null; } ),
+			App.request( 'GET', '/events?per_page=100' ).catch( function () { return { data: [] }; } ),
 		] ).then( function ( results ) {
 			Messaging.kinds = results[ 0 ].kinds || [];
 			Messaging.channels = results[ 0 ].channels || [];
 			Messaging.locales = results[ 0 ].locales || [];
 			Messaging.log = results[ 1 ].data || [];
+			Messaging.mayAnnounce = !! results[ 2 ];
+			Messaging.announcements = results[ 2 ] ? ( results[ 2 ].data || [] ) : [];
+			Messaging.events = results[ 3 ].data || [];
 			Messaging.kind = Messaging.kind || ( Messaging.kinds[ 0 ] || {} ).key;
 			Messaging.locale = global.SeatmapI18n.locale || 'en';
 			Messaging.paint();
@@ -60,6 +70,7 @@
 					'<div class="theme-editor__controls">' + Messaging.kindsMarkup() + '</div>' +
 					'<div class="theme-editor__preview">' + Messaging.editorMarkup() + '</div>' +
 				'</div>' +
+				Messaging.announcementsMarkup() +
 				'<h3 class="subhead">' + esc( App.t( 'messaging.log' ) ) + '</h3>' +
 				Messaging.logMarkup(),
 		} );
@@ -166,6 +177,192 @@
 		'</section>';
 	};
 
+	/**
+	 * Announcements: what has been said to buyers, and a button to say something.
+	 *
+	 * Absent entirely for somebody who may not send: a screen that shows a control and refuses it
+	 * has told them about a permission they do not have and wasted the trip.
+	 */
+	Messaging.announcementsMarkup = function () {
+		var App = Messaging.App;
+
+		if ( ! Messaging.mayAnnounce ) {
+			return '';
+		}
+
+		return '<div class="page-head page-head--inline spaced">' +
+				'<div class="page-head__text">' +
+					'<h3 class="subhead spaced-none">' + esc( App.t( 'messaging.announceHeading' ) ) + '</h3>' +
+					'<p class="hint">' + esc( App.t( 'messaging.announceIntro' ) ) + '</p>' +
+				'</div>' +
+				'<div class="page-head__actions">' +
+					'<button class="btn btn--primary" id="announce-new">' + icon( 'mail', { size: 15 } ) +
+						esc( App.t( 'messaging.announceNew' ) ) + '</button>' +
+				'</div>' +
+			'</div>' +
+			( Messaging.announcements.length
+				? App.table(
+					[
+						App.t( 'messaging.announceSubject' ),
+						App.t( 'messaging.announceAudience' ),
+						App.t( 'panel.common.status' ),
+						App.t( 'messaging.announceWhen' ),
+					],
+					Messaging.announcements.map( function ( note ) {
+						return '<tr>' +
+							'<td class="table__primary">' +
+								esc( note.subject || note.body.slice( 0, 60 ) ) + '</td>' +
+							'<td>' + esc( 'event' === note.audience
+								? ( note.event || App.t( 'messaging.audienceEvent' ) )
+								: App.t( 'messaging.audienceEveryone' ) ) + '</td>' +
+							'<td>' + Messaging.announceStatus( note ) + '</td>' +
+							'<td class="muted nowrap">' + esc( App.date( note.created_at ) ) + '</td>' +
+						'</tr>';
+					} ).join( '' )
+				)
+				: App.emptyState( 'mail', App.t( 'messaging.announceNone' ),
+					esc( App.t( 'messaging.announceNoneHint' ) ) ) );
+	};
+
+	Messaging.announceStatus = function ( note ) {
+		var App = Messaging.App;
+		var label = {
+			draft: 'messaging.announceStatusDraft',
+			sending: 'messaging.announceStatusSending',
+			sent: 'messaging.announceStatusSent',
+		}[ note.status ] || 'messaging.announceStatusDraft';
+
+		return '<span class="badge badge--' + ( 'sent' === note.status ? 'ok' : 'neutral' ) + '">' +
+			esc( App.t( label ) ) + '</span>' +
+			'<span class="muted on-own-line">' +
+				esc( App.t( 'messaging.announceProgress', {
+					sent: App.number( note.sent ),
+					total: App.number( note.total ),
+				} ) ) +
+				( note.failed
+					? ' · ' + esc( App.t( 'messaging.announceFailed', { count: App.number( note.failed ) } ) )
+					: '' ) +
+			'</span>';
+	};
+
+	/**
+	 * Write one.
+	 *
+	 * The reach is counted before anything is sent, and again in the confirmation, because "send
+	 * to everybody" is a sentence people say before they have thought about how many that is.
+	 */
+	Messaging.compose = function () {
+		var App = Messaging.App;
+
+		App.modal( {
+			title: App.t( 'messaging.announceNew' ),
+			submitLabel: App.t( 'messaging.announceSend' ),
+			body:
+				'<div class="stack">' +
+					'<div class="field"><label class="field__label" for="a-event">' +
+						esc( App.t( 'messaging.announceAudience' ) ) + '</label>' +
+					'<select class="select" id="a-event" name="event_id">' +
+						'<option value="">' + esc( App.t( 'messaging.audienceEveryone' ) ) + '</option>' +
+						Messaging.events.map( function ( event ) {
+							return '<option value="' + esc( event.id ) + '">' + esc( event.name ) + '</option>';
+						} ).join( '' ) +
+					'</select>' +
+					'<span class="field__hint">' + esc( App.t( 'messaging.announceOnlyPaid' ) ) + '</span></div>' +
+
+					'<div class="field"><span class="field__label">' +
+						esc( App.t( 'messaging.announceChannels' ) ) + '</span>' +
+					'<div class="perms">' + Messaging.channels.map( function ( channel, index ) {
+						return '<label class="perms__row">' +
+							'<input type="checkbox" class="checkbox" data-announce-channel="' +
+								esc( channel.key ) + '"' + ( 0 === index ? ' checked' : '' ) + '>' +
+							'<span>' + esc( channel.name ) + '</span></label>';
+					} ).join( '' ) + '</div></div>' +
+
+					'<p class="hint" id="a-reach">&nbsp;</p>' +
+
+					'<div class="field"><label class="field__label" for="a-subject">' +
+						esc( App.t( 'messaging.announceSubject' ) ) + '</label>' +
+					'<input class="input" id="a-subject" name="subject" maxlength="200">' +
+					'<span class="field__hint">' + esc( App.t( 'messaging.announceSubjectHint' ) ) + '</span></div>' +
+
+					'<div class="field"><label class="field__label" for="a-body">' +
+						esc( App.t( 'messaging.announceBody' ) ) + '</label>' +
+					'<textarea class="textarea" id="a-body" name="body" rows="6" maxlength="2000" required></textarea>' +
+					'<span class="field__hint">' + esc( App.t( 'messaging.announceBodyHint' ) ) + '</span></div>' +
+				'</div>',
+			onSubmit: function ( data ) {
+				var channels = Messaging.chosenChannels();
+
+				if ( ! channels.length ) {
+					App.toast( App.t( 'messaging.announceChannels' ), true );
+
+					return Promise.reject( new Error( App.t( 'messaging.announceChannels' ) ) );
+				}
+
+				return App.request( 'POST', '/messaging/announcements', {
+					event_id: data.get( 'event_id' ) || null,
+					channels: channels,
+					subject: data.get( 'subject' ) || null,
+					body: data.get( 'body' ),
+				} ).then( function () {
+					App.toast( App.t( 'messaging.announceSent' ) );
+					Messaging.render( App );
+				} );
+			},
+		} );
+
+		Messaging.bindReach();
+	};
+
+	Messaging.chosenChannels = function () {
+		var chosen = [];
+
+		each( '[data-announce-channel]', function ( box ) {
+			box.checked && chosen.push( box.dataset.announceChannel );
+		} );
+
+		return chosen;
+	};
+
+	/** Keep "who this reaches" honest while the audience and channels are being chosen. */
+	Messaging.bindReach = function () {
+		var App = Messaging.App;
+		var host = document.getElementById( 'a-reach' );
+		var event = document.getElementById( 'a-event' );
+
+		var count = function () {
+			var channels = Messaging.chosenChannels();
+
+			if ( ! host || ! channels.length ) {
+				host && ( host.textContent = App.t( 'messaging.announceReachNobody' ) );
+
+				return;
+			}
+
+			var query = channels.map( function ( key ) {
+				return 'channels[]=' + encodeURIComponent( key );
+			} ).join( '&' ) + ( event.value ? '&event_id=' + encodeURIComponent( event.value ) : '' );
+
+			App.request( 'GET', '/messaging/announcements/audience?' + query )
+				.then( function ( reach ) {
+					host.textContent = reach.messages
+						? App.t( 'messaging.announceReach', {
+							people: App.number( reach.people ),
+							messages: App.number( reach.messages ),
+						} )
+						: App.t( 'messaging.announceReachNobody' );
+				} )
+				.catch( function () { host.textContent = ''; } );
+		};
+
+		event.addEventListener( 'change', count );
+		each( '[data-announce-channel]', function ( box ) {
+			box.addEventListener( 'change', count );
+		} );
+
+		count();
+	};
+
 	Messaging.logMarkup = function () {
 		var App = Messaging.App;
 
@@ -207,10 +404,17 @@
 			( entry.reason ? '<span class="muted on-own-line">' + esc( entry.reason ) + '</span>' : '' );
 	};
 
+	/**
+	 * What the log calls a kind.
+	 *
+	 * Not every kind is one an organiser writes wording for — an announcement carries their own
+	 * words, and a system notice is the platform talking to them — so those are not in the list
+	 * the settings above are built from, and the log looks their names up separately.
+	 */
 	Messaging.kindName = function ( key ) {
 		var found = Messaging.kinds.filter( function ( kind ) { return kind.key === key; } )[ 0 ];
 
-		return found ? found.name : key;
+		return found ? found.name : Messaging.App.t( 'messaging.logKinds.' + key.replace( /\./g, '_' ) );
 	};
 
 	Messaging.channelName = function ( key ) {
@@ -233,6 +437,12 @@
 
 	Messaging.bind = function () {
 		var App = Messaging.App;
+
+		var announce = document.getElementById( 'announce-new' );
+
+		if ( announce ) {
+			announce.addEventListener( 'click', function () { Messaging.compose(); } );
+		}
 
 		each( '[data-kind]', function ( button ) {
 			button.addEventListener( 'click', function () {

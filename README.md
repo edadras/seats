@@ -198,6 +198,7 @@ node api/editor_smoke.mjs                                        # drives the de
 node api/a11y_check.mjs                                          # contrast and keyboard paths
 node api/reports_smoke.mjs                                       # builds a report by dragging, then a page
 node api/customers_smoke.mjs                                     # the customer directory and its CSV
+node api/messaging_smoke.mjs                                     # an announcement, its deliveries, the notice bell
 php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
 ```
 

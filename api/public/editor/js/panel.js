@@ -328,6 +328,11 @@
 					'<div class="sidebar__brand">' +
 						'<span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) + '</span>' +
 						'<span class="grow">' + esc( this.t( 'panel.brand' ) ) + '</span>' +
+						'<button class="icon-btn icon-btn--sm bell" id="bell" data-tip-side="bottom-end" ' +
+							'data-tip="' + esc( this.t( 'panel.notices.title' ) ) + '" aria-label="' +
+							esc( this.t( 'panel.notices.title' ) ) + '">' +
+							icon( 'alert', { size: 16 } ) +
+							'<span class="bell__count" id="bell-count" hidden></span></button>' +
 						'<button class="icon-btn icon-btn--sm" id="theme" data-tip-side="bottom-end"></button>' +
 					'</div>' +
 					'<nav class="sidebar__nav" id="nav" aria-label="' +
@@ -363,6 +368,13 @@
 
 		document.getElementById( 'signout' ).addEventListener( 'click', function () { self.signOut(); } );
 
+		document.getElementById( 'bell' ).addEventListener( 'click', function () { self.notices(); } );
+
+		// Asked for once now and every few minutes after. A notice worth raising is worth arriving
+		// while somebody is still looking at the screen, and polling this rarely costs nothing.
+		this.loadNotices();
+		window.setInterval( function () { self.loadNotices(); }, 120000 );
+
 		var language = document.getElementById( 'locale' );
 
 		language.addEventListener( 'change', function () { i18n.choose( language.value ); } );
@@ -372,6 +384,66 @@
 		window.SeatmapSignup.banner( this );
 
 		this.route( 'overview' );
+	};
+
+	/* ------------------------------------------------------------------------- the notices */
+
+	/**
+	 * What the platform has to say to this account.
+	 *
+	 * Composed by the server in the reader's own language — a notice is a sentence about facts,
+	 * and the facts are in the database while the sentence is in six catalogues. The panel's job
+	 * is to count what is unread and show what there is.
+	 */
+	App.loadNotices = function () {
+		var self = this;
+
+		return this.request( 'GET', '/notifications' )
+			.then( function ( response ) {
+				self.noticeList = response.data || [];
+				self.paintBell( response.unread || 0 );
+			} )
+			.catch( function () { /* A bell that cannot be filled is not worth an error. */ } );
+	};
+
+	App.paintBell = function ( unread ) {
+		var badge = document.getElementById( 'bell-count' );
+
+		if ( ! badge ) {
+			return;
+		}
+
+		badge.textContent = unread > 9 ? '9+' : this.number( unread );
+		badge.hidden = ! unread;
+	};
+
+	App.notices = function () {
+		var self = this;
+		var list = this.noticeList || [];
+
+		this.modal( {
+			title: this.t( 'panel.notices.title' ),
+			submitLabel: this.t( 'panel.notices.markRead' ),
+			cancelLabel: this.t( 'panel.common.close' ),
+			body: list.length
+				? '<ul class="notices">' + list.map( function ( notice ) {
+					return '<li class="notice-row notice-row--' + esc( notice.level ) +
+						( notice.read ? '' : ' is-unread' ) + '">' +
+						'<div class="notice-row__head">' +
+							'<strong>' + esc( notice.title ) + '</strong>' +
+							'<span class="muted nowrap">' + esc( self.date( notice.created_at ) ) + '</span>' +
+						'</div>' +
+						'<p>' + esc( notice.body ) + '</p>' +
+					'</li>';
+				} ).join( '' ) + '</ul>'
+				: this.emptyState( 'info', this.t( 'panel.notices.none' ),
+					esc( this.t( 'panel.notices.noneHint' ) ) ),
+			onSubmit: function () {
+				return self.request( 'POST', '/notifications/read', {} ).then( function () {
+					return self.loadNotices();
+				} );
+			},
+		} );
 	};
 
 	/**

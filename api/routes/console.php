@@ -29,3 +29,16 @@ Schedule::command('payments:reconcile')->everyTenMinutes()->withoutOverlapping()
  */
 Schedule::command('messages:retry')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
 Schedule::command('messages:remind')->hourly()->withoutOverlapping()->runInBackground();
+
+/*
+ * Announcements too long to finish in the request that sent them. The first batch goes out inline,
+ * so most are already done by the time this runs; this is what carries a message to four thousand
+ * people the rest of the way.
+ */
+Schedule::command('messages:announce')->everyMinute()->withoutOverlapping()->runInBackground();
+
+/*
+ * "Sold out" is worth knowing and expensive to work out, so it is asked hourly rather than on every
+ * sale — see the command for why that trade is the right way round.
+ */
+Schedule::command('events:watch-capacity')->hourly()->withoutOverlapping()->runInBackground();

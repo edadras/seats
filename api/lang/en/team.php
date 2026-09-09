@@ -69,6 +69,7 @@ return [
         'reports.attendance.view' => 'Attendance reports',
         'reports.orders.view' => 'Sales and revenue reports',
         'reports.build' => 'Build and save reports',
+        'messages.send' => 'Write to everybody who bought',
         'team.view' => 'See who is in this account',
         'team.manage' => 'Invite, suspend and change roles',
         'roles.manage' => 'Create and edit roles',

@@ -331,9 +331,23 @@ class SiteController extends Controller
         $this->authorize($request, 'domains.manage');
         $this->assertBelongs($site, $domain->site_id);
 
+        $wasVerified = $domain->isVerified();
+
         VerifySiteDomain::dispatchSync($domain->id);
 
-        return response()->json($this->presentDomain($domain->fresh()));
+        $domain = $domain->fresh();
+
+        // Only the transition. Checking an address that was already verified is somebody being
+        // careful, not news.
+        if (! $wasVerified && $domain->isVerified()) {
+            app(\App\Domain\Notifications\Notifier::class)->raise(
+                'domain.verified',
+                ['hostname' => $domain->hostname, 'site' => $site->name],
+                $domain,
+            );
+        }
+
+        return response()->json($this->presentDomain($domain));
     }
 
     public function makeDomainPrimary(Request $request, Site $site, SiteDomain $domain)
