@@ -31,6 +31,18 @@ class MessageKinds
             'optional' => true,
         ],
         /*
+         * Somebody who asked to be told when a seat came back, being told.
+         *
+         * Not optional: they asked for exactly this message and nothing else, and an organiser who
+         * could switch it off would be collecting addresses for a promise they do not keep.
+         */
+        'waitlist.available' => [
+            'placeholders' => [
+                'buyer', 'event', 'venue', 'starts', 'quantity', 'hours', 'site', 'link', 'leave',
+            ],
+            'optional' => false,
+        ],
+        /*
          * An announcement carries the organiser's own words rather than a template's, so there is
          * nothing here to write wording for — but it is a kind, because everything it sends is a
          * delivery, and a delivery has to say what it was. Its channels are chosen per

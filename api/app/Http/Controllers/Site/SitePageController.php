@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Site;
 use App\Domain\Availability\AvailabilityService;
 use App\Domain\SeatMaps\PublishedGeometry;
 use App\Domain\Sites\Themes;
+use App\Domain\Waitlist\WaitingList;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Site;
@@ -347,6 +348,16 @@ class SitePageController extends Controller
             'container_id' => $containerId,
             'calendar_url' => '/events/'.$event->public_id.'/calendar.ics',
             'boot' => $onSale ? $this->boot($site, $event, $containerId) : null,
+            /*
+             * The queue, offered only where there is one to join.
+             *
+             * A sold-out night, or one whose sale has closed — not a night that simply has not
+             * opened yet, where the honest answer is "come back on Tuesday" rather than a form.
+             * Seats come back all the time; until now they went back on sale silently, to whoever
+             * happened to be looking.
+             */
+            'waiting_list' => ('cancelled' !== $event->status)
+                && ('closed' === $event->status || ($onSale && 0 === app(WaitingList::class)->freePlaces($event))),
         ] + $this->cover($event->name);
     }
 

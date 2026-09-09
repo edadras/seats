@@ -28,6 +28,8 @@
 		users: '<circle cx="9.5" cy="8" r="3.2"/><path d="M3.5 19.5a6 6 0 0 1 12 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6"/><path d="M17.5 14.4a6 6 0 0 1 3 5.1"/>',
 		// A clock with its hand turned back: the log, not the schedule.
 		history: '<path d="M3.6 12a8.4 8.4 0 1 1 2.5 6"/><path d="M3 14.5 6.1 18l3.4-3"/><path d="M12 7.5V12l3 1.8"/>',
+		// A plain clock: waiting, rather than looking back at what happened.
+		clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
 		key: '<circle cx="8" cy="14" r="4"/><path d="M11 11l8-8M17 5l2 2M14.5 7.5l2 2"/>',
 
 		/* --- actions ------------------------------------------------------------------- */

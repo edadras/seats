@@ -114,6 +114,18 @@ return [
     'yourSeats' => 'I tuoi posti',
     'total' => 'Totale',
     'heldUntil' => 'Tenuti fino alle :time.',
+    'waitlist' => [
+        'title' => 'Esaurito — ma i posti tornano',
+        'lead' => 'Rimborsi e carrelli scaduti rimettono posti in vendita di continuo. Lascia il tuo nome: ti scriviamo appena accade.',
+        'howMany' => 'Quanti',
+        'join' => 'Avvisami',
+        'note' => 'Un solo messaggio, e solo se si libera un posto. Ogni nostro messaggio contiene il link per uscire da questa lista.',
+        'joined' => 'Sei in lista. Ti scriviamo appena si libera un posto.',
+        'leftTitle' => 'Sei uscito dalla lista',
+        'leftBody' => 'Non ti scriveremo più riguardo a questo evento.',
+        'backHome' => 'Torna al programma',
+    ],
+
     'invoice' => [
         'title' => 'Fattura',
         'ask' => 'Ho bisogno della fattura',

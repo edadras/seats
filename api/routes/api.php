@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
 use App\Http\Controllers\Api\V1\Management\TicketTypeController;
+use App\Http\Controllers\Api\V1\Management\WaitingListController as ManagementWaitingList;
 use App\Http\Controllers\Api\V1\Management\VenueController;
 use Illuminate\Support\Facades\Route;
 
@@ -135,6 +136,11 @@ Route::prefix('v1')->group(function () {
         // Who is expected tonight. `export` before nothing, because it is a verb and not an id.
         Route::get('events/{event}/door-list', [DoorListController::class, 'index']);
         Route::get('events/{event}/door-list/export', [DoorListController::class, 'export']);
+
+        // ---- The waiting list -----------------------------------------------------------------
+        Route::get('events/{event}/waiting-list', [ManagementWaitingList::class, 'index']);
+        Route::post('events/{event}/waiting-list/notify', [ManagementWaitingList::class, 'notify'])
+            ->middleware('throttle:10,1');
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);

@@ -115,6 +115,18 @@ return [
     'yourSeats' => 'Ihre Plätze',
     'total' => 'Summe',
     'heldUntil' => 'Reserviert bis :time.',
+    'waitlist' => [
+        'title' => 'Ausverkauft — aber Plätze kommen zurück',
+        'lead' => 'Rückgaben und abgelaufene Warenkörbe geben ständig Plätze frei. Hinterlassen Sie Ihren Namen, wir schreiben, sobald einer frei wird.',
+        'howMany' => 'Wie viele',
+        'join' => 'Benachrichtigt mich',
+        'note' => 'Eine Nachricht, und nur wenn ein Platz frei wird. Jede unserer Nachrichten enthält den Link zum Abmelden.',
+        'joined' => 'Sie stehen auf der Liste. Wir schreiben, sobald ein Platz frei wird.',
+        'leftTitle' => 'Sie sind von der Liste',
+        'leftBody' => 'Wir schreiben Ihnen zu dieser Veranstaltung nicht mehr.',
+        'backHome' => 'Zurück zum Programm',
+    ],
+
     'invoice' => [
         'title' => 'Rechnung',
         'ask' => 'Ich brauche eine Rechnung',

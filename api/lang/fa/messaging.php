@@ -26,6 +26,10 @@ return [
             'name' => 'یادآوری رویداد',
             'description' => 'یک روز پیش‌تر، برای همهٔ بلیت‌داران. تا روشنش نکنید خاموش است.',
         ],
+        'waitlist_available' => [
+            'name' => 'صندلی آزاد شد',
+            'description' => 'به نفرات بعدی فهرست انتظار فرستاده می‌شود وقتی جایی آزاد می‌شود. آن‌ها دقیقاً همین را خواسته‌اند، پس نمی‌توان خاموشش کرد.',
+        ],
     ],
     'channels' => [
         'email' => 'ایمیل',
@@ -46,6 +50,10 @@ return [
         'event_reminder' => [
             'subject' => '{event} فرداست',
             'body' => "{buyer}، {event} فرداست.\n\n{venue}\n{starts}\nصندلی‌ها: {seats}\n\nکد پیگیری {reference}.",
+        ],
+        'waitlist_available' => [
+            'subject' => 'برای {event} صندلی آزاد شد',
+            'body' => "{buyer}، برای {event} جایی آزاد شد.\n\n{venue}\n{starts}\n\nشما {quantity} بلیت خواسته بودید. تا {hours} ساعت آینده فروش باز است، به‌ترتیب مراجعه:\n{link}\n\nبرای خروج از این فهرست: {leave}",
         ],
     ],
     'logKinds' => [

@@ -26,6 +26,10 @@ return [
             'name' => 'Erinnerung',
             'description' => 'Am Vortag, an alle mit Ticket. Aus, bis Sie sie einschalten.',
         ],
+        'waitlist_available' => [
+            'name' => 'Ein Platz ist frei geworden',
+            'description' => 'Geht an die Nächsten auf einer Warteliste, wenn Plätze zurückkommen. Genau darum haben sie gebeten, also lässt es sich nicht abschalten.',
+        ],
     ],
     'channels' => [
         'email' => 'E-Mail',
@@ -46,6 +50,10 @@ return [
         'event_reminder' => [
             'subject' => '{event} ist morgen',
             'body' => "{buyer}, {event} ist morgen.\n\n{venue}\n{starts}\nPlätze: {seats}\n\nBuchungsnummer {reference}.",
+        ],
+        'waitlist_available' => [
+            'subject' => 'Für {event} ist ein Platz frei geworden',
+            'body' => "{buyer}, für {event} ist ein Platz zurückgekommen.\n\n{venue}\n{starts}\n\nSie wollten {quantity}. Der Verkauf ist die nächsten {hours} Stunden offen, wer zuerst kommt:\n{link}\n\nVon dieser Liste abmelden: {leave}",
         ],
     ],
     'logKinds' => [

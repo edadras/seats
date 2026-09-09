@@ -8,6 +8,7 @@ use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\SiteFilesController;
 use App\Http\Controllers\Site\SitePageController;
 use App\Http\Controllers\Site\StoreController;
+use App\Http\Controllers\Site\WaitingListController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,6 +59,13 @@ Route::middleware('site')->group(function () {
     Route::get('events/{event}', [SitePageController::class, 'event']);
     // A file a calendar will take, because a ticket bought in September is for a night in November.
     Route::get('events/{event}/calendar.ics', [SitePageController::class, 'calendar']);
+
+    // The queue for a sold-out night, and the way out of it. Leaving is a GET because that is what
+    // a mail client will follow, and repeating it changes nothing.
+    Route::post('events/{event}/waiting-list', [WaitingListController::class, 'join'])
+        ->middleware('throttle:10,1');
+    Route::get('waiting-list/{token}/leave', [WaitingListController::class, 'leave'])
+        ->middleware('throttle:30,1');
 
     /*
      * A buyer's own page. `/account` renders for anybody — signed in it lists their orders,

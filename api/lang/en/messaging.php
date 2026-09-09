@@ -26,6 +26,10 @@ return [
             'name' => 'Event reminder',
             'description' => 'Sent the day before, to everyone holding a ticket. Off unless you turn it on.',
         ],
+        'waitlist_available' => [
+            'name' => 'A seat came free',
+            'description' => 'Sent to the next people on a waiting list when places come back. They asked for exactly this, so it cannot be switched off.',
+        ],
     ],
     'channels' => [
         'email' => 'Email',
@@ -46,6 +50,10 @@ return [
         'event_reminder' => [
             'subject' => '{event} is tomorrow',
             'body' => "{buyer}, {event} is tomorrow.\n\n{venue}\n{starts}\nSeats: {seats}\n\nBooking reference {reference}.",
+        ],
+        'waitlist_available' => [
+            'subject' => 'A seat has come free for {event}',
+            'body' => "{buyer}, a place has come back for {event}.\n\n{venue}\n{starts}\n\nYou asked for {quantity}. Seats are on sale again for the next {hours} hours, first come first served:\n{link}\n\nTo come off this list: {leave}",
         ],
     ],
     'logKinds' => [

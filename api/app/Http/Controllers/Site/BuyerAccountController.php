@@ -6,6 +6,7 @@ use App\Domain\Orders\TicketIssuer;
 use App\Domain\Sites\Auth\GoogleIdentity;
 use App\Domain\Sites\Themes;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Site\Concerns\RendersSitePages;
 use App\Models\ExternalOrder;
 use App\Models\Site;
 use App\Support\Locale\Money;
@@ -26,6 +27,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class BuyerAccountController extends Controller
 {
+    use RendersSitePages;
+
     private const SESSION = 'seatmap_buyer';
 
     public function __construct(
@@ -204,17 +207,4 @@ class BuyerAccountController extends Controller
         return $order;
     }
 
-    private function view(Site $site, string $template, array $data)
-    {
-        return response()->view($template, $data + [
-            'site' => $site,
-            'brand' => Themes::forSite($site),
-            'description' => null,
-            'canonical' => null,
-            'image' => null,
-            'jsonld' => null,
-            'headerMenu' => $site->menuFor('header'),
-            'footerMenu' => $site->menuFor('footer'),
-        ]);
-    }
 }

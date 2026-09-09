@@ -114,6 +114,18 @@ return [
     'yourSeats' => 'Vos places',
     'total' => 'Total',
     'heldUntil' => 'Retenues jusqu’à :time.',
+    'waitlist' => [
+        'title' => 'Complet — mais des places reviennent',
+        'lead' => 'Remboursements et paniers expirés remettent des places en vente en permanence. Laissez votre nom, nous écrivons dès qu’il y en a une.',
+        'howMany' => 'Combien',
+        'join' => 'Prévenez-moi',
+        'note' => 'Un seul message, et seulement si une place se libère. Chacun de nos messages contient le lien pour quitter cette liste.',
+        'joined' => 'Vous êtes sur la liste. Nous écrivons dès qu’une place se libère.',
+        'leftTitle' => 'Vous n’êtes plus sur la liste',
+        'leftBody' => 'Nous ne vous écrirons plus au sujet de cet événement.',
+        'backHome' => 'Retour au programme',
+    ],
+
     'invoice' => [
         'title' => 'Facture',
         'ask' => 'J’ai besoin d’une facture',

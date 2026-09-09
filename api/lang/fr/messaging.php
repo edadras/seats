@@ -26,6 +26,10 @@ return [
             'name' => 'Rappel',
             'description' => 'La veille, à tous les détenteurs de billets. Désactivé tant que vous ne l’activez pas.',
         ],
+        'waitlist_available' => [
+            'name' => 'Une place s’est libérée',
+            'description' => 'Envoyé aux suivants sur une liste d’attente quand des places reviennent. C’est exactement ce qu’ils ont demandé : impossible de le désactiver.',
+        ],
     ],
     'channels' => [
         'email' => 'E-mail',
@@ -46,6 +50,10 @@ return [
         'event_reminder' => [
             'subject' => '{event}, c’est demain',
             'body' => "{buyer}, {event} a lieu demain.\n\n{venue}\n{starts}\nPlaces : {seats}\n\nRéférence {reference}.",
+        ],
+        'waitlist_available' => [
+            'subject' => 'Une place s’est libérée pour {event}',
+            'body' => "{buyer}, une place est revenue pour {event}.\n\n{venue}\n{starts}\n\nVous en vouliez {quantity}. La vente est ouverte pendant {hours} heures, premier arrivé premier servi :\n{link}\n\nPour quitter cette liste : {leave}",
         ],
     ],
     'logKinds' => [

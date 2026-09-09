@@ -95,4 +95,39 @@
             <p class="notice">{{ $event['closed_message'] }}</p>
         </section>
     @endif
+
+    @if (! empty($event['waiting_list']))
+        {{-- Offered where there is a queue worth joining: a night that has sold out, or one whose
+             sale has closed. Seats come back all the time — a refund, a hold that expired — and
+             until now they went back on sale silently, to whoever happened to be looking. --}}
+        <section class="shell section section--tight">
+            <form class="waitlist" method="POST" action="/events/{{ $event['public_id'] }}/waiting-list">
+                @csrf
+
+                <h2 class="waitlist__title">{{ __('site.waitlist.title') }}</h2>
+                <p class="waitlist__lead">{{ __('site.waitlist.lead') }}</p>
+
+                <div class="waitlist__fields">
+                    <div class="field">
+                        <label for="wl-name">{{ __('site.name') }}</label>
+                        <input id="wl-name" name="name" required autocomplete="name" maxlength="120">
+                    </div>
+
+                    <div class="field">
+                        <label for="wl-email">{{ __('site.email') }}</label>
+                        <input id="wl-email" name="email" type="email" required
+                               autocomplete="email" maxlength="190">
+                    </div>
+
+                    <div class="field field--narrow">
+                        <label for="wl-quantity">{{ __('site.waitlist.howMany') }}</label>
+                        <input id="wl-quantity" name="quantity" type="number" min="1" max="20" value="2">
+                    </div>
+                </div>
+
+                <button class="button" type="submit">{{ __('site.waitlist.join') }}</button>
+                <p class="waitlist__note">{{ __('site.waitlist.note') }}</p>
+            </form>
+        </section>
+    @endif
 @endif

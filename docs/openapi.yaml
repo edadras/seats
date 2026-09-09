@@ -52,6 +52,7 @@ tags:
   - name: Discounts
   - name: Box office
   - name: Door
+  - name: Waiting list
   - name: Customers
   - name: Notifications
   - name: Sites
@@ -2731,6 +2732,85 @@ paths:
               schema: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /events/{event}/waiting-list:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getWaitingList
+      tags: [Waiting list]
+      summary: Who is waiting for a sold-out night
+      description: |
+        Requires `orders.view` — these are names and addresses of people who have bought nothing
+        yet, which is customer data.
+
+        `summary.free_places` is asked of the same code the site asks, so the number here and the
+        number a buyer sees cannot disagree. `waiting_places` is what those people actually want,
+        which is not the same as how many of them there are: eleven people wanting twenty-three
+        places is the sentence an organiser is trying to form.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [waiting, notified, converted, left] }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 10, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: The queue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/WaitingListEntry" }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+                      last_page: { type: integer }
+                  summary:
+                    type: object
+                    properties:
+                      waiting: { type: integer }
+                      waiting_places: { type: integer }
+                      notified: { type: integer }
+                      left: { type: integer }
+                      free_places: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /events/{event}/waiting-list/notify:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    post:
+      operationId: notifyWaitingList
+      tags: [Waiting list]
+      summary: Tell the next people in line now
+      description: |
+        Requires `messages.send`, because it writes to people. For the organiser who has just
+        released a block of house seats and does not want to wait for the scheduled round.
+
+        Nobody is held a seat. The message says the sale is open again and it is first come first
+        served — holding seats for somebody who may never open the email is how a sold-out night
+        ends up half empty. Places already promised to somebody whose window is still open are
+        subtracted first, so one returned seat is not offered to the whole queue at once.
+      responses:
+        "200":
+          description: How many were told
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  told: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: The account has no live website for the message to link to
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /customers:
     get:
       operationId: listCustomers
@@ -4524,6 +4604,24 @@ components:
         code: { type: string, description: "The ticket code's visible prefix, for reading aloud." }
         arrived: { type: boolean }
         arrived_at: { type: [string, "null"], format: date-time }
+
+    WaitingListEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string }
+        phone: { type: [string, "null"] }
+        quantity: { type: integer, description: "How many places they want." }
+        status: { type: string, enum: [waiting, notified, converted, left] }
+        joined_at: { type: string, format: date-time }
+        notified_at: { type: [string, "null"], format: date-time }
+        claiming:
+          type: boolean
+          description: >
+            Told, and their window has not run out. "Notified" alone would be a half-truth an hour
+            later, and an organiser deciding whether to release more seats needs to know which of
+            the two it is.
 
     Money:
       type: object

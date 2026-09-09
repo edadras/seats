@@ -26,6 +26,10 @@ return [
             'name' => 'Promemoria',
             'description' => 'Il giorno prima, a chi ha un biglietto. Spento finché non lo accendi.',
         ],
+        'waitlist_available' => [
+            'name' => 'Si è liberato un posto',
+            'description' => 'Inviato ai successivi in lista d’attesa quando tornano dei posti. È esattamente ciò che hanno chiesto, quindi non si può disattivare.',
+        ],
     ],
     'channels' => [
         'email' => 'E-mail',
@@ -46,6 +50,10 @@ return [
         'event_reminder' => [
             'subject' => '{event} è domani',
             'body' => "{buyer}, {event} è domani.\n\n{venue}\n{starts}\nPosti: {seats}\n\nRiferimento {reference}.",
+        ],
+        'waitlist_available' => [
+            'subject' => 'Si è liberato un posto per {event}',
+            'body' => "{buyer}, è tornato un posto per {event}.\n\n{venue}\n{starts}\n\nNe volevi {quantity}. La vendita è aperta per le prossime {hours} ore, chi prima arriva:\n{link}\n\nPer uscire da questa lista: {leave}",
         ],
     ],
     'logKinds' => [

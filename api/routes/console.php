@@ -42,3 +42,12 @@ Schedule::command('messages:announce')->everyMinute()->withoutOverlapping()->run
  * sale — see the command for why that trade is the right way round.
  */
 Schedule::command('events:watch-capacity')->hourly()->withoutOverlapping()->runInBackground();
+
+/*
+ * The queue for a sold-out night.
+ *
+ * Every few minutes rather than the instant a refund lands: seats come back in bursts — a party of
+ * six cancels, three holds expire while the sweeper runs — and one message per released seat would
+ * send the same person six emails in a minute.
+ */
+Schedule::command('waitlist:notify')->everyFiveMinutes()->withoutOverlapping()->runInBackground();

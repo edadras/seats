@@ -26,6 +26,10 @@ return [
             'name' => 'تذكير بالفعالية',
             'description' => 'قبل يوم، لكل حامل تذكرة. مطفأة حتى تشغّلها.',
         ],
+        'waitlist_available' => [
+            'name' => 'شغر مقعد',
+            'description' => 'يُرسل إلى التالين في قائمة الانتظار عند عودة أماكن. طلبوا هذا تحديدًا، فلا يمكن إيقافه.',
+        ],
     ],
     'channels' => [
         'email' => 'البريد',
@@ -46,6 +50,10 @@ return [
         'event_reminder' => [
             'subject' => '{event} غدًا',
             'body' => "{buyer}، {event} غدًا.\n\n{venue}\n{starts}\nالمقاعد: {seats}\n\nرقم الحجز {reference}.",
+        ],
+        'waitlist_available' => [
+            'subject' => 'شغر مقعد في {event}',
+            'body' => "{buyer}، عاد مكان في {event}.\n\n{venue}\n{starts}\n\nطلبت {quantity}. البيع مفتوح خلال {hours} ساعة القادمة، والأسبقية للأسبق:\n{link}\n\nللخروج من القائمة: {leave}",
         ],
     ],
     'logKinds' => [

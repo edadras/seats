@@ -44,6 +44,7 @@
 		] },
 		{ group: 'audience', items: [
 			{ key: 'customers', icon: 'users' },
+			{ key: 'waitlist', icon: 'clock' },
 			{ key: 'sites', icon: 'globe' },
 			{ key: 'themes', icon: 'palette' },
 			{ key: 'messaging', icon: 'mail' },
@@ -546,6 +547,7 @@
 			case 'customers': return window.SeatmapCustomers.render( this );
 			case 'counter': return window.SeatmapCounter.render( this );
 			case 'doorlist': return window.SeatmapDoorList.render( this );
+			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
 			case 'events': return this.renderEvents();

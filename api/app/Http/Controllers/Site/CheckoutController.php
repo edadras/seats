@@ -11,6 +11,7 @@ use App\Domain\Sites\Themes;
 use App\Exceptions\ApiException;
 use App\Domain\Sites\TicketMailer;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Site\Concerns\RendersSitePages;
 use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\Site;
@@ -29,6 +30,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class CheckoutController extends Controller
 {
+    use RendersSitePages;
+
     public function __construct(
         private readonly StorefrontCheckout $checkout,
         private readonly GatewayRegistry $gateways,
@@ -497,20 +500,4 @@ class CheckoutController extends Controller
         return Money::format($minor, $currency ?: 'EUR');
     }
 
-    private function view(Site $site, string $template, array $data)
-    {
-        $currency = $data['currency'] ?? $site->currency;
-
-        return response()->view($template, $data + [
-            'money' => fn (int $minor) => $this->money($minor, $currency),
-            'site' => $site,
-            'brand' => Themes::forSite($site),
-            'description' => null,
-            'canonical' => null,
-            'image' => null,
-            'jsonld' => null,
-            'headerMenu' => $site->menuFor('header'),
-            'footerMenu' => $site->menuFor('footer'),
-        ]);
-    }
 }
