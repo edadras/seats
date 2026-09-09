@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Checkin\CheckinController;
 use App\Http\Controllers\Api\V1\Embed\EmbedController;
 use App\Http\Controllers\Api\V1\Integrations\WooCommerceController;
 use App\Http\Controllers\Api\V1\LocaleController;
+use App\Http\Controllers\Api\V1\SignupController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
@@ -33,6 +34,14 @@ Route::prefix('v1')->group(function () {
     // anyone has signed in. Nothing here is secret.
     Route::get('i18n', [LocaleController::class, 'index'])->middleware('throttle:120,1');
     Route::get('i18n/{locale}', [LocaleController::class, 'show'])->middleware('throttle:120,1');
+
+    // ---- Signing yourself up ------------------------------------------------------------
+    // Public by necessity, and throttled per address and per IP inside the controller as well as
+    // here: this is the one endpoint that creates accounts and sends email to strangers.
+    Route::get('plans', [SignupController::class, 'plans'])->middleware('throttle:60,1');
+    Route::post('signup', [SignupController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('signup/verify', [SignupController::class, 'verify'])->middleware('throttle:20,1');
+    Route::post('signup/resend', [SignupController::class, 'resend'])->middleware('throttle:10,1');
 
     // ---- Panel / management -------------------------------------------------------------
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');

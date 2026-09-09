@@ -99,6 +99,20 @@ class SiteController extends Controller
             $data['brand'] = $this->brand($data['brand'], $site);
         }
 
+        /*
+         * An unverified address may build anything and publish nothing.
+         *
+         * That is the whole restriction on a self-served account, and it is the right one: the
+         * thing an unverified address could be used for is putting content on the public internet
+         * under somebody else's name.
+         */
+        if (($data['status'] ?? null) === 'live' && ! $request->user()?->email_verified_at) {
+            throw ApiException::conflict(
+                'email_unverified',
+                'Verify your email address before putting a site on the internet.'
+            );
+        }
+
         if (($data['status'] ?? null) === 'live' && ! $site->domains()->whereNotNull('verified_at')->exists()) {
             throw ApiException::conflict(
                 'no_verified_domain',

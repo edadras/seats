@@ -452,6 +452,144 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [Signup]
+      summary: What somebody choosing a plan is choosing between
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string }
+                        name: { type: string }
+                        price_amount: { type: integer, description: In the currency's minor unit. }
+                        currency: { type: string }
+                        interval: { type: string, examples: [month, year] }
+                        limits: { type: object, additionalProperties: true }
+
+  /signup:
+    post:
+      operationId: signUp
+      tags: [Signup]
+      summary: Create an account
+      security: []
+      description: >
+        One request makes the four things that have to exist before a venue can do anything: a
+        person, an organiser, a subscription and a website. Four requests would be four ways to end
+        up half signed up.
+
+
+        The address is verified afterwards. An unverified account can build everything and cannot
+        put a site on the public internet, which is the one thing an unverified address could be
+        used to abuse.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, organisation, email, password]
+              properties:
+                name: { type: string, maxLength: 120 }
+                organisation: { type: string, maxLength: 120 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12 }
+                locale: { type: string }
+                timezone: { type: string }
+                plan: { type: string }
+      responses:
+        "201":
+          description: Created, with a token that already works
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  tenant: { type: object, additionalProperties: true }
+                  role: { type: string }
+                  site_id: { type: string, format: uuid }
+                  email_verified: { type: boolean }
+                  plan: { type: string }
+        "409":
+          description: That address already has an account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /signup/verify:
+    post:
+      operationId: verifyEmail
+      tags: [Signup]
+      summary: Type the code from the email
+      security: []
+      description: >
+        Six digits, hashed at rest, good for a day, and capped at six attempts — the cap is what
+        makes six digits not guessable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string }
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email_verified: { type: boolean }
+        "422":
+          description: Wrong or expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /signup/resend:
+    post:
+      operationId: resendVerification
+      tags: [Signup]
+      summary: Send the code again
+      security: []
+      description: >
+        Answers the same way whether or not the address has an account: this endpoint must not be
+        usable to find out who has one, and it is throttled hard because it sends email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean }
+
   /messaging:
     get:
       operationId: getMessagingSettings

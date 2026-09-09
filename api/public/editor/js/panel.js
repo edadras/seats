@@ -219,6 +219,8 @@
 				'autocomplete="current-password"></div>' +
 				'<div class="issue issue--error" id="login-error" role="alert" hidden></div>' +
 				'<button class="btn btn--primary btn--lg btn--block" type="submit">Sign in</button>' +
+				'<p class="auth__foot"><button type="button" class="link" id="go-signup">' +
+					esc( this.t( 'signup.newAccount' ) ) + '</button></p>' +
 			'</form></div>';
 
 		var form = document.getElementById( 'login' );
@@ -226,6 +228,9 @@
 		var problem = document.getElementById( 'login-error' );
 
 		form.querySelector( '#email' ).focus();
+
+		document.getElementById( 'go-signup' )
+			.addEventListener( 'click', function () { window.SeatmapSignup.render( self ); } );
 
 		form.addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
@@ -247,6 +252,7 @@
 						email: String( data.get( 'email' ) || '' ),
 						tenant: response.tenant ? response.tenant.name : '',
 						role: response.role || '',
+						email_verified: false !== response.email_verified,
 					};
 
 					// sessionStorage, not localStorage: the token dies with the tab rather than
@@ -318,6 +324,10 @@
 		} );
 
 		document.getElementById( 'signout' ).addEventListener( 'click', function () { self.signOut(); } );
+
+		// An account that has not verified its address gets a bar it can act on, not a nag: the
+		// code box is in it, and everything else on the panel still works.
+		window.SeatmapSignup.banner( this );
 
 		this.route( 'events' );
 	};

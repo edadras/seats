@@ -74,6 +74,9 @@ class AuthController extends Controller
                 'locale' => $tenant->locale,
             ],
             'role' => $membership->role,
+            // So the panel can put the verification bar back for somebody who signed up, closed
+            // the tab, and came back a day later without typing the code.
+            'email_verified' => null !== $user->email_verified_at,
         ]);
     }
 
