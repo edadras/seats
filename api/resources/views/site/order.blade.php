@@ -32,12 +32,19 @@
                                  width="200" height="200">
                         @endif
 
-                        <p class="ticket__seat">
-                            {{ trim($allocation->section_name.' '.$allocation->row_name.' '.$allocation->seat_label) ?: __('site.standing') }}
-                            {{-- Quantity belongs to a standing place, where it is the whole point.
-                                 On a named seat it is always one, and printing it says nothing. --}}
-                            @if (! $allocation->seat_id && $allocation->quantity)
-                                <span class="muted">× {{ $allocation->quantity }}</span>
+                        {{--
+                            A named seat reads as section, row and seat. A standing place has none
+                            of those: it has the area it is in and how many of them there are, and
+                            `seat_label` on such a row carries an English phrase written at sale
+                            time ("2 places") that would sit untranslated in the middle of this
+                            sentence — and say the quantity a second time.
+                        --}}
+                        <p class="ticket__seat" dir="auto">
+                            @if ($allocation->seat_id)
+                                {{ trim($allocation->section_name.' '.$allocation->row_name.' '.$allocation->seat_label) }}
+                            @else
+                                {{ $allocation->section_name ?: __('site.standing') }}
+                                <span class="muted">× {{ \App\Support\Locale\Money::number($allocation->quantity ?: 1) }}</span>
                             @endif
                         </p>
 

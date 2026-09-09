@@ -218,7 +218,11 @@ class CheckoutController extends Controller
 
         foreach ($snapshot['areas'] ?? [] as $area) {
             $lines[] = [
-                'label' => ($area['quantity'] ?? 1).' × '.($area['label'] ?? 'Standing'),
+                // The count in the reader's digits and the fallback in the reader's language: this
+                // line sits directly under a price that is already shaped, and "2 × Floor" beside
+                // "€۴۸٬۰۰" is two writing systems in one summary.
+                'label' => Money::number($area['quantity'] ?? 1).' × '
+                    .($area['label'] ?? __('site.standing')),
                 'amount' => (int) ($area['amount'] ?? 0),
             ];
         }

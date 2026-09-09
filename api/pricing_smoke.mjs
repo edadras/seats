@@ -74,7 +74,8 @@ await page.click( '#pricing-save' );
 await page.waitForSelector( priceButton );
 await page.waitForTimeout( 400 );
 
-const row = await page.locator( 'tbody tr' ).first().innerText();
+// The row this run priced, not whichever event sorts first: the demo has two.
+const row = await page.locator( `tr:has(${ priceButton })` ).innerText();
 check( 'the list shows the saved price, undivided', /500,000/.test( row ), row.replace( /\n/g, ' | ' ) );
 
 console.log( 'Persian' );
@@ -86,7 +87,7 @@ await page.waitForTimeout( 400 );
 const dir = await page.evaluate( () => document.documentElement.getAttribute( 'dir' ) );
 check( 'the panel turns round', dir === 'rtl', `dir=${ dir }` );
 
-const faRow = await page.locator( 'tbody tr' ).first().innerText();
+const faRow = await page.locator( `tr:has(${ priceButton })` ).innerText();
 check( 'the price is written in Persian digits', /۵۰۰٬۰۰۰/.test( faRow ), faRow.replace( /\n/g, ' | ' ) );
 check( 'the action button is Persian', ( await page.locator( priceButton ).innerText() ).includes( 'قیمت' ) );
 
