@@ -24,6 +24,7 @@
     <script src="{{ asset('editor/js/doorlist.js') }}"></script>
     <script src="{{ asset('editor/js/waitlist.js') }}"></script>
     <script src="{{ asset('editor/js/questions.js') }}"></script>
+    <script src="{{ asset('editor/js/security.js') }}"></script>
     <script src="{{ asset('editor/js/discounts.js') }}"></script>
     <script src="{{ asset('editor/js/modules.js') }}"></script>
     <script src="{{ asset('editor/js/team.js') }}"></script>

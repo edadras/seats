@@ -57,6 +57,7 @@
 			{ key: 'connections', icon: 'plug' },
 			{ key: 'modules', icon: 'puzzle' },
 			{ key: 'team', icon: 'users' },
+			{ key: 'security', icon: 'lock' },
 			{ key: 'audit', icon: 'history' },
 		] },
 	];
@@ -280,20 +281,13 @@
 				device_name: 'panel',
 			} )
 				.then( function ( response ) {
-					self.token = response.token;
-					self.profile = {
-						email: String( data.get( 'email' ) || '' ),
-						tenant: response.tenant ? response.tenant.name : '',
-						role: response.role || '',
-						email_verified: false !== response.email_verified,
-					};
+					// The password was right and the account wants a second step. Not a refusal:
+					// a half-finished sign-in, holding a challenge worth nothing on its own.
+					if ( response.two_factor_required ) {
+						return self.askForCode( response.challenge, String( data.get( 'email' ) || '' ) );
+					}
 
-					// sessionStorage, not localStorage: the token dies with the tab rather than
-					// lingering on a shared machine.
-					window.sessionStorage.setItem( STORE.token, response.token );
-					window.sessionStorage.setItem( STORE.profile, JSON.stringify( self.profile ) );
-
-					self.showWorkspace();
+					self.finishSignIn( response, String( data.get( 'email' ) || '' ) );
 				} )
 				.catch( function ( error ) {
 					problem.innerHTML = icon( 'alert', { size: 16 } ) + '<span>' + esc( error.message ) + '</span>';
@@ -301,6 +295,73 @@
 					submit.disabled = false;
 					submit.textContent = self.t( 'panel.auth.signIn' );
 				} );
+		} );
+	};
+
+	/**
+	 * What to keep once a sign-in is done, whichever half finished it.
+	 *
+	 * sessionStorage, not localStorage: the token dies with the tab rather than lingering on a
+	 * shared machine.
+	 */
+	App.finishSignIn = function ( response, email ) {
+		this.token = response.token;
+		this.profile = {
+			email: email,
+			tenant: response.tenant ? response.tenant.name : '',
+			role: response.role || '',
+			email_verified: false !== response.email_verified,
+			must_set_up_two_factor: !! response.must_set_up_two_factor,
+		};
+
+		window.sessionStorage.setItem( STORE.token, response.token );
+		window.sessionStorage.setItem( STORE.profile, JSON.stringify( this.profile ) );
+
+		this.showWorkspace();
+
+		if ( this.profile.must_set_up_two_factor ) {
+			// The account requires it and this person has not set it up. Signing them in anyway
+			// would make the requirement a suggestion; refusing would leave them no way to comply.
+			this.toast( this.t( 'panel.security.mustSetUp' ), true );
+			this.route( 'security' );
+		}
+	};
+
+	/**
+	 * The second half of a sign-in.
+	 *
+	 * A modal that cannot be dismissed into a half-signed-in state: closing it leaves the login
+	 * form exactly as it was, which is the honest outcome of not finishing.
+	 */
+	App.askForCode = function ( challenge, email ) {
+		var self = this;
+		var submit = document.querySelector( '#login button[type=submit]' );
+
+		if ( submit ) {
+			submit.disabled = false;
+			submit.textContent = this.t( 'panel.auth.signIn' );
+		}
+
+		this.modal( {
+			title: this.t( 'panel.security.codeTitle' ),
+			submitLabel: this.t( 'panel.auth.signIn' ),
+			body:
+				'<div class="stack">' +
+					'<p class="hint">' + esc( this.t( 'panel.security.codeBody' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="tfa-code">' +
+						esc( this.t( 'panel.security.code' ) ) + '</label>' +
+						'<input class="input input--code" id="tfa-code" inputmode="numeric" ' +
+							'autocomplete="one-time-code" required></div>' +
+					'<p class="field__hint">' + esc( this.t( 'panel.security.orRecovery' ) ) + '</p>' +
+				'</div>',
+			onSubmit: function () {
+				return self.request( 'POST', '/auth/login/two-factor', {
+					challenge: challenge,
+					code: document.getElementById( 'tfa-code' ).value.trim(),
+				} ).then( function ( response ) {
+					self.finishSignIn( response, email );
+				} );
+			},
 		} );
 	};
 
@@ -549,6 +610,7 @@
 			case 'counter': return window.SeatmapCounter.render( this );
 			case 'doorlist': return window.SeatmapDoorList.render( this );
 			case 'questions': return window.SeatmapQuestions.render( this );
+			case 'security': return window.SeatmapSecurity.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );

@@ -42,6 +42,7 @@ servers:
 
 tags:
   - name: Auth
+  - name: Security
   - name: Venues
   - name: Seat maps
   - name: Events
@@ -549,6 +550,227 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
+
+  /auth/login/two-factor:
+    post:
+      operationId: loginTwoFactor
+      tags: [Auth]
+      summary: The second half of a sign-in
+      security: []
+      description: |
+        `POST /auth/login` returns `two_factor_required` and a `challenge` instead of a token when
+        the account has a second step. The password was right, so that is not a refusal — it is a
+        half-finished sign-in, holding a handle that is worth nothing on its own.
+
+        The challenge is a random value in a five-minute cache rather than anything derived from
+        the account, and it is spent whatever the answer: a handle that survived a wrong guess
+        would be a handle worth guessing against, and there is no cost to typing the password
+        again. Either the code from the authenticator app or one of the recovery codes is accepted,
+        and a recovery code is used up as it is used.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challenge, code]
+              properties:
+                challenge: { type: string }
+                code: { type: string, maxLength: 20 }
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  role: { type: [string, "null"] }
+                  two_factor: { type: boolean }
+        "401":
+          description: Wrong code, or a challenge that has been spent or has expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Too many attempts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/two-factor:
+    get:
+      operationId: getTwoFactor
+      tags: [Security]
+      summary: What the signed-in account has
+      description: |
+        Always the caller's own account. There is no way to set up, inspect or remove somebody
+        else's second step — an administrator who could is an administrator who could sign in as
+        them, which is the thing this exists to prevent. The secret never appears in a payload.
+      responses:
+        "200":
+          description: The state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  recovery_codes_left: { type: integer }
+                  required_by_account: { type: boolean }
+    post:
+      operationId: beginTwoFactor
+      tags: [Security]
+      summary: Begin setting up a second step
+      description: |
+        Returns a secret, the `otpauth://` URI an authenticator app reads, and that URI as a QR
+        code. Nothing is switched on here: an enrolment abandoned halfway leaves the account
+        exactly as usable as it was.
+      responses:
+        "200":
+          description: Something to scan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret: { type: string }
+                  uri: { type: string }
+                  qr: { type: string, description: "A data: URI." }
+    delete:
+      operationId: disableTwoFactor
+      tags: [Security]
+      summary: Turn the second step off
+      description: |
+        Takes a working code *and* the password: a borrowed tab is the case a second step defends
+        against, and a borrowed tab has neither. Refused outright while the account requires it of
+        everybody.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, password]
+              properties:
+                code: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: Off
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+        "409":
+          description: The account requires two-step sign-in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/two-factor/confirm:
+    post:
+      operationId: confirmTwoFactor
+      tags: [Security]
+      summary: Finish by proving the app works
+      description: |
+        The recovery codes come back here and nowhere else: they are hashed the moment they are
+        made, so this is the only time they can be shown.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: On
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  recovery_codes:
+                    type: array
+                    items: { type: string }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/two-factor/recovery-codes:
+    post:
+      operationId: replaceRecoveryCodes
+      tags: [Security]
+      summary: A fresh set of recovery codes
+      description: The old ones stop working the moment the new ones are made.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: The new codes, shown once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recovery_codes:
+                    type: array
+                    items: { type: string }
+        "409":
+          description: Two-step sign-in is not switched on
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /account/two-factor-requirement:
+    post:
+      operationId: requireTwoFactor
+      tags: [Security]
+      summary: Require a second step of everybody in the account
+      description: |
+        Requires `account.manage`, and refuses while the caller has not set up their own: an account
+        that requires it of everybody but not of its owner locks its owner out on the next sign-in.
+
+        People who have not set it up still get in — refusing would leave them no way to comply —
+        and are told to finish, through `must_set_up_two_factor` on the sign-in response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [required]
+              properties:
+                required: { type: boolean }
+      responses:
+        "200":
+          description: Set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  required_by_account: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: The caller has not set up their own
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /events/{event}/questions:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]

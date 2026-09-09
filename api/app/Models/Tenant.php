@@ -11,9 +11,12 @@ class Tenant extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'status', 'timezone', 'locale', 'settings'];
+    protected $fillable = ['name', 'slug', 'status', 'timezone', 'locale', 'settings', 'require_two_factor'];
 
-    protected $casts = ['settings' => 'array'];
+    protected $casts = [
+        'settings' => 'array',
+        'require_two_factor' => 'boolean',
+    ];
 
     public function members()
     {

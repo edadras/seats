@@ -60,6 +60,9 @@ class ResolveTenantFromUser
         }
 
         $request->attributes->set('membership', $membership);
+        // The tenant itself, for the handful of screens that are about the account rather than
+        // about something inside it. The context has it; a controller should not have to ask twice.
+        $request->attributes->set('tenant', $tenant);
 
         return $next($request);
     }

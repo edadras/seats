@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
 use App\Http\Controllers\Api\V1\Management\TicketTypeController;
+use App\Http\Controllers\Api\V1\Management\TwoFactorController;
 use App\Http\Controllers\Api\V1\Management\WaitingListController as ManagementWaitingList;
 use App\Http\Controllers\Api\V1\Management\VenueController;
 use Illuminate\Support\Facades\Route;
@@ -58,6 +59,10 @@ Route::prefix('v1')->group(function () {
 
     // ---- Panel / management -------------------------------------------------------------
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
+    // The second half of a sign-in. Its own route because the first half returns no token: what it
+    // hands back is a challenge that is worth nothing on its own.
+    Route::post('auth/login/two-factor', [AuthController::class, 'twoFactor'])
+        ->middleware('throttle:20,1');
 
     Route::middleware(['auth:sanctum', 'tenant', 'throttle:240,1'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
@@ -148,6 +153,21 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}/waiting-list', [ManagementWaitingList::class, 'index']);
         Route::post('events/{event}/waiting-list/notify', [ManagementWaitingList::class, 'notify'])
             ->middleware('throttle:10,1');
+
+        // ---- A second step at the door --------------------------------------------------------
+        // Always the signed-in person's own account: there is no way to set up, inspect or remove
+        // somebody else's, because an administrator who could is an administrator who could sign
+        // in as them.
+        Route::get('auth/two-factor', [TwoFactorController::class, 'show']);
+        Route::post('auth/two-factor', [TwoFactorController::class, 'begin'])
+            ->middleware('throttle:10,1');
+        Route::post('auth/two-factor/confirm', [TwoFactorController::class, 'confirm'])
+            ->middleware('throttle:10,1');
+        Route::post('auth/two-factor/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])
+            ->middleware('throttle:10,1');
+        Route::delete('auth/two-factor', [TwoFactorController::class, 'disable'])
+            ->middleware('throttle:10,1');
+        Route::post('account/two-factor-requirement', [TwoFactorController::class, 'require']);
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);

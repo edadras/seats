@@ -1458,6 +1458,28 @@
 .on-own-line { display: block; }
 .nowrap { white-space: nowrap; }
 .is-muted td { opacity: 0.6; }
+/* The recovery codes, shown once and written on paper. */
+.codes {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+	gap: var(--s-2);
+	margin: var(--s-4) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.codes code {
+	display: block;
+	padding: var(--s-2);
+	border: 1px solid var(--hairline);
+	border-radius: calc(var(--radius) * 0.6);
+	background: var(--surface-sunken);
+	text-align: center;
+	letter-spacing: 0.08em;
+}
+
+.tfa-qr { border: 1px solid var(--hairline); border-radius: var(--radius); background: #fff; }
+
 /* A row for somebody already inside, read at arm's length across a busy door. */
 .door-row.is-in td { opacity: 0.55; }
 

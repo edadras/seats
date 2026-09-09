@@ -18,14 +18,27 @@ class User extends Authenticatable
 
     protected $fillable = ['name', 'email', 'password', 'locale'];
 
-    protected $hidden = ['password', 'remember_token'];
+    // The secret is a credential of the same kind as the password: it never leaves in a payload.
+    protected $hidden = ['password', 'remember_token', 'totp_secret', 'recovery_codes'];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // Encrypted rather than hashed: a TOTP code is checked by computing the same code, so
+            // the server has to be able to read the secret back. Encryption is what stops a stolen
+            // database from being a stolen set of authenticators.
+            'totp_secret' => 'encrypted',
+            'totp_confirmed_at' => 'datetime',
+            'recovery_codes' => 'array',
         ];
+    }
+
+    /** Enrolled *and* finished: a half-set-up authenticator must not lock anybody out. */
+    public function hasTwoFactor(): bool
+    {
+        return null !== $this->totp_secret && null !== $this->totp_confirmed_at;
     }
 
     /**
