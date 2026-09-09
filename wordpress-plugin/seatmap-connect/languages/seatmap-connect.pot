@@ -236,7 +236,7 @@ msgstr ""
 msgid "Total"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:162
+#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:201
 msgid "Reserve and add to cart"
 msgstr ""
 
@@ -347,7 +347,24 @@ msgstr ""
 msgid "In %s"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:207
+#: includes/class-seatmap-widget.php:198
+msgid "Choose your tickets"
+msgstr ""
+
+#: includes/class-seatmap-widget.php:199
+msgid "Tickets"
+msgstr ""
+
+#: includes/class-seatmap-widget.php:200
+msgid "Nothing chosen yet."
+msgstr ""
+
+#. translators: %d: the largest number of tickets one order may hold.
+#: includes/class-seatmap-widget.php:203
+msgid "You can take up to %d tickets."
+msgstr ""
+
+#: includes/class-seatmap-widget.php:214
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr ""
 

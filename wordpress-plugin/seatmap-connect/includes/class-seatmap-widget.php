@@ -194,6 +194,13 @@ class Seatmap_Widget {
 							'openSection'    => __( 'Show seats in %s', 'seatmap-connect' ),
 							/* translators: %s: name of the area. */
 							'inSection'      => __( 'In %s', 'seatmap-connect' ),
+							// A room sold by the head: areas with a capacity and no chair to click.
+							'chooseTickets'  => __( 'Choose your tickets', 'seatmap-connect' ),
+							'ticketTypes'    => __( 'Tickets', 'seatmap-connect' ),
+							'noneChosen'     => __( 'Nothing chosen yet.', 'seatmap-connect' ),
+							'reserveTickets' => __( 'Reserve and add to cart', 'seatmap-connect' ),
+							/* translators: %d: the largest number of tickets one order may hold. */
+							'maxTickets'     => __( 'You can take up to %d tickets.', 'seatmap-connect' ),
 						),
 					)
 				)

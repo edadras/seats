@@ -467,6 +467,20 @@
 		}
 
 		switch ( block.type ) {
+			case 'hero':
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				text( label( 'heroSubtitle' ), 'subtitle', { wide: true } );
+				text( label( 'imageUrl' ), 'url', { wide: true, placeholder: 'https://…' } );
+				select( label( 'align' ), 'align', [
+					[ 'start', label( 'alignLeft' ) ], [ 'center', label( 'alignCentre' ) ],
+				] );
+				select( label( 'heroHeight' ), 'height', [
+					[ 'short', label( 'heightShort' ) ],
+					[ 'tall', label( 'heightTall' ) ],
+					[ 'full', label( 'heightFull' ) ],
+				] );
+				break;
+
 			case 'heading':
 				text( label( 'blockText' ), 'text', { wide: true } );
 				select( label( 'blockSize' ), 'level', [
@@ -503,7 +517,9 @@
 			case 'eventList':
 				text( label( 'blockTitle' ), 'title', { wide: true } );
 				select( label( 'layout' ), 'layout', [
-					[ 'cards', label( 'layoutCards' ) ], [ 'list', label( 'layoutList' ) ],
+					[ 'cards', label( 'layoutCards' ) ],
+					[ 'list', label( 'layoutList' ) ],
+					[ 'spotlight', label( 'layoutSpotlight' ) ],
 				] );
 				text( label( 'howMany' ), 'limit' );
 				break;

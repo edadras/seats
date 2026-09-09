@@ -28,7 +28,10 @@ class EventController extends Controller
     {
         $this->authorize($request, 'events.view');
 
-        $events = Event::with(['venue', 'priceZones'])
+        // `seatMapVersion` as well: present() reads the published chart's categories, and a list of
+        // events that lazy-loaded it would be one query per row — or, with lazy loading disabled,
+        // a 500 on the first account that has two events.
+        $events = Event::with(['venue', 'priceZones', 'seatMapVersion'])
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('starts_at')
             ->paginate(min((int) $request->query('per_page', 25), 100));
@@ -282,6 +285,10 @@ class EventController extends Controller
 
     private function present(Event $event): array
     {
+        // A no-op on the list, which eager-loads both; the safety net is for the single-model
+        // routes, where the event arrives from route binding with nothing loaded.
+        $event->loadMissing(['priceZones', 'seatMapVersion']);
+
         return [
             'id' => $event->id,
             'public_id' => $event->public_id,

@@ -43,9 +43,12 @@ class SiteProvisioner
             $say = fn (string $key) => __('site.seed.'.$key, [], $locale);
 
             $home = $this->page($site, '', $say('home'), 'home', 0, [
-                ['type' => 'heading', 'text' => $name, 'level' => 2, 'align' => 'center'],
-                ['type' => 'richText', 'text' => $say('welcome')],
-                ['type' => 'eventList', 'title' => $say('whatsOn'), 'limit' => 12, 'layout' => 'cards'],
+                // A banner, not a centred heading: the first thing an organiser sees of their own
+                // site should already look like a site, with room for their picture when they have
+                // one and their own accent colour until then.
+                ['type' => 'hero', 'title' => $name, 'subtitle' => $say('welcome'), 'url' => null,
+                    'align' => 'start', 'height' => 'tall'],
+                ['type' => 'eventList', 'title' => $say('whatsOn'), 'limit' => 12, 'layout' => 'spotlight'],
             ]);
 
             $event = $this->page($site, 'event', $say('event'), 'event', 1, [

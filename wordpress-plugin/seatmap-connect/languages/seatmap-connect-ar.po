@@ -237,7 +237,7 @@ msgstr "لم تختر أي مقعد بعد."
 msgid "Total"
 msgstr "الإجمالي"
 
-#: includes/class-seatmap-widget.php:162
+#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:201
 msgid "Reserve and add to cart"
 msgstr "احجز وأضِف إلى السلة"
 
@@ -348,7 +348,24 @@ msgstr "اعرض مقاعد %s"
 msgid "In %s"
 msgstr "في %s"
 
-#: includes/class-seatmap-widget.php:207
+#: includes/class-seatmap-widget.php:198
+msgid "Choose your tickets"
+msgstr "اختر تذاكرك"
+
+#: includes/class-seatmap-widget.php:199
+msgid "Tickets"
+msgstr "التذاكر"
+
+#: includes/class-seatmap-widget.php:200
+msgid "Nothing chosen yet."
+msgstr "لم تختر شيئًا بعد."
+
+#. translators: %d: the largest number of tickets one order may hold.
+#: includes/class-seatmap-widget.php:203
+msgid "You can take up to %d tickets."
+msgstr "يمكنك أخذ %d تذكرة كحد أقصى."
+
+#: includes/class-seatmap-widget.php:214
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "اختيار المقاعد يحتاج جافاسكربت. فعّله من فضلك، أو اتصل بشبّاك التذاكر."
 

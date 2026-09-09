@@ -1,9 +1,21 @@
-/* Noir — dark and high contrast, for gigs and late shows. */
+/*
+ * Noir — dark and high contrast, for gigs and late shows.
+ *
+ * A dark page needs its cards lifted off the background rather than outlined on it, so the surfaces
+ * step up instead of the borders getting louder.
+ */
 .masthead { border-block-end-color: var(--border); }
 .footer { background: var(--surface-sunken); }
 .button--secondary { border-color: var(--border); color: var(--text); }
-.event-card { background: var(--surface-sunken); }
-.event-card__when { background: rgba(255, 255, 255, 0.06); }
+
+.event-card { background: var(--surface-sunken); border-color: color-mix(in srgb, var(--border) 60%, transparent); }
+.event-card:hover { border-color: var(--accent); }
+.event-card__when { background: rgba(255, 255, 255, 0.1); color: #fff; backdrop-filter: blur(8px); }
+.event-card__month { color: rgba(255, 255, 255, 0.7); }
+
+.booking, .checkout__step, .ticket { background: var(--surface-sunken); }
+.ticket::before, .ticket::after { background: var(--surface); }
+.langs__button, .langs__menu { background: var(--surface-sunken); }
 
 /*
  * The picker is a guest on the page and follows the *visitor's* system theme by default. On a site

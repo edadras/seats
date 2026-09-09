@@ -1,26 +1,50 @@
 /*
  * Kiosk — dense and practical. For a season of forty dates, not a single gala.
  *
- * Everything is one line shorter than elsewhere: the point of this theme is that a listing of
- * forty events fits on a screen instead of scrolling for a minute.
+ * Everything is one line shorter than elsewhere: the point of this theme is that a listing of forty
+ * events fits on a screen instead of scrolling for a minute. So the poster shrinks to a stamp and
+ * the card lies down, whichever layout the page asked for.
  */
-.masthead { padding-block: 0.35rem; border-block-end: 2px solid var(--border); }
+.masthead__inner { padding-block: 0.45rem; }
+.masthead { border-block-end-width: 2px; border-block-end-color: var(--border); }
 .brand__name { font-weight: 700; }
 
-.event-card {
-	gap: 0.6rem;
-	padding: 0.55rem 0.7rem;
-	line-height: 1.35;
+.section { padding-block: clamp(1.25rem, 3vw, 2rem); }
+
+.events--cards, .events--spotlight {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
 }
 
-.event-card + .event-card { margin-block-start: -1px; }
+.events--spotlight .event-card--lead { grid-column: auto; }
+
+.event-card {
+	flex-direction: row;
+	align-items: stretch;
+	line-height: 1.35;
+	box-shadow: none;
+}
+
+.event-card:hover { transform: none; }
+
+.event-card__art { inline-size: 5.5rem; aspect-ratio: auto; flex: none; }
+.event-card__art::after { background: none; }
+.event-card__kind, .event-card__gone { display: none; }
 
 .event-card__when {
-	background: var(--surface-sunken);
-	border: 1px solid var(--border);
+	inset: 0;
+	inline-size: 100%;
+	border-radius: 0;
+	background: color-mix(in srgb, var(--surface) 82%, transparent);
+	box-shadow: none;
 	font-variant-numeric: tabular-nums;
-	font-size: 0.85rem;
 }
 
-.button { min-block-size: 2.25rem; padding-inline: 0.9rem; }
+.event-card__day { font-size: 1.15rem; }
+.event-card__body { justify-content: center; padding: 0.5rem 0.8rem; }
+.event-card__foot { flex-direction: column; align-items: flex-end; justify-content: center; padding: 0.5rem 0.8rem; }
+
+.event-hero { min-block-size: 13rem; }
+.button { min-block-size: 2.5rem; padding-inline: 1rem; }
 .footer { padding-block: 1rem; background: var(--surface-sunken); }

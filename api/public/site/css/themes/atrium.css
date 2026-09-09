@@ -2,12 +2,10 @@
  * Atrium — museum-quiet. Wide margins, thin rules, nothing shouting.
  *
  * The restraint is mostly in the tokens (roomy spacing, light headings, no shadow). Here: hairline
- * rules instead of boxes, and a masthead that reads as a caption rather than a banner.
+ * rules instead of boxes, a masthead that reads as a caption rather than a banner, and a poster
+ * that is a plate on a wall rather than a card in a shop.
  */
-.masthead {
-	border-block-end: 1px solid var(--border);
-	padding-block: 0.5rem;
-}
+.masthead { padding-block: 0.35rem; }
 
 .brand__name {
 	font-family: var(--font-heading);
@@ -15,22 +13,30 @@
 	letter-spacing: 0.02em;
 }
 
-.nav__link { color: var(--text-muted); }
-.nav__link:hover { color: var(--text); }
-
 .event-card {
-	border-width: 0 0 1px 0;
+	border: none;
 	border-radius: 0;
-	padding-inline: 0;
 	background: transparent;
-	align-items: baseline;
+	box-shadow: none;
 }
 
+.event-card:hover { box-shadow: none; transform: none; }
+.event-card:hover .event-card__art { filter: brightness(1.04); }
+.event-card__art { border-radius: 0; transition: filter 200ms var(--ease); }
+.event-card__art::after { background: none; }
+
 .event-card__when {
-	background: transparent;
-	color: var(--text-muted);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 0;
+	box-shadow: none;
 	font-variant-numeric: tabular-nums;
 }
 
+.event-card__body, .event-card__foot { padding-inline: 0; }
+.event-card__foot { border-block-start: 1px solid var(--border); margin-block-start: 0.75rem; }
+
+.chip { border-radius: 0; }
+.booking, .checkout__step, .ticket { border-radius: 0; }
 .section + .section { border-block-start: 1px solid var(--border); }
 .footer { border-block-start: 1px solid var(--border); background: transparent; }

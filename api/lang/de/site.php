@@ -46,10 +46,16 @@ return [
         'sectionSoldOut' => 'Ausverkauft',
         'openSection' => 'Plätze in %s anzeigen',
         'inSection' => 'In %s',
+        'chooseTickets' => 'Tickets wählen',
+        'ticketTypes' => 'Tickets',
+        'noneChosen' => 'Noch nichts ausgewählt.',
+        'reserveTickets' => 'Diese Tickets reservieren',
+        'maxTickets' => 'Sie können bis zu %d Tickets nehmen.',
     ],
 
 
     'blocks' => [
+        'hero' => 'Kopfbanner',
         'heading' => 'Überschrift',
         'richText' => 'Text',
         'image' => 'Bild',
@@ -134,6 +140,7 @@ return [
     'standing' => 'Stehplatz',
     'emptyPage' => 'Auf dieser Seite steht noch nichts.',
     'nothingOnSale' => 'Gerade ist nichts im Verkauf. Schauen Sie bald wieder vorbei.',
+    'pickerNeedsScript' => 'Für die Sitzplatzauswahl wird JavaScript gebraucht. Bitte einschalten oder die Kasse anrufen.',
     'book' => 'Buchen',
     'status' => [
         'pending' => 'noch nicht bezahlt',

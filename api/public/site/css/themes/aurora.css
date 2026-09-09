@@ -2,15 +2,8 @@
  * Aurora — light, roomy and quiet. The default.
  *
  * Colour, type and roundness come from the theme's tokens, which are emitted after this file
- * (App\Domain\Sites\ThemeTokens). What lives here is the structure that tokens cannot say.
+ * (App\Domain\Sites\ThemeTokens). What lives here is the structure that tokens cannot say — and for
+ * this theme that is almost nothing, which is the point of it.
  */
-.masthead {
-	position: sticky;
-	inset-block-start: 0;
-	z-index: 5;
-	backdrop-filter: blur(8px);
-	background: color-mix(in srgb, var(--surface) 86%, transparent);
-}
-
-.event-card { transition: transform 120ms ease, box-shadow 120ms ease; }
-.event-card:hover { transform: translateY(-1px); }
+.event-card { box-shadow: 0 1px 2px rgba(16, 20, 30, 0.04); }
+.booking, .checkout__step { box-shadow: 0 1px 2px rgba(16, 20, 30, 0.04); }

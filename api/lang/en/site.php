@@ -48,10 +48,16 @@ return [
         'sectionSoldOut' => 'Sold out',
         'openSection' => 'Show seats in %s',
         'inSection' => 'In %s',
+        'chooseTickets' => 'Choose your tickets',
+        'ticketTypes' => 'Tickets',
+        'noneChosen' => 'Nothing chosen yet.',
+        'reserveTickets' => 'Reserve these tickets',
+        'maxTickets' => 'You can take up to %d tickets.',
     ],
 
     /* The block vocabulary, as the panel's block picker names it (Blocks::describe). */
     'blocks' => [
+        'hero' => 'Hero banner',
         'heading' => 'Heading',
         'richText' => 'Text',
         'image' => 'Image',
@@ -137,6 +143,7 @@ return [
     'standing' => 'Standing',
     'emptyPage' => 'This page has nothing on it yet.',
     'nothingOnSale' => 'Nothing on sale just now. Check back soon.',
+    'pickerNeedsScript' => 'Choosing seats needs JavaScript. Please turn it on, or call the box office.',
     'book' => 'Book',
     'status' => [
         'pending' => 'awaiting payment',

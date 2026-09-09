@@ -2,13 +2,15 @@
     The shell every hosted page is rendered into.
 
     Server-rendered on purpose: an event site has to be indexable and fast on a phone on venue
-    Wi-Fi, and a blank page that fetches JSON is neither (ADR-0003).
+    Wi-Fi, and a blank page that fetches JSON is neither (ADR-0003). Nothing on this page needs
+    JavaScript to work — including the language menu, which is a <details>.
 --}}
 <!doctype html>
 {{-- Direction comes from the locale this request actually resolved to, not from the site's own
      setting and not from a list of language codes copied into a template. A Persian buyer reading
      a German venue's site gets Persian text and a right-to-left page (ADR-0005 §3). --}}
 @php($locale = app()->getLocale())
+@php($languages = \App\Support\Locale\Locales::menu())
 <html lang="{{ $locale }}" dir="{{ \App\Support\Locale\Locales::direction($locale) }}">
 <head>
     <meta charset="utf-8">
@@ -23,6 +25,7 @@
         <link rel="canonical" href="{{ $canonical }}">
         <meta property="og:url" content="{{ $canonical }}">
     @endif
+    @stack('meta')
     <link rel="stylesheet" href="{{ asset('site/css/site.css') }}">
     <link rel="stylesheet" href="{{ asset('site/css/themes/'.$brand['base_key'].'.css') }}">
     {{-- Tokens last, so a custom theme and then the organiser's own brand win over the theme file.
@@ -58,6 +61,30 @@
                 @endforeach
             </nav>
         @endif
+
+        <details class="langs">
+            <summary class="langs__button" aria-label="{{ __('site.language') }}">
+                <svg class="langs__globe" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15 0 18M12 3c-2.5 2.7-2.5 15 0 18"/>
+                </svg>
+                {{ collect($languages)->firstWhere('code', $locale)['native'] ?? $locale }}
+                <svg class="langs__caret" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 9 7 7 7-7"/></svg>
+            </summary>
+
+            <div class="langs__menu">
+                @foreach ($languages as $option)
+                    @if ($option['code'] === $locale)
+                        <span class="langs__current" aria-current="true">{{ $option['native'] }}</span>
+                    @else
+                        {{-- Keeps the visitor where they are: same path, same query, one parameter more. --}}
+                        <a class="langs__link" hreflang="{{ $option['code'] }}"
+                           href="{{ request()->fullUrlWithQuery(['lang' => $option['code']]) }}">{{ $option['native'] }}</a>
+                    @endif
+                @endforeach
+            </div>
+        </details>
     </div>
 </header>
 
@@ -73,18 +100,6 @@
                 <p class="footer__tagline">{{ $brand['tagline'] }}</p>
             @endif
         </div>
-
-        <nav class="langs" aria-label="{{ __('site.language') }}">
-            @foreach (\App\Support\Locale\Locales::menu() as $option)
-                @if ($option['code'] === $locale)
-                    <span class="langs__current" aria-current="true">{{ $option['native'] }}</span>
-                @else
-                    {{-- Keeps the visitor where they are: same path, same query, one parameter more. --}}
-                    <a class="langs__link" hreflang="{{ $option['code'] }}"
-                       href="{{ request()->fullUrlWithQuery(['lang' => $option['code']]) }}">{{ $option['native'] }}</a>
-                @endif
-            @endforeach
-        </nav>
 
         @if (count($footerMenu))
             <nav class="nav nav--footer" aria-label="{{ __('site.footerNav') }}">

@@ -5,6 +5,12 @@
  * way back out. That last one matters as much as the rest: a buyer who zooms into the wrong block
  * and cannot leave it has lost the whole venue.
  *
+ * Then the other kind of room. Half the events on this platform have no chairs at all — a
+ * warehouse, a festival tent, a standing gig — and the picker has to be a different thing there:
+ * no seat legend, no seat list, a heading that does not say "seats", and a row per ticket type with
+ * a stepper. Both are checked, and the run fails if the demo has stopped containing one of them,
+ * because a path nobody looks at is a path that rots.
+ *
  * Needs the API and the plugin's preview page:
  *
  *   php artisan migrate:fresh --seed --force
@@ -33,8 +39,6 @@ const events = await ( await fetch( BASE + '/v1/events', {
 	headers: { Accept: 'application/json', Authorization: 'Bearer ' + token },
 } ) ).json();
 
-const eventId = events.data[ 0 ].public_id;
-
 const browser = await chromium.launch( {
 	executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
 } );
@@ -46,8 +50,38 @@ page.on( 'console', ( m ) => {
 	if ( 'error' === m.type() && ! m.text().includes( '404' ) ) errors.push( m.text() );
 } );
 
-await page.goto( `${ PREVIEW }/tools/preview.html?api=${ BASE }&event=${ eventId }`,
-	{ waitUntil: 'networkidle' } );
+const open = async ( publicId ) => {
+	await page.goto( `${ PREVIEW }/tools/preview.html?api=${ BASE }&event=${ publicId }`,
+		{ waitUntil: 'networkidle' } );
+	await page.waitForSelector( '.seatmap-widget__title' );
+};
+
+/*
+ * Which event is which is asked of the picker rather than of the API: "has chairs" is exactly the
+ * question the picker itself answers, and a smoke test that decided it from a seat count would
+ * agree with the code it is checking by construction. Standing places count towards a seat total,
+ * so that number cannot tell the two rooms apart anyway.
+ */
+const rooms = {};
+
+for ( const event of events.data ) {
+	await open( event.public_id );
+
+	const kind = await page.locator( '.seatmap-widget__seats' ).count() ? 'seated' : 'standing';
+
+	rooms[ kind ] = rooms[ kind ] || event.public_id;
+}
+
+check( 'the demo still has a seated room', !! rooms.seated );
+check( 'and a room sold by the head', !! rooms.standing );
+
+if ( ! rooms.seated || ! rooms.standing ) {
+	await browser.close();
+	console.log( `\n${ failures } FAILED` );
+	process.exit( 1 );
+}
+
+await open( rooms.seated );
 
 console.log( 'The venue, as blocks' );
 await page.waitForSelector( '.seatmap-widget__block' );
@@ -92,6 +126,37 @@ await page.keyboard.press( 'Escape' );
 await page.waitForTimeout( 200 );
 check( 'Escape leaves the block too',
 	( await page.locator( '.seatmap-widget__block' ).count() ) >= 2 );
+
+console.log( 'A room with no chairs in it' );
+
+await open( rooms.standing );
+
+check( 'it does not ask for seats',
+	'Choose your tickets' === await page.locator( '.seatmap-widget__title' ).innerText() );
+check( 'there is no seat list to be empty', 0 === await page.locator( '.seatmap-widget__seats' ).count() );
+check( 'and no legend for states a chair has',
+	! /Selected|Unavailable/.test( await page.locator( '.seatmap-widget__legend' ).innerText() ),
+	await page.locator( '.seatmap-widget__legend' ).innerText() );
+
+const tickets = page.locator( '.seatmap-widget__area' );
+check( 'every ticket type is offered', ( await tickets.count() ) >= 3, `${ await tickets.count() } types` );
+check( 'each says what is left',
+	/left/.test( await tickets.first().locator( '.seatmap-widget__area-left' ).innerText() ),
+	await tickets.first().locator( '.seatmap-widget__area-left' ).innerText() );
+
+// Two of one kind, which is the whole interaction: there is no chair to click.
+const plus = tickets.first().locator( '.seatmap-widget__stepper button' ).last();
+await plus.click();
+await plus.click();
+await page.waitForTimeout( 250 );
+
+check( 'a quantity can be taken', '2' === await tickets.first().locator( 'output' ).innerText(),
+	await tickets.first().locator( 'output' ).innerText() );
+check( 'and it reaches the summary',
+	1 === await page.locator( '.seatmap-widget__selection li' ).count(),
+	await page.locator( '.seatmap-widget__selection' ).innerText().then( ( t ) => t.replace( /\s+/g, ' ' ) ) );
+check( 'which can then be reserved',
+	! await page.locator( '.seatmap-widget__submit' ).isDisabled() );
 
 check( 'no console errors', errors.length === 0, errors.join( ' / ' ) );
 

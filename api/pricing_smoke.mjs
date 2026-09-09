@@ -13,8 +13,15 @@
  *   node pricing_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
+
+// The theatre, not the warehouse: the last stretch of this prices individual chairs, and the demo
+// deliberately contains a room that has none.
+const seated = await seatedEvent( BASE, 'pricing' );
+const priceButton = `[data-prices="${ seated.id }"]`;
+
 let failures = 0;
 const check = ( label, ok, detail = '' ) => {
 	console.log( `  ${ ok ? 'ok  ' : 'FAIL' } ${ label }${ detail ? ' — ' + detail : '' }` );
@@ -34,12 +41,12 @@ await page.click( '#login button[type=submit]' );
 await page.waitForSelector( '.sidebar' );
 
 console.log( 'Events list' );
-await page.waitForSelector( '[data-prices]' );
+await page.waitForSelector( priceButton );
 check( 'a price column', ( await page.locator( 'th', { hasText: 'Prices' } ).count() ) === 1 );
 console.log( '   row now reads:', ( await page.locator( 'tbody tr' ).first().innerText() ).replace( /\n/g, ' | ' ) );
 
 console.log( 'Price screen' );
-await page.locator( '[data-prices]' ).first().click();
+await page.locator( priceButton ).click();
 await page.waitForSelector( '#pricing-currency' );
 check( 'zones seeded from the chart', ( await page.locator( '[data-amount]' ).count() ) > 0,
 	`${ await page.locator( '[data-amount]' ).count() } zones` );
@@ -64,7 +71,7 @@ for ( let i = 1; i < rest; i++ ) {
 }
 
 await page.click( '#pricing-save' );
-await page.waitForSelector( '[data-prices]' );
+await page.waitForSelector( priceButton );
 await page.waitForTimeout( 400 );
 
 const row = await page.locator( 'tbody tr' ).first().innerText();
@@ -73,7 +80,7 @@ check( 'the list shows the saved price, undivided', /500,000/.test( row ), row.r
 console.log( 'Persian' );
 await page.evaluate( () => window.localStorage.setItem( 'seatmap.locale', 'fa' ) );
 await page.reload( { waitUntil: 'networkidle' } );
-await page.waitForSelector( '[data-prices]' );
+await page.waitForSelector( priceButton );
 await page.waitForTimeout( 400 );
 
 const dir = await page.evaluate( () => document.documentElement.getAttribute( 'dir' ) );
@@ -81,17 +88,17 @@ check( 'the panel turns round', dir === 'rtl', `dir=${ dir }` );
 
 const faRow = await page.locator( 'tbody tr' ).first().innerText();
 check( 'the price is written in Persian digits', /۵۰۰٬۰۰۰/.test( faRow ), faRow.replace( /\n/g, ' | ' ) );
-check( 'the action button is Persian', ( await page.locator( '[data-prices]' ).first().innerText() ).includes( 'قیمت' ) );
+check( 'the action button is Persian', ( await page.locator( priceButton ).innerText() ).includes( 'قیمت' ) );
 
-await page.locator( '[data-prices]' ).first().click();
+await page.locator( priceButton ).click();
 await page.waitForSelector( '#pricing-currency' );
 const heading = await page.locator( '.page-head' ).innerText();
 check( 'the price screen is Persian', heading.includes( 'قیمت' ), heading.replace( /\n/g, ' | ' ) );
 console.log( 'Individual seats' );
 await page.evaluate( () => window.localStorage.setItem( 'seatmap.locale', 'en' ) );
 await page.reload( { waitUntil: 'networkidle' } );
-await page.waitForSelector( '[data-prices]' );
-await page.locator( '[data-prices]' ).first().click();
+await page.waitForSelector( priceButton );
+await page.locator( priceButton ).click();
 await page.waitForSelector( '#pricing-seats' );
 await page.click( '#pricing-seats' );
 

@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
 class Blocks
 {
     public const TYPES = [
-        'heading', 'richText', 'image', 'buttons', 'eventList', 'eventDetail',
+        'hero', 'heading', 'richText', 'image', 'buttons', 'eventList', 'eventDetail',
         'faq', 'venueMap', 'divider', 'html',
     ];
 
@@ -30,6 +30,7 @@ class Blocks
     public static function describe(): array
     {
         $icons = [
+            'hero' => 'image',
             'heading' => 'text',
             'richText' => 'text',
             'image' => 'image',
@@ -95,6 +96,13 @@ class Blocks
         $out = ['id' => $id, 'type' => $type];
 
         return match ($type) {
+            'hero' => $out + [
+                'title' => self::text($block['title'] ?? '', 160),
+                'subtitle' => self::text($block['subtitle'] ?? '', 400),
+                'url' => Themes::url($block['url'] ?? null),
+                'align' => self::choice($block['align'] ?? 'start', ['start', 'center'], 'start'),
+                'height' => self::choice($block['height'] ?? 'tall', ['short', 'tall', 'full'], 'tall'),
+            ],
             'heading' => $out + [
                 'text' => self::text($block['text'] ?? '', 200),
                 'level' => in_array($block['level'] ?? 2, [2, 3, 4], true) ? (int) $block['level'] : 2,
@@ -115,7 +123,7 @@ class Blocks
             'eventList' => $out + [
                 'title' => self::text($block['title'] ?? '', 120),
                 'limit' => max(1, min(50, (int) ($block['limit'] ?? 12))),
-                'layout' => self::choice($block['layout'] ?? 'cards', ['cards', 'list'], 'cards'),
+                'layout' => self::choice($block['layout'] ?? 'cards', ['cards', 'list', 'spotlight'], 'cards'),
             ],
             'eventDetail' => $out + [
                 // Empty means "the event this page is for", which is how one page serves every event.

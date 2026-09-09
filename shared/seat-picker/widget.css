@@ -79,8 +79,17 @@
 	color: var(--seatmap-muted);
 }
 
+/*
+ * Sized here rather than inherited.
+ *
+ * The picker is dropped into somebody else's theme, and a theme's `h2` is written for the top of a
+ * page. Left alone, "Select your seats" comes out the same size as the name of the show — which is
+ * the one thing on the page it must not compete with.
+ */
 .seatmap-widget__title {
-	margin: 0 0 0.75rem;
+	margin: 0 0 1rem;
+	font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+	line-height: 1.2;
 }
 
 /*
@@ -271,38 +280,53 @@
  */
 .seatmap-widget__areas {
 	margin-block-start: 1rem;
-	padding: 0.25rem 0.9rem;
+	padding: 0.9rem;
 	border: 1px solid var(--seatmap-border);
 	border-radius: var(--seatmap-radius);
 	background: var(--seatmap-surface);
 }
 
 .seatmap-widget__areas h3 {
-	margin: 0.75rem 0 0.25rem;
+	margin: 0 0 0.75rem;
 	font-size: 0.75rem;
 	font-weight: 600;
-	letter-spacing: 0.06em;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: var(--seatmap-muted);
 }
 
+/*
+ * One ticket type, one row.
+ *
+ * In a room with no chairs this list *is* the picker, so a row has to carry its own weight: the
+ * name and the price at the size a price is read at, how many are left underneath, and the stepper
+ * far enough from both that nobody taps it by accident.
+ */
 .seatmap-widget__area {
 	display: flex;
 	align-items: center;
-	gap: 0.4rem 0.75rem;
+	gap: 0.5rem 1rem;
 	flex-wrap: wrap;
-	padding-block: 0.6rem;
-	border-block-start: 1px solid var(--seatmap-border);
+	padding: 0.85rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-surface-sunken);
+	transition: border-color 140ms ease;
 }
 
-.seatmap-widget__area:first-of-type {
-	border-block-start: none;
+.seatmap-widget__area + .seatmap-widget__area { margin-block-start: 0.5rem; }
+.seatmap-widget__area:hover { border-color: var(--seatmap-border-strong); }
+.seatmap-widget__area:has(output[data-chosen]:not([data-chosen="0"])) {
+	border-color: var(--seatmap-accent);
+	background: var(--seatmap-surface);
 }
 
 .seatmap-widget__area-name {
 	flex: 1;
 	min-inline-size: 8rem;
-	font-weight: 500;
+	font-weight: 600;
+	font-size: 1.0625rem;
+	line-height: 1.35;
 }
 
 .seatmap-widget__area-left {
@@ -314,17 +338,17 @@
 .seatmap-widget__stepper {
 	display: flex;
 	align-items: center;
-	padding: 2px;
+	padding: 3px;
 	border: 1px solid var(--seatmap-border);
 	border-radius: 999px;
 	background: var(--seatmap-surface);
 }
 
 .seatmap-widget__stepper output {
-	min-inline-size: 2rem;
+	min-inline-size: 2.25rem;
 	text-align: center;
 	font-variant-numeric: tabular-nums;
-	font-weight: 500;
+	font-weight: 600;
 }
 
 /* ========================================================================= the seat list */

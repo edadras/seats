@@ -2,7 +2,7 @@
  * Marquee — loud. A headline you can read from the street.
  *
  * The type is a token decision (condensed, uppercase, heavy). What is here is the furniture that
- * goes with it: a hard rule under the masthead, blocks that touch, and no rounded anything.
+ * goes with it: hard rules, blocks that touch, and no rounded anything.
  */
 .masthead {
 	border-block-end-width: 4px;
@@ -15,20 +15,24 @@
 	font-weight: 800;
 }
 
-
-.event-card {
-	border-width: 0 0 1px 0;
-	border-radius: 0;
-	padding-inline: 0;
-	background: transparent;
-}
+.event-card { border-radius: 0; border-color: var(--border); }
+.event-card__art { border-radius: 0; }
+.event-card:hover { transform: none; border-color: var(--accent); }
 
 .event-card__when {
+	border-radius: 0;
 	background: var(--accent);
 	color: var(--on-accent);
 	font-weight: 700;
+	box-shadow: none;
 }
 
+.event-card__month { color: var(--on-accent); }
+
+.chip { border-radius: 0; text-transform: uppercase; }
+.booking, .checkout__step, .checkout__summary, .ticket, .notice { border-radius: 0; }
+.ticket::before, .ticket::after { display: none; }
+.langs__button, .langs__menu, .nav__link { border-radius: 0; }
 .button { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
 .footer { background: var(--surface-sunken); }
 

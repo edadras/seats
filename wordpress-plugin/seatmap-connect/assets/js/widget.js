@@ -55,6 +55,18 @@
 
 	SeatmapWidget.prototype.init = function () {
 		this.flattenSeats();
+
+		/*
+		 * Two kinds of room, and the difference runs through the whole picker.
+		 *
+		 * A theatre has named chairs: you zoom into a section and click the one you want. A
+		 * warehouse has areas with a capacity and nothing to click — you say how many of you there
+		 * are. Half the events on this platform are the second kind, and showing them a legend of
+		 * seat states, an empty seat list and a heading that says "Select your seats" is showing
+		 * them a broken version of somebody else's page.
+		 */
+		this.seated = this.seats.length > 0;
+
 		this.buildBlocks();
 		this.render();
 		this.renderAreaList();
@@ -440,7 +452,7 @@
 
 		var heading = document.createElement( 'h2' );
 		heading.className = 'seatmap-widget__title';
-		heading.textContent = this.i18n.selectSeats;
+		heading.textContent = this.seated ? this.i18n.selectSeats : this.i18n.chooseTickets;
 		this.container.appendChild( heading );
 
 		/*
@@ -480,8 +492,21 @@
 		}
 
 		main.appendChild( stage );
+
+		/*
+		 * Seats first, then the areas.
+		 *
+		 * Under the plan is where somebody looks next, and in a seated room what they are looking
+		 * for is the way into a section. Standing room and tables are a second way to buy the same
+		 * evening, so they follow rather than lead. In a room with no seats the list below is the
+		 * only list there is, and it lands in the same place anyway.
+		 */
+		if ( this.seated ) {
+			main.appendChild( this.buildSeatList() );
+		}
+
 		main.appendChild( this.buildAreaList() );
-		main.appendChild( this.buildSeatList() );
+
 		side.appendChild( this.buildSummary() );
 
 		layout.appendChild( main );
@@ -521,7 +546,8 @@
 			legend.appendChild( item );
 		} );
 
-		[ 'selected', 'unavailable' ].forEach( function ( state ) {
+		// "Selected" and "Unavailable" describe a chair. Where there are none, they describe nothing.
+		( this.seated ? [ 'selected', 'unavailable' ] : [] ).forEach( function ( state ) {
 			var item = document.createElement( 'li' );
 			var swatch = document.createElement( 'span' );
 			swatch.className = 'seatmap-widget__swatch seatmap-widget__swatch--' + state;
@@ -693,7 +719,7 @@
 		}
 
 		var heading = document.createElement( 'h3' );
-		heading.textContent = this.i18n.standingAreas;
+		heading.textContent = this.seated ? this.i18n.standingAreas : this.i18n.ticketTypes;
 		this.areaListEl.appendChild( heading );
 
 		areas.forEach( function ( area ) {
@@ -702,6 +728,9 @@
 
 			var name = document.createElement( 'span' );
 			name.className = 'seatmap-widget__area-name';
+			// The venue named this area, in whatever language it names things. That is not
+			// necessarily the language the picker is being read in.
+			name.setAttribute( 'dir', 'auto' );
 			name.textContent = area.label +
 				( area.amount != null ? ' — ' + self.formatMoney( area.amount ) : '' );
 			row.appendChild( name );
@@ -722,6 +751,9 @@
 
 			var count = document.createElement( 'output' );
 			count.textContent = self.formatCount( area.quantity );
+			// The raw number as well as the shaped one: the row is highlighted from CSS when it
+			// holds anything, and Persian digits are not something a stylesheet can compare.
+			count.dataset.chosen = String( area.quantity );
 			count.setAttribute( 'aria-live', 'polite' );
 
 			var plus = iconButton( 'plus', self.i18n.addOne.replace( '%s', area.label ),
@@ -747,7 +779,8 @@
 		// Seats and standing places share the per-order limit, so the two have to be counted
 		// together rather than each against the cap on its own.
 		if ( delta > 0 && this.totalChosen() >= this.maxSeats ) {
-			this.announce( this.i18n.maxSeats.replace( '%d', this.formatCount( this.maxSeats ) ) );
+			this.announce( ( this.seated ? this.i18n.maxSeats : this.i18n.maxTickets )
+				.replace( '%d', this.formatCount( this.maxSeats ) ) );
 
 			return;
 		}
@@ -791,7 +824,7 @@
 		this.submitEl = document.createElement( 'button' );
 		this.submitEl.type = 'button';
 		this.submitEl.className = 'seatmap-widget__submit button';
-		this.submitEl.textContent = this.i18n.addToCart;
+		this.submitEl.textContent = this.seated ? this.i18n.addToCart : this.i18n.reserveTickets;
 		this.submitEl.disabled = true;
 		this.submitEl.addEventListener( 'click', function () {
 			self.reserve();
@@ -1602,7 +1635,8 @@
 			}
 
 			if ( this.selected.length >= this.maxSeats ) {
-				this.announce( this.i18n.maxSeats.replace( '%d', this.formatCount( this.maxSeats ) ) );
+				this.announce( ( this.seated ? this.i18n.maxSeats : this.i18n.maxTickets )
+				.replace( '%d', this.formatCount( this.maxSeats ) ) );
 
 				return;
 			}
@@ -1795,7 +1829,7 @@
 		if ( ! this.selected.length && ! chosenAreas.length ) {
 			var empty = document.createElement( 'li' );
 			empty.className = 'seatmap-widget__selection-empty';
-			empty.textContent = this.i18n.noneSelected;
+			empty.textContent = this.seated ? this.i18n.noneSelected : this.i18n.noneChosen;
 			this.selectionEl.appendChild( empty );
 			this.totalEl.textContent = '';
 			this.submitEl.disabled = true;

@@ -2,13 +2,22 @@
 
 @section('content')
     <section class="shell section">
-        <h1>{{ __('site.bookedHeading') }}</h1>
-        <p class="muted">{{ __('site.orderLine', [
-            'reference' => $order->external_order_id,
-            'event' => $order->event?->name,
-        ]) }}</p>
-
         @if ('confirmed' === $order->status)
+            <div class="done">
+                <span class="done__mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+                         stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5.5 5.5L20 7"/></svg>
+                </span>
+                <div>
+                    <h1 class="section__title">{{ __('site.bookedHeading') }}</h1>
+                </div>
+            </div>
+
+            <p class="muted">{{ __('site.orderLine', [
+                'reference' => $order->external_order_id,
+                'event' => $order->event?->name,
+            ]) }}</p>
+
             @if (count($tokens))
                 <p class="prose">{{ __('site.showCodeAtDoor') }}</p>
             @else
@@ -39,6 +48,8 @@
                 @endforeach
             </div>
         @else
+            <h1 class="section__title">{{ __('site.bookedHeading') }}</h1>
+
             {{-- The status is translated too. "This booking is cancelled" half in one language
                  is the sentence a worried person reads twice and still cannot act on. --}}
             <p class="notice">{{ __('site.bookingStatus', [

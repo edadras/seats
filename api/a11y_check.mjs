@@ -14,6 +14,7 @@
  *   node a11y_check.mjs
  */
 import { chromium } from 'playwright';
+import { seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const PREVIEW = process.env.SEATMAP_PREVIEW || 'http://127.0.0.1:8200';
@@ -203,19 +204,9 @@ const PICKER_PAIRS = [
 	[ 'error text on its background', '--seatmap-danger', '--seatmap-danger-soft', '--seatmap-surface' ],
 ];
 
-const eventId = process.env.EVENT || await ( async () => {
-	const res = await fetch( BASE + '/v1/auth/login', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify( { email: 'owner@northgate.test', password: 'password', device_name: 'a11y' } ),
-	} );
-	const { token } = await res.json();
-	const events = await ( await fetch( BASE + '/v1/events', {
-		headers: { Accept: 'application/json', Authorization: 'Bearer ' + token },
-	} ) ).json();
-
-	return events.data[ 0 ].public_id;
-} )();
+// The seated room specifically: the checks below click a chair, and the demo also contains a
+// warehouse that has none.
+const eventId = process.env.EVENT || ( await seatedEvent( BASE, 'a11y' ) ).public_id;
 
 for ( const scheme of [ 'light', 'dark' ] ) {
 	const buyer = await browser.newPage( { viewport: { width: 1200, height: 900 }, colorScheme: scheme } );

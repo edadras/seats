@@ -126,6 +126,9 @@ class SitePageController extends Controller
                 'name' => $event->name,
                 'url' => '/events/'.$event->public_id,
                 'starts_at_iso' => $event->starts_at?->toIso8601String(),
+                'image' => Themes::url($event->image_url),
+                'category' => $event->category,
+            ] + $this->cover($event->name) + [
                 // Dates, not format(): `D j M` prints "Tue 29 Sep" in every language, which is the
                 // exact bug this exercise exists to remove — and the calendar follows the reader
                 // too, so an Iranian visitor is told ۷ مهر rather than a date they must convert.
@@ -160,8 +163,16 @@ class SitePageController extends Controller
             'public_id' => $event->public_id,
             'name' => $event->name,
             'description' => $event->description,
+            'image' => Themes::url($event->image_url),
+            'category' => $event->category,
             'venue' => $event->venue?->name,
             'long_when' => Dates::longWhen($starts),
+            'day' => Dates::day($starts, app()->getLocale()),
+            'month' => Dates::month($starts, app()->getLocale()),
+            'time' => Dates::shortWhen($starts, app()->getLocale()),
+            'from_price' => null === ($cheapest = $event->priceZones->min('amount'))
+                ? null
+                : $this->money($cheapest, $event->currency),
             'on_sale' => $onSale,
             'closed_message' => match ($event->status) {
                 'cancelled' => __('site.closed.cancelled'),
@@ -170,7 +181,7 @@ class SitePageController extends Controller
             },
             'container_id' => $containerId,
             'boot' => $onSale ? $this->boot($site, $event, $containerId) : null,
-        ];
+        ] + $this->cover($event->name);
     }
 
     /**
@@ -214,6 +225,31 @@ class SitePageController extends Controller
                 ? $this->geometry->forVersion($event->seatMapVersion)
                 : ['floors' => []],
             'i18n' => trans('site.picker'),
+        ];
+    }
+
+    /**
+     * A cover for an event that has no artwork.
+     *
+     * Not a grey box and not a broken image: a hue taken from the name, and the name's own
+     * initials set large. Every organiser starts with nothing uploaded, and the first thing they
+     * see of their own website should not look unfinished.
+     *
+     * The hue is a hash, so a given event is always the same colour — a listing that reshuffles
+     * its palette on every page load reads as broken rather than as lively.
+     */
+    private function cover(string $name): array
+    {
+        $words = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $initials = mb_strtoupper(implode('', array_map(
+            fn (string $word) => mb_substr($word, 0, 1),
+            array_slice($words, 0, 2)
+        )));
+
+        return [
+            'hue' => crc32($name) % 360,
+            'initials' => '' === $initials ? '·' : $initials,
         ];
     }
 

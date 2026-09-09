@@ -177,8 +177,12 @@ class DatabaseSeeder extends Seeder
                     'public_id' => 'evt_'.Str::lower(Str::random(20)),
                     'status' => 'published',
                     'category' => 'Theatre',
-                    'starts_at' => now()->addWeeks(3)->setTime(19, 30),
-                    'ends_at' => now()->addWeeks(3)->setTime(22, 0),
+                    // Written in the venue's own clock and converted on the way in, because
+                    // that is what an organiser means by "half past seven" — and because Eloquent
+                    // stores the wall time it is handed and forgets the offset, so a Berlin-zoned
+                    // Carbon saved as-is comes back two hours late.
+                    'starts_at' => now('Europe/Berlin')->addWeeks(3)->setTime(19, 30)->utc(),
+                    'ends_at' => now('Europe/Berlin')->addWeeks(3)->setTime(22, 0)->utc(),
                     'timezone' => 'Europe/Berlin',
                     'currency' => 'EUR',
                 ],
@@ -232,8 +236,8 @@ class DatabaseSeeder extends Seeder
                     'status' => 'published',
                     'category' => 'Club',
                     'description' => 'Doors at ten, four rooms, one ticket. No seats — come and stand.',
-                    'starts_at' => now()->addWeeks(5)->setTime(22, 0),
-                    'ends_at' => now()->addWeeks(5)->addHours(5),
+                    'starts_at' => now('Europe/Berlin')->addWeeks(5)->setTime(22, 0)->utc(),
+                    'ends_at' => now('Europe/Berlin')->addWeeks(5)->setTime(22, 0)->addHours(5)->utc(),
                     'timezone' => 'Europe/Berlin',
                     'currency' => 'EUR',
                     'max_seats_per_order' => 8,

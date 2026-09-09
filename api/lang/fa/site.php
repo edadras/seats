@@ -45,10 +45,16 @@ return [
         'sectionSoldOut' => 'تمام شد',
         'openSection' => 'نمایش صندلی‌های %s',
         'inSection' => 'در %s',
+        'chooseTickets' => 'بلیت‌هایتان را انتخاب کنید',
+        'ticketTypes' => 'بلیت‌ها',
+        'noneChosen' => 'هنوز چیزی انتخاب نشده است.',
+        'reserveTickets' => 'رزرو این بلیت‌ها',
+        'maxTickets' => 'تا %d بلیت می‌توانید بردارید.',
     ],
 
 
     'blocks' => [
+        'hero' => 'بنر اصلی',
         'heading' => 'تیتر',
         'richText' => 'متن',
         'image' => 'تصویر',
@@ -133,6 +139,7 @@ return [
     'standing' => 'ایستاده',
     'emptyPage' => 'هنوز چیزی در این صفحه نیست.',
     'nothingOnSale' => 'در حال حاضر چیزی برای فروش نیست. بعداً سر بزنید.',
+    'pickerNeedsScript' => 'انتخاب صندلی به جاوااسکریپت نیاز دارد. لطفاً آن را فعال کنید یا با گیشه تماس بگیرید.',
     'book' => 'رزرو',
     'status' => [
         'pending' => 'در انتظار پرداخت',

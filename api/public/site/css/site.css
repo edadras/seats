@@ -1,9 +1,13 @@
 /**
  * Structure for every hosted site.
  *
- * Only layout and rhythm live here; colour, type and roundness come from the theme file and then
- * from the organiser's brand, in that order. A theme is therefore a small file, and a site's own
- * colours survive switching between them.
+ * Only layout, rhythm and shape live here; colour and type come from the theme file and then from
+ * the organiser's brand, in that order (App\Domain\Sites\ThemeTokens). A theme is therefore a small
+ * file, and a site's own colours survive switching between them.
+ *
+ * Everything below is written against the same handful of custom properties, and the ones a theme
+ * does not know about are derived from the ones it does — so a theme written before this sheet
+ * still renders, and a new one still only has to name colours.
  */
 
 :root {
@@ -30,6 +34,25 @@
 	--heading-tracking: -0.015em;
 	--button-radius: var(--radius);
 	--shadow: none;
+
+	/*
+	 * Derived, not chosen.
+	 *
+	 * A theme names seven colours and three shapes; everything else on the page is worked out from
+	 * those. That is what keeps a theme a small file, and it is why adding a card style here never
+	 * means editing six theme files afterwards.
+	 */
+	--radius-lg: calc(var(--radius) * 1.9);
+	--radius-pill: 999px;
+	--accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+	--accent-line: color-mix(in srgb, var(--accent) 32%, var(--border));
+	--surface-veil: color-mix(in srgb, var(--surface) 70%, transparent);
+	--hairline: color-mix(in srgb, var(--border) 70%, transparent);
+	--lift: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent),
+		0 18px 40px -22px color-mix(in srgb, var(--text) 45%, transparent);
+	--lift-strong: 0 2px 4px color-mix(in srgb, var(--text) 8%, transparent),
+		0 30px 60px -28px color-mix(in srgb, var(--text) 55%, transparent);
+	--ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -42,25 +65,28 @@ body {
 	color: var(--text);
 	background: var(--surface);
 	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
 }
 
 h1, h2, h3, h4 {
 	margin: 0 0 0.4em;
 	font-family: var(--font-heading);
 	font-weight: var(--heading-weight);
-	line-height: 1.15;
+	line-height: 1.1;
 	letter-spacing: var(--heading-tracking);
 	text-transform: var(--heading-case);
+	text-wrap: balance;
 }
 
-h1 { font-size: clamp(2rem, 5vw, 3rem); }
-h2 { font-size: clamp(1.5rem, 3.4vw, 2rem); }
-h3 { font-size: 1.15rem; }
+h1 { font-size: clamp(2.25rem, 6vw, 4rem); }
+h2 { font-size: clamp(1.6rem, 3.8vw, 2.4rem); }
+h3 { font-size: 1.2rem; }
 
 p { margin: 0 0 1em; }
 a { color: inherit; }
 img { max-inline-size: 100%; block-size: auto; display: block; }
 hr { border: none; }
+:is(button, input, select, textarea) { font: inherit; color: inherit; }
 
 /* Never rely on the browser default alone; a themed site is where it most often goes missing. */
 :focus-visible {
@@ -77,7 +103,7 @@ hr { border: none; }
 .skip:focus {
 	inset-inline-start: 1rem;
 	inset-block-start: 1rem;
-	z-index: 10;
+	z-index: 20;
 	padding: 0.6rem 1rem;
 	background: var(--surface);
 	border: 1px solid var(--border);
@@ -89,33 +115,64 @@ hr { border: none; }
 	margin-inline: auto;
 }
 
-.section { padding-block: clamp(2rem, 5vw, 3.5rem); }
+.section { padding-block: clamp(2.25rem, 6vw, 4.5rem); }
 .section--tight { padding-block: clamp(1rem, 2.5vw, 1.75rem); }
 
 .muted { color: var(--text-muted); }
 
+/*
+ * A heading with a line under it and room around it.
+ *
+ * The listing pages are the ones people scroll, and a run of sections with nothing between them is
+ * the thing that makes a site read as a document rather than as a shop.
+ */
+.section__head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	margin-block-end: clamp(1.25rem, 3vw, 2rem);
+}
+
+.section__title { margin: 0; }
+
+.eyebrow {
+	display: block;
+	margin-block-end: 0.5rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
 /* ============================================================================= masthead */
 
 .masthead {
-	border-block-end: 1px solid var(--border);
-	background: var(--surface);
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 10;
+	border-block-end: 1px solid var(--hairline);
+	background: var(--surface-veil);
+	backdrop-filter: blur(14px) saturate(1.4);
+	-webkit-backdrop-filter: blur(14px) saturate(1.4);
 }
 
 .masthead__inner {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	gap: 1.5rem;
+	gap: 1rem 1.5rem;
 	flex-wrap: wrap;
-	padding-block: 1rem;
+	padding-block: 0.9rem;
 }
 
-.brand { text-decoration: none; }
+.brand { text-decoration: none; margin-inline-end: auto; }
 .brand__logo { max-block-size: 2.5rem; inline-size: auto; }
 
 .brand__name {
 	font-family: var(--font-heading);
-	font-size: 1.25rem;
+	font-size: 1.2rem;
 	font-weight: 700;
 	letter-spacing: -0.02em;
 }
@@ -123,20 +180,142 @@ hr { border: none; }
 .nav {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.35rem 1.25rem;
+	gap: 0.35rem 0.5rem;
 }
 
 .nav__link {
+	padding: 0.4rem 0.7rem;
+	border-radius: var(--radius-pill);
 	text-decoration: none;
 	color: var(--text-muted);
 	font-size: 0.95rem;
+	transition: color 140ms var(--ease), background-color 140ms var(--ease);
 }
 
-.nav__link:hover { color: var(--text); }
+.nav__link:hover { color: var(--text); background: var(--accent-soft); }
+
+/*
+ * The language menu.
+ *
+ * It used to live in the footer, on the argument that the locale is resolved from the visitor
+ * before the page renders (ADR-0005 §4), so this is a correction rather than a first choice. That
+ * argument is still true and it is still the wrong place for it: a correction nobody can find is
+ * not a correction. It sits in the header now, where every ticketing site people already use puts
+ * it, and it is a `<details>` rather than a script — a language menu that needs JavaScript to open
+ * is a language menu that fails for exactly the visitor most likely to need it.
+ *
+ * Each language is written in itself: somebody who cannot read the current language cannot read a
+ * translated list of languages either.
+ */
+.langs { position: relative; }
+
+.langs__button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.4rem 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-pill);
+	background: var(--surface);
+	color: var(--text);
+	font-size: 0.9rem;
+	cursor: pointer;
+	list-style: none;
+}
+
+.langs__button::-webkit-details-marker { display: none; }
+.langs__button:hover { border-color: var(--accent-line); }
+
+.langs__caret { transition: transform 140ms var(--ease); }
+.langs[open] .langs__caret { transform: rotate(180deg); }
+
+.langs__menu {
+	position: absolute;
+	inset-block-start: calc(100% + 0.5rem);
+	inset-inline-end: 0;
+	z-index: 12;
+	min-inline-size: 11rem;
+	padding: 0.35rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	box-shadow: var(--lift-strong);
+}
+
+.langs__link,
+.langs__current {
+	display: block;
+	padding: 0.45rem 0.7rem;
+	border-radius: calc(var(--radius) * 0.7);
+	font-size: 0.925rem;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.langs__link { color: var(--text-muted); }
+.langs__link:hover { color: var(--text); background: var(--accent-soft); }
+.langs__current { color: var(--text); font-weight: 600; background: var(--accent-soft); }
+
+/* ================================================================================== hero
+ *
+ * The band across the top of a page: a picture, a name, a sentence.
+ *
+ * With no picture it falls back to the site's own accent rather than to a grey box — a page should
+ * be presentable before anybody has uploaded anything, because the first time an organiser looks at
+ * their site is before they have uploaded anything.
+ */
+
+.hero {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	overflow: hidden;
+	isolation: isolate;
+	padding-block: clamp(2rem, 6vw, 4.5rem);
+	color: #fff;
+	background:
+		radial-gradient(120% 140% at 12% 0%, color-mix(in srgb, var(--accent) 85%, #fff) 0%, transparent 55%),
+		linear-gradient(160deg, color-mix(in srgb, var(--accent) 92%, #000), color-mix(in srgb, var(--accent) 45%, #000));
+}
+
+.hero--short { min-block-size: clamp(12rem, 26vh, 17rem); }
+.hero--tall { min-block-size: clamp(19rem, 52vh, 30rem); }
+.hero--full { min-block-size: min(84vh, 46rem); }
+
+.hero__art {
+	position: absolute;
+	inset: 0;
+	z-index: -2;
+	inline-size: 100%;
+	block-size: 100%;
+	object-fit: cover;
+}
+
+.hero::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.05) 40%, rgba(0, 0, 0, 0.72) 100%);
+}
+
+.hero--center { text-align: center; }
+.hero--center .hero__body { margin-inline: auto; }
+.hero--center .hero__subtitle { margin-inline: auto; }
+
+.hero__body { position: relative; max-inline-size: 46rem; }
+.hero__title { margin: 0; color: #fff; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.45); }
+
+.hero__subtitle {
+	margin: 0.9rem 0 0;
+	max-inline-size: 38rem;
+	font-size: clamp(1rem, 1.6vw, 1.2rem);
+	color: rgba(255, 255, 255, 0.88);
+}
 
 /* ================================================================================ blocks */
 
-.prose { max-inline-size: var(--shell-narrow); }
+.prose { max-inline-size: var(--shell-narrow); font-size: 1.05rem; }
 .prose:last-child { margin-block-end: 0; }
 .prose ul, .prose ol { padding-inline-start: 1.4rem; }
 .prose table { inline-size: 100%; border-collapse: collapse; }
@@ -148,7 +327,7 @@ hr { border: none; }
 .image--content img, .image--content figcaption { inline-size: min(100% - 2.5rem, var(--shell)); margin-inline: auto; }
 .image--wide img { inline-size: min(100% - 1.5rem, 90rem); margin-inline: auto; }
 .image--full img { inline-size: 100%; }
-.image img { border-radius: var(--radius); }
+.image img { border-radius: var(--radius-lg); }
 .image--full img { border-radius: 0; }
 
 .image figcaption {
@@ -162,15 +341,22 @@ hr { border: none; }
 .button {
 	display: inline-flex;
 	align-items: center;
-	min-block-size: 2.75rem;
-	padding-inline: 1.25rem;
+	justify-content: center;
+	gap: 0.5rem;
+	min-block-size: 3rem;
+	padding-inline: 1.5rem;
 	border-radius: var(--button-radius);
 	border: 1px solid var(--accent);
 	background: var(--accent);
 	color: var(--on-accent);
 	font-weight: 600;
 	text-decoration: none;
+	cursor: pointer;
+	transition: transform 120ms var(--ease), box-shadow 140ms var(--ease), filter 140ms var(--ease);
 }
+
+.button:hover { filter: brightness(1.08); box-shadow: var(--lift); }
+.button:active { transform: translateY(1px); }
 
 .button--secondary {
 	background: transparent;
@@ -178,21 +364,41 @@ hr { border: none; }
 	border-color: var(--border);
 }
 
+.button--secondary:hover { border-color: var(--accent-line); background: var(--accent-soft); filter: none; }
+
+.button--block { inline-size: 100%; }
+
 .divider {
 	border-block-start: 1px solid var(--border);
 	margin-block: 1rem;
 }
 
 .faq__item {
-	border-block-end: 1px solid var(--border);
-	padding-block: 0.9rem;
+	border-block-end: 1px solid var(--hairline);
+	padding-block: 1rem;
 }
 
 .faq__item summary {
 	cursor: pointer;
 	font-weight: 600;
 	font-family: var(--font-heading);
+	list-style: none;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
 }
+
+.faq__item summary::-webkit-details-marker { display: none; }
+
+.faq__item summary::after {
+	content: '+';
+	font-size: 1.4rem;
+	line-height: 1;
+	color: var(--text-muted);
+}
+
+.faq__item[open] summary::after { content: '−'; }
 
 .venue__address {
 	font-style: normal;
@@ -200,118 +406,345 @@ hr { border: none; }
 }
 
 .notice {
-	padding: 1rem 1.25rem;
+	padding: 1.1rem 1.35rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: var(--surface-sunken);
 	color: var(--text-muted);
 }
 
+/* ================================================================================= chips */
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.3rem 0.7rem;
+	border-radius: var(--radius-pill);
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.chip--kind { background: var(--accent); color: var(--on-accent); }
+.chip--quiet { background: var(--accent-soft); color: var(--text); }
+
+.chip--gone {
+	background: color-mix(in srgb, var(--text) 82%, transparent);
+	color: var(--surface);
+}
+
+/* ============================================================================== the cover
+ *
+ * An event with no artwork still gets a poster: a hue taken from its name and its own initials set
+ * large. Every organiser starts with nothing uploaded, and the first thing they see of their own
+ * website should not look unfinished. The hue is a hash of the name, so it never reshuffles.
+ */
+
+.cover {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	background: var(--surface-sunken);
+	isolation: isolate;
+}
+
+.cover img {
+	position: absolute;
+	inset: 0;
+	inline-size: 100%;
+	block-size: 100%;
+	object-fit: cover;
+}
+
+.cover--drawn {
+	background:
+		radial-gradient(110% 120% at 12% 8%, hsl(var(--art-h) 82% 62% / 0.95), transparent 58%),
+		radial-gradient(110% 120% at 88% 92%, hsl(calc(var(--art-h) + 52) 76% 46% / 0.95), transparent 60%),
+		linear-gradient(155deg, hsl(var(--art-h) 48% 24%), hsl(calc(var(--art-h) + 26) 58% 12%));
+}
+
+.cover__initials {
+	font-family: var(--font-heading);
+	font-size: clamp(2.5rem, 14cqi, 6rem);
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	color: rgba(255, 255, 255, 0.92);
+	text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+	user-select: none;
+}
+
 /* ============================================================================== events */
 
 .events--cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
-	gap: 1rem;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+	gap: clamp(1rem, 2.2vw, 1.6rem);
 }
 
-.events--list { display: flex; flex-direction: column; gap: 0.5rem; }
+.events--list { display: flex; flex-direction: column; gap: 0.75rem; }
 
 .event-card {
+	container-type: inline-size;
+	position: relative;
 	display: flex;
-	align-items: center;
-	gap: 1rem;
-	padding: 1rem;
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
+	flex-direction: column;
+	overflow: hidden;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow);
 	background: var(--surface);
 	text-decoration: none;
-	transition: border-color 140ms ease, transform 140ms ease;
+	transition: transform 160ms var(--ease), box-shadow 160ms var(--ease), border-color 160ms var(--ease);
 }
 
 .event-card:hover {
-	border-color: var(--accent);
-	transform: translateY(-1px);
+	border-color: var(--accent-line);
+	box-shadow: var(--lift-strong);
+	transform: translateY(-3px);
 }
 
+.event-card__art {
+	position: relative;
+	aspect-ratio: 3 / 2;
+	inline-size: 100%;
+}
+
+.event-card__art::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 38%, transparent 62%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* The date, on the poster rather than beside it: it is the first thing anybody looks for. */
 .event-card__when {
+	position: absolute;
+	inset-block-start: 0.75rem;
+	inset-inline-start: 0.75rem;
+	z-index: 2;
 	display: grid;
 	place-items: center;
-	inline-size: 3.25rem;
-	padding-block: 0.4rem;
-	border-radius: calc(var(--radius) * 0.7);
-	background: var(--surface-sunken);
-	flex: none;
-	line-height: 1.1;
+	inline-size: 3.1rem;
+	padding-block: 0.35rem;
+	border-radius: calc(var(--radius) * 0.9);
+	background: var(--surface);
+	color: var(--text);
+	line-height: 1.05;
+	box-shadow: var(--lift);
 }
 
-.event-card__day { font-size: 1.4rem; font-weight: 700; font-family: var(--font-heading); }
-.event-card__month { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.event-card__day { font-size: 1.35rem; font-weight: 700; font-family: var(--font-heading); font-variant-numeric: tabular-nums; }
+.event-card__month { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
 
-.event-card__body { flex: 1; min-inline-size: 0; }
-.event-card__name { margin: 0 0 0.15rem; font-size: 1.05rem; }
-.event-card__meta { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
-.event-card__price { margin: 0.2rem 0 0; font-size: 0.875rem; font-weight: 600; }
+.event-card__kind {
+	position: absolute;
+	inset-block-start: 0.75rem;
+	inset-inline-end: 0.75rem;
+	z-index: 2;
+}
+
+.event-card__gone {
+	position: absolute;
+	inset-block-end: 0.75rem;
+	inset-inline-start: 0.75rem;
+	z-index: 2;
+}
+
+.event-card__body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	padding: 1rem 1.1rem 0;
+	min-inline-size: 0;
+}
+
+.event-card__name { margin: 0; font-size: 1.1rem; }
+.event-card__meta { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
+
+.event-card__foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.9rem 1.1rem 1.1rem;
+}
+
+.event-card__price { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .event-card__cta {
-	flex: none;
-	font-size: 0.875rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.9rem;
 	font-weight: 600;
 	color: var(--accent);
 }
 
-.event__name { margin-block-end: 0.2em; }
-.event__when { color: var(--text-muted); margin-block-end: 1.5rem; }
+.event-card__cta::after {
+	content: '';
+	inline-size: 0.5rem;
+	block-size: 0.5rem;
+	border-block-start: 2px solid currentColor;
+	border-inline-end: 2px solid currentColor;
+	transform: rotate(45deg);
+	transition: transform 160ms var(--ease), translate 160ms var(--ease);
+}
+
+/* Mirrored rather than re-rotated: one transform to reason about, and it cannot point downwards. */
+[dir="rtl"] .event-card__cta::after { transform: scaleX(-1) rotate(45deg); }
+.event-card:hover .event-card__cta::after { translate: 3px 0; }
+[dir="rtl"] .event-card:hover .event-card__cta::after { translate: -3px 0; }
+
+.event-card--gone { opacity: 0.72; }
+
+/* The list layout: the same card lying down, for a season of forty dates. */
+.events--list .event-card { flex-direction: row; align-items: stretch; }
+.events--list .event-card__art { inline-size: clamp(7rem, 22%, 12rem); aspect-ratio: auto; flex: none; }
+.events--list .event-card__when { inset-block-start: 0.5rem; inset-inline-start: 0.5rem; inline-size: 2.75rem; }
+.events--list .event-card__kind { display: none; }
+.events--list .event-card__body { justify-content: center; padding: 1rem 1.25rem; }
+.events--list .event-card__foot { flex-direction: column; align-items: flex-end; justify-content: center; gap: 0.3rem; padding-inline-end: 1.25rem; }
+
+/*
+ * Spotlight: the first date large, the rest beside it.
+ *
+ * A season usually has one thing it is actually selling, and a grid of identical cards is a grid
+ * that says every night is the same night.
+ */
+.events--spotlight {
+	display: grid;
+	gap: clamp(1rem, 2.2vw, 1.6rem);
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+}
+
+.events--spotlight .event-card--lead { grid-column: 1 / -1; }
+
+@media (min-width: 60rem) {
+	.events--spotlight { grid-template-columns: repeat(3, 1fr); }
+	.events--spotlight .event-card--lead { grid-column: span 2; grid-row: span 2; }
+	.events--spotlight .event-card--lead .event-card__art { aspect-ratio: 16 / 10; }
+	.events--spotlight .event-card--lead .event-card__name { font-size: clamp(1.4rem, 2.4vw, 2rem); }
+	.events--spotlight .event-card--lead .event-card__when { inline-size: 3.6rem; }
+}
+
+/* ========================================================================== event hero */
+
+.event-hero {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	min-block-size: clamp(19rem, 52vh, 30rem);
+	padding-block: clamp(2rem, 6vw, 4rem);
+	overflow: hidden;
+	isolation: isolate;
+	color: #fff;
+}
+
+.event-hero .cover { z-index: -2; place-items: center end; }
+
+/*
+ * On a card the initials are the artwork; behind a title they are texture, and at card opacity
+ * they compete with the name of the show. Pushed to the trailing edge and faded to a watermark.
+ */
+.event-hero .cover__initials {
+	font-size: clamp(7rem, 28vw, 20rem);
+	opacity: 0.14;
+	padding-inline-end: 3vw;
+	line-height: 0.85;
+}
+
+.event-hero::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background:
+		linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.15) 35%, rgba(0, 0, 0, 0.82) 100%);
+}
+
+.event-hero__body { position: relative; }
+
+.event-hero__name {
+	margin: 0.6rem 0 0;
+	color: #fff;
+	text-shadow: 0 2px 30px rgba(0, 0, 0, 0.5);
+}
+
+.event-hero__facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 0.75rem;
+	margin: 1.25rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.event-hero__fact {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.9rem;
+	border-radius: var(--radius-pill);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	background: rgba(0, 0, 0, 0.35);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	font-size: 0.925rem;
+}
+
+.event-hero__fact svg { inline-size: 1rem; block-size: 1rem; flex: none; opacity: 0.85; }
+.event-hero__fact strong { font-weight: 700; }
+
+/* ============================================================================= booking */
+
+.event-about { max-inline-size: var(--shell-narrow); }
+
+/*
+ * The picker's own section.
+ *
+ * Given a surface of its own rather than dropped onto the page: buying is a different job from
+ * reading about the evening, and the join between the two is where people lose their place.
+ */
+.booking {
+	padding: clamp(1rem, 2.5vw, 1.75rem);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow);
+}
+
+.booking .seatmap-widget { margin-block: 0; }
 
 /* ============================================================================== footer */
 
 .footer {
-	margin-block-start: 3rem;
-	border-block-start: 1px solid var(--border);
+	margin-block-start: clamp(3rem, 8vw, 5rem);
+	border-block-start: 1px solid var(--hairline);
 	background: var(--surface-sunken);
 }
 
 .footer__inner {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 1.5rem;
+	gap: 1.5rem 2.5rem;
 	justify-content: space-between;
-	padding-block: 2rem;
+	padding-block: clamp(2rem, 5vw, 3rem);
 }
 
-.footer__name { margin: 0; font-weight: 600; font-family: var(--font-heading); }
-.footer__tagline { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
-
-/*
- * The language menu.
- *
- * In the footer rather than the header on purpose: the locale is resolved from the visitor before
- * the page renders (ADR-0005 §4), so this is a correction, not a first choice, and a correction
- * does not need to compete with the venue's own navigation. Each language is written in itself —
- * somebody who cannot read the current language cannot read a translated list of languages either.
- */
-.langs {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 0.35rem 0.75rem;
-	font-size: 0.85rem;
-}
-
-.langs__link,
-.langs__current {
-	padding-block: 0.15rem;
-	border-block-end: 1px solid transparent;
-}
-
-.langs__link { color: var(--text-muted); text-decoration: none; }
-.langs__link:hover { color: var(--text); border-block-end-color: currentColor; }
-.langs__link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
-.langs__current { color: var(--text); font-weight: 600; }
+.footer__name { margin: 0; font-weight: 700; font-family: var(--font-heading); font-size: 1.05rem; }
+.footer__tagline { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.925rem; }
+.nav--footer { flex-direction: column; gap: 0.15rem; }
+.nav--footer .nav__link { padding-inline: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-	* { transition: none !important; }
+	* { transition: none !important; animation: none !important; }
+	.event-card:hover { transform: none; }
 }
 
 /* ============================================================================ checkout */
@@ -320,39 +753,72 @@ hr { border: none; }
 	display: flex;
 	flex-wrap: wrap;
 	align-items: flex-start;
-	gap: 2rem;
+	gap: clamp(1.5rem, 3vw, 2.5rem);
 }
 
 .checkout__form { flex: 1 1 24rem; min-inline-size: 0; }
 
-.checkout__form h2 {
-	font-size: 1.05rem;
-	margin-block: 1.75rem 0.9rem;
+.checkout__step {
+	padding: clamp(1.1rem, 2.4vw, 1.6rem);
+	margin-block-end: 1rem;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow);
 }
 
-.checkout__form h2:first-child { margin-block-start: 0; }
+.checkout__step h2 {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	font-size: 1.1rem;
+	margin-block: 0 1.1rem;
+}
+
+.checkout__step h2::before {
+	counter-increment: step;
+	content: counter(step);
+	display: grid;
+	place-items: center;
+	inline-size: 1.75rem;
+	block-size: 1.75rem;
+	border-radius: 50%;
+	background: var(--accent);
+	color: var(--on-accent);
+	font-size: 0.9rem;
+	font-weight: 700;
+	flex: none;
+}
+
+.checkout__form { counter-reset: step; }
 
 .field { margin-block-end: 1rem; }
+.field:last-child { margin-block-end: 0; }
 
 .field label {
 	display: block;
-	margin-block-end: 0.3rem;
+	margin-block-end: 0.35rem;
 	font-size: 0.9rem;
 	font-weight: 600;
 }
 
 .field input {
 	inline-size: 100%;
-	min-block-size: 2.75rem;
-	padding-inline: 0.8rem;
+	min-block-size: 3rem;
+	padding-inline: 0.9rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: var(--surface);
 	color: var(--text);
-	font: inherit;
+	transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
 }
 
-.field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.field input:focus {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
 .field__hint { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
 .field__error { margin: 0.35rem 0 0; font-size: 0.85rem; color: #b3261e; }
 
@@ -361,37 +827,40 @@ hr { border: none; }
 	display: flex;
 	align-items: flex-start;
 	gap: 0.75rem;
-	padding: 0.9rem 1rem;
+	padding: 1rem 1.1rem;
 	margin-block-end: 0.6rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	cursor: pointer;
+	transition: border-color 140ms var(--ease), background-color 140ms var(--ease);
 }
 
-.pay:has(input:checked) { border-color: var(--accent); }
-.pay input { margin-block-start: 0.3rem; }
+.pay:last-of-type { margin-block-end: 0; }
+.pay:hover { border-color: var(--accent-line); }
+.pay:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.pay input { margin-block-start: 0.35rem; accent-color: var(--accent); }
 .pay span { display: block; }
 .pay strong { display: block; }
 .pay .muted { font-size: 0.9rem; }
 
-.checkout__submit { margin-block-start: 1.5rem; }
+.checkout__submit { margin-block-start: 1.25rem; }
 
 .checkout__summary {
-	flex: 1 1 18rem;
+	flex: 1 1 19rem;
 	min-inline-size: 0;
-	padding: 1.25rem;
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
+	padding: clamp(1.1rem, 2.4vw, 1.5rem);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
 	background: var(--surface-sunken);
 	position: sticky;
-	inset-block-start: 1rem;
+	inset-block-start: 5.5rem;
 }
 
 .checkout__summary h2 {
 	margin-block-start: 0;
-	font-size: 0.8rem;
+	font-size: 0.78rem;
 	text-transform: uppercase;
-	letter-spacing: 0.07em;
+	letter-spacing: 0.12em;
 	color: var(--text-muted);
 }
 
@@ -401,8 +870,8 @@ hr { border: none; }
 	display: flex;
 	justify-content: space-between;
 	gap: 1rem;
-	padding-block: 0.35rem;
-	border-block-end: 1px solid var(--border);
+	padding-block: 0.5rem;
+	border-block-end: 1px solid var(--hairline);
 	font-size: 0.925rem;
 	font-variant-numeric: tabular-nums;
 }
@@ -414,36 +883,87 @@ hr { border: none; }
 	justify-content: space-between;
 	gap: 1rem;
 	margin: 0;
-	padding-block-start: 0.6rem;
+	padding-block-start: 0.7rem;
 	border-block-start: 1px solid var(--border);
 	font-weight: 700;
+	font-size: 1.1rem;
 	font-variant-numeric: tabular-nums;
 }
 
-.summary-hold { margin-block-start: 0.75rem; font-size: 0.85rem; }
+.summary-hold {
+	margin-block-start: 0.9rem;
+	padding: 0.6rem 0.8rem;
+	border-radius: calc(var(--radius) * 0.8);
+	background: var(--accent-soft);
+	font-size: 0.85rem;
+}
 
 /* ============================================================================= tickets */
 
+.done {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-block-end: 0.5rem;
+}
+
+.done__mark {
+	display: grid;
+	place-items: center;
+	inline-size: 3rem;
+	block-size: 3rem;
+	flex: none;
+	border-radius: 50%;
+	background: var(--accent);
+	color: var(--on-accent);
+}
+
+.done__mark svg { inline-size: 1.5rem; block-size: 1.5rem; }
+
 .tickets {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
 	gap: 1rem;
-	margin-block-start: 1.5rem;
+	margin-block-start: 1.75rem;
 }
 
+/*
+ * A ticket, drawn as one: two notches where a stub would be torn off.
+ *
+ * Recognisable at arm's length on a phone in a queue, which is the only place this page is ever
+ * looked at.
+ */
 .ticket {
-	padding: 1rem;
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
+	position: relative;
+	padding: 1.1rem;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
 	background: var(--surface);
+	box-shadow: var(--lift);
+	overflow: hidden;
 }
 
-.ticket__seat { margin: 0 0 0.35rem; font-weight: 600; font-family: var(--font-heading); }
+.ticket::before,
+.ticket::after {
+	content: '';
+	position: absolute;
+	inline-size: 1.1rem;
+	block-size: 1.1rem;
+	border-radius: 50%;
+	background: var(--surface-sunken);
+	border: 1px solid var(--hairline);
+	inset-block-end: 3.4rem;
+}
+
+.ticket::before { inset-inline-start: -0.6rem; }
+.ticket::after { inset-inline-end: -0.6rem; }
+
+.ticket__seat { margin: 0 0 0.35rem; font-weight: 700; font-family: var(--font-heading); }
 
 .ticket__code {
 	margin: 0;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 0.75rem;
+	font-size: 0.7rem;
 	color: var(--text-muted);
 	letter-spacing: 0.02em;
 	/* A ticket token is long and has no spaces, so it has to be told where it may break. */
@@ -454,8 +974,13 @@ hr { border: none; }
 	inline-size: 100%;
 	max-inline-size: 200px;
 	block-size: auto;
-	margin-block-end: 0.75rem;
+	margin-block-end: 0.9rem;
 	border-radius: calc(var(--radius) * 0.6);
 	background: #fff;
 	padding: 6px;
+}
+
+@media print {
+	.masthead, .footer, .skip { display: none; }
+	.ticket { box-shadow: none; break-inside: avoid; }
 }

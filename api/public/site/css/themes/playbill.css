@@ -1,11 +1,19 @@
-/* Playbill — a printed programme: double rules, spaced capitals in the masthead. */
+/*
+ * Playbill — a printed programme: double rules, spaced capitals, paper rather than screen.
+ */
 .masthead { border-block-end-width: 3px; border-block-end-style: double; }
 .brand__name { text-transform: uppercase; letter-spacing: 0.06em; }
 .divider { border-block-start-style: double; border-block-start-width: 3px; }
 
+.event-card { border-width: 2px; border-style: double; }
+.event-card:hover { transform: none; box-shadow: var(--lift); }
+
 .event-card__when {
 	background: var(--surface);
 	border: 1px solid var(--border);
+	box-shadow: none;
 }
 
+.event-card__foot { border-block-start: 1px solid var(--border); margin-inline: 1.1rem; padding-inline: 0; }
+.section__head { border-block-end: 3px double var(--border); padding-block-end: 0.75rem; }
 .footer { border-block-start-width: 3px; border-block-start-style: double; }

@@ -45,10 +45,16 @@ return [
         'sectionSoldOut' => 'نفدت التذاكر',
         'openSection' => 'اعرض مقاعد %s',
         'inSection' => 'في %s',
+        'chooseTickets' => 'اختر تذاكرك',
+        'ticketTypes' => 'التذاكر',
+        'noneChosen' => 'لم تختر شيئًا بعد.',
+        'reserveTickets' => 'احجز هذه التذاكر',
+        'maxTickets' => 'يمكنك أخذ %d تذكرة كحد أقصى.',
     ],
 
 
     'blocks' => [
+        'hero' => 'لافتة رئيسية',
         'heading' => 'عنوان',
         'richText' => 'نص',
         'image' => 'صورة',
@@ -133,6 +139,7 @@ return [
     'standing' => 'وقوف',
     'emptyPage' => 'لا يوجد شيء في هذه الصفحة بعد.',
     'nothingOnSale' => 'لا شيء معروض للبيع الآن. عُد لاحقًا.',
+    'pickerNeedsScript' => 'يحتاج اختيار المقاعد إلى جافاسكريبت. فعّلها من فضلك، أو اتصل بشباك التذاكر.',
     'book' => 'احجز',
     'status' => [
         'pending' => 'بانتظار الدفع',
