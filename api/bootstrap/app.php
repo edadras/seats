@@ -59,6 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,
             'device' => \App\Http\Middleware\ResolveCheckinDevice::class,
             'site' => \App\Http\Middleware\ResolveSiteFromHost::class,
+            'platform' => \App\Http\Middleware\RequirePlatformAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

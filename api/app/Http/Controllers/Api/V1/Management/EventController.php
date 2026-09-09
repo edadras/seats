@@ -39,6 +39,10 @@ class EventController extends Controller
     {
         $this->authorize($request, 'events.manage');
 
+        // What the plan says, before anything is created — a limit checked after the fact is a
+        // row somebody has to delete.
+        app(\App\Support\Plans\PlanLimits::class)->assertCanAddEvent();
+
         $data = $this->validateEvent($request, creating: true);
 
         $map = SeatMap::findOrFail($data['seat_map_id']);

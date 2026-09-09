@@ -40,6 +40,14 @@ Route::middleware('site')->group(function () {
     Route::get('events/{event}', [SitePageController::class, 'event']);
 });
 
+/*
+ * The platform's own console. Ahead of the front door, and a separate page from the panel: they
+ * share a stylesheet and nothing else. What it shows is decided by the API, which checks
+ * membership of `platform_admins` — this route serves the shell to anybody, and the shell can do
+ * nothing without a token that passes that check.
+ */
+Route::get('console', fn () => view('console'));
+
 // The door scanner. Ahead of the front door because /checkin belongs to the platform on every
 // host: a site is a place to buy a ticket, never a place that answers for scanning one.
 Route::get('checkin', CheckinAppController::class);
@@ -47,4 +55,4 @@ Route::get('checkin/{path}', CheckinAppController::class)->where('path', '.*');
 
 Route::get('/', FrontDoorController::class);
 Route::get('{path}', FrontDoorController::class)
-    ->where('path', '^(?!v1|up|storage|site|checkin).*$');
+    ->where('path', '^(?!v1|up|storage|site|checkin|console).*$');

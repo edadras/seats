@@ -452,6 +452,292 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /admin/login:
+    post:
+      operationId: consoleLogin
+      tags: [Console]
+      summary: Sign in to the platform console
+      security: []
+      description: >
+        A route of its own rather than a flag on the panel's login: the panel's asks which
+        organiser somebody is a member of, and an operator is a member of none. One message for all
+        three failures — no such user, wrong password, not an operator — so this cannot be used to
+        find out who runs the platform. Signing in is itself recorded.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Signed in, with a token that expires in four hours
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  level: { type: string, enum: [support, operator] }
+                  name: { type: string }
+
+  /admin/overview:
+    get:
+      operationId: consoleOverview
+      tags: [Console]
+      summary: The platform, in numbers
+      description: >
+        Takings are grouped by currency rather than added up. A platform serving Tehran and Berlin
+        has no single number, and inventing one by summing rials into euros is worse than two rows.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenants: { type: object, additionalProperties: true }
+                  sites: { type: object, additionalProperties: true }
+                  selling: { type: object, additionalProperties: true }
+                  takings_this_month:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        currency: { type: string }
+                        total: { type: integer }
+                        orders: { type: integer }
+
+  /admin/tenants:
+    get:
+      operationId: consoleListTenants
+      tags: [Console]
+      summary: Every organiser on the platform
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, suspended, cancelled] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ConsoleTenant" }
+
+  /admin/tenants/{tenant}:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: consoleGetTenant
+      tags: [Console]
+      summary: One organiser, with its people and websites
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ConsoleTenant"
+                  - type: object
+                    properties:
+                      members:
+                        type: array
+                        items: { type: object, additionalProperties: true }
+                      websites:
+                        type: array
+                        items: { type: object, additionalProperties: true }
+                      events: { type: integer }
+                      tickets: { type: integer }
+    patch:
+      operationId: consoleUpdateTenant
+      tags: [Console]
+      summary: Suspend, reinstate, or move an organiser to another plan
+      description: >
+        An operator's power, not support's. Suspension is not a flag on a screen: the panel refuses
+        the account and its websites stop serving.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, suspended, cancelled] }
+                plan: { type: string }
+                reason: { type: [string, 'null'], maxLength: 200 }
+      responses:
+        "200":
+          description: Changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsoleTenant" }
+        "403":
+          description: A support account tried to change something
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /admin/tenants/{tenant}/impersonate:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: consoleImpersonate
+      tags: [Console]
+      summary: A token that acts as an organiser's owner, for an hour
+      description: >
+        Support needs to see what a customer sees; nobody should be able to do that quietly. The
+        token expires by itself, and the fact is written to the platform's log *and* to the
+        organiser's own audit log — it is their account that was entered.
+      responses:
+        "200":
+          description: A time-boxed token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  expires_at: { type: string, format: date-time }
+                  as: { type: object, additionalProperties: true }
+                  tenant: { type: object, additionalProperties: true }
+
+  /admin/sites:
+    get:
+      operationId: consoleListSites
+      tags: [Console]
+      summary: Every website this platform serves
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+
+  /admin/audit:
+    get:
+      operationId: consoleAudit
+      tags: [Console]
+      summary: What the people who run the platform did inside other people's accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+
+  /admin/plans:
+    get:
+      operationId: consoleListPlans
+      tags: [Console]
+      summary: The tariffs, with how many organisers are on each
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ConsolePlan" }
+                  limit_keys:
+                    type: array
+                    description: The limits the platform actually enforces.
+                    items: { type: string }
+    post:
+      operationId: consoleCreatePlan
+      tags: [Console]
+      summary: Add a tariff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConsolePlan" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsolePlan" }
+
+  /admin/plans/{plan}:
+    parameters:
+      - name: plan
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: consoleUpdatePlan
+      tags: [Console]
+      summary: Change a tariff
+      description: >
+        The key cannot be changed: a subscription points at it. Both the old and the new price are
+        written to the operator log, because changing a price changes what existing subscribers pay
+        at renewal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConsolePlan" }
+      responses:
+        "200":
+          description: Changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsolePlan" }
+    delete:
+      operationId: consoleDeletePlan
+      tags: [Console]
+      summary: Delete a tariff nobody is on
+      description: >
+        A plan with subscribers is deactivated, not deleted — that takes it off the signup screen
+        and leaves every organiser on it where they were.
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "409":
+          description: Organisers are on it
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /plans:
     get:
       operationId: listPlans
@@ -3479,6 +3765,44 @@ components:
         failures: { type: integer }
         last_failure_at: { type: [string, "null"], format: date-time }
         last_message: { type: [string, "null"] }
+
+    ConsoleTenant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [active, suspended, cancelled] }
+        locale: { type: string }
+        timezone: { type: string }
+        created_at: { type: string, format: date-time }
+        plan: { type: [string, 'null'] }
+        plan_name: { type: [string, 'null'] }
+        subscription_status: { type: [string, 'null'] }
+        people:
+          type: integer
+          description: How many — not who. The list of them is `members`.
+        sites:
+          type: integer
+          description: How many — not which. The list of them is `websites`.
+
+    ConsolePlan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        key:
+          type: string
+          description: Set once. A subscription points at it, so renaming would detach both.
+        name: { type: string }
+        price_amount: { type: integer, description: In the currency's minor unit. }
+        currency: { type: string }
+        interval: { type: string, enum: [month, year] }
+        limits:
+          type: object
+          description: Only the keys the platform enforces; null means no limit.
+          additionalProperties: { type: [integer, 'null'] }
+        is_active: { type: boolean }
+        subscribers: { type: integer }
 
     MessageKind:
       type: object

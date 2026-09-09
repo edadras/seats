@@ -21,7 +21,6 @@ class PlanFactory extends Factory
                 'max_venues' => 10,
                 'max_events' => 100,
                 'max_seats_per_map' => 20000,
-                'max_scans_per_month' => 200000,
             ],
             'is_active' => true,
         ];

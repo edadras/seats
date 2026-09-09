@@ -134,7 +134,7 @@
 				esc( zone.name ) +
 				( zone.onMap
 					? ''
-					: '<span class="muted block">' + esc( App.t( 'pricing.notOnMap' ) ) + '</span>' ) +
+					: '<span class="muted on-own-line">' + esc( App.t( 'pricing.notOnMap' ) ) + '</span>' ) +
 			'</td>' +
 			'<td>' +
 				'<input class="input input--amount tnum" type="number" min="0" ' +

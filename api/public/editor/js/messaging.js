@@ -204,7 +204,7 @@
 
 		return '<span class="badge badge--' + ( tone || 'neutral' ) + '">' +
 			esc( App.t( 'messaging.status.' + entry.status ) ) + '</span>' +
-			( entry.reason ? '<span class="muted block">' + esc( entry.reason ) + '</span>' : '' );
+			( entry.reason ? '<span class="muted on-own-line">' + esc( entry.reason ) + '</span>' : '' );
 	};
 
 	Messaging.kindName = function ( key ) {

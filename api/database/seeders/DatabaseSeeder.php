@@ -15,6 +15,7 @@ use App\Models\ExternalOrder;
 use App\Models\Seat;
 use App\Models\EventPriceZone;
 use App\Models\Plan;
+use App\Models\PlatformAdmin;
 use App\Models\SeatMap;
 use App\Models\SeatMapVersion;
 use App\Models\SiteDomain;
@@ -46,8 +47,11 @@ class DatabaseSeeder extends Seeder
             'Riverside Arena', 'riverside', 'owner@riverside.test', $plans['starter'], seatsPerRow: 10, rows: 6
         );
 
+        $operator = $this->seedPlatformOperator();
+
         $this->command?->newLine();
         $this->command?->info('Demo data ready.');
+        $this->command?->line('Platform console: /console — '.$operator.' / password');
         $this->command?->table(
             ['Tenant', 'Login', 'Password', 'Event public id', 'API key id', 'API secret'],
             [
@@ -56,6 +60,31 @@ class DatabaseSeeder extends Seeder
             ],
         );
         $this->command?->warn('API secrets are shown here only because this is seed data. Real secrets are displayed once, at creation, and never again.');
+    }
+
+    /**
+     * Somebody who runs the platform, so the console is reachable in a demo.
+     *
+     * Deliberately not a member of either tenant: an operator is not a member of anybody's
+     * account, and a seeder that blurred that would teach the wrong thing about the boundary.
+     */
+    private function seedPlatformOperator(): string
+    {
+        $email = 'operator@seatmap.test';
+
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'Platform operator',
+                'password' => Hash::make('password'),
+                'locale' => 'en',
+                'email_verified_at' => now(),
+            ],
+        );
+
+        PlatformAdmin::firstOrCreate(['user_id' => $user->id], ['level' => 'operator']);
+
+        return $email;
     }
 
     /** @return array<string, Plan> */
@@ -68,8 +97,7 @@ class DatabaseSeeder extends Seeder
                 'currency' => 'EUR',
                 'interval' => 'month',
                 'limits' => [
-                    'max_venues' => 2, 'max_events' => 20,
-                    'max_seats_per_map' => 2000, 'max_scans_per_month' => 20000,
+                    'max_venues' => 2, 'max_events' => 20, 'max_seats_per_map' => 2000,
                 ],
             ]),
             'pro' => Plan::firstOrCreate(['key' => 'pro'], [
@@ -78,8 +106,7 @@ class DatabaseSeeder extends Seeder
                 'currency' => 'EUR',
                 'interval' => 'month',
                 'limits' => [
-                    'max_venues' => 25, 'max_events' => 500,
-                    'max_seats_per_map' => 25000, 'max_scans_per_month' => 500000,
+                    'max_venues' => 25, 'max_events' => 500, 'max_seats_per_map' => 25000,
                 ],
             ]),
         ];

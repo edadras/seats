@@ -170,3 +170,29 @@ half that matters with a real gateway: the buyer leaves, money moves elsewhere, 
 
 Webhooks are **not** implemented, and the reconciliation job is why that is a delay rather than a
 hole: every gateway here is settled by asking it, not by being told.
+
+## Amendment, 2026-09: the platform's own console
+
+Somebody runs this platform, and they need to see every organiser on it. That is a different
+application from the panel, and it is built as one.
+
+- **Operators are not tenant users.** A `platform_admins` table, checked by its own middleware. A
+  role inside an account is never a way in: if it were, every organiser's data would be one bug in
+  the permission catalogue away from every other organiser's.
+- **The console reads unscoped, once, in one place.** The middleware wraps the request in
+  `runUnscoped()` rather than scattering `withoutGlobalScope` through controllers, where one
+  forgotten call is a screen that quietly shows nothing.
+- **Its own login.** The panel's asks which organiser somebody belongs to; an operator belongs to
+  none. One message for every failure, so the endpoint cannot be used to find out who runs the
+  platform.
+- **Two levels.** Support can look, an operator can change — enforced in the controllers, not by
+  hiding buttons.
+- **Its own log.** `platform_audit_logs` answers "who at the platform touched my account", which is
+  a different question from the one an organiser's own audit log answers, and usually a more
+  pointed one. Signing in is recorded, not just changes.
+- **Impersonation is time-boxed and doubly recorded.** An hour, expiring by itself, written to the
+  platform's log *and* to the organiser's own — it is their account that was entered.
+- **A plan may only promise what the platform enforces.** The console offers exactly
+  `PlanLimits::KEYS`. Scans are deliberately not limited: cutting off a door on a busy night
+  because a counter passed a number would be the platform breaking the one thing a venue cannot
+  recover from.

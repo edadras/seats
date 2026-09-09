@@ -3,6 +3,9 @@
 use App\Http\Controllers\Api\V1\Checkin\CheckinController;
 use App\Http\Controllers\Api\V1\Embed\EmbedController;
 use App\Http\Controllers\Api\V1\Integrations\WooCommerceController;
+use App\Http\Controllers\Api\V1\Admin\AuthController as ConsoleAuthController;
+use App\Http\Controllers\Api\V1\Admin\ConsoleController;
+use App\Http\Controllers\Api\V1\Admin\PlanController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\SignupController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
@@ -167,6 +170,29 @@ Route::prefix('v1')->group(function () {
 
         Route::get('api-clients', [ApiClientController::class, 'index']);
         Route::delete('api-clients/{client}/keys/{keyId}', [ApiClientController::class, 'revoke']);
+    });
+
+    // ---- The platform's own console -------------------------------------------------------
+    // Its own middleware, its own table of operators, its own audit log. It shares no route and no
+    // permission with an organiser's panel: the moment it did, a bug in one would be a bug in the
+    // other, and the blast radius would be everybody.
+    // An operator belongs to no organiser, so the panel's login cannot serve them: it answers
+    // "which account is this person a member of", and the answer here is none.
+    Route::post('admin/login', [ConsoleAuthController::class, 'login'])->middleware('throttle:20,1');
+
+    Route::middleware(['auth:sanctum', 'platform', 'throttle:120,1'])->prefix('admin')->group(function () {
+        Route::get('overview', [ConsoleController::class, 'overview']);
+        Route::get('tenants', [ConsoleController::class, 'tenants']);
+        Route::get('tenants/{tenant}', [ConsoleController::class, 'tenant']);
+        Route::patch('tenants/{tenant}', [ConsoleController::class, 'updateTenant']);
+        Route::post('tenants/{tenant}/impersonate', [ConsoleController::class, 'impersonate']);
+        Route::get('sites', [ConsoleController::class, 'sites']);
+        Route::get('audit', [ConsoleController::class, 'audit']);
+
+        Route::get('plans', [PlanController::class, 'index']);
+        Route::post('plans', [PlanController::class, 'store']);
+        Route::patch('plans/{plan}', [PlanController::class, 'update']);
+        Route::delete('plans/{plan}', [PlanController::class, 'destroy']);
     });
 
     // ---- Public widget ------------------------------------------------------------------

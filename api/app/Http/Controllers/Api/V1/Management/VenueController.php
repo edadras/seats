@@ -28,6 +28,8 @@ class VenueController extends Controller
     {
         $this->authorize($request, 'venues.manage');
 
+        app(\App\Support\Plans\PlanLimits::class)->assertCanAddVenue();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'address' => ['nullable', 'string', 'max:255'],

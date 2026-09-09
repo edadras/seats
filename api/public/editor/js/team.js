@@ -61,7 +61,7 @@
 			members.map( function ( member ) {
 				return '<tr' + ( member.suspended ? ' class="is-muted"' : '' ) + '>' +
 					'<td class="table__primary">' + esc( member.name || member.email ) +
-						'<span class="muted block">' + esc( member.email ) + '</span></td>' +
+						'<span class="muted on-own-line">' + esc( member.email ) + '</span></td>' +
 					'<td>' + esc( member.role_name ) + '</td>' +
 					'<td class="muted">' +
 						( member.suspended
@@ -329,7 +329,7 @@
 			'<td class="muted nowrap">' + esc( App.date( entry.created_at ) ) + '</td>' +
 			'<td class="table__primary">' + esc( entry.action ) +
 				( entry.subject.label
-					? '<span class="muted block">' + esc( entry.subject.label ) + '</span>'
+					? '<span class="muted on-own-line">' + esc( entry.subject.label ) + '</span>'
 					: '' ) + '</td>' +
 			'<td>' + esc( actor ) + '</td>' +
 			'<td class="changes">' + changes + '</td>' +

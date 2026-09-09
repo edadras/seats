@@ -67,7 +67,9 @@ return new class extends Migration
             $table->bigInteger('price_amount')->default(0); // minor units
             $table->string('currency', 3)->default('EUR');
             $table->string('interval')->default('month'); // month|year
-            // max_venues, max_events, max_seats_per_map, max_active_seats, max_scans_per_month
+            // The keys App\Support\Plans\PlanLimits enforces: max_venues, max_events,
+            // max_seats_per_map. Nothing else belongs here — a limit only this column knows about
+            // is a promise nothing checks.
             $table->jsonb('limits')->default('{}');
             $table->boolean('is_active')->default(true);
             $table->timestamps();

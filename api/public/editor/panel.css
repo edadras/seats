@@ -1367,7 +1367,9 @@
 
 .change b { color: var(--text); font-weight: 600; }
 
-.block { display: block; }
+/* A run of text that has to sit on its own line. Named for what it does rather than `block`,
+   which is already the page-builder's card and was quietly giving these a border. */
+.on-own-line { display: block; }
 .nowrap { white-space: nowrap; }
 .is-muted td { opacity: 0.6; }
 .select--sm { block-size: 1.75rem; font-size: var(--text-xs); padding-inline-end: var(--s-5); }
