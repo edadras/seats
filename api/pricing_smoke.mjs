@@ -87,6 +87,59 @@ await page.locator( '[data-prices]' ).first().click();
 await page.waitForSelector( '#pricing-currency' );
 const heading = await page.locator( '.page-head' ).innerText();
 check( 'the price screen is Persian', heading.includes( 'قیمت' ), heading.replace( /\n/g, ' | ' ) );
+console.log( 'Individual seats' );
+await page.evaluate( () => window.localStorage.setItem( 'seatmap.locale', 'en' ) );
+await page.reload( { waitUntil: 'networkidle' } );
+await page.waitForSelector( '[data-prices]' );
+await page.locator( '[data-prices]' ).first().click();
+await page.waitForSelector( '#pricing-seats' );
+await page.click( '#pricing-seats' );
+
+await page.waitForSelector( '[data-section]' );
+check( 'the hall arrives as blocks', ( await page.locator( '[data-section]' ).count() ) > 0,
+	`${ await page.locator( '[data-section]' ).count() } sections` );
+
+await page.locator( '[data-section]' ).first().click();
+await page.waitForSelector( '[data-seat]' );
+const seats = await page.locator( '[data-seat]' ).count();
+check( 'the block opens onto its chairs', seats > 0, `${ seats } seats` );
+
+const labels = ( await page.locator( '[data-seat]' ).allInnerTexts() ).slice( 0, 4 ).join( ',' );
+check( 'a row is walked, not sorted as strings', labels === '1,2,3,4', labels );
+
+// One chair, then a run of them: "12 to 18" is how a box office speaks.
+await page.locator( '[data-seat]' ).first().click();
+await page.locator( '[data-seat]' ).nth( 3 ).click( { modifiers: [ 'Shift' ] } );
+check( 'shift takes the run in between',
+	( await page.locator( '.seat-bar__count' ).innerText() ).includes( '4' ),
+	await page.locator( '.seat-bar__count' ).innerText() );
+
+await page.fill( '#seat-amount', '900000' );
+await page.click( '#seat-apply' );
+await page.waitForTimeout( 150 );
+check( 'the chairs are marked as carrying their own price',
+	( await page.locator( '.chip--own' ).count() ) === 4,
+	`${ await page.locator( '.chip--own' ).count() } marked` );
+
+await page.click( '#seats-save' );
+await page.waitForTimeout( 900 );
+
+const priced = await page.evaluate( async () => {
+	const token = window.sessionStorage.getItem( 'seatmap_token' );
+	const id = window.SeatmapSeatPrices.eventId;
+	const body = await fetch( `/v1/events/${ id }/seat-prices`, {
+		headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+	} ).then( ( r ) => r.json() );
+
+	return body.sections
+		.flatMap( ( s ) => s.rows )
+		.flatMap( ( r ) => r.seats )
+		.filter( ( s ) => s.own_amount === 900000 ).length;
+} );
+check( 'the server kept all four, and only those', priced === 4, `${ priced } seats` );
+
+await page.screenshot( { path: process.env.SEATMAP_SHOT || '/tmp/seats.png' } );
+
 check( 'no console errors', errors.length === 0, errors.join( ' / ' ) );
 await browser.close();
 console.log( failures ? `\n${ failures } FAILED` : '\nall good' );

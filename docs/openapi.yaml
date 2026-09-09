@@ -452,6 +452,102 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /events/{event}/seat-prices:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: listSeatPrices
+      tags: [Events]
+      summary: Every seat, with what it costs and why
+      description: >
+        The chart grouped by section and row — the way a hall is spoken about. Each seat carries
+        the amount a buyer would be charged now, whether that amount is the seat's own or its
+        zone's, and whether it is blocked or already sold.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currency: { type: string }
+                  zones:
+                    type: array
+                    items: { $ref: "#/components/schemas/PriceZone" }
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string }
+                        name: { type: string }
+                        color: { type: [string, 'null'] }
+                        rows:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              key: { type: string }
+                              name: { type: string }
+                              seats:
+                                type: array
+                                items: { $ref: "#/components/schemas/SeatPrice" }
+    put:
+      operationId: updateSeatPrices
+      tags: [Events]
+      summary: Price, move or block individual seats
+      description: >
+        Changes the seats named and leaves every other seat alone. A section called VIP is a name,
+        not a price, so a seat may carry its own amount; the zone is what it falls back to.
+
+
+        A seat with no amount, no zone of its own, not blocked and with nothing noted has its
+        override deleted rather than stored as a row of nulls.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [seats]
+              properties:
+                seats:
+                  type: array
+                  minItems: 1
+                  maxItems: 5000
+                  items:
+                    type: object
+                    required: [seat_id, amount, zone_key]
+                    properties:
+                      seat_id: { type: string, format: uuid }
+                      amount:
+                        type: [integer, 'null']
+                        minimum: 0
+                        description: The seat's own price, in the event currency's minor unit.
+                      zone_key:
+                        type: [string, 'null']
+                        description: >
+                          Follow this price zone instead of the one the chart put the seat in.
+                          Different from copying today's number onto the seat: the seat moves when
+                          the zone is repriced.
+                      blocked: { type: boolean }
+                      note: { type: [string, 'null'], maxLength: 255 }
+      responses:
+        "200":
+          description: Applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changed: { type: integer }
+                  cleared: { type: integer }
+        "422":
+          description: A seat is not in this event's map, or a zone does not exist
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /events/{event}/stats:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -2253,6 +2349,30 @@ components:
         hold_ttl_seconds: { type: integer, minimum: 60, maximum: 3600 }
         max_extends: { type: integer, minimum: 0, maximum: 10 }
         refund_policy: { type: string, enum: [release, hold_back] }
+
+    SeatPrice:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        accessible: { type: boolean }
+        zone_key: { type: [string, 'null'] }
+        chart_zone_key:
+          type: [string, 'null']
+          description: The zone the published chart put this seat in.
+        amount:
+          type: [integer, 'null']
+          description: What a buyer would be charged now, however that came about.
+        own_amount:
+          type: [integer, 'null']
+          description: Set only when this seat carries its own price rather than its zone's.
+        blocked: { type: boolean }
+        note: { type: [string, 'null'] }
+        sold:
+          type: boolean
+          description: >
+            A sold seat keeps the price it was sold at; repricing it changes what the next buyer
+            pays.
 
     PriceZone:
       type: object

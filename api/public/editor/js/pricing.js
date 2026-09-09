@@ -89,6 +89,8 @@
 			actions:
 				'<button class="btn" id="pricing-back">' + icon( 'back', { size: 15 } ) +
 					esc( App.t( 'pricing.back' ) ) + '</button>' +
+				'<button class="btn" id="pricing-seats">' + icon( 'layers', { size: 15 } ) +
+					esc( App.t( 'pricing.seats.open' ) ) + '</button>' +
 				'<button class="btn btn--primary" id="pricing-save">' +
 					esc( App.t( 'pricing.save' ) ) + '</button>',
 			body:
@@ -178,6 +180,13 @@
 
 		document.getElementById( 'pricing-back' )
 			.addEventListener( 'click', function () { App.renderEvents(); } );
+
+		document.getElementById( 'pricing-seats' ).addEventListener( 'click', function () {
+			// Zone prices are not carried over unsaved: the seat screen reads what the server
+			// holds, and showing it amounts that exist only in this tab would be a lie about the
+			// hall. Anything typed here and not saved stays behind, which is why it says so.
+			global.SeatmapSeatPrices.open( App, Pricing.eventId, Pricing.event.name );
+		} );
 
 		document.getElementById( 'pricing-save' )
 			.addEventListener( 'click', function () { Pricing.save( App ); } );

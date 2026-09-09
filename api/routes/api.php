@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
+use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
@@ -61,6 +62,10 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}', [EventController::class, 'show']);
         Route::patch('events/{event}', [EventController::class, 'update']);
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
+        // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty
+        // thousand seats and a repricing usually touches eight.
+        Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);
+        Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);
         Route::get('events/{event}/checkins', [EventController::class, 'checkins']);
 
