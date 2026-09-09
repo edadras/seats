@@ -266,7 +266,7 @@
 			return this.i18n.sectionSoldOut;
 		}
 
-		var left = this.i18n.sectionSeatsLeft.replace( '%d', stats.available );
+		var left = this.i18n.sectionSeatsLeft.replace( '%d', this.formatCount( stats.available ) );
 
 		return null === stats.cheapest
 			? left
@@ -709,7 +709,7 @@
 			var left = document.createElement( 'span' );
 			left.className = 'seatmap-widget__area-left';
 			left.textContent = area.remaining > 0
-				? self.i18n.placesLeft.replace( '%d', area.remaining )
+				? self.i18n.placesLeft.replace( '%d', self.formatCount( area.remaining ) )
 				: self.i18n.soldOut;
 			row.appendChild( left );
 
@@ -721,7 +721,7 @@
 			minus.disabled = area.quantity <= 0;
 
 			var count = document.createElement( 'output' );
-			count.textContent = String( area.quantity );
+			count.textContent = self.formatCount( area.quantity );
 			count.setAttribute( 'aria-live', 'polite' );
 
 			var plus = iconButton( 'plus', self.i18n.addOne.replace( '%s', area.label ),
@@ -747,7 +747,7 @@
 		// Seats and standing places share the per-order limit, so the two have to be counted
 		// together rather than each against the cap on its own.
 		if ( delta > 0 && this.totalChosen() >= this.maxSeats ) {
-			this.announce( this.i18n.maxSeats.replace( '%d', this.maxSeats ) );
+			this.announce( this.i18n.maxSeats.replace( '%d', this.formatCount( this.maxSeats ) ) );
 
 			return;
 		}
@@ -1194,7 +1194,7 @@
 			ctx.fillText(
 				soldOut
 					? self.i18n.soldOut
-					: self.i18n.placesLeft.replace( '%d', area.remaining ) +
+					: self.i18n.placesLeft.replace( '%d', self.formatCount( area.remaining ) ) +
 						( area.amount != null ? ' · ' + self.formatMoney( area.amount ) : '' ),
 				box.x + box.width / 2,
 				box.y + box.height / 2 + 10
@@ -1602,7 +1602,7 @@
 			}
 
 			if ( this.selected.length >= this.maxSeats ) {
-				this.announce( this.i18n.maxSeats.replace( '%d', this.maxSeats ) );
+				this.announce( this.i18n.maxSeats.replace( '%d', this.formatCount( this.maxSeats ) ) );
 
 				return;
 			}
@@ -1832,7 +1832,7 @@
 			total += ( area.amount || 0 ) * area.quantity;
 
 			self.selectionEl.appendChild( line(
-				area.quantity + ' × ' + area.label,
+				self.formatCount( area.quantity ) + ' × ' + area.label,
 				self.formatMoney( ( area.amount || 0 ) * area.quantity )
 			) );
 		} );
@@ -1990,6 +1990,24 @@
 	 * shop knows about itself, and the picker must keep matching the prices printed everywhere
 	 * else on that shop. So that path stays exactly as it was.
 	 */
+	/**
+	 * A plain count, in the digits the rest of the page uses.
+	 *
+	 * "250 places left" beside "€۶۵٬۰۰" is two writing systems in one line, and the price is the
+	 * one that got attention first. Anything a buyer reads as a number goes through here.
+	 */
+	SeatmapWidget.prototype.formatCount = function ( value ) {
+		if ( this.config.locale && window.Intl && window.Intl.NumberFormat ) {
+			try {
+				return new Intl.NumberFormat( this.config.locale ).format( value );
+			} catch ( e ) {
+				// A locale this browser has no data for. The plain digits are still a number.
+			}
+		}
+
+		return String( value );
+	};
+
 	SeatmapWidget.prototype.formatMoney = function ( minorUnits ) {
 		if ( null === minorUnits || undefined === minorUnits ) {
 			return '';
