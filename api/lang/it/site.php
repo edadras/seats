@@ -124,7 +124,6 @@ return [
     'addToCalendar' => 'Aggiungi al calendario',
     'printTickets' => 'Stampa i biglietti',
     'downloadTickets' => 'Scarica i biglietti (PDF)',
-    'savePdfHint' => 'Scegliete “Salva come PDF” nella finestra di stampa per conservarne una copia.',
     'yourTickets' => 'I vostri biglietti',
     'seat' => 'Posto',
     'section' => 'Area',

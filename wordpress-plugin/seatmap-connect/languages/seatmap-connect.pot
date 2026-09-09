@@ -364,7 +364,16 @@ msgstr ""
 msgid "You can take up to %d tickets."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:214
+#. translators: %s: the seat or area being taken off the order.
+#: includes/class-seatmap-widget.php:205
+msgid "Remove %s"
+msgstr ""
+
+#: includes/class-seatmap-widget.php:207
+msgid "Seat list"
+msgstr ""
+
+#: includes/class-seatmap-widget.php:218
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr ""
 

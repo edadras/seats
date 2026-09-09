@@ -124,7 +124,6 @@ return [
     'addToCalendar' => 'أضف إلى التقويم',
     'printTickets' => 'اطبع التذاكر',
     'downloadTickets' => 'تنزيل التذاكر (PDF)',
-    'savePdfHint' => 'اختر «حفظ بصيغة PDF» في نافذة الطباعة للاحتفاظ بنسخة.',
     'yourTickets' => 'تذاكرك',
     'seat' => 'مقعد',
     'section' => 'منطقة',

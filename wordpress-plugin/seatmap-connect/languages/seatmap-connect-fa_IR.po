@@ -365,7 +365,16 @@ msgstr "هنوز چیزی انتخاب نشده است."
 msgid "You can take up to %d tickets."
 msgstr "تا %d بلیت می‌توانید بردارید."
 
-#: includes/class-seatmap-widget.php:214
+#. translators: %s: the seat or area being taken off the order.
+#: includes/class-seatmap-widget.php:205
+msgid "Remove %s"
+msgstr "حذف %s"
+
+#: includes/class-seatmap-widget.php:207
+msgid "Seat list"
+msgstr "فهرست صندلی‌ها"
+
+#: includes/class-seatmap-widget.php:218
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "انتخاب صندلی به جاوااسکریپت نیاز دارد. لطفاً فعالش کنید، یا با گیشه تماس بگیرید."
 

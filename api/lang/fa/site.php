@@ -124,7 +124,6 @@ return [
     'addToCalendar' => 'افزودن به تقویم',
     'printTickets' => 'چاپ بلیط‌ها',
     'downloadTickets' => 'دانلود بلیت‌ها (PDF)',
-    'savePdfHint' => 'در پنجرهٔ چاپ، گزینهٔ «ذخیره به‌صورت PDF» را انتخاب کنید.',
     'yourTickets' => 'بلیت‌های شما',
     'seat' => 'صندلی',
     'section' => 'بخش',

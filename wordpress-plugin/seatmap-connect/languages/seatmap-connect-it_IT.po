@@ -365,7 +365,16 @@ msgstr "Ancora nulla di scelto."
 msgid "You can take up to %d tickets."
 msgstr "Potete prendere fino a %d biglietti."
 
-#: includes/class-seatmap-widget.php:214
+#. translators: %s: the seat or area being taken off the order.
+#: includes/class-seatmap-widget.php:205
+msgid "Remove %s"
+msgstr "Rimuovi %s"
+
+#: includes/class-seatmap-widget.php:207
+msgid "Seat list"
+msgstr "Elenco dei posti"
+
+#: includes/class-seatmap-widget.php:218
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "Per scegliere i posti serve JavaScript. Attivalo, oppure contatta il botteghino."
 

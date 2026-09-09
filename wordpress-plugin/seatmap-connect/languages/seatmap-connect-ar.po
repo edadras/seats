@@ -365,7 +365,16 @@ msgstr "لم تختر شيئًا بعد."
 msgid "You can take up to %d tickets."
 msgstr "يمكنك أخذ %d تذكرة كحد أقصى."
 
-#: includes/class-seatmap-widget.php:214
+#. translators: %s: the seat or area being taken off the order.
+#: includes/class-seatmap-widget.php:205
+msgid "Remove %s"
+msgstr "إزالة %s"
+
+#: includes/class-seatmap-widget.php:207
+msgid "Seat list"
+msgstr "قائمة المقاعد"
+
+#: includes/class-seatmap-widget.php:218
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "اختيار المقاعد يحتاج جافاسكربت. فعّله من فضلك، أو اتصل بشبّاك التذاكر."
 

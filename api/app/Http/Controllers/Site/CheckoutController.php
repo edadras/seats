@@ -11,6 +11,7 @@ use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\Site;
 use App\Support\Locale\Money;
+use App\Support\Pdf\TicketPdf;
 use App\Support\Qr\QrRenderer;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -158,26 +159,25 @@ class CheckoutController extends Controller
      * thing, and a ticket token is a bearer credential for getting into a building.
      */
     /**
-     * The tickets on their own, laid out for paper.
+     * The tickets as a file the buyer keeps.
      *
-     * A sheet rather than a file the server built: a ticket carries the name of an event somebody
-     * typed, and that name can be in Persian or Arabic. Writing a PDF with text in those scripts
-     * means embedding a font *and* shaping it — choosing the right form of every letter from its
-     * neighbours, and laying the line out right to left — which is a text engine, not a feature.
-     * The browser already has one, and its "Save as PDF" produces a real PDF from this page in
-     * every language the platform speaks.
+     * A download rather than a page to print: a ticket has to survive being forwarded, printed at
+     * work, and opened on a phone that has never seen this website. How it is built — and why that
+     * takes a text engine rather than a template — is in App\Support\Pdf\TicketPdf.
      */
     public function tickets(Request $request, string $reference)
     {
         $site = $request->attributes->get('site');
         $order = $this->ownOrder($request, $reference);
+        $tokens = (array) $request->session()->get('seatmap_tokens', []);
 
-        return response()->view('site.tickets', [
-            'site' => $site,
-            'brand' => Themes::forSite($site),
-            'order' => $order,
-            'tokens' => (array) $request->session()->get('seatmap_tokens', []),
-            'qr' => fn (string $token) => $this->qr->dataUri($token, 320),
+        $pdf = app(TicketPdf::class)->render($site, $order, $tokens);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="tickets-'.$reference.'.pdf"',
+            // The codes in here open a door. Nothing between us and the buyer should keep a copy.
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 

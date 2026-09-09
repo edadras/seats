@@ -161,6 +161,48 @@ class HostedSiteTest extends TestCase
     }
 
     #[Test]
+    public function a_persian_booking_downloads_a_persian_ticket(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $this->makeSite($fixture['tenant'], 'northgate.test');
+
+        $seatId = app(TenantContext::class)->runAs(
+            $fixture['tenant'],
+            fn () => \App\Models\Seat::where('seat_map_id', $fixture['map']->id)->value('id')
+        );
+
+        $this->postJson('http://northgate.test/_store/hold?lang=fa', [
+            'event_public_id' => $fixture['event']->public_id,
+            'seat_ids' => [$seatId],
+        ])->assertCreated();
+
+        $redirect = $this->post('http://northgate.test/checkout?lang=fa', [
+            'name' => 'مریم رضایی',
+            'email' => 'maryam@example.test',
+            'gateway' => 'offline',
+        ])->assertRedirect();
+
+        $reference = basename(parse_url((string) $redirect->headers->get('Location'), PHP_URL_PATH));
+
+        $pdf = $this->get('http://northgate.test/order/'.$reference.'/tickets?lang=fa')
+            ->assertOk()
+            ->getContent();
+
+        /*
+         * The assertion is that a font came with it.
+         *
+         * A PDF that reaches a Persian reader without an embedded, shaped typeface is a page of
+         * boxes, and it fails silently — the file opens, it just cannot be read. `/FontFile2` is
+         * the font itself inside the document; `/Identity-H` is the encoding that lets it address
+         * glyphs directly, which is what shaping needs.
+         */
+        $this->assertStringStartsWith('%PDF-', $pdf);
+        $this->assertStringContainsString('/FontFile2', $pdf);
+        $this->assertStringContainsString('/Identity-H', $pdf);
+        $this->assertStringContainsString('Vazirmatn', $pdf);
+    }
+
+    #[Test]
     public function the_confirmation_page_belongs_to_the_session_that_bought_it(): void
     {
         $fixture = $this->makeSellableEvent();
@@ -184,10 +226,13 @@ class HostedSiteTest extends TestCase
 
         $reference = basename((string) $redirect->headers->get('Location'));
 
-        // The printable sheet is the same tickets, so it answers to the same session.
-        $this->get('http://northgate.test/order/'.$reference.'/tickets')
+        // The downloadable tickets are the same tickets, so they answer to the same session.
+        $pdf = $this->get('http://northgate.test/order/'.$reference.'/tickets')
             ->assertOk()
-            ->assertSee('window.print()', false);
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->assertStringStartsWith('%PDF-', $pdf->getContent());
+        $this->assertStringContainsString('attachment;', (string) $pdf->headers->get('Content-Disposition'));
 
         // A ticket token is a credential for getting into a building, and an order reference in a
         // URL is a guessable thing. Somebody else's session must not be able to read it.

@@ -128,7 +128,6 @@ return [
     'addToCalendar' => 'Add to calendar',
     'printTickets' => 'Print tickets',
     'downloadTickets' => 'Download tickets (PDF)',
-    'savePdfHint' => 'Choose “Save as PDF” in the print dialogue to keep a copy.',
     'yourTickets' => 'Your tickets',
     'seat' => 'Seat',
     'section' => 'Section',
