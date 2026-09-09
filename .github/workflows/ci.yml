@@ -192,6 +192,13 @@ jobs:
           # they may select up to seats. See ADR-0005 §2.
           node tools/i18n-check.mjs
 
+      - name: The panel and its catalogue agree, in both directions
+        run: |
+          # t() never throws: a mistyped key renders its own last segment on the screen, and a
+          # catalogue entry nobody looks up is six translations of a string that is never shown.
+          # Neither shows up in the check above, because both locales agree with each other.
+          node tools/panel-strings-check.mjs
+
   plugin:
     name: WordPress plugin
     runs-on: ubuntu-latest

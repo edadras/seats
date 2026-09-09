@@ -47,6 +47,36 @@ return [
         'inSection' => 'In %s',
     ],
 
+
+    'blocks' => [
+        'heading' => 'Titolo',
+        'richText' => 'Testo',
+        'image' => 'Immagine',
+        'buttons' => 'Pulsanti',
+        'eventList' => 'In programma',
+        'eventDetail' => 'Evento e scelta dei posti',
+        'faq' => 'Domande',
+        'venueMap' => 'Come raggiungerci',
+        'divider' => 'Divisore',
+        'html' => 'HTML personalizzato',
+    ],
+
+    'seed' => [
+        'home' => 'Home',
+        'event' => 'Evento',
+        'visiting' => 'Come visitarci',
+        'welcome' => 'Benvenuti. I biglietti per tutto ciò che arriva sono qui sotto.',
+        'whatsOn' => 'In programma',
+        'findingUs' => 'Come raggiungerci',
+        'beforeYouCome' => 'Prima di venire',
+        'doorsQuestion' => 'A che ora aprono le porte?',
+        'doorsAnswer' => 'Di solito mezz’ora prima dell’inizio.',
+        'refundQuestion' => 'Posso avere un rimborso?',
+        'refundAnswer' => 'Scrivete qui la vostra politica per il pubblico.',
+        'header' => 'Intestazione',
+        'footer' => 'Piè di pagina',
+    ],
+
     // --- Struttura del sito -----------------------------------------------------------------
     'skipToContent' => 'Vai al contenuto',
     'mainNav' => 'Principale',

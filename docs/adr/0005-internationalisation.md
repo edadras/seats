@@ -100,3 +100,41 @@ page in the wrong language before they see `site.page.title`.
   the panel counts them and says so.
 - The check-in app carries its own catalogue for the same six locales, because a door in Tehran is
   where a missing translation costs the most and where nobody can fix it.
+
+## Amendment, 2026-09: the panel finishes what it started
+
+The catalogues above were built out screen by screen, and for several increments the panel was
+honestly half-translated: everything added after the i18n work — modules, team, pricing, seat
+prices, themes, reports, messaging, signup — read `App.t()`, while everything written before it —
+the shell and its navigation, events, venues, seat maps, connections, the whole designer, the
+website editor and the ticket desk — still held English inline. A Persian organiser got a Persian
+sidebar over an English designer.
+
+That is now closed. `api/lang/*/panel.php` is the largest catalogue on the platform (514 keys) and
+`api/public/editor/js` holds no user-facing word of its own. Three things came out of doing it that
+are worth writing down, because each is a rule for the next surface.
+
+**A word that describes the machine is not translated.** The shortcut sheet keeps `Shift`, `Enter`,
+`Ctrl/⌘`, `Delete` and the arrows in Latin: those letters are printed on the reader's keyboard
+whatever language they read in, and translating them names a key that does not exist. What each
+combination *does* is translated, and so are the three entries that are actions rather than keys —
+Click, drag, Double-click. The same reasoning keeps theme names (Aurora, Noir) out of the
+catalogue and puts their descriptions in it.
+
+**Content created on the customer's behalf is content, and is written in their language.** A new
+account is provisioned with a home page, an event page and a visiting page. Those were English
+strings in `SiteProvisioner`; they are now `site.seed.*`, resolved in the *site's* locale rather
+than the locale of whoever happened to click Create. An organiser whose site is Persian should not
+have to translate three pages before going live. The same applies to the two menus a site is given:
+their names are resolved from the menu key at render time, so a site created in one language does
+not keep those names in another.
+
+**Two checks are needed, not one.** `tools/i18n-check.mjs` proves the six locales are level with
+each other; it is blind to whether the panel reads them at all, because `t()` never throws — a
+mistyped key renders its own last segment and nothing goes red. So `tools/panel-strings-check.mjs`
+now asserts the other direction in CI: every `panel.…` key the JavaScript looks up exists in the
+catalogue, and every key in the catalogue is looked up by something. Keys assembled at run time
+(`'panel.tools.' + tool.key`) count as a prefix, which is deliberately loose — the alternative is a
+second copy of the tool list living in a lint. Beyond that, `api/locale_smoke.mjs` drives the real
+panel in Persian and German and asserts both that the translations appear and that a list of
+formerly hard-coded English strings does not.

@@ -48,6 +48,36 @@ return [
         'inSection' => 'In %s',
     ],
 
+
+    'blocks' => [
+        'heading' => 'Überschrift',
+        'richText' => 'Text',
+        'image' => 'Bild',
+        'buttons' => 'Schaltflächen',
+        'eventList' => 'Programm',
+        'eventDetail' => 'Veranstaltung und Sitzplatzwahl',
+        'faq' => 'Fragen',
+        'venueMap' => 'So finden Sie uns',
+        'divider' => 'Trennlinie',
+        'html' => 'Eigenes HTML',
+    ],
+
+    'seed' => [
+        'home' => 'Startseite',
+        'event' => 'Veranstaltung',
+        'visiting' => 'Besuch',
+        'welcome' => 'Willkommen. Karten für alles, was ansteht, finden Sie weiter unten.',
+        'whatsOn' => 'Programm',
+        'findingUs' => 'So finden Sie uns',
+        'beforeYouCome' => 'Bevor Sie kommen',
+        'doorsQuestion' => 'Wann öffnen die Türen?',
+        'doorsAnswer' => 'In der Regel eine halbe Stunde vor Beginn.',
+        'refundQuestion' => 'Kann ich die Karten zurückgeben?',
+        'refundAnswer' => 'Schreiben Sie hier Ihre Regelung für Ihr Publikum.',
+        'header' => 'Kopfzeile',
+        'footer' => 'Fußzeile',
+    ],
+
     // --- Rahmen der Website -----------------------------------------------------------------
     'skipToContent' => 'Zum Inhalt springen',
     'mainNav' => 'Hauptmenü',

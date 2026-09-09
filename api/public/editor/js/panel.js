@@ -21,20 +21,26 @@
 		theme: 'seatmap_theme',
 	};
 
-	/* Navigation, in the order the work happens: events are the daily screen, so they come first. */
+	/*
+	 * Navigation, in the order the work happens: events are the daily screen, so they come first.
+	 *
+	 * Only the key and the icon are here. The label is looked up when the nav is painted, because
+	 * this array is built while the file loads — before the catalogue has been fetched — and a
+	 * label captured then would be English for the rest of the session.
+	 */
 	var NAV = [
-		{ key: 'events', label: 'Events', icon: 'calendar' },
-		{ key: 'tickets', label: 'Tickets', icon: 'ticket' },
-		{ key: 'maps', label: 'Seat maps', icon: 'map' },
-		{ key: 'venues', label: 'Venues', icon: 'building' },
-		{ key: 'sites', label: 'Websites', icon: 'globe' },
-		{ key: 'themes', label: 'Themes', icon: 'palette' },
-		{ key: 'reports', label: 'Reports', icon: 'chart' },
-		{ key: 'messaging', label: 'Messages', icon: 'mail' },
-		{ key: 'connections', label: 'Connections', icon: 'plug' },
-		{ key: 'modules', label: 'Modules', icon: 'puzzle' },
-		{ key: 'team', label: 'Team', icon: 'users' },
-		{ key: 'audit', label: 'Activity', icon: 'history' },
+		{ key: 'events', icon: 'calendar' },
+		{ key: 'tickets', icon: 'ticket' },
+		{ key: 'maps', icon: 'map' },
+		{ key: 'venues', icon: 'building' },
+		{ key: 'sites', icon: 'globe' },
+		{ key: 'themes', icon: 'palette' },
+		{ key: 'reports', icon: 'chart' },
+		{ key: 'messaging', icon: 'mail' },
+		{ key: 'connections', icon: 'plug' },
+		{ key: 'modules', icon: 'puzzle' },
+		{ key: 'team', icon: 'users' },
+		{ key: 'audit', icon: 'history' },
 	];
 
 	var STATUS_TONE = {
@@ -130,6 +136,10 @@
 		return i18n.t( key, replace );
 	};
 
+	App.has = function ( key ) {
+		return i18n.has( key );
+	};
+
 	App.money = function ( minorUnits, currency, decimals ) {
 		return i18n.money( minorUnits, currency, decimals );
 	};
@@ -188,7 +198,9 @@
 						self.signOut();
 					}
 
-					var error = new Error( ( data.error && data.error.message ) || 'Request failed' );
+					var error = new Error(
+						( data.error && data.error.message ) || self.t( 'panel.common.failed' )
+					);
 					error.code = data.error && data.error.code;
 					error.details = data.error && data.error.details;
 					error.status = response.status;
@@ -209,16 +221,19 @@
 		this.root.innerHTML =
 			'<div class="auth"><form class="auth__card" id="login">' +
 				'<div class="auth__brand"><span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) +
-				'</span>Seatmap</div>' +
-				'<h1 class="auth__title">Sign in</h1>' +
-				'<p class="auth__sub">Manage your venues, seating charts and events.</p>' +
-				'<div class="field"><label class="field__label" for="email">Email</label>' +
+				'</span>' + esc( this.t( 'panel.brand' ) ) + '</div>' +
+				'<h1 class="auth__title">' + esc( this.t( 'panel.auth.signIn' ) ) + '</h1>' +
+				'<p class="auth__sub">' + esc( this.t( 'panel.auth.subtitle' ) ) + '</p>' +
+				'<div class="field"><label class="field__label" for="email">' +
+				esc( this.t( 'panel.auth.email' ) ) + '</label>' +
 				'<input class="input" id="email" name="email" type="email" required autocomplete="username"></div>' +
-				'<div class="field"><label class="field__label" for="password">Password</label>' +
+				'<div class="field"><label class="field__label" for="password">' +
+				esc( this.t( 'panel.auth.password' ) ) + '</label>' +
 				'<input class="input" id="password" name="password" type="password" required ' +
 				'autocomplete="current-password"></div>' +
 				'<div class="issue issue--error" id="login-error" role="alert" hidden></div>' +
-				'<button class="btn btn--primary btn--lg btn--block" type="submit">Sign in</button>' +
+				'<button class="btn btn--primary btn--lg btn--block" type="submit">' +
+				esc( this.t( 'panel.auth.signIn' ) ) + '</button>' +
 				'<p class="auth__foot"><button type="button" class="link" id="go-signup">' +
 					esc( this.t( 'signup.newAccount' ) ) + '</button></p>' +
 			'</form></div>';
@@ -239,7 +254,7 @@
 
 			problem.hidden = true;
 			submit.disabled = true;
-			submit.textContent = 'Signing in…';
+			submit.textContent = self.t( 'panel.auth.signingIn' );
 
 			self.request( 'POST', '/auth/login', {
 				email: data.get( 'email' ),
@@ -266,7 +281,7 @@
 					problem.innerHTML = icon( 'alert', { size: 16 } ) + '<span>' + esc( error.message ) + '</span>';
 					problem.hidden = false;
 					submit.disabled = false;
-					submit.textContent = 'Sign in';
+					submit.textContent = self.t( 'panel.auth.signIn' );
 				} );
 		} );
 	};
@@ -284,8 +299,14 @@
 	App.showWorkspace = function () {
 		var self = this;
 		var profile = this.profile || {};
-		var name = profile.tenant || profile.email || 'Signed in';
-		var meta = profile.role ? titleCase( profile.role ) : ( profile.tenant ? profile.email : '' );
+		var name = profile.tenant || profile.email || this.t( 'panel.shell.signedIn' );
+		// A built-in role has a translated name; one the account invented for itself does not, and
+		// making one up would be worse than showing what they called it.
+		var meta = profile.role
+			? ( this.has( 'team.roles.' + profile.role )
+				? this.t( 'team.roles.' + profile.role )
+				: titleCase( profile.role ) )
+			: ( profile.tenant ? profile.email : '' );
 
 		// The theme toggle lives up by the brand rather than in the account row: down there it
 		// squeezed the organiser's name into an ellipsis, and its tooltip fell off the window.
@@ -294,18 +315,21 @@
 				'<aside class="sidebar">' +
 					'<div class="sidebar__brand">' +
 						'<span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) + '</span>' +
-						'<span class="grow">Seatmap</span>' +
+						'<span class="grow">' + esc( this.t( 'panel.brand' ) ) + '</span>' +
 						'<button class="icon-btn icon-btn--sm" id="theme" data-tip-side="bottom-end"></button>' +
 					'</div>' +
-					'<nav class="sidebar__nav" id="nav" aria-label="Sections"></nav>' +
+					'<nav class="sidebar__nav" id="nav" aria-label="' +
+						esc( this.t( 'panel.nav.sections' ) ) + '"></nav>' +
 					'<div class="sidebar__footer"><div class="account">' +
 						'<span class="account__avatar" aria-hidden="true">' + esc( initials( name ) ) + '</span>' +
 						'<div class="account__body">' +
 							'<div class="account__name">' + esc( name ) + '</div>' +
 							'<div class="account__meta">' + esc( meta || '' ) + '</div>' +
 						'</div>' +
-						'<button class="icon-btn icon-btn--sm" id="signout" data-tip="Sign out" ' +
-							'data-tip-side="top-end" aria-label="Sign out">' +
+						'<button class="icon-btn icon-btn--sm" id="signout" data-tip="' +
+							esc( this.t( 'panel.shell.signOut' ) ) + '" ' +
+							'data-tip-side="top-end" aria-label="' +
+							esc( this.t( 'panel.shell.signOut' ) ) + '">' +
 							icon( 'logout', { size: 16 } ) + '</button>' +
 					'</div></div>' +
 				'</aside>' +
@@ -342,8 +366,9 @@
 		var dark = 'dark' === Theme.current();
 
 		button.innerHTML = icon( dark ? 'sun' : 'moon', { size: 16 } );
-		button.setAttribute( 'data-tip', dark ? 'Light theme' : 'Dark theme' );
-		button.setAttribute( 'aria-label', dark ? 'Switch to the light theme' : 'Switch to the dark theme' );
+		button.setAttribute( 'data-tip', this.t( dark ? 'panel.shell.lightTheme' : 'panel.shell.darkTheme' ) );
+		button.setAttribute( 'aria-label',
+			this.t( dark ? 'panel.shell.switchToLight' : 'panel.shell.switchToDark' ) );
 	};
 
 	App.renderNav = function () {
@@ -360,7 +385,8 @@
 			var button = node( 'button', 'nav-item' );
 			button.type = 'button';
 			button.dataset.view = entry.key;
-			button.innerHTML = icon( entry.icon, { size: 16 } ) + '<span>' + esc( entry.label ) + '</span>';
+			button.innerHTML = icon( entry.icon, { size: 16 } ) +
+				'<span>' + esc( self.t( 'panel.nav.' + entry.key ) ) + '</span>';
 
 			if ( self.current === entry.key ) {
 				button.classList.add( 'is-active' );
@@ -423,7 +449,10 @@
 	};
 
 	App.loading = function ( title ) {
-		this.page( { title: title, body: '<p class="muted">Loading…</p>' } );
+		this.page( {
+			title: title,
+			body: '<p class="muted">' + esc( this.t( 'panel.common.loading' ) ) + '</p>',
+		} );
 	};
 
 	App.error = function ( error ) {
@@ -506,17 +535,19 @@
 		host.innerHTML =
 			'<' + ( isForm ? 'form' : 'div' ) + ' class="modal__panel">' +
 				'<div class="modal__head"><h2>' + esc( options.title ) + '</h2>' +
-					'<button type="button" class="icon-btn icon-btn--sm" data-close aria-label="Close">' +
+					'<button type="button" class="icon-btn icon-btn--sm" data-close aria-label="' +
+					esc( App.t( 'panel.common.close' ) ) + '">' +
 					icon( 'close', { size: 16 } ) + '</button></div>' +
 				'<div class="modal__body">' + ( options.body || '' ) + '</div>' +
 				'<div class="modal__foot">' +
 					( options.cancelLabel === null ? '' :
 						'<button type="button" class="btn" data-close>' +
-						esc( options.cancelLabel || 'Cancel' ) + '</button>' ) +
+						esc( options.cancelLabel || App.t( 'panel.common.cancel' ) ) + '</button>' ) +
 					( isForm
-						? '<button type="submit" class="btn btn--primary">' + esc( options.submitLabel || 'Save' ) + '</button>'
+						? '<button type="submit" class="btn btn--primary">' +
+							esc( options.submitLabel || App.t( 'panel.common.save' ) ) + '</button>'
 						: '<button type="button" class="btn btn--primary" data-close>' +
-							esc( options.doneLabel || 'Done' ) + '</button>' ) +
+							esc( options.doneLabel || App.t( 'panel.common.done' ) ) + '</button>' ) +
 				'</div>' +
 			'</' + ( isForm ? 'form' : 'div' ) + '>';
 
@@ -560,7 +591,7 @@
 				var label = submit.textContent;
 
 				submit.disabled = true;
-				submit.textContent = 'Working…';
+				submit.textContent = App.t( 'panel.common.working' );
 
 				Promise.resolve( options.onSubmit( new FormData( event.target ), host ) )
 					.then( function ( keepOpen ) {
@@ -594,7 +625,7 @@
 	App.renderVenues = function () {
 		var self = this;
 
-		this.loading( 'Venues' );
+		this.loading( this.t( 'panel.nav.venues' ) );
 
 		this.request( 'GET', '/venues' )
 			.then( function ( response ) {
@@ -606,15 +637,20 @@
 				} ).join( '' );
 
 				self.page( {
-					title: 'Venues',
-					description: 'A venue is the building. Its seating charts live under Seat maps.',
+					title: self.t( 'panel.nav.venues' ),
+					description: esc( self.t( 'panel.venues.description' ) ),
 					actions: '<button class="btn btn--primary" id="add-venue">' +
-						icon( 'plus', { size: 15 } ) + 'New venue</button>',
+						icon( 'plus', { size: 15 } ) + esc( self.t( 'panel.venues.new' ) ) + '</button>',
 					body: table(
-						[ 'Name', 'City', 'Country', 'Time zone' ],
+						[
+							self.t( 'panel.common.name' ),
+							self.t( 'panel.venues.city' ),
+							self.t( 'panel.venues.country' ),
+							self.t( 'panel.common.timezone' ),
+						],
 						rows,
-						emptyState( 'building', 'No venues yet',
-							'Add the building first — charts and events both hang off it.' )
+						emptyState( 'building', self.t( 'panel.venues.emptyTitle' ),
+							esc( self.t( 'panel.venues.emptyBody' ) ) )
 					),
 				} );
 
@@ -629,20 +665,25 @@
 		var self = this;
 
 		this.modal( {
-			title: 'New venue',
-			submitLabel: 'Create venue',
+			title: this.t( 'panel.venues.new' ),
+			submitLabel: this.t( 'panel.venues.create' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="v-name">Name</label>' +
+				'<div class="field"><label class="field__label" for="v-name">' +
+				esc( this.t( 'panel.common.name' ) ) + '</label>' +
 				'<input class="input" id="v-name" name="name" required maxlength="160" ' +
-				'placeholder="Northgate Theatre"></div>' +
-				'<div class="row"><div class="field grow"><label class="field__label" for="v-city">City</label>' +
+				'placeholder="' + esc( this.t( 'panel.venues.namePlaceholder' ) ) + '"></div>' +
+				'<div class="row"><div class="field grow"><label class="field__label" for="v-city">' +
+				esc( this.t( 'panel.venues.city' ) ) + '</label>' +
 				'<input class="input" id="v-city" name="city" maxlength="120"></div>' +
-				'<div class="field field--narrow"><label class="field__label" for="v-country">Country</label>' +
+				'<div class="field field--narrow"><label class="field__label" for="v-country">' +
+				esc( this.t( 'panel.venues.country' ) ) + '</label>' +
 				'<input class="input" id="v-country" name="country" maxlength="2" placeholder="GB"></div></div>' +
-				'<div class="field"><label class="field__label" for="v-tz">Time zone</label>' +
+				'<div class="field"><label class="field__label" for="v-tz">' +
+				esc( this.t( 'panel.common.timezone' ) ) + '</label>' +
 				'<input class="input" id="v-tz" name="timezone" value="' + esc( guessTimezone() ) + '">' +
-				'<span class="field__hint">Doors and start times are shown in this zone.</span></div>' +
+				'<span class="field__hint">' + esc( this.t( 'panel.venues.timezoneHint' ) ) +
+				'</span></div>' +
 				'</div>',
 			onSubmit: function ( data ) {
 				return self.request( 'POST', '/venues', {
@@ -651,7 +692,7 @@
 					country: ( data.get( 'country' ) || '' ).toUpperCase() || null,
 					timezone: data.get( 'timezone' ) || null,
 				} ).then( function () {
-					self.toast( 'Venue created.' );
+					self.toast( self.t( 'panel.venues.created' ) );
 					self.renderVenues();
 				} );
 			},
@@ -661,7 +702,7 @@
 	App.renderMaps = function () {
 		var self = this;
 
-		this.loading( 'Seat maps' );
+		this.loading( this.t( 'panel.nav.maps' ) );
 
 		Promise.all( [ this.request( 'GET', '/seat-maps' ), this.request( 'GET', '/venues' ) ] )
 			.then( function ( results ) {
@@ -673,12 +714,16 @@
 					var published = map.published_version;
 					var draft = map.draft_version;
 
+					// The version number arrives already spelled "v2": it is the same token in every
+					// language, and leaving the v out of the catalogue keeps it out of six files.
 					var state = published
-						? badge( 'v' + published.version + ' live', 'ok' )
-						: badge( 'Not published', 'neutral' );
+						? badge( self.t( 'panel.maps.live', { version: 'v' + published.version } ), 'ok' )
+						: badge( self.t( 'panel.maps.notPublished' ), 'neutral' );
 
 					if ( draft && ( ! published || draft.version > published.version ) ) {
-						state += ' ' + badge( 'Draft v' + draft.version, 'warn' );
+						state += ' ' + badge(
+							self.t( 'panel.maps.draft', { version: 'v' + draft.version } ), 'warn'
+						);
 					}
 
 					var places = published
@@ -690,24 +735,30 @@
 						'<td>' + state + '</td>' +
 						'<td class="tnum">' + places + '</td>' +
 						'<td class="table__actions">' +
-						actionButton( 'map', map.id, 'Open designer', 'map' ) + '</td></tr>';
+						actionButton( 'map', map.id, self.t( 'panel.maps.open' ), 'map' ) + '</td></tr>';
 				} ).join( '' );
 
 				self.page( {
-					title: 'Seat maps',
-					description: 'A chart is drawn once and published. Events sell against the version ' +
-						'that was live when they were created.',
+					title: self.t( 'panel.nav.maps' ),
+					description: esc( self.t( 'panel.maps.description' ) ),
 					actions: results[ 1 ].data.length
 						? '<button class="btn btn--primary" id="add-map">' +
-							icon( 'plus', { size: 15 } ) + 'New seat map</button>'
+							icon( 'plus', { size: 15 } ) + esc( self.t( 'panel.maps.new' ) ) + '</button>'
 						: '',
 					body: table(
-						[ 'Name', 'Venue', 'Status', { label: 'Places', numeric: true }, '' ],
+						[
+							self.t( 'panel.common.name' ),
+							self.t( 'panel.maps.venue' ),
+							self.t( 'panel.common.status' ),
+							{ label: self.t( 'panel.maps.places' ), numeric: true },
+							'',
+						],
 						rows,
 						results[ 1 ].data.length
-							? emptyState( 'map', 'No seat maps yet', 'Draw your first chart in the designer.' )
-							: emptyState( 'building', 'Add a venue first',
-								'A chart belongs to a building, so there has to be one to hang it on.' )
+							? emptyState( 'map', self.t( 'panel.maps.emptyTitle' ),
+								esc( self.t( 'panel.maps.emptyBody' ) ) )
+							: emptyState( 'building', self.t( 'panel.maps.needVenueTitle' ),
+								esc( self.t( 'panel.maps.needVenueBody' ) ) )
 					),
 				} );
 
@@ -728,14 +779,16 @@
 		var self = this;
 
 		this.modal( {
-			title: 'New seat map',
-			submitLabel: 'Create and open',
+			title: this.t( 'panel.maps.new' ),
+			submitLabel: this.t( 'panel.maps.create' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="m-name">Name</label>' +
+				'<div class="field"><label class="field__label" for="m-name">' +
+				esc( this.t( 'panel.common.name' ) ) + '</label>' +
 				'<input class="input" id="m-name" name="name" required maxlength="160" ' +
-				'placeholder="Main auditorium"></div>' +
-				'<div class="field"><label class="field__label" for="m-venue">Venue</label>' +
+				'placeholder="' + esc( this.t( 'panel.maps.namePlaceholder' ) ) + '"></div>' +
+				'<div class="field"><label class="field__label" for="m-venue">' +
+				esc( this.t( 'panel.maps.venue' ) ) + '</label>' +
 				'<select class="select" id="m-venue" name="venue_id" required>' +
 				venues.map( function ( venue ) {
 					return '<option value="' + esc( venue.id ) + '">' + esc( venue.name ) + '</option>';
@@ -756,7 +809,7 @@
 	App.renderEvents = function () {
 		var self = this;
 
-		this.loading( 'Events' );
+		this.loading( this.t( 'panel.nav.events' ) );
 
 		Promise.all( [ this.request( 'GET', '/events' ), this.request( 'GET', '/seat-maps' ) ] )
 			.then( function ( results ) {
@@ -764,35 +817,45 @@
 
 				var rows = results[ 0 ].data.map( function ( event ) {
 					return '<tr><td class="table__primary">' + esc( event.name ) + '</td>' +
-						'<td class="tnum">' + esc( formatDate( event.starts_at ) ) + '</td>' +
-						'<td>' + badge( titleCase( event.status ), STATUS_TONE[ event.status ] ) + '</td>' +
+						'<td class="tnum">' + esc( App.date( event.starts_at ) ) + '</td>' +
+						'<td>' + badge( self.t( 'panel.eventStatus.' + event.status ),
+							STATUS_TONE[ event.status ] ) + '</td>' +
 						'<td class="tnum">' + priceRange( event ) + '</td>' +
 						'<td><code>' + esc( event.public_id ) + '</code>' +
 						'<button class="icon-btn icon-btn--sm" data-copy="' + esc( event.public_id ) +
-						'" data-tip="Copy" aria-label="Copy the public ID">' + icon( 'copy', { size: 14 } ) +
+						'" data-tip="' + esc( self.t( 'panel.common.copy' ) ) + '" aria-label="' +
+						esc( self.t( 'panel.events.copyPublicId' ) ) + '">' + icon( 'copy', { size: 14 } ) +
 						'</button></td>' +
 						'<td class="table__actions">' +
 						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
-						actionButton( 'stats', event.id, 'Inventory', 'layers' ) + '</td></tr>';
+						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
+						'</td></tr>';
 				} ).join( '' );
 
 				self.page( {
-					title: 'Events',
-					description: 'Paste an event’s public ID into WordPress as ' +
-						'<code>[seatmap_event id="evt_…"]</code>, or into the Seat map block.',
+					// The one description that carries markup of its own: the shortcode is code, and
+					// showing it as text would leave an organiser copying the wrong thing.
+					title: self.t( 'panel.nav.events' ),
+					description: self.t( 'panel.events.description' ),
 					actions: sellable.length
 						? '<button class="btn btn--primary" id="add-event">' +
-							icon( 'plus', { size: 15 } ) + 'New event</button>'
+							icon( 'plus', { size: 15 } ) + esc( self.t( 'panel.events.new' ) ) + '</button>'
 						: '',
 					body: table(
-						[ 'Name', 'Starts', 'Status', { label: App.t( 'pricing.prices' ), numeric: true },
-							'Public ID', '' ],
+						[
+							self.t( 'panel.common.name' ),
+							self.t( 'panel.events.starts' ),
+							self.t( 'panel.common.status' ),
+							{ label: App.t( 'pricing.prices' ), numeric: true },
+							self.t( 'panel.events.publicId' ),
+							'',
+						],
 						rows,
 						sellable.length
-							? emptyState( 'calendar', 'No events yet',
-								'An event is one performance selling against a published chart.' )
-							: emptyState( 'map', 'Publish a chart first',
-								'An event sells against a published seat map, so there has to be one to sell.' )
+							? emptyState( 'calendar', self.t( 'panel.events.emptyTitle' ),
+								esc( self.t( 'panel.events.emptyBody' ) ) )
+							: emptyState( 'map', self.t( 'panel.events.needChartTitle' ),
+								esc( self.t( 'panel.events.needChartBody' ) ) )
 					),
 				} );
 
@@ -817,7 +880,7 @@
 				self.main().querySelectorAll( '[data-copy]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
 						copyText( button.dataset.copy );
-						self.toast( 'Public ID copied.' );
+						self.toast( self.t( 'panel.events.publicIdCopied' ) );
 					} );
 				} );
 			} )
@@ -828,22 +891,25 @@
 		var self = this;
 
 		this.modal( {
-			title: 'New event',
-			submitLabel: 'Create event',
+			title: this.t( 'panel.events.new' ),
+			submitLabel: this.t( 'panel.events.create' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="e-name">Name</label>' +
+				'<div class="field"><label class="field__label" for="e-name">' +
+				esc( this.t( 'panel.common.name' ) ) + '</label>' +
 				'<input class="input" id="e-name" name="name" required maxlength="200" ' +
-				'placeholder="Saturday evening"></div>' +
-				'<div class="field"><label class="field__label" for="e-map">Seat map</label>' +
+				'placeholder="' + esc( this.t( 'panel.events.namePlaceholder' ) ) + '"></div>' +
+				'<div class="field"><label class="field__label" for="e-map">' +
+				esc( this.t( 'panel.events.seatMap' ) ) + '</label>' +
 				'<select class="select" id="e-map" name="seat_map_id" required>' +
 				maps.map( function ( map ) {
 					return '<option value="' + esc( map.id ) + '">' + esc( map.name ) +
 						' — v' + map.published_version.version + '</option>';
 				} ).join( '' ) +
-				'</select><span class="field__hint">The event keeps selling against this version even ' +
-				'if the chart is republished later.</span></div>' +
-				'<div class="field"><label class="field__label" for="e-starts">Starts</label>' +
+				'</select><span class="field__hint">' + esc( self.t( 'panel.events.seatMapHint' ) ) +
+				'</span></div>' +
+				'<div class="field"><label class="field__label" for="e-starts">' +
+				esc( self.t( 'panel.events.starts' ) ) + '</label>' +
 				'<input class="input" id="e-starts" name="starts_at" type="datetime-local" required></div>' +
 				'<div class="field"><label class="field__label" for="e-currency">' +
 				esc( self.t( 'pricing.currency' ) ) + '</label>' +
@@ -855,10 +921,11 @@
 				} ).join( '' ) +
 				'</datalist>' +
 				'<span class="field__hint">' + esc( self.t( 'pricing.currencyHint' ) ) + '</span></div>' +
-				'<div class="field"><label class="field__label" for="e-status">Status</label>' +
+				'<div class="field"><label class="field__label" for="e-status">' +
+				esc( self.t( 'panel.common.status' ) ) + '</label>' +
 				'<select class="select" id="e-status" name="status">' +
-				'<option value="draft">Draft — not on sale</option>' +
-				'<option value="published">Published — on sale</option>' +
+				'<option value="draft">' + esc( self.t( 'panel.events.statusDraft' ) ) + '</option>' +
+				'<option value="published">' + esc( self.t( 'panel.events.statusPublished' ) ) + '</option>' +
 				'</select></div>' +
 				'</div>',
 			onSubmit: function ( data ) {
@@ -869,7 +936,7 @@
 					currency: String( data.get( 'currency' ) || '' ).trim().toUpperCase(),
 					status: data.get( 'status' ),
 				} ).then( function () {
-					self.toast( 'Event created.' );
+					self.toast( self.t( 'panel.events.created' ) );
 					self.renderEvents();
 				} );
 			},
@@ -881,25 +948,24 @@
 
 		this.request( 'GET', '/events/' + eventId + '/stats' ).then( function ( stats ) {
 			var cells = [
-				[ 'seats_total', 'Places' ],
-				[ 'available', 'Available' ],
-				[ 'held', 'Held' ],
-				[ 'allocated', 'Sold' ],
-				[ 'blocked', 'Blocked' ],
-				[ 'checked_in', 'Checked in' ],
+				[ 'seats_total', 'places' ],
+				[ 'available', 'available' ],
+				[ 'held', 'held' ],
+				[ 'allocated', 'sold' ],
+				[ 'blocked', 'blocked' ],
+				[ 'checked_in', 'checkedIn' ],
 			].map( function ( pair ) {
 				return '<div class="stat stat--block"><span class="stat__value tnum">' +
-					esc( stats[ pair[ 0 ] ] ) + '</span><span class="stat__label">' + esc( pair[ 1 ] ) +
-					'</span></div>';
+					esc( self.number( stats[ pair[ 0 ] ] ) ) + '</span><span class="stat__label">' +
+					esc( self.t( 'panel.inventory.' + pair[ 1 ] ) ) + '</span></div>';
 			} ).join( '' );
 
 			self.modal( {
-				title: name || 'Inventory',
+				title: name || self.t( 'panel.inventory.title' ),
 				cancelLabel: null,
-				doneLabel: 'Close',
+				doneLabel: self.t( 'panel.common.close' ),
 				body: '<div class="stat-grid">' + cells + '</div>' +
-					'<p class="hint">Counted live from allocations, holds and overrides. Money is your ' +
-					'shop’s business — these are places, not takings.</p>',
+					'<p class="hint">' + esc( self.t( 'panel.inventory.hint' ) ) + '</p>',
 			} );
 		} ).catch( function ( error ) { self.toast( error.message, true ); } );
 	};
@@ -907,7 +973,7 @@
 	App.renderConnections = function () {
 		var self = this;
 
-		this.loading( 'Connections' );
+		this.loading( this.t( 'panel.nav.connections' ) );
 
 		this.request( 'GET', '/api-clients' )
 			.then( function ( response ) {
@@ -916,8 +982,10 @@
 						return '<div class="row"><code>' + esc( key.key_id ) + '</code>' +
 							'<span class="muted">…' + esc( key.secret_hint || '' ) + '</span>' +
 							'<button class="icon-btn icon-btn--sm" data-revoke="' + esc( client.id ) +
-							'" data-key="' + esc( key.key_id ) + '" data-tip="Revoke" ' +
-							'data-tip-side="bottom-end" aria-label="Revoke this key">' +
+							'" data-key="' + esc( key.key_id ) + '" data-tip="' +
+							esc( self.t( 'panel.connections.revoke' ) ) + '" ' +
+							'data-tip-side="bottom-end" aria-label="' +
+							esc( self.t( 'panel.connections.revokeThis' ) ) + '">' +
 							icon( 'trash', { size: 14 } ) + '</button></div>';
 					} ).join( '' );
 
@@ -926,23 +994,33 @@
 							? '<a href="' + esc( client.site_url ) + '" rel="noreferrer noopener" target="_blank">' +
 								esc( client.site_url ) + '</a>'
 							: '<span class="muted">—</span>' ) + '</td>' +
-						'<td>' + ( keys || '<span class="muted">No active keys</span>' ) + '</td>' +
-						'<td class="muted">' + esc( client.last_seen_at ? formatDate( client.last_seen_at ) : 'Never' ) + '</td>' +
+						'<td>' + ( keys || '<span class="muted">' +
+							esc( self.t( 'panel.connections.noKeys' ) ) + '</span>' ) + '</td>' +
+						'<td class="muted">' + esc( client.last_seen_at
+							? App.date( client.last_seen_at )
+							: self.t( 'panel.common.never' ) ) + '</td>' +
 						'<td class="table__actions">' +
-						actionButton( 'rotate', client.id, 'Rotate key', 'key' ) + '</td></tr>';
+						actionButton( 'rotate', client.id, self.t( 'panel.connections.rotate' ), 'key' ) +
+						'</td></tr>';
 				} ).join( '' );
 
 				self.page( {
-					title: 'Connections',
-					description: 'Each shop that sells your seats gets its own key pair. Requests are ' +
-						'signed, so a stolen key is the only thing worth rotating.',
+					title: self.t( 'panel.nav.connections' ),
+					description: esc( self.t( 'panel.connections.description' ) ),
 					actions: '<button class="btn btn--primary" id="add-client">' +
-						icon( 'plus', { size: 15 } ) + 'Connect a site</button>',
+						icon( 'plus', { size: 15 } ) + esc( self.t( 'panel.connections.connect' ) ) +
+						'</button>',
 					body: table(
-						[ 'Site', 'URL', 'Keys', 'Last seen', '' ],
+						[
+							self.t( 'panel.connections.site' ),
+							self.t( 'panel.connections.url' ),
+							self.t( 'panel.connections.keys' ),
+							self.t( 'panel.connections.lastSeen' ),
+							'',
+						],
 						rows,
-						emptyState( 'plug', 'No sites connected',
-							'Connect your WordPress shop, then paste the key pair into the plugin’s settings.' )
+						emptyState( 'plug', self.t( 'panel.connections.emptyTitle' ),
+							esc( self.t( 'panel.connections.emptyBody' ) ) )
 					),
 				} );
 
@@ -969,17 +1047,19 @@
 		var self = this;
 
 		this.modal( {
-			title: 'Connect a site',
-			submitLabel: 'Connect',
+			title: this.t( 'panel.connections.connect' ),
+			submitLabel: this.t( 'panel.connections.submit' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="c-name">Site name</label>' +
+				'<div class="field"><label class="field__label" for="c-name">' +
+				esc( this.t( 'panel.connections.siteName' ) ) + '</label>' +
 				'<input class="input" id="c-name" name="name" required maxlength="120" ' +
-				'placeholder="Box office"></div>' +
-				'<div class="field"><label class="field__label" for="c-url">Site URL</label>' +
+				'placeholder="' + esc( this.t( 'panel.connections.siteNamePlaceholder' ) ) + '"></div>' +
+				'<div class="field"><label class="field__label" for="c-url">' +
+				esc( this.t( 'panel.connections.siteUrl' ) ) + '</label>' +
 				'<input class="input" id="c-url" name="site_url" type="url" placeholder="https://example.com">' +
-				'<span class="field__hint">Only for your own reference — it is not used to authorise ' +
-				'anything.</span></div>' +
+				'<span class="field__hint">' + esc( this.t( 'panel.connections.siteUrlHint' ) ) +
+				'</span></div>' +
 				'</div>',
 			onSubmit: function ( data ) {
 				return self.request( 'POST', '/api-clients', {
@@ -1000,21 +1080,22 @@
 		var self = this;
 
 		this.modal( {
-			title: rotated ? 'New key issued' : 'Site connected',
+			title: this.t( rotated ? 'panel.connections.issued' : 'panel.connections.connected' ),
 			cancelLabel: null,
-			doneLabel: 'I have saved it',
+			doneLabel: this.t( 'panel.connections.saved' ),
 			body:
 				'<div class="credentials">' +
-					'<div class="row"><strong>Key ID</strong></div>' +
+					'<div class="row"><strong>' + esc( this.t( 'panel.connections.keyId' ) ) +
+					'</strong></div>' +
 					'<div class="credentials__row"><code>' + esc( credentials.key_id ) + '</code>' +
 					'<button type="button" class="btn btn--sm" data-copy-key>' +
-					icon( 'copy', { size: 14 } ) + 'Copy</button></div>' +
-					'<div class="row"><strong>Secret</strong></div>' +
+					icon( 'copy', { size: 14 } ) + esc( this.t( 'panel.common.copy' ) ) + '</button></div>' +
+					'<div class="row"><strong>' + esc( this.t( 'panel.connections.secret' ) ) +
+					'</strong></div>' +
 					'<div class="credentials__row"><code>' + esc( credentials.secret ) + '</code>' +
 					'<button type="button" class="btn btn--sm" data-copy-secret>' +
-					icon( 'copy', { size: 14 } ) + 'Copy</button></div>' +
-					'<p class="hint">This is the only time the secret is shown. If you lose it, rotate ' +
-					'the key — the old one keeps working until you revoke it, so your shop stays up.</p>' +
+					icon( 'copy', { size: 14 } ) + esc( this.t( 'panel.common.copy' ) ) + '</button></div>' +
+					'<p class="hint">' + esc( this.t( 'panel.connections.secretHint' ) ) + '</p>' +
 				'</div>',
 			onClose: function () { self.renderConnections(); },
 		} );
@@ -1023,12 +1104,12 @@
 
 		host.querySelector( '[data-copy-key]' ).addEventListener( 'click', function () {
 			copyText( credentials.key_id );
-			self.toast( 'Key ID copied.' );
+			self.toast( self.t( 'panel.connections.keyIdCopied' ) );
 		} );
 
 		host.querySelector( '[data-copy-secret]' ).addEventListener( 'click', function () {
 			copyText( credentials.secret );
-			self.toast( 'Secret copied.' );
+			self.toast( self.t( 'panel.connections.secretCopied' ) );
 		} );
 	};
 
@@ -1036,14 +1117,13 @@
 		var self = this;
 
 		this.modal( {
-			title: 'Revoke this key?',
-			submitLabel: 'Revoke',
-			body: '<p>Requests signed with <code>' + esc( keyId ) + '</code> will start failing ' +
-				'immediately. If a shop is still using it, its seat picker stops working.</p>',
+			title: this.t( 'panel.connections.revokeTitle' ),
+			submitLabel: this.t( 'panel.connections.revoke' ),
+			body: '<p>' + this.t( 'panel.connections.revokeBody', { key: esc( keyId ) } ) + '</p>',
 			onSubmit: function () {
 				return self.request( 'DELETE', '/api-clients/' + clientId + '/keys/' + keyId )
 					.then( function () {
-						self.toast( 'Key revoked.' );
+						self.toast( self.t( 'panel.connections.revoked' ) );
 						self.renderConnections();
 					} );
 			},
@@ -1081,57 +1161,64 @@
 	}
 
 	App.designerMarkup = function ( map ) {
+		var t = App.t.bind( App );
+
 		return '' +
 		'<div class="designer">' +
 			'<div class="designer__bar">' +
 				'<div class="designer__title">' +
-					toolbarButton( 'dz-close', 'back', 'Back to seat maps' ) +
+					toolbarButton( 'dz-close', 'back', t( 'panel.designer.back' ) ) +
 					'<span class="designer__name">' + esc( map.name ) + '</span>' +
 					'<span class="badge badge--warn" id="dz-readonly" hidden>' +
-						icon( 'lock', { size: 13 } ) + 'Read only</span>' +
+						icon( 'lock', { size: 13 } ) + esc( t( 'panel.designer.readOnly' ) ) + '</span>' +
 				'</div>' +
 				'<div class="toolbar-group">' +
-					toolbarButton( 'dz-undo', 'undo', 'Undo' ) +
-					toolbarButton( 'dz-redo', 'redo', 'Redo' ) +
+					toolbarButton( 'dz-undo', 'undo', t( 'panel.designer.undo' ) ) +
+					toolbarButton( 'dz-redo', 'redo', t( 'panel.designer.redo' ) ) +
 				'</div>' +
 				'<div class="toolbar-group">' +
-					toolbarButton( 'dz-duplicate', 'duplicate', 'Duplicate' ) +
-					toolbarButton( 'dz-copy', 'copy', 'Copy' ) +
-					toolbarButton( 'dz-delete', 'trash', 'Delete' ) +
+					toolbarButton( 'dz-duplicate', 'duplicate', t( 'panel.designer.duplicate' ) ) +
+					toolbarButton( 'dz-copy', 'copy', t( 'panel.designer.copy' ) ) +
+					toolbarButton( 'dz-delete', 'trash', t( 'panel.designer.delete' ) ) +
 				'</div>' +
 				'<div class="toolbar-group">' +
-					toolbarButton( 'dz-mirror-h', 'flipH', 'Mirror horizontally' ) +
-					toolbarButton( 'dz-mirror-v', 'flipV', 'Mirror vertically' ) +
+					toolbarButton( 'dz-mirror-h', 'flipH', t( 'panel.designer.mirrorHorizontally' ) ) +
+					toolbarButton( 'dz-mirror-v', 'flipV', t( 'panel.designer.mirrorVertically' ) ) +
 				'</div>' +
 				'<div class="toolbar-group">' +
-					toolbarButton( 'dz-focal', 'target', 'Set the focal point' ) +
-					toolbarButton( 'dz-labels', 'tag', 'Show or hide labels' ) +
-					toolbarButton( 'dz-add-floor', 'plus', 'Add a floor' ) +
+					toolbarButton( 'dz-focal', 'target', t( 'panel.designer.focalPoint' ) ) +
+					toolbarButton( 'dz-labels', 'tag', t( 'panel.designer.toggleLabels' ) ) +
+					toolbarButton( 'dz-add-floor', 'plus', t( 'panel.designer.addFloor' ) ) +
 				'</div>' +
 				'<span class="designer__spacer"></span>' +
 				'<div class="toolbar-group">' +
-					toolbarButton( 'dz-lock', 'unlock', 'Lock the chart against edits' ) +
-					toolbarButton( 'dz-preview', 'eye', 'Preview as a buyer sees it' ) +
-					toolbarButton( 'dz-theme', 'moon', 'Dark theme' ) +
-					toolbarButton( 'dz-help', 'help', 'Keyboard shortcuts', 'bottom-end' ) +
+					toolbarButton( 'dz-lock', 'unlock', t( 'panel.designer.lock' ) ) +
+					toolbarButton( 'dz-preview', 'eye', t( 'panel.designer.preview' ) ) +
+					toolbarButton( 'dz-theme', 'moon', t( 'panel.shell.darkTheme' ) ) +
+					toolbarButton( 'dz-help', 'help', t( 'panel.shortcuts.title' ), 'bottom-end' ) +
 				'</div>' +
-				'<button class="btn" id="dz-save">' + icon( 'save', { size: 15 } ) + 'Save draft</button>' +
+				'<button class="btn" id="dz-save">' + icon( 'save', { size: 15 } ) +
+					esc( t( 'panel.designer.saveDraft' ) ) + '</button>' +
 				'<button class="btn btn--primary" id="dz-publish">' +
-					icon( 'publish', { size: 15 } ) + 'Publish</button>' +
+					icon( 'publish', { size: 15 } ) + esc( t( 'panel.designer.publish' ) ) + '</button>' +
 			'</div>' +
 			'<div class="designer__body">' +
-				'<div class="tools" id="dz-tools" role="toolbar" aria-label="Drawing tools"></div>' +
+				'<div class="tools" id="dz-tools" role="toolbar" aria-label="' +
+					esc( t( 'panel.designer.tools' ) ) + '"></div>' +
 				'<div class="stage">' +
 					'<div class="stage__canvas"><canvas id="dz-canvas"></canvas></div>' +
 					'<div class="float layers" id="dz-layers"></div>' +
 					'<button class="float stage__exit" id="dz-exit" hidden>' +
-						icon( 'back', { size: 15 } ) + 'Exit section</button>' +
+						icon( 'back', { size: 15 } ) + esc( t( 'panel.designer.exitSection' ) ) + '</button>' +
 					'<div class="float zoom">' +
-						'<button class="icon-btn icon-btn--sm" id="dz-zoom-out" aria-label="Zoom out">' +
+						'<button class="icon-btn icon-btn--sm" id="dz-zoom-out" aria-label="' +
+							esc( t( 'panel.designer.zoomOut' ) ) + '">' +
 							icon( 'minus', { size: 16 } ) + '</button>' +
-						'<button class="zoom__level" id="dz-zoom-level" data-tip="Fit to view" ' +
-							'aria-label="Fit to view">100%</button>' +
-						'<button class="icon-btn icon-btn--sm" id="dz-zoom-in" aria-label="Zoom in">' +
+						'<button class="zoom__level" id="dz-zoom-level" data-tip="' +
+							esc( t( 'panel.designer.fit' ) ) + '" ' +
+							'aria-label="' + esc( t( 'panel.designer.fit' ) ) + '">100%</button>' +
+						'<button class="icon-btn icon-btn--sm" id="dz-zoom-in" aria-label="' +
+							esc( t( 'panel.designer.zoomIn' ) ) + '">' +
 							icon( 'plus', { size: 16 } ) + '</button>' +
 					'</div>' +
 					'<div class="float floors" id="dz-floors"></div>' +
@@ -1149,24 +1236,24 @@
 	 * not seating, then move the view.
 	 */
 	App.TOOLS = [
-		{ key: 'select', icon: 'cursor', label: 'Select' },
-		{ key: 'lasso', icon: 'lasso', label: 'Lasso select' },
-		{ key: 'sameType', icon: 'wand', label: 'Select same type' },
+		{ key: 'select', icon: 'cursor' },
+		{ key: 'lasso', icon: 'lasso' },
+		{ key: 'sameType', icon: 'wand' },
 		{ separator: true },
-		{ key: 'row', icon: 'row', label: 'Straight row' },
-		{ key: 'curvedRow', icon: 'curvedRow', label: 'Curved row' },
-		{ key: 'section', icon: 'section', label: 'Section' },
-		{ key: 'table', icon: 'table', label: 'Table' },
-		{ key: 'booth', icon: 'booth', label: 'Booth' },
-		{ key: 'area', icon: 'area', label: 'General admission area' },
+		{ key: 'row', icon: 'row' },
+		{ key: 'curvedRow', icon: 'curvedRow' },
+		{ key: 'section', icon: 'section' },
+		{ key: 'table', icon: 'table' },
+		{ key: 'booth', icon: 'booth' },
+		{ key: 'area', icon: 'area' },
 		{ separator: true },
-		{ key: 'shape', icon: 'shape', label: 'Shape' },
-		{ key: 'line', icon: 'line', label: 'Line' },
-		{ key: 'text', icon: 'text', label: 'Text' },
-		{ key: 'image', icon: 'image', label: 'Image' },
-		{ key: 'icon', icon: 'accessibility', label: 'Icon' },
+		{ key: 'shape', icon: 'shape' },
+		{ key: 'line', icon: 'line' },
+		{ key: 'text', icon: 'text' },
+		{ key: 'image', icon: 'image' },
+		{ key: 'icon', icon: 'accessibility' },
 		{ separator: true },
-		{ key: 'pan', icon: 'hand', label: 'Pan' },
+		{ key: 'pan', icon: 'hand' },
 	];
 
 	App.mountDesigner = function ( chart ) {
@@ -1226,11 +1313,13 @@
 			}
 
 			var button = node( 'button', 'icon-btn' );
+			var label = self.t( 'panel.tools.' + tool.key );
+
 			button.innerHTML = icon( tool.icon );
 			button.dataset.tool = tool.key;
-			button.setAttribute( 'data-tip', tool.label );
+			button.setAttribute( 'data-tip', label );
 			button.setAttribute( 'data-tip-side', 'right' );
-			button.setAttribute( 'aria-label', tool.label );
+			button.setAttribute( 'aria-label', label );
 			button.setAttribute( 'aria-pressed', self.editor.tool === tool.key ? 'true' : 'false' );
 
 			button.addEventListener( 'click', function () {
@@ -1275,7 +1364,7 @@
 		on( 'dz-mirror-h', function () { editor.mirrorSelection( 'horizontal' ); } );
 		on( 'dz-mirror-v', function () { editor.mirrorSelection( 'vertical' ); } );
 		on( 'dz-duplicate', function () { editor.duplicateSelection(); } );
-		on( 'dz-copy', function () { editor.copy(); self.toast( 'Copied.' ); } );
+		on( 'dz-copy', function () { editor.copy(); self.toast( self.t( 'panel.designer.copied' ) ); } );
 		on( 'dz-delete', function () { editor.deleteSelection(); } );
 		on( 'dz-focal', function () { editor.setTool( 'focalPoint' ); self.renderTools(); } );
 		on( 'dz-save', function () { self.saveDraft(); } );
@@ -1292,7 +1381,7 @@
 		on( 'dz-lock', function () {
 			editor.locked = ! editor.locked;
 			self.refreshDesigner();
-			self.toast( editor.locked ? 'Chart locked.' : 'Chart unlocked.' );
+			self.toast( self.t( editor.locked ? 'panel.designer.locked' : 'panel.designer.unlocked' ) );
 		} );
 
 		on( 'dz-preview', function () {
@@ -1327,8 +1416,9 @@
 		var dark = 'dark' === Theme.current();
 
 		button.innerHTML = icon( dark ? 'sun' : 'moon' );
-		button.setAttribute( 'data-tip', dark ? 'Light theme' : 'Dark theme' );
-		button.setAttribute( 'aria-label', dark ? 'Switch to the light theme' : 'Switch to the dark theme' );
+		button.setAttribute( 'data-tip', this.t( dark ? 'panel.shell.lightTheme' : 'panel.shell.darkTheme' ) );
+		button.setAttribute( 'aria-label',
+			this.t( dark ? 'panel.shell.switchToLight' : 'panel.shell.switchToDark' ) );
 	};
 
 	App.refreshDesigner = function () {
@@ -1355,7 +1445,8 @@
 		if ( lock ) {
 			lock.innerHTML = icon( this.editor.locked ? 'lock' : 'unlock' );
 			lock.classList.toggle( 'is-active', this.editor.locked );
-			lock.setAttribute( 'data-tip', this.editor.locked ? 'Unlock the chart' : 'Lock the chart against edits' );
+			lock.setAttribute( 'data-tip',
+				this.t( this.editor.locked ? 'panel.designer.unlock' : 'panel.designer.lock' ) );
 			lock.setAttribute( 'aria-label', lock.getAttribute( 'data-tip' ) );
 		}
 	};
@@ -1383,8 +1474,9 @@
 		}
 
 		if ( editor.seatSelection.length ) {
-			target.textContent = editor.seatSelection.length + ' seat' +
-				( 1 === editor.seatSelection.length ? '' : 's' ) + ' selected';
+			target.textContent = 1 === editor.seatSelection.length
+				? this.t( 'panel.designer.seatSelected' )
+				: this.t( 'panel.designer.seatsSelected', { count: this.number( editor.seatSelection.length ) } );
 
 			return;
 		}
@@ -1402,8 +1494,10 @@
 		} );
 
 		target.textContent =
-			editor.selection.length + ' object' + ( 1 === editor.selection.length ? '' : 's' ) + ' selected' +
-			( children ? ' (' + children + ' children)' : '' );
+			( 1 === editor.selection.length
+				? this.t( 'panel.designer.objectSelected' )
+				: this.t( 'panel.designer.objectsSelected', { count: this.number( editor.selection.length ) } ) ) +
+			( children ? ' ' + this.t( 'panel.designer.children', { count: this.number( children ) } ) : '' );
 	};
 
 	/**
@@ -1421,7 +1515,7 @@
 		}
 
 		host.innerHTML = '';
-		host.appendChild( node( 'h4', 'layers__title overline', 'Selection layer' ) );
+		host.appendChild( node( 'h4', 'layers__title overline', this.t( 'panel.designer.selectionLayer' ) ) );
 
 		var floor = this.editor.floor();
 		var counts = { all: 0 };
@@ -1435,8 +1529,8 @@
 
 		[ 'all' ].concat( Chart.LAYERS.slice().reverse() ).forEach( function ( layer ) {
 			var button = node( 'button', 'layer' );
-			button.appendChild( node( 'span', null, Chart.LAYER_LABELS[ layer ] ) );
-			button.appendChild( node( 'span', 'layer__count', String( counts[ layer ] ) ) );
+			button.appendChild( node( 'span', null, self.t( 'panel.chart.layers.' + layer ) ) );
+			button.appendChild( node( 'span', 'layer__count', self.number( counts[ layer ] ) ) );
 
 			// A layer with nothing on it is shown but greyed, so the list stays a stable map of the
 			// chart rather than appearing and disappearing as objects are added.
@@ -1471,9 +1565,9 @@
 
 		var gear = node( 'button', 'floor' );
 		gear.innerHTML = icon( 'settings', { size: 15 } );
-		gear.setAttribute( 'data-tip', 'Rename or remove this floor' );
+		gear.setAttribute( 'data-tip', this.t( 'panel.designer.floorSettings' ) );
 		gear.setAttribute( 'data-tip-side', 'bottom-end' );
-		gear.setAttribute( 'aria-label', 'Rename or remove this floor' );
+		gear.setAttribute( 'aria-label', this.t( 'panel.designer.floorSettings' ) );
 		gear.addEventListener( 'click', function () { self.editFloor(); } );
 		host.appendChild( gear );
 
@@ -1497,11 +1591,14 @@
 		var self = this;
 
 		this.modal( {
-			title: 'Add a floor',
-			submitLabel: 'Add floor',
-			body: '<div class="field"><label class="field__label" for="f-name">Floor name</label>' +
-				'<input class="input" id="f-name" name="name" required maxlength="60" value="Level ' +
-				( this.editor.chart.floors.length + 1 ) + '"></div>',
+			title: this.t( 'panel.floors.addTitle' ),
+			submitLabel: this.t( 'panel.floors.addSubmit' ),
+			body: '<div class="field"><label class="field__label" for="f-name">' +
+				esc( this.t( 'panel.floors.name' ) ) + '</label>' +
+				'<input class="input" id="f-name" name="name" required maxlength="60" value="' +
+				esc( this.t( 'panel.floors.level', {
+					number: this.number( this.editor.chart.floors.length + 1 ),
+				} ) ) + '"></div>',
 			onSubmit: function ( data ) {
 				var name = String( data.get( 'name' ) || '' ).trim();
 
@@ -1531,15 +1628,15 @@
 		var removable = this.editor.chart.floors.length > 1;
 
 		var host = this.modal( {
-			title: 'Floor',
-			submitLabel: 'Rename',
-			body: '<div class="field"><label class="field__label" for="f-rename">Floor name</label>' +
+			title: this.t( 'panel.floors.title' ),
+			submitLabel: this.t( 'panel.floors.rename' ),
+			body: '<div class="field"><label class="field__label" for="f-rename">' +
+				esc( this.t( 'panel.floors.name' ) ) + '</label>' +
 				'<input class="input" id="f-rename" name="name" required maxlength="60" value="' +
 				esc( floor.name ) + '"></div>' +
-				( removable
-					? '<p class="hint spaced">Removing a floor removes everything drawn on it.</p>'
-					: '<p class="hint spaced">A chart needs at least one floor, so this one cannot be ' +
-						'removed.</p>' ),
+				'<p class="hint spaced">' +
+				esc( this.t( removable ? 'panel.floors.removeWarning' : 'panel.floors.cannotRemove' ) ) +
+				'</p>',
 			onSubmit: function ( data ) {
 				var name = String( data.get( 'name' ) || '' ).trim();
 
@@ -1553,7 +1650,7 @@
 		} );
 
 		if ( removable ) {
-			var remove = node( 'button', 'btn btn--danger', 'Remove floor' );
+			var remove = node( 'button', 'btn btn--danger', this.t( 'panel.floors.remove' ) );
 			remove.type = 'button';
 
 			remove.addEventListener( 'click', function () {
@@ -1580,20 +1677,22 @@
 		var chart = this.editor.chart;
 
 		var host = this.modal( {
-			title: 'Categories',
+			title: this.t( 'panel.categories.title' ),
 			cancelLabel: null,
-			doneLabel: 'Done',
+			doneLabel: this.t( 'panel.common.done' ),
 			body:
 				'<div id="dz-cats" class="stack"></div>' +
 				'<form id="dz-cat-form" class="row row--wrap spaced">' +
-					'<input class="input grow" name="label" placeholder="Category name" required maxlength="60">' +
-					'<input class="swatch" name="color" type="color" value="#5b63f0" aria-label="Colour">' +
+					'<input class="input grow" name="label" placeholder="' +
+					esc( this.t( 'panel.categories.namePlaceholder' ) ) + '" required maxlength="60">' +
+					'<input class="swatch" name="color" type="color" value="#5b63f0" aria-label="' +
+					esc( this.t( 'panel.categories.colour' ) ) + '">' +
 					'<label class="row"><input class="checkbox" name="accessible" type="checkbox">' +
-					'<span>Accessible</span></label>' +
-					'<button class="btn" type="submit">' + icon( 'plus', { size: 14 } ) + 'Add</button>' +
+					'<span>' + esc( this.t( 'panel.categories.accessible' ) ) + '</span></label>' +
+					'<button class="btn" type="submit">' + icon( 'plus', { size: 14 } ) +
+					esc( this.t( 'panel.common.add' ) ) + '</button>' +
 				'</form>' +
-				'<p class="hint spaced">A category is a price tier. ' +
-				'Every bookable object needs one before the chart can be priced for an event.</p>',
+				'<p class="hint spaced">' + esc( this.t( 'panel.categories.hint' ) ) + '</p>',
 			onClose: function () { self.refreshDesigner(); },
 		} );
 
@@ -1603,7 +1702,7 @@
 			list.innerHTML = '';
 
 			if ( ! ( chart.categories || [] ).length ) {
-				list.appendChild( node( 'p', 'muted', 'No categories yet.' ) );
+				list.appendChild( node( 'p', 'muted', self.t( 'panel.categories.empty' ) ) );
 
 				return;
 			}
@@ -1619,16 +1718,17 @@
 				if ( category.accessible ) {
 					var mark = node( 'span', 'muted' );
 					mark.innerHTML = icon( 'accessibility', { size: 15 } );
-					mark.setAttribute( 'data-tip', 'Accessible' );
+					mark.setAttribute( 'data-tip', self.t( 'panel.categories.accessible' ) );
 					line.appendChild( mark );
 				}
 
 				var remove = node( 'button', 'icon-btn icon-btn--sm' );
 				remove.type = 'button';
 				remove.innerHTML = icon( 'trash', { size: 14 } );
-				remove.setAttribute( 'data-tip', 'Remove' );
+				remove.setAttribute( 'data-tip', self.t( 'panel.common.remove' ) );
 				remove.setAttribute( 'data-tip-side', 'bottom-end' );
-				remove.setAttribute( 'aria-label', 'Remove ' + category.label );
+				remove.setAttribute( 'aria-label',
+					self.t( 'panel.categories.remove', { label: category.label } ) );
 
 				remove.addEventListener( 'click', function () {
 					self.editor.mutate( function () { Chart.removeCategory( chart, category.key ); } );
@@ -1657,32 +1757,42 @@
 		} );
 	};
 
+	/**
+	 * The shortcut sheet.
+	 *
+	 * The key *names* stay in Latin — Shift, Enter, Ctrl/⌘ are printed on the reader's keyboard in
+	 * those letters whatever language they read in, and translating them would name a key that is
+	 * not there. What each combination does is translated; so are the three that are actions rather
+	 * than keys: Click, drag and Double-click.
+	 */
 	App.showShortcuts = function () {
+		var self = this;
 		var keys = [
-			[ [ 'Ctrl/⌘', 'Z' ], 'Undo' ],
-			[ [ 'Ctrl/⌘', 'Shift', 'Z' ], 'Redo' ],
-			[ [ 'Ctrl/⌘', 'A' ], 'Select everything in the current layer' ],
-			[ [ 'Ctrl/⌘', 'D' ], 'Deselect' ],
-			[ [ 'Ctrl/⌘', 'C' ], 'Copy' ],
-			[ [ 'Ctrl/⌘', 'V' ], 'Paste' ],
-			[ [ 'Shift', 'Click' ], 'Add to or remove from the selection' ],
-			[ [ '←', '→', '↑', '↓' ], 'Nudge by one unit — hold Shift for a grid step' ],
-			[ [ 'Space', 'drag' ], 'Pan' ],
-			[ [ 'Enter' ], 'Close the section or line being drawn' ],
-			[ [ 'Double-click' ], 'Go into a section, or back out of it' ],
-			[ [ 'Delete' ], 'Remove the selection' ],
+			[ [ 'Ctrl/⌘', 'Z' ], 'undo' ],
+			[ [ 'Ctrl/⌘', 'Shift', 'Z' ], 'redo' ],
+			[ [ 'Ctrl/⌘', 'A' ], 'selectAll' ],
+			[ [ 'Ctrl/⌘', 'D' ], 'deselect' ],
+			[ [ 'Ctrl/⌘', 'C' ], 'copy' ],
+			[ [ 'Ctrl/⌘', 'V' ], 'paste' ],
+			[ [ 'Shift', this.t( 'panel.shortcuts.click' ) ], 'addRemove' ],
+			[ [ '←', '→', '↑', '↓' ], 'nudge' ],
+			[ [ 'Space', this.t( 'panel.shortcuts.drag' ) ], 'pan' ],
+			[ [ 'Enter' ], 'closeShape' ],
+			[ [ this.t( 'panel.shortcuts.doubleClick' ) ], 'enterSection' ],
+			[ [ 'Delete' ], 'removeSelection' ],
 		];
 
 		var list = keys.map( function ( entry ) {
 			return '<dt>' + entry[ 0 ].map( function ( key ) {
 				return '<span class="kbd">' + esc( key ) + '</span>';
-			} ).join( '' ) + '</dt><dd>' + esc( entry[ 1 ] ) + '</dd>';
+			} ).join( '' ) + '</dt><dd>' +
+				esc( self.t( 'panel.shortcuts.' + entry[ 1 ] ) ) + '</dd>';
 		} ).join( '' );
 
 		this.modal( {
-			title: 'Keyboard shortcuts',
+			title: this.t( 'panel.shortcuts.title' ),
 			cancelLabel: null,
-			doneLabel: 'Close',
+			doneLabel: this.t( 'panel.common.close' ),
 			body: '<dl class="kbd-list">' + list + '</dl>',
 		} );
 	};
@@ -1700,7 +1810,7 @@
 				self.editor.locked = false;
 				self.map.draft_version = version;
 				self.refreshDesigner();
-				self.toast( 'Draft saved.' );
+				self.toast( self.t( 'panel.designer.draftSaved' ) );
 
 				return version;
 			} )
@@ -1723,7 +1833,10 @@
 				return self.request( 'POST', '/seat-maps/' + self.map.id + '/publish', {} );
 			} )
 			.then( function ( version ) {
-				self.toast( 'Published version ' + version.version + ' with ' + version.seat_count + ' places.' );
+				self.toast( self.t( 'panel.designer.published', {
+					version: self.number( version.version ),
+					count: self.number( version.seat_count ),
+				} ) );
 			} )
 			.catch( function ( error ) {
 				if ( ! error || ! error.message ) {
@@ -1737,7 +1850,11 @@
 				// paragraph nobody reads; the full list is in the panel beside it.
 				if ( issues.length ) {
 					detail = ' ' + issues[ 0 ].message +
-						( issues.length > 1 ? ' (and ' + ( issues.length - 1 ) + ' more)' : '' );
+						( issues.length > 1
+							? ' ' + self.t( 'panel.designer.andMore', {
+								count: self.number( issues.length - 1 ),
+							} )
+							: '' );
 				}
 
 				self.toast( error.message + detail, true );
@@ -1810,18 +1927,6 @@
 		var text = String( value || '' ).replace( /[_-]+/g, ' ' );
 
 		return text.charAt( 0 ).toUpperCase() + text.slice( 1 );
-	}
-
-	function formatDate( value ) {
-		var date = new Date( value );
-
-		if ( isNaN( date.getTime() ) ) {
-			return '—';
-		}
-
-		return date.toLocaleString( undefined, {
-			day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-		} );
 	}
 
 	function guessTimezone() {

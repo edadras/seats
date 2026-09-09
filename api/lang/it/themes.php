@@ -43,6 +43,14 @@ return [
     'revert' => 'Ripristina questa versione',
     'reverted' => 'Tema ripristinato.',
     'trimmed' => 'Una parte del foglio di stile non era ammessa ed è stata rimossa. Il resto è stato salvato.',
+    'descriptions' => [
+        'aurora' => 'Chiaro, arioso e tranquillo. Fotografie e testi lunghi danno il meglio di sé.',
+        'noir' => 'Scuro e molto contrastato. Fatto per concerti, club e spettacoli notturni.',
+        'playbill' => 'Carta calda e titoli con grazie, alla maniera di un programma di sala stampato.',
+        'marquee' => 'Rumoroso. Maiuscole strette, bordi netti e un titolo che si legge dalla strada.',
+        'atrium' => 'Silenzioso come un museo. Margini ampi, filetti sottili, niente che gridi.',
+        'kiosk' => 'Denso e pratico. Per una stagione di quaranta date, non per una serata di gala.',
+    ],
     'groups' => [
         'colour' => 'Colore',
         'type' => 'Caratteri',

@@ -43,6 +43,15 @@ return [
     'revert' => 'Put this back',
     'reverted' => 'Theme put back.',
     'trimmed' => 'Some of your stylesheet was removed because it is not allowed. Everything else was saved.',
+    /* What each of ours is for. The names — Aurora, Noir — are proper nouns and are not here. */
+    'descriptions' => [
+        'aurora' => 'Light, roomy and quiet. Photographs and long descriptions look their best.',
+        'noir' => 'Dark and high contrast. Made for gigs, clubs and late shows.',
+        'playbill' => 'Warm paper and serif headings, in the manner of a printed programme.',
+        'marquee' => 'Loud. Condensed capitals, hard edges and a headline you can read from the street.',
+        'atrium' => 'Museum-quiet. Wide margins, thin rules, nothing shouting.',
+        'kiosk' => 'Dense and practical. For a season of forty dates, not a single gala.',
+    ],
     'groups' => [
         'colour' => 'Colour',
         'type' => 'Type',

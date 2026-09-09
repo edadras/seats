@@ -43,6 +43,14 @@ return [
     'revert' => 'Rétablir cette version',
     'reverted' => 'Thème rétabli.',
     'trimmed' => 'Une partie de votre feuille de style n’était pas autorisée et a été retirée. Le reste est enregistré.',
+    'descriptions' => [
+        'aurora' => 'Clair, aéré et calme. Les photos et les textes longs y sont à leur avantage.',
+        'noir' => 'Sombre et très contrasté. Fait pour les concerts, les clubs et les séances tardives.',
+        'playbill' => 'Papier chaud et titres à empattements, à la manière d’un programme imprimé.',
+        'marquee' => 'Sonore. Capitales étroites, arêtes vives et un titre qui se lit depuis la rue.',
+        'atrium' => 'Silence de musée. Marges larges, filets fins, rien qui crie.',
+        'kiosk' => 'Dense et pratique. Pour une saison de quarante dates, pas pour un seul gala.',
+    ],
     'groups' => [
         'colour' => 'Couleur',
         'type' => 'Typographie',

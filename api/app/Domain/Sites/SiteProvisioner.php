@@ -23,45 +23,59 @@ class SiteProvisioner
     public function create(string $name, array $attributes = []): Site
     {
         return DB::transaction(function () use ($name, $attributes) {
+            $locale = $attributes['locale'] ?? 'en';
+
             $site = Site::create([
                 'name' => $name,
                 'theme_key' => Themes::exists($attributes['theme_key'] ?? '') ? $attributes['theme_key'] : Themes::DEFAULT,
-                'locale' => $attributes['locale'] ?? 'en',
+                'locale' => $locale,
                 'timezone' => $attributes['timezone'] ?? 'UTC',
                 'currency' => strtoupper($attributes['currency'] ?? 'EUR'),
                 'brand' => $attributes['brand'] ?? [],
                 'status' => 'draft',
             ]);
 
-            $home = $this->page($site, '', 'Home', 'home', 0, [
+            /*
+             * The starter content is written in the *site's* language, not the language of whoever
+             * happened to click Create. It is real content on a real page: an organiser whose site
+             * is Persian should not have to translate three pages of English before going live.
+             */
+            $say = fn (string $key) => __('site.seed.'.$key, [], $locale);
+
+            $home = $this->page($site, '', $say('home'), 'home', 0, [
                 ['type' => 'heading', 'text' => $name, 'level' => 2, 'align' => 'center'],
-                ['type' => 'richText', 'text' => "Welcome. Tickets for everything we've got coming up are below."],
-                ['type' => 'eventList', 'title' => "What's on", 'limit' => 12, 'layout' => 'cards'],
+                ['type' => 'richText', 'text' => $say('welcome')],
+                ['type' => 'eventList', 'title' => $say('whatsOn'), 'limit' => 12, 'layout' => 'cards'],
             ]);
 
-            $event = $this->page($site, 'event', 'Event', 'event', 1, [
+            $event = $this->page($site, 'event', $say('event'), 'event', 1, [
                 ['type' => 'eventDetail', 'event_public_id' => ''],
             ]);
 
-            $visiting = $this->page($site, 'visiting', 'Visiting', 'page', 2, [
-                ['type' => 'heading', 'text' => 'Visiting', 'level' => 2, 'align' => 'start'],
-                ['type' => 'venueMap', 'title' => 'Finding us', 'address' => '', 'directions' => ''],
-                ['type' => 'faq', 'title' => 'Before you come', 'items' => [
-                    ['question' => 'When do doors open?', 'answer' => 'Usually half an hour before the start time.'],
-                    ['question' => 'Can I get a refund?', 'answer' => 'Tell your customers your policy here.'],
+            $visiting = $this->page($site, 'visiting', $say('visiting'), 'page', 2, [
+                ['type' => 'heading', 'text' => $say('visiting'), 'level' => 2, 'align' => 'start'],
+                ['type' => 'venueMap', 'title' => $say('findingUs'), 'address' => '', 'directions' => ''],
+                ['type' => 'faq', 'title' => $say('beforeYouCome'), 'items' => [
+                    ['question' => $say('doorsQuestion'), 'answer' => $say('doorsAnswer')],
+                    ['question' => $say('refundQuestion'), 'answer' => $say('refundAnswer')],
                 ]],
             ]);
 
-            $header = SiteMenu::create(['site_id' => $site->id, 'key' => 'header', 'name' => 'Header']);
-            SiteMenu::create(['site_id' => $site->id, 'key' => 'footer', 'name' => 'Footer']);
+            $header = SiteMenu::create([
+                'site_id' => $site->id, 'key' => 'header', 'name' => $say('header'),
+            ]);
+
+            SiteMenu::create([
+                'site_id' => $site->id, 'key' => 'footer', 'name' => $say('footer'),
+            ]);
 
             SiteMenuItem::create([
-                'site_menu_id' => $header->id, 'label' => "What's on",
+                'site_menu_id' => $header->id, 'label' => $say('whatsOn'),
                 'target_type' => 'page', 'site_page_id' => $home->id, 'position' => 0,
             ]);
 
             SiteMenuItem::create([
-                'site_menu_id' => $header->id, 'label' => 'Visiting',
+                'site_menu_id' => $header->id, 'label' => $say('visiting'),
                 'target_type' => 'page', 'site_page_id' => $visiting->id, 'position' => 1,
             ]);
 

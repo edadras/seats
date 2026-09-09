@@ -10,6 +10,7 @@
 </head>
 <body>
     <div id="app" data-api="{{ url('/v1') }}"></div>
+    <script src="{{ asset('editor/js/i18n.js') }}"></script>
     <script src="{{ asset('editor/js/icons.js') }}"></script>
     <script src="{{ asset('editor/js/chart.js') }}"></script>
     <script src="{{ asset('editor/js/chart-ops.js') }}"></script>
@@ -25,7 +26,6 @@
     <script src="{{ asset('editor/js/messaging.js') }}"></script>
     <script src="{{ asset('editor/js/signup.js') }}"></script>
     <script src="{{ asset('editor/js/seat-prices.js') }}"></script>
-    <script src="{{ asset('editor/js/i18n.js') }}"></script>
     <script src="{{ asset('editor/js/panel.js') }}"></script>
 </body>
 </html>

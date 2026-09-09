@@ -50,6 +50,37 @@ return [
         'inSection' => 'In %s',
     ],
 
+    /* The block vocabulary, as the panel's block picker names it (Blocks::describe). */
+    'blocks' => [
+        'heading' => 'Heading',
+        'richText' => 'Text',
+        'image' => 'Image',
+        'buttons' => 'Buttons',
+        'eventList' => 'What’s on',
+        'eventDetail' => 'Event and seat picker',
+        'faq' => 'Questions',
+        'venueMap' => 'Finding us',
+        'divider' => 'Divider',
+        'html' => 'Custom HTML',
+    ],
+
+    /* The starter site every new account is given, written in that site's own language. */
+    'seed' => [
+        'home' => 'Home',
+        'event' => 'Event',
+        'visiting' => 'Visiting',
+        'welcome' => 'Welcome. Tickets for everything we’ve got coming up are below.',
+        'whatsOn' => 'What’s on',
+        'findingUs' => 'Finding us',
+        'beforeYouCome' => 'Before you come',
+        'doorsQuestion' => 'When do doors open?',
+        'doorsAnswer' => 'Usually half an hour before the start time.',
+        'refundQuestion' => 'Can I get a refund?',
+        'refundAnswer' => 'Tell your customers your policy here.',
+        'header' => 'Header',
+        'footer' => 'Footer',
+    ],
+
     // --- Site chrome ------------------------------------------------------------------------
     'skipToContent' => 'Skip to content',
     'mainNav' => 'Main',

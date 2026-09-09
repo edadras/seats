@@ -26,7 +26,6 @@ class Themes
     private const THEMES = [
         'aurora' => [
             'name' => 'Aurora',
-            'description' => 'Light, roomy and quiet. Photographs and long descriptions look their best.',
             'tokens' => [
                 'accent' => '#4a4fdc',
                 'heading_font' => 'sans',
@@ -37,7 +36,6 @@ class Themes
         ],
         'noir' => [
             'name' => 'Noir',
-            'description' => 'Dark and high contrast. Made for gigs, clubs and late shows.',
             'tokens' => [
                 'accent' => '#f0455f',
                 'on_accent' => '#0d0f14',
@@ -55,7 +53,6 @@ class Themes
         ],
         'playbill' => [
             'name' => 'Playbill',
-            'description' => 'Warm paper and serif headings, in the manner of a printed programme.',
             'tokens' => [
                 'accent' => '#8c2f39',
                 'surface' => '#fbf7f0',
@@ -71,7 +68,6 @@ class Themes
         ],
         'marquee' => [
             'name' => 'Marquee',
-            'description' => 'Loud. Condensed capitals, hard edges and a headline you can read from the street.',
             'tokens' => [
                 'accent' => '#ffd400',
                 'on_accent' => '#101010',
@@ -92,7 +88,6 @@ class Themes
         ],
         'atrium' => [
             'name' => 'Atrium',
-            'description' => 'Museum-quiet. Wide margins, thin rules, nothing shouting.',
             'tokens' => [
                 'accent' => '#1f5f4d',
                 'surface' => '#ffffff',
@@ -113,7 +108,6 @@ class Themes
         ],
         'kiosk' => [
             'name' => 'Kiosk',
-            'description' => 'Dense and practical. For a season of forty dates, not a single gala.',
             'tokens' => [
                 'accent' => '#0b6bcb',
                 'surface' => '#ffffff',
@@ -154,7 +148,7 @@ class Themes
             fn (string $key) => [
                 'key' => $key,
                 'name' => self::THEMES[$key]['name'],
-                'description' => self::THEMES[$key]['description'],
+                'description' => __('themes.descriptions.'.$key),
                 'tokens' => ThemeTokens::resolve(self::THEMES[$key]['tokens']),
             ],
             array_combine(self::keys(), self::keys())

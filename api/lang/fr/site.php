@@ -47,6 +47,36 @@ return [
         'inSection' => 'En %s',
     ],
 
+
+    'blocks' => [
+        'heading' => 'Titre',
+        'richText' => 'Texte',
+        'image' => 'Image',
+        'buttons' => 'Boutons',
+        'eventList' => 'À l’affiche',
+        'eventDetail' => 'Événement et choix des places',
+        'faq' => 'Questions',
+        'venueMap' => 'Nous trouver',
+        'divider' => 'Séparateur',
+        'html' => 'HTML personnalisé',
+    ],
+
+    'seed' => [
+        'home' => 'Accueil',
+        'event' => 'Événement',
+        'visiting' => 'Venir nous voir',
+        'welcome' => 'Bienvenue. Les billets pour tout ce qui arrive sont ci-dessous.',
+        'whatsOn' => 'À l’affiche',
+        'findingUs' => 'Nous trouver',
+        'beforeYouCome' => 'Avant de venir',
+        'doorsQuestion' => 'À quelle heure ouvrent les portes ?',
+        'doorsAnswer' => 'En général une demi-heure avant le début.',
+        'refundQuestion' => 'Puis-je être remboursé ?',
+        'refundAnswer' => 'Indiquez ici votre politique à vos clients.',
+        'header' => 'En-tête',
+        'footer' => 'Pied de page',
+    ],
+
     // --- Habillage du site ------------------------------------------------------------------
     'skipToContent' => 'Aller au contenu',
     'mainNav' => 'Principal',

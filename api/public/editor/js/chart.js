@@ -23,6 +23,19 @@
 
 	var Chart = {};
 
+	/**
+	 * A translated string.
+	 *
+	 * The chart model produces words — layer names, the publish checklist, and every refusal in
+	 * `validate()` — so it reads the same catalogue the panel does rather than carrying English of
+	 * its own. Resolved on each call, not captured: `SeatmapI18n` is loaded first but its catalogue
+	 * arrives over the network afterwards, and a string captured at load time would be the fallback
+	 * for the rest of the session.
+	 */
+	function t( key, replace ) {
+		return global.SeatmapI18n.t( key, replace );
+	}
+
 	Chart.VERSION = 2;
 
 	/** Seat diameter in chart units. Spacing is the gap between seats, so pitch = size + spacing. */
@@ -36,13 +49,6 @@
 	 */
 	Chart.LAYERS = [ 'surroundings', 'background', 'interactive', 'foreground' ];
 
-	Chart.LAYER_LABELS = {
-		all: 'All objects',
-		foreground: 'Foreground decorations',
-		interactive: 'Interactive objects',
-		background: 'Background decorations',
-		surroundings: 'Surroundings',
-	};
 
 	/** Object types that carry bookable places. */
 	Chart.BOOKABLE_TYPES = [ 'row', 'section', 'area', 'table', 'booth' ];
@@ -61,10 +67,10 @@
 	Chart.empty = function ( name ) {
 		return {
 			version: Chart.VERSION,
-			name: name || 'Untitled chart',
+			name: name || t( 'panel.chart.untitled' ),
 			focalPoint: null,
 			categories: [],
-			floors: [ Chart.newFloor( '1', 'Level 1' ) ],
+			floors: [ Chart.newFloor( '1', t( 'panel.floors.level', { number: 1 } ) ) ],
 		};
 	};
 
@@ -304,7 +310,7 @@
 			categoryKey: settings.categoryKey,
 			entrance: null,
 			labeling: Chart.defaultRowLabeling( label ),
-			seatLabeling: { scheme: settings.labelScheme, displayedType: 'Seat', locked: false },
+			seatLabeling: { scheme: settings.labelScheme, displayedType: t( 'panel.chart.seat' ), locked: false },
 			seats: [],
 		};
 
@@ -321,7 +327,7 @@
 			label: label,
 			displayedLabel: null, // null means "show `label`"; set it to override what the buyer sees
 			position: 'both',
-			displayedType: 'Row',
+			displayedType: t( 'panel.chart.row' ),
 			locked: false,
 		};
 	};
@@ -588,7 +594,7 @@
 			bookAs: settings.bookAs,
 			categoryKey: settings.categoryKey,
 			entrance: null,
-			seatLabeling: { scheme: settings.labelScheme, displayedType: 'Seat', locked: false },
+			seatLabeling: { scheme: settings.labelScheme, displayedType: t( 'panel.chart.seat' ), locked: false },
 			seats: [],
 		};
 
@@ -832,7 +838,9 @@
 					) {
 						errors.push( {
 							code: 'seat_off_canvas',
-							message: 'A seat in row ' + Chart.displayedRowLabel( object ) + ' lies outside the canvas.',
+							message: t( 'panel.chart.issues.seat_off_canvas', {
+								row: Chart.displayedRowLabel( object ),
+							} ),
 							objectKey: object.key,
 						} );
 					}
@@ -843,18 +851,22 @@
 		duplicates.forEach( function ( duplicate ) {
 			errors.push( {
 				code: 'duplicate_label',
-				message: 'Two objects are both labelled ' + duplicate + '.',
+				message: t( 'panel.chart.issues.duplicate_label', { label: duplicate } ),
 			} );
 		} );
 
 		unlabeled.forEach( function ( key ) {
-			errors.push( { code: 'object_not_labeled', message: 'An object has no label.', objectKey: key } );
+			errors.push( {
+				code: 'object_not_labeled',
+				message: t( 'panel.chart.issues.object_not_labeled' ),
+				objectKey: key,
+			} );
 		} );
 
 		uncategorized.forEach( function ( key ) {
 			warnings.push( {
 				code: 'object_not_categorized',
-				message: 'An object has no category, so it cannot be priced.',
+				message: t( 'panel.chart.issues.object_not_categorized' ),
 				objectKey: key,
 			} );
 		} );
@@ -866,33 +878,35 @@
 		mixedCategories.forEach( function ( key ) {
 			warnings.push( {
 				code: 'category_spans_object_types',
-				message:
-					'Category "' + key + '" is used on more than one kind of object, which usually means ' +
-					'seats and standing places share a price by accident.',
+				message: t( 'panel.chart.issues.category_spans_object_types', { key: key } ),
 			} );
 		} );
 
 		var places = Chart.placeCount( chart );
 
 		if ( 0 === places ) {
-			errors.push( { code: 'no_places', message: 'A chart needs at least one bookable place.' } );
+			errors.push( { code: 'no_places', message: t( 'panel.chart.issues.no_places' ) } );
 		}
 
 		Chart.findOverlaps( positions ).forEach( function ( pair ) {
 			warnings.push( {
 				code: 'seats_overlap',
-				message: 'Seats ' + pair[ 0 ] + ' and ' + pair[ 1 ] + ' are almost on top of each other.',
+				message: t( 'panel.chart.issues.seats_overlap', { first: pair[ 0 ], second: pair[ 1 ] } ),
 			} );
 		} );
 
 		// The panel's checklist, in the order the designer shows it.
 		var checks = [
-			{ code: 'no_duplicate_objects', label: 'No duplicate objects', ok: 0 === duplicates.length },
-			{ code: 'all_labeled', label: 'All objects are labeled', ok: 0 === unlabeled.length },
-			{ code: 'all_categorized', label: 'All objects are categorized', ok: 0 === uncategorized.length },
-			{ code: 'one_category_per_type', label: 'One category per object type', ok: 0 === mixedCategories.length },
-			{ code: 'focal_point', label: 'Focal point is set', ok: !! chart.focalPoint },
-		];
+			{ code: 'no_duplicate_objects', ok: 0 === duplicates.length },
+			{ code: 'all_labeled', ok: 0 === unlabeled.length },
+			{ code: 'all_categorized', ok: 0 === uncategorized.length },
+			{ code: 'one_category_per_type', ok: 0 === mixedCategories.length },
+			{ code: 'focal_point', ok: !! chart.focalPoint },
+		].map( function ( check ) {
+			check.label = t( 'panel.chart.checks.' + check.code );
+
+			return check;
+		} );
 
 		return {
 			valid: 0 === errors.length,

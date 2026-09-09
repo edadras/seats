@@ -19,7 +19,7 @@
 	/* ------------------------------------------------------------------------- the listing */
 
 	Sites.renderList = function ( App ) {
-		App.loading( 'Websites' );
+		App.loading( App.t( 'panel.sites.title' ) );
 
 		App.request( 'GET', '/sites' )
 			.then( function ( response ) {
@@ -30,27 +30,34 @@
 							? '<a href="' + esc( site.url ) + '" target="_blank" rel="noreferrer noopener">' +
 								esc( primary.hostname ) + '</a>'
 							: '<span class="muted">' + esc( primary.hostname ) + '</span> ' +
-								badge( 'Not verified', 'warn' ) )
-						: '<span class="muted">No address yet</span>';
+								badge( App.t( 'panel.sites.notVerified' ), 'warn' ) )
+						: '<span class="muted">' + esc( App.t( 'panel.sites.noAddress' ) ) + '</span>';
 
 					return '<tr><td class="table__primary">' + esc( site.name ) + '</td>' +
 						'<td>' + address + '</td>' +
 						'<td>' + esc( titleCase( site.theme_key ) ) + '</td>' +
-						'<td>' + badge( titleCase( site.status ), 'live' === site.status ? 'ok' : 'neutral' ) + '</td>' +
+						'<td>' + Sites.statusBadge( App, site.status ) + '</td>' +
 						'<td class="table__actions"><button class="btn btn--sm" data-site="' + esc( site.id ) + '">' +
-						icon( 'settings', { size: 14 } ) + 'Edit</button></td></tr>';
+						icon( 'settings', { size: 14 } ) + esc( App.t( 'panel.common.edit' ) ) +
+						'</button></td></tr>';
 				} ).join( '' );
 
 				App.page( {
-					title: 'Websites',
-					description: 'A complete event site on your own domain, with tickets sold straight from it.',
+					title: App.t( 'panel.sites.title' ),
+					description: esc( App.t( 'panel.sites.description' ) ),
 					actions: '<button class="btn btn--primary" id="add-site">' +
-						icon( 'plus', { size: 15 } ) + 'New website</button>',
+						icon( 'plus', { size: 15 } ) + esc( App.t( 'panel.sites.new' ) ) + '</button>',
 					body: App.table(
-						[ 'Name', 'Address', 'Theme', 'Status', '' ],
+						[
+							App.t( 'panel.common.name' ),
+							App.t( 'panel.common.address' ),
+							App.t( 'panel.sites.theme' ),
+							App.t( 'panel.common.status' ),
+							'',
+						],
 						rows,
-						App.emptyState( 'globe', 'No website yet',
-							'Create one and it arrives with a home page, an event page and menus already wired up.' )
+						App.emptyState( 'globe', App.t( 'panel.sites.emptyTitle' ),
+							esc( App.t( 'panel.sites.emptyBody' ) ) )
 					),
 				} );
 
@@ -65,19 +72,30 @@
 			.catch( function ( error ) { App.error( error ); } );
 	};
 
+	/** The live/draft badge, in one place: the listing and the editor bar both show it. */
+	Sites.statusBadge = function ( App, status ) {
+		return badge(
+			App.t( 'live' === status ? 'panel.sites.statusLive' : 'panel.sites.statusDraft' ),
+			'live' === status ? 'ok' : 'neutral'
+		);
+	};
+
 	Sites.create = function ( App ) {
 		App.modal( {
-			title: 'New website',
-			submitLabel: 'Create website',
+			title: App.t( 'panel.sites.new' ),
+			submitLabel: App.t( 'panel.sites.create' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="s-name">Name</label>' +
+				'<div class="field"><label class="field__label" for="s-name">' +
+				esc( App.t( 'panel.common.name' ) ) + '</label>' +
 				'<input class="input" id="s-name" name="name" required maxlength="120" ' +
-				'placeholder="Northgate Theatre"><span class="field__hint">Shown in the header and ' +
-				'on tickets.</span></div>' +
-				'<div class="field"><label class="field__label" for="s-tz">Time zone</label>' +
+				'placeholder="' + esc( App.t( 'panel.sites.namePlaceholder' ) ) + '">' +
+				'<span class="field__hint">' + esc( App.t( 'panel.sites.nameHint' ) ) + '</span></div>' +
+				'<div class="field"><label class="field__label" for="s-tz">' +
+				esc( App.t( 'panel.common.timezone' ) ) + '</label>' +
 				'<input class="input" id="s-tz" name="timezone" value="' + esc( App.timezone() ) + '"></div>' +
-				'<div class="field"><label class="field__label" for="s-cur">Currency</label>' +
+				'<div class="field"><label class="field__label" for="s-cur">' +
+				esc( App.t( 'pricing.currency' ) ) + '</label>' +
 				'<input class="input" id="s-cur" name="currency" maxlength="3" value="EUR"></div>' +
 				'</div>',
 			onSubmit: function ( data ) {
@@ -86,7 +104,7 @@
 					timezone: data.get( 'timezone' ) || undefined,
 					currency: ( data.get( 'currency' ) || 'EUR' ).toUpperCase(),
 				} ).then( function ( site ) {
-					App.toast( 'Website created.' );
+					App.toast( App.t( 'panel.sites.created' ) );
 					Sites.open( App, site.id );
 				} );
 			},
@@ -123,20 +141,24 @@
 			'<div class="designer">' +
 				'<div class="designer__bar">' +
 					'<div class="designer__title">' +
-						'<button class="icon-btn" id="site-back" data-tip="Back to websites" ' +
-							'aria-label="Back to websites">' + icon( 'back' ) + '</button>' +
+						'<button class="icon-btn" id="site-back" data-tip="' +
+							esc( App.t( 'panel.sites.back' ) ) + '" ' +
+							'aria-label="' + esc( App.t( 'panel.sites.back' ) ) + '">' +
+							icon( 'back' ) + '</button>' +
 						'<span class="designer__name">' + esc( site.name ) + '</span>' +
-						badge( titleCase( site.status ), 'live' === site.status ? 'ok' : 'neutral' ) +
+						Sites.statusBadge( App, site.status ) +
 					'</div>' +
 					'<span class="designer__spacer"></span>' +
 					( site.url
 						? '<a class="btn" href="' + esc( site.url ) + '" target="_blank" rel="noreferrer noopener">' +
-							icon( 'external', { size: 15 } ) + 'Visit</a>'
+							icon( 'external', { size: 15 } ) + esc( App.t( 'panel.sites.visit' ) ) + '</a>'
 						: '' ) +
 					( 'live' === site.status
-						? '<button class="btn" id="site-offline">Take offline</button>'
+						? '<button class="btn" id="site-offline">' +
+							esc( App.t( 'panel.sites.takeOffline' ) ) + '</button>'
 						: '<button class="btn btn--primary" id="site-live">' +
-							icon( 'publish', { size: 15 } ) + 'Go live</button>' ) +
+							icon( 'publish', { size: 15 } ) + esc( App.t( 'panel.sites.goLive' ) ) +
+							'</button>' ) +
 				'</div>' +
 				'<div class="designer__body site-body">' +
 					'<aside class="site-nav" id="site-nav"></aside>' +
@@ -169,7 +191,7 @@
 			.then( function ( site ) {
 				Sites.state.site = site;
 				Sites.paint( App );
-				App.toast( 'live' === status ? 'The site is live.' : 'The site is offline.' );
+				App.toast( App.t( 'live' === status ? 'panel.sites.isLive' : 'panel.sites.isOffline' ) );
 			} )
 			.catch( function ( error ) { App.toast( error.message, true ); } );
 	};
@@ -181,7 +203,7 @@
 		host.innerHTML = '';
 
 		var pages = node( 'div', 'site-nav__group' );
-		pages.appendChild( node( 'div', 'overline site-nav__title', 'Pages' ) );
+		pages.appendChild( node( 'div', 'overline site-nav__title', App.t( 'panel.sites.pages' ) ) );
 
 		( state.site.pages || [] ).forEach( function ( page ) {
 			var button = node( 'button', 'nav-item' );
@@ -203,22 +225,25 @@
 		} );
 
 		var add = node( 'button', 'link-btn site-nav__add' );
-		add.innerHTML = icon( 'plus', { size: 14 } ) + 'New page';
+		add.innerHTML = icon( 'plus', { size: 14 } ) + esc( App.t( 'panel.sites.newPage' ) );
 		add.addEventListener( 'click', function () { Sites.newPage( App ); } );
 		pages.appendChild( add );
 
 		host.appendChild( pages );
 
 		var settings = node( 'div', 'site-nav__group' );
-		settings.appendChild( node( 'div', 'overline site-nav__title', 'Settings' ) );
+		settings.appendChild(
+			node( 'div', 'overline site-nav__title', App.t( 'panel.sites.settingsGroup' ) )
+		);
 
 		[
-			[ 'design', 'palette', 'Design' ],
-			[ 'menus', 'list', 'Menus' ],
-			[ 'domains', 'globe', 'Address' ],
+			[ 'design', 'palette', 'design' ],
+			[ 'menus', 'list', 'menus' ],
+			[ 'domains', 'globe', 'addressNav' ],
 		].forEach( function ( entry ) {
 			var button = node( 'button', 'nav-item' );
-			button.innerHTML = icon( entry[ 1 ], { size: 15 } ) + '<span>' + entry[ 2 ] + '</span>';
+			button.innerHTML = icon( entry[ 1 ], { size: 15 } ) +
+				'<span>' + esc( App.t( 'panel.sites.' + entry[ 2 ] ) ) + '</span>';
 
 			if ( state.tab === entry[ 0 ] ) {
 				button.classList.add( 'is-active' );
@@ -260,7 +285,7 @@
 
 		if ( ! page ) {
 			host.innerHTML = '<div class="site-pane">' +
-				'<p class="muted">Pick a page on the left, or make a new one.</p></div>';
+				'<p class="muted">' + esc( App.t( 'panel.sites.pickPage' ) ) + '</p></div>';
 
 			return;
 		}
@@ -272,16 +297,20 @@
 						'<h1>' + esc( page.title ) + '</h1>' +
 						'<p class="page-head__desc"><code>' + esc( page.path ) + '</code>' +
 						( page.has_unpublished_changes
-							? ' · ' + badge( 'Unpublished changes', 'warn' )
-							: ( page.published_at ? ' · ' + badge( 'Published', 'ok' ) : ' · ' + badge( 'Draft', 'neutral' ) ) ) +
+							? ' · ' + badge( App.t( 'panel.sites.unpublishedChanges' ), 'warn' )
+							: ' · ' + ( page.published_at
+								? badge( App.t( 'panel.sites.published' ), 'ok' )
+								: badge( App.t( 'panel.sites.draft' ), 'neutral' ) ) ) +
 						'</p>' +
 					'</div>' +
 					'<div class="page-head__actions">' +
-						'<button class="btn" id="page-settings">' + icon( 'settings', { size: 15 } ) + 'Settings</button>' +
+						'<button class="btn" id="page-settings">' + icon( 'settings', { size: 15 } ) +
+							esc( App.t( 'panel.common.settings' ) ) + '</button>' +
 						( 'home' === page.kind || 'event' === page.kind ? ''
 							: '<button class="btn btn--danger" id="page-delete">' + icon( 'trash', { size: 15 } ) + '</button>' ) +
 						'<button class="btn btn--primary" id="page-publish">' +
-							icon( 'publish', { size: 15 } ) + 'Publish page</button>' +
+							icon( 'publish', { size: 15 } ) + esc( App.t( 'panel.sites.publishPage' ) ) +
+							'</button>' +
 					'</div>' +
 				'</div>' +
 				'<div class="blocks" id="blocks"></div>' +
@@ -312,7 +341,7 @@
 		host.innerHTML = '';
 
 		if ( ! ( page.blocks || [] ).length ) {
-			host.appendChild( node( 'p', 'muted', 'Nothing on this page yet. Add something below.' ) );
+			host.appendChild( node( 'p', 'muted', App.t( 'panel.sites.emptyPage' ) ) );
 		}
 
 		( page.blocks || [] ).forEach( function ( block, index ) {
@@ -320,7 +349,7 @@
 		} );
 
 		var adder = document.getElementById( 'block-add' );
-		adder.innerHTML = '<span class="overline">Add</span>';
+		adder.innerHTML = '<span class="overline">' + esc( App.t( 'panel.sites.addBlock' ) ) + '</span>';
 
 		( Sites.state.meta.blocks || [] ).forEach( function ( kind ) {
 			var button = node( 'button', 'btn btn--sm' );
@@ -346,14 +375,17 @@
 		var tools = node( 'div', 'block__tools' );
 
 		[
-			[ 'arrowUp', 'Move up', index > 0, function () { Sites.moveBlock( App, index, -1 ); } ],
-			[ 'arrowDown', 'Move down', index < page.blocks.length - 1, function () { Sites.moveBlock( App, index, 1 ); } ],
-			[ 'trash', 'Remove', true, function () { Sites.removeBlock( App, index ); } ],
+			[ 'arrowUp', 'panel.sites.moveUp', index > 0, function () { Sites.moveBlock( App, index, -1 ); } ],
+			[ 'arrowDown', 'panel.sites.moveDown', index < page.blocks.length - 1,
+				function () { Sites.moveBlock( App, index, 1 ); } ],
+			[ 'trash', 'panel.common.remove', true, function () { Sites.removeBlock( App, index ); } ],
 		].forEach( function ( entry ) {
 			var button = node( 'button', 'icon-btn icon-btn--sm' );
+			var label = App.t( entry[ 1 ] );
+
 			button.innerHTML = icon( entry[ 0 ], { size: 15 } );
-			button.setAttribute( 'data-tip', entry[ 1 ] );
-			button.setAttribute( 'aria-label', entry[ 1 ] );
+			button.setAttribute( 'data-tip', label );
+			button.setAttribute( 'aria-label', label );
 			button.disabled = ! entry[ 2 ];
 			button.addEventListener( 'click', entry[ 3 ] );
 			tools.appendChild( button );
@@ -430,22 +462,38 @@
 			field( label, input );
 		}
 
+		function label( key ) {
+			return App.t( 'panel.sites.' + key );
+		}
+
 		switch ( block.type ) {
 			case 'heading':
-				text( 'Text', 'text', { wide: true } );
-				select( 'Size', 'level', [ [ 2, 'Large' ], [ 3, 'Medium' ], [ 4, 'Small' ] ] );
-				select( 'Align', 'align', [ [ 'start', 'Left' ], [ 'center', 'Centre' ] ] );
+				text( label( 'blockText' ), 'text', { wide: true } );
+				select( label( 'blockSize' ), 'level', [
+					[ 2, label( 'sizeLarge' ) ], [ 3, label( 'sizeMedium' ) ], [ 4, label( 'sizeSmall' ) ],
+				] );
+				select( label( 'align' ), 'align', [
+					[ 'start', label( 'alignLeft' ) ], [ 'center', label( 'alignCentre' ) ],
+				] );
 				break;
 
 			case 'richText':
-				text( null, 'text', { multiline: true, rows: 6, placeholder: 'Write here. A blank line starts a new paragraph.' } );
+				text( null, 'text', {
+					multiline: true, rows: 6, placeholder: label( 'richTextPlaceholder' ),
+				} );
 				break;
 
 			case 'image':
-				text( 'Image URL', 'url', { wide: true, placeholder: 'https://…' } );
-				text( 'Description', 'alt', { wide: true, placeholder: 'What is in the picture, for someone who cannot see it' } );
-				text( 'Caption', 'caption', { wide: true } );
-				select( 'Width', 'width', [ [ 'content', 'In the column' ], [ 'wide', 'Wider' ], [ 'full', 'Full width' ] ] );
+				text( label( 'imageUrl' ), 'url', { wide: true, placeholder: 'https://…' } );
+				text( label( 'imageAlt' ), 'alt', {
+					wide: true, placeholder: label( 'imageAltPlaceholder' ),
+				} );
+				text( label( 'caption' ), 'caption', { wide: true } );
+				select( label( 'imageWidth' ), 'width', [
+					[ 'content', label( 'widthContent' ) ],
+					[ 'wide', label( 'widthWide' ) ],
+					[ 'full', label( 'widthFull' ) ],
+				] );
 				break;
 
 			case 'buttons':
@@ -453,40 +501,41 @@
 				break;
 
 			case 'eventList':
-				text( 'Title', 'title', { wide: true } );
-				select( 'Layout', 'layout', [ [ 'cards', 'Cards' ], [ 'list', 'List' ] ] );
-				text( 'How many', 'limit' );
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				select( label( 'layout' ), 'layout', [
+					[ 'cards', label( 'layoutCards' ) ], [ 'list', label( 'layoutList' ) ],
+				] );
+				text( label( 'howMany' ), 'limit' );
 				break;
 
 			case 'eventDetail':
-				select( 'Event', 'event_public_id', [ [ '', 'Whichever event the visitor opened' ] ].concat(
-					Sites.state.events.map( function ( event ) {
-						return [ event.public_id, event.name ];
-					} )
-				) );
-				host.appendChild( node( 'p', 'hint',
-					'Left as it is, one page serves every event — which is why adding a date does not mean building a page.' ) );
+				select( label( 'whichEvent' ), 'event_public_id',
+					[ [ '', label( 'anyEvent' ) ] ].concat(
+						Sites.state.events.map( function ( event ) {
+							return [ event.public_id, event.name ];
+						} )
+					) );
+				host.appendChild( node( 'p', 'hint', label( 'eventDetailHint' ) ) );
 				break;
 
 			case 'faq':
-				text( 'Title', 'title', { wide: true } );
+				text( label( 'blockTitle' ), 'title', { wide: true } );
 				Sites.faqEditor( App, block, host );
 				break;
 
 			case 'venueMap':
-				text( 'Title', 'title', { wide: true } );
-				text( 'Address', 'address', { multiline: true, rows: 3 } );
-				text( 'Getting here', 'directions', { multiline: true, rows: 4 } );
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				text( label( 'venueAddress' ), 'address', { multiline: true, rows: 3 } );
+				text( label( 'directions' ), 'directions', { multiline: true, rows: 4 } );
 				break;
 
 			case 'html':
 				text( null, 'html', { multiline: true, rows: 6 } );
-				host.appendChild( node( 'p', 'hint',
-					'Tags are stripped to a small safe list, and every attribute is removed.' ) );
+				host.appendChild( node( 'p', 'hint', label( 'htmlHint' ) ) );
 				break;
 
 			default:
-				host.appendChild( node( 'p', 'hint', 'Nothing to set on this one.' ) );
+				host.appendChild( node( 'p', 'hint', label( 'nothingToSet' ) ) );
 		}
 	};
 
@@ -498,7 +547,7 @@
 
 			var label = document.createElement( 'input' );
 			label.className = 'input grow';
-			label.placeholder = 'Label';
+			label.placeholder = App.t( 'panel.sites.buttonLabel' );
 			label.value = item.label || '';
 			label.addEventListener( 'input', function () {
 				item.label = label.value;
@@ -507,7 +556,7 @@
 
 			var href = document.createElement( 'input' );
 			href.className = 'input grow';
-			href.placeholder = '/visiting or https://…';
+			href.placeholder = App.t( 'panel.sites.buttonHref' );
 			href.value = item.href || '';
 			href.addEventListener( 'input', function () {
 				item.href = href.value;
@@ -516,7 +565,7 @@
 
 			var remove = node( 'button', 'icon-btn icon-btn--sm' );
 			remove.innerHTML = icon( 'trash', { size: 14 } );
-			remove.setAttribute( 'aria-label', 'Remove this button' );
+			remove.setAttribute( 'aria-label', App.t( 'panel.sites.removeButton' ) );
 			remove.addEventListener( 'click', function () {
 				block.items.splice( index, 1 );
 				Sites.savePage( App, true );
@@ -530,9 +579,9 @@
 
 		if ( block.items.length < 4 ) {
 			var add = node( 'button', 'link-btn' );
-			add.innerHTML = icon( 'plus', { size: 14 } ) + 'Add a button';
+			add.innerHTML = icon( 'plus', { size: 14 } ) + esc( App.t( 'panel.sites.addButton' ) );
 			add.addEventListener( 'click', function () {
-				block.items.push( { label: 'Book now', href: '/', style: 'primary' } );
+				block.items.push( { label: App.t( 'panel.sites.bookNow' ), href: '/', style: 'primary' } );
 				Sites.savePage( App, true );
 			} );
 			host.appendChild( add );
@@ -547,7 +596,7 @@
 
 			var question = document.createElement( 'input' );
 			question.className = 'input';
-			question.placeholder = 'Question';
+			question.placeholder = App.t( 'panel.sites.question' );
 			question.value = item.question || '';
 			question.addEventListener( 'input', function () {
 				item.question = question.value;
@@ -557,7 +606,7 @@
 			var answer = document.createElement( 'textarea' );
 			answer.className = 'textarea';
 			answer.rows = 3;
-			answer.placeholder = 'Answer';
+			answer.placeholder = App.t( 'panel.sites.answer' );
 			answer.value = item.answer || '';
 			answer.addEventListener( 'input', function () {
 				item.answer = answer.value;
@@ -565,7 +614,7 @@
 			} );
 
 			var remove = node( 'button', 'link-btn' );
-			remove.innerHTML = icon( 'trash', { size: 14 } ) + 'Remove';
+			remove.innerHTML = icon( 'trash', { size: 14 } ) + esc( App.t( 'panel.common.remove' ) );
 			remove.addEventListener( 'click', function () {
 				block.items.splice( index, 1 );
 				Sites.savePage( App, true );
@@ -578,7 +627,7 @@
 		} );
 
 		var add = node( 'button', 'link-btn' );
-		add.innerHTML = icon( 'plus', { size: 14 } ) + 'Add a question';
+		add.innerHTML = icon( 'plus', { size: 14 } ) + esc( App.t( 'panel.sites.addQuestion' ) );
 		add.addEventListener( 'click', function () {
 			block.items.push( { question: '', answer: '' } );
 			Sites.savePage( App, true );
@@ -631,7 +680,7 @@
 						Sites.paintPage( App );
 						Sites.paintNav( App );
 					} else {
-						Sites.markDirty();
+						Sites.markDirty( App );
 					}
 				} )
 				.catch( function ( error ) { App.toast( error.message, true ); } );
@@ -645,12 +694,13 @@
 	};
 
 	/** Only the badge changes while typing; redrawing the whole page would take focus away. */
-	Sites.markDirty = function () {
+	Sites.markDirty = function ( App ) {
 		var page = Sites.currentPage();
 		var desc = document.querySelector( '.page-head--inline .page-head__desc' );
 
 		if ( desc && page && page.has_unpublished_changes ) {
-			desc.innerHTML = '<code>' + esc( page.path ) + '</code> · ' + badge( 'Unpublished changes', 'warn' );
+			desc.innerHTML = '<code>' + esc( page.path ) + '</code> · ' +
+				badge( App.t( 'panel.sites.unpublishedChanges' ), 'warn' );
 		}
 	};
 
@@ -662,23 +712,25 @@
 				Sites.replacePage( saved );
 				Sites.paintPage( App );
 				Sites.paintNav( App );
-				App.toast( 'Page published.' );
+				App.toast( App.t( 'panel.sites.pagePublished' ) );
 			} )
 			.catch( function ( error ) { App.toast( error.message, true ); } );
 	};
 
 	Sites.newPage = function ( App ) {
 		App.modal( {
-			title: 'New page',
-			submitLabel: 'Create page',
+			title: App.t( 'panel.sites.newPageTitle' ),
+			submitLabel: App.t( 'panel.sites.newPageSubmit' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="p-title">Title</label>' +
+				'<div class="field"><label class="field__label" for="p-title">' +
+				esc( App.t( 'panel.common.title' ) ) + '</label>' +
 				'<input class="input" id="p-title" name="title" required maxlength="160"></div>' +
-				'<div class="field"><label class="field__label" for="p-slug">Address</label>' +
+				'<div class="field"><label class="field__label" for="p-slug">' +
+				esc( App.t( 'panel.sites.slug' ) ) + '</label>' +
 				'<input class="input" id="p-slug" name="slug" required maxlength="80" ' +
-				'placeholder="whats-on"><span class="field__hint">Lowercase, with hyphens. It becomes ' +
-				'the part of the address after the slash.</span></div>' +
+				'placeholder="' + esc( App.t( 'panel.sites.slugPlaceholder' ) ) + '">' +
+				'<span class="field__hint">' + esc( App.t( 'panel.sites.slugHint' ) ) + '</span></div>' +
 				'</div>',
 			onSubmit: function ( data ) {
 				return App.request( 'POST', '/sites/' + Sites.state.site.id + '/pages', {
@@ -699,19 +751,23 @@
 		var page = Sites.currentPage();
 
 		App.modal( {
-			title: 'Page settings',
-			submitLabel: 'Save',
+			title: App.t( 'panel.sites.pageSettings' ),
+			submitLabel: App.t( 'panel.common.save' ),
 			body:
 				'<div class="stack">' +
-				'<div class="field"><label class="field__label" for="ps-title">Title</label>' +
+				'<div class="field"><label class="field__label" for="ps-title">' +
+				esc( App.t( 'panel.common.title' ) ) + '</label>' +
 				'<input class="input" id="ps-title" name="title" required value="' + esc( page.title ) + '"></div>' +
 				( 'home' === page.kind ? ''
-					: '<div class="field"><label class="field__label" for="ps-slug">Address</label>' +
+					: '<div class="field"><label class="field__label" for="ps-slug">' +
+						esc( App.t( 'panel.sites.slug' ) ) + '</label>' +
 						'<input class="input" id="ps-slug" name="slug" value="' + esc( page.slug ) + '"></div>' ) +
-				'<div class="field"><label class="field__label" for="ps-seo">Search title</label>' +
+				'<div class="field"><label class="field__label" for="ps-seo">' +
+				esc( App.t( 'panel.sites.seoTitle' ) ) + '</label>' +
 				'<input class="input" id="ps-seo" name="seo_title" maxlength="160" value="' +
 				esc( page.seo_title || '' ) + '"></div>' +
-				'<div class="field"><label class="field__label" for="ps-desc">Search description</label>' +
+				'<div class="field"><label class="field__label" for="ps-desc">' +
+				esc( App.t( 'panel.sites.seoDescription' ) ) + '</label>' +
 				'<textarea class="textarea" id="ps-desc" name="seo_description" rows="3" maxlength="320">' +
 				esc( page.seo_description || '' ) + '</textarea></div>' +
 				'</div>',
@@ -740,10 +796,9 @@
 		var page = Sites.currentPage();
 
 		App.modal( {
-			title: 'Delete this page?',
-			submitLabel: 'Delete',
-			body: '<p>Anyone who has bookmarked <code>' + esc( page.path ) + '</code> will get a ' +
-				'not-found page. Menus pointing at it lose their link.</p>',
+			title: App.t( 'panel.sites.deletePageTitle' ),
+			submitLabel: App.t( 'panel.common.delete' ),
+			body: '<p>' + App.t( 'panel.sites.deletePageBody', { path: esc( page.path ) } ) + '</p>',
 			onSubmit: function () {
 				return App.request( 'DELETE', '/sites/' + Sites.state.site.id + '/pages/' + page.id )
 					.then( function () {
@@ -753,7 +808,7 @@
 						Sites.state.pageId = ( Sites.state.site.pages[ 0 ] || {} ).id || null;
 						Sites.paintNav( App );
 						Sites.paintPage( App );
-						App.toast( 'Page deleted.' );
+						App.toast( App.t( 'panel.sites.pageDeleted' ) );
 					} );
 			},
 		} );
@@ -771,12 +826,12 @@
 		host.innerHTML =
 			'<div class="site-pane">' +
 				'<div class="page-head page-head--inline"><div class="page-head__text">' +
-					'<h1>Design</h1>' +
-					'<p class="page-head__desc">A theme sets the shape; your colours and logo sit on top ' +
-					'of it, so switching theme keeps them.</p>' +
+					'<h1>' + esc( App.t( 'panel.sites.designTitle' ) ) + '</h1>' +
+					'<p class="page-head__desc">' + esc( App.t( 'panel.sites.designDescription' ) ) + '</p>' +
 				'</div></div>' +
 				'<div class="themes" id="themes"></div>' +
-				'<section class="insp-section"><div class="insp-section__head"><h3>Brand</h3></div>' +
+				'<section class="insp-section"><div class="insp-section__head"><h3>' +
+					esc( App.t( 'panel.sites.brand' ) ) + '</h3></div>' +
 					'<div id="brand"></div>' +
 				'</section>' +
 			'</div>';
@@ -838,11 +893,11 @@
 		accent.addEventListener( 'change', function () {
 			Sites.saveBrand( App, { accent: accent.value } );
 		} );
-		field( 'Accent colour', accent );
+		field( App.t( 'panel.sites.accent' ), accent );
 
 		[
-			[ 'Headings', 'heading_font' ],
-			[ 'Body text', 'body_font' ],
+			[ 'headingFont', 'heading_font' ],
+			[ 'bodyFont', 'body_font' ],
 		].forEach( function ( entry ) {
 			var select = document.createElement( 'select' );
 			select.className = 'select';
@@ -850,7 +905,7 @@
 			( state.meta.fonts || [] ).forEach( function ( key ) {
 				var option = document.createElement( 'option' );
 				option.value = key;
-				option.textContent = titleCase( key );
+				option.textContent = App.t( 'themes.options.' + key );
 				option.selected = brand[ entry[ 1 ] ] === key;
 				select.appendChild( option );
 			} );
@@ -861,7 +916,7 @@
 				Sites.saveBrand( App, patch );
 			} );
 
-			field( entry[ 0 ], select );
+			field( App.t( 'panel.sites.' + entry[ 0 ] ), select );
 		} );
 
 		var radius = document.createElement( 'select' );
@@ -870,26 +925,26 @@
 		( state.meta.radii || [] ).forEach( function ( key ) {
 			var option = document.createElement( 'option' );
 			option.value = key;
-			option.textContent = titleCase( key );
+			option.textContent = App.t( 'themes.options.' + key );
 			option.selected = brand.radius === key;
 			radius.appendChild( option );
 		} );
 
 		radius.addEventListener( 'change', function () { Sites.saveBrand( App, { radius: radius.value } ); } );
-		field( 'Corners', radius );
+		field( App.t( 'panel.sites.corners' ), radius );
 
 		var logo = document.createElement( 'input' );
 		logo.className = 'input';
 		logo.placeholder = 'https://…';
 		logo.value = brand.logo_url || '';
 		logo.addEventListener( 'change', function () { Sites.saveBrand( App, { logo_url: logo.value } ); } );
-		field( 'Logo URL', logo, true );
+		field( App.t( 'panel.sites.logoUrl' ), logo, true );
 
 		var tagline = document.createElement( 'input' );
 		tagline.className = 'input';
 		tagline.value = brand.tagline || '';
 		tagline.addEventListener( 'change', function () { Sites.saveBrand( App, { tagline: tagline.value } ); } );
-		field( 'Tagline', tagline, true );
+		field( App.t( 'panel.sites.tagline' ), tagline, true );
 	};
 
 	Sites.saveBrand = function ( App, patch ) {
@@ -915,8 +970,8 @@
 		host.innerHTML =
 			'<div class="site-pane">' +
 				'<div class="page-head page-head--inline"><div class="page-head__text">' +
-					'<h1>Menus</h1>' +
-					'<p class="page-head__desc">What appears in the header and in the footer.</p>' +
+					'<h1>' + esc( App.t( 'panel.sites.menusTitle' ) ) + '</h1>' +
+					'<p class="page-head__desc">' + esc( App.t( 'panel.sites.menusDescription' ) ) + '</p>' +
 				'</div></div>' +
 				'<div id="menus"></div>' +
 			'</div>';
@@ -931,7 +986,11 @@
 	Sites.menuEditor = function ( App, menu ) {
 		var section = node( 'section', 'insp-section' );
 		var head = node( 'div', 'insp-section__head' );
-		head.appendChild( node( 'h3', '', menu.name ) );
+		// The two menus every site is provisioned with are named here rather than read back from
+		// the row, so a site created in one language does not keep those names in another.
+		head.appendChild( node( 'h3', '', App.has( 'panel.sites.menu' + titleCase( menu.key ) )
+			? App.t( 'panel.sites.menu' + titleCase( menu.key ) )
+			: menu.name ) );
 		section.appendChild( head );
 
 		menu.items = menu.items || [];
@@ -941,7 +1000,7 @@
 
 			var label = document.createElement( 'input' );
 			label.className = 'input';
-			label.placeholder = 'Label';
+			label.placeholder = App.t( 'panel.sites.menuLabel' );
 			label.value = item.label || '';
 			label.addEventListener( 'input', function () { item.label = label.value; } );
 			label.addEventListener( 'change', function () { Sites.saveMenu( App, menu ); } );
@@ -949,14 +1008,14 @@
 			var target = document.createElement( 'select' );
 			target.className = 'select';
 
-			var options = [ [ 'page:', '— Choose —' ] ]
+			var options = [ [ 'page:', App.t( 'panel.sites.chooseTarget' ) ] ]
 				.concat( ( Sites.state.site.pages || [] ).map( function ( page ) {
-					return [ 'page:' + page.id, 'Page · ' + page.title ];
+					return [ 'page:' + page.id, App.t( 'panel.sites.targetPage', { title: page.title } ) ];
 				} ) )
 				.concat( Sites.state.events.map( function ( event ) {
-					return [ 'event:' + event.id, 'Event · ' + event.name ];
+					return [ 'event:' + event.id, App.t( 'panel.sites.targetEvent', { name: event.name } ) ];
 				} ) )
-				.concat( [ [ 'url:', 'A web address…' ] ] );
+				.concat( [ [ 'url:', App.t( 'panel.sites.targetUrl' ) ] ] );
 
 			var current = 'url' === item.target_type
 				? 'url:'
@@ -996,7 +1055,7 @@
 
 			var remove = node( 'button', 'icon-btn icon-btn--sm' );
 			remove.innerHTML = icon( 'trash', { size: 15 } );
-			remove.setAttribute( 'aria-label', 'Remove this link' );
+			remove.setAttribute( 'aria-label', App.t( 'panel.sites.removeLink' ) );
 			remove.addEventListener( 'click', function () {
 				menu.items.splice( index, 1 );
 				Sites.saveMenu( App, menu, true );
@@ -1010,12 +1069,12 @@
 		} );
 
 		var add = node( 'button', 'link-btn' );
-		add.innerHTML = icon( 'plus', { size: 14 } ) + 'Add a link';
+		add.innerHTML = icon( 'plus', { size: 14 } ) + esc( App.t( 'panel.sites.addLink' ) );
 		add.addEventListener( 'click', function () {
 			var first = ( Sites.state.site.pages || [] )[ 0 ];
 
 			menu.items.push( {
-				label: first ? first.title : 'Link',
+				label: first ? first.title : App.t( 'panel.sites.linkDefault' ),
 				target_type: 'page',
 				site_page_id: first ? first.id : null,
 			} );
@@ -1055,13 +1114,13 @@
 			'<div class="site-pane">' +
 				'<div class="page-head page-head--inline">' +
 					'<div class="page-head__text">' +
-						'<h1>Address</h1>' +
-						'<p class="page-head__desc">Point your own domain here. We serve nothing at it ' +
-						'until you have proved it is yours.</p>' +
+						'<h1>' + esc( App.t( 'panel.sites.addressTitle' ) ) + '</h1>' +
+						'<p class="page-head__desc">' +
+						esc( App.t( 'panel.sites.addressDescription' ) ) + '</p>' +
 					'</div>' +
 					'<div class="page-head__actions">' +
 						'<button class="btn btn--primary" id="domain-add">' +
-						icon( 'plus', { size: 15 } ) + 'Add an address</button>' +
+						icon( 'plus', { size: 15 } ) + esc( App.t( 'panel.sites.addAddress' ) ) + '</button>' +
 					'</div>' +
 				'</div>' +
 				'<div id="domains"></div>' +
@@ -1074,8 +1133,8 @@
 		var list = document.getElementById( 'domains' );
 
 		if ( ! domains.length ) {
-			list.innerHTML = App.emptyState( 'globe', 'No address yet',
-				'Add the domain your customers will type.' );
+			list.innerHTML = App.emptyState( 'globe', App.t( 'panel.sites.noDomainTitle' ),
+				esc( App.t( 'panel.sites.noDomainBody' ) ) );
 
 			return;
 		}
@@ -1090,20 +1149,24 @@
 
 		var head = node( 'div', 'domain__head' );
 		head.innerHTML = '<strong>' + esc( domain.hostname ) + '</strong>' +
-			( domain.is_primary ? ' ' + badge( 'Main', 'accent' ) : '' ) +
-			' ' + ( domain.verified ? badge( 'Verified', 'ok' ) : badge( 'Waiting for DNS', 'warn' ) );
+			( domain.is_primary ? ' ' + badge( App.t( 'panel.sites.main' ), 'accent' ) : '' ) +
+			' ' + ( domain.verified
+				? badge( App.t( 'panel.sites.verified' ), 'ok' )
+				: badge( App.t( 'panel.sites.waitingForDns' ), 'warn' ) );
 
 		var tools = node( 'div', 'domain__tools' );
 
 		if ( ! domain.verified ) {
 			var check = node( 'button', 'btn btn--sm' );
-			check.innerHTML = icon( 'check', { size: 14 } ) + 'Check now';
+			check.innerHTML = icon( 'check', { size: 14 } ) + esc( App.t( 'panel.sites.checkNow' ) );
 			check.addEventListener( 'click', function () {
 				App.request( 'POST', '/sites/' + Sites.state.site.id + '/domains/' + domain.id + '/verify', {} )
 					.then( function ( updated ) {
 						Sites.replaceDomain( updated );
 						Sites.paintDomains( App );
-						App.toast( updated.verified ? 'Verified.' : 'Not there yet — DNS can take a while.' );
+						App.toast( App.t( updated.verified
+							? 'panel.sites.verifiedToast'
+							: 'panel.sites.notYet' ) );
 					} )
 					.catch( function ( error ) { App.toast( error.message, true ); } );
 			} );
@@ -1112,7 +1175,7 @@
 
 		if ( domain.verified && ! domain.is_primary ) {
 			var promote = node( 'button', 'btn btn--sm' );
-			promote.textContent = 'Make it the main one';
+			promote.textContent = App.t( 'panel.sites.makeMain' );
 			promote.addEventListener( 'click', function () {
 				App.request( 'POST', '/sites/' + Sites.state.site.id + '/domains/' + domain.id + '/primary', {} )
 					.then( function () { Sites.open( App, Sites.state.site.id ); } )
@@ -1123,7 +1186,8 @@
 
 		var remove = node( 'button', 'icon-btn icon-btn--sm' );
 		remove.innerHTML = icon( 'trash', { size: 15 } );
-		remove.setAttribute( 'aria-label', 'Remove ' + domain.hostname );
+		remove.setAttribute( 'aria-label',
+			App.t( 'panel.sites.removeDomain', { hostname: domain.hostname } ) );
 		remove.addEventListener( 'click', function () {
 			App.request( 'DELETE', '/sites/' + Sites.state.site.id + '/domains/' + domain.id )
 				.then( function () { Sites.open( App, Sites.state.site.id ); } )
@@ -1137,12 +1201,14 @@
 		if ( ! domain.verified ) {
 			var record = node( 'div', 'domain__record' );
 			record.innerHTML =
-				'<p class="hint">Add this record at your DNS provider, then check again. It proves the ' +
-				'domain is yours — without it, anyone could point a name at us and be served on it.</p>' +
+				'<p class="hint">' + esc( App.t( 'panel.sites.recordHint' ) ) + '</p>' +
 				'<dl class="record">' +
-				'<dt>Type</dt><dd><code>' + esc( domain.record.type ) + '</code></dd>' +
-				'<dt>Name</dt><dd><code>' + esc( domain.record.name ) + '</code></dd>' +
-				'<dt>Value</dt><dd><code>' + esc( domain.record.value ) + '</code></dd>' +
+				'<dt>' + esc( App.t( 'panel.sites.recordType' ) ) + '</dt>' +
+				'<dd><code>' + esc( domain.record.type ) + '</code></dd>' +
+				'<dt>' + esc( App.t( 'panel.sites.recordName' ) ) + '</dt>' +
+				'<dd><code>' + esc( domain.record.name ) + '</code></dd>' +
+				'<dt>' + esc( App.t( 'panel.sites.recordValue' ) ) + '</dt>' +
+				'<dd><code>' + esc( domain.record.value ) + '</code></dd>' +
 				'</dl>' +
 				( domain.last_error ? '<p class="issue issue--warning">' + esc( domain.last_error ) + '</p>' : '' );
 
@@ -1160,13 +1226,14 @@
 
 	Sites.addDomain = function ( App ) {
 		App.modal( {
-			title: 'Add an address',
-			submitLabel: 'Add',
+			title: App.t( 'panel.sites.addAddress' ),
+			submitLabel: App.t( 'panel.common.add' ),
 			body:
-				'<div class="field"><label class="field__label" for="d-host">Domain</label>' +
-				'<input class="input" id="d-host" name="hostname" required placeholder="tickets.example.com">' +
-				'<span class="field__hint">Point it at us with a CNAME or an A record first, then add ' +
-				'the TXT record we show you.</span></div>',
+				'<div class="field"><label class="field__label" for="d-host">' +
+				esc( App.t( 'panel.sites.domain' ) ) + '</label>' +
+				'<input class="input" id="d-host" name="hostname" required placeholder="' +
+				esc( App.t( 'panel.sites.domainPlaceholder' ) ) + '">' +
+				'<span class="field__hint">' + esc( App.t( 'panel.sites.domainHint' ) ) + '</span></div>',
 			onSubmit: function ( data ) {
 				return App.request( 'POST', '/sites/' + Sites.state.site.id + '/domains', {
 					hostname: data.get( 'hostname' ),

@@ -13,7 +13,7 @@
 	var Tickets = { eventId: null, query: '', status: '' };
 
 	Tickets.render = function ( App ) {
-		App.loading( 'Tickets' );
+		App.loading( App.t( 'panel.tickets.title' ) );
 
 		App.request( 'GET', '/events' )
 			.then( function ( response ) {
@@ -21,9 +21,9 @@
 
 				if ( ! events.length ) {
 					App.page( {
-						title: 'Tickets',
-						body: App.emptyState( 'ticket', 'No events yet',
-							'Tickets appear here once an event has sold something.' ),
+						title: App.t( 'panel.tickets.title' ),
+						body: App.emptyState( 'ticket', App.t( 'panel.tickets.noEventsTitle' ),
+							esc( App.t( 'panel.tickets.noEventsBody' ) ) ),
 					} );
 
 					return;
@@ -34,11 +34,12 @@
 				}
 
 				App.page( {
-					title: 'Tickets',
-					description: 'Every ticket for one event. Search by name, email, seat or reference.',
+					title: App.t( 'panel.tickets.title' ),
+					description: esc( App.t( 'panel.tickets.description' ) ),
 					body:
 						'<div class="filters" id="ticket-filters">' +
-							'<select class="select filters__event" id="ticket-event" aria-label="Event">' +
+							'<select class="select filters__event" id="ticket-event" aria-label="' +
+							esc( App.t( 'panel.tickets.event' ) ) + '">' +
 							events.map( function ( event ) {
 								return '<option value="' + esc( event.id ) + '"' +
 									( event.id === Tickets.eventId ? ' selected' : '' ) + '>' +
@@ -46,14 +47,17 @@
 							} ).join( '' ) +
 							'</select>' +
 							'<input class="input grow" id="ticket-search" type="search" ' +
-							'placeholder="Name, email, seat or reference" value="' + esc( Tickets.query ) + '" ' +
-							'aria-label="Search tickets">' +
-							'<select class="select filters__status" id="ticket-status" aria-label="Status">' +
-							[ [ '', 'Any status' ], [ 'issued', 'Not used' ], [ 'used', 'Checked in' ], [ 'void', 'Void' ] ]
+							'placeholder="' + esc( App.t( 'panel.tickets.searchPlaceholder' ) ) + '" ' +
+							'value="' + esc( Tickets.query ) + '" ' +
+							'aria-label="' + esc( App.t( 'panel.tickets.searchLabel' ) ) + '">' +
+							'<select class="select filters__status" id="ticket-status" aria-label="' +
+							esc( App.t( 'panel.common.status' ) ) + '">' +
+							[ [ '', 'anyStatus' ], [ 'issued', 'notUsed' ], [ 'used', 'checkedIn' ],
+								[ 'void', 'void' ] ]
 								.map( function ( option ) {
 									return '<option value="' + option[ 0 ] + '"' +
 										( option[ 0 ] === Tickets.status ? ' selected' : '' ) + '>' +
-										option[ 1 ] + '</option>';
+										esc( App.t( 'panel.tickets.' + option[ 1 ] ) ) + '</option>';
 								} ).join( '' ) +
 							'</select>' +
 						'</div>' +
@@ -102,36 +106,52 @@
 						.filter( Boolean ).join( ' · ' );
 
 					var status = 'used' === ticket.status
-						? badge( 'Checked in', 'ok' )
-						: ( 'void' === ticket.status ? badge( 'Void', 'danger' ) : badge( 'Not used', 'neutral' ) );
+						? badge( App.t( 'panel.tickets.checkedIn' ), 'ok' )
+						: ( 'void' === ticket.status
+							? badge( App.t( 'panel.tickets.void' ), 'danger' )
+							: badge( App.t( 'panel.tickets.notUsed' ), 'neutral' ) );
 
-					return '<tr><td class="table__primary">' + esc( seat || 'Standing' ) +
-						( ticket.seat.quantity && ! seat ? ' × ' + esc( ticket.seat.quantity ) : '' ) + '</td>' +
+					return '<tr><td class="table__primary">' +
+						esc( seat || App.t( 'panel.tickets.standing' ) ) +
+						( ticket.seat.quantity && ! seat
+							? ' × ' + esc( App.number( ticket.seat.quantity ) )
+							: '' ) + '</td>' +
 						'<td>' + esc( ( ticket.order && ticket.order.buyer_name ) || ticket.holder_name || '—' ) +
 						'<br><span class="muted">' +
 						esc( ( ticket.order && ticket.order.buyer_email ) || '' ) + '</span></td>' +
 						'<td><code>' + esc( ticket.token_prefix ) + '…</code></td>' +
 						'<td>' + status +
-						( ticket.used_at ? '<br><span class="muted tnum">' + esc( formatTime( ticket.used_at ) ) +
-							'</span>' : '' ) + '</td>' +
+						( ticket.used_at
+							? '<br><span class="muted tnum">' + esc( App.date( ticket.used_at ) ) + '</span>'
+							: '' ) + '</td>' +
 						'<td><code>' + esc( ( ticket.order && ticket.order.reference ) || '—' ) + '</code></td>' +
 						'<td class="table__actions">' +
 						( 'issued' === ticket.status
 							? '<button class="btn btn--sm btn--danger" data-release="' + esc( ticket.id ) +
-								'">Release seat</button>'
+								'">' + esc( App.t( 'panel.tickets.release' ) ) + '</button>'
 							: '' ) +
 						'</td></tr>';
 				} ).join( '' );
 
 				host.innerHTML = App.table(
-					[ 'Seat', 'Booked by', 'Code', 'Status', 'Order', '' ],
+					[
+						App.t( 'panel.tickets.seat' ),
+						App.t( 'panel.tickets.bookedBy' ),
+						App.t( 'panel.tickets.code' ),
+						App.t( 'panel.common.status' ),
+						App.t( 'panel.tickets.order' ),
+						'',
+					],
 					rows,
-					App.emptyState( 'search', 'Nothing found',
-						Tickets.query
-							? 'No ticket matches that. Try part of a name, or the seat.'
-							: 'Nothing has been sold for this event yet.' )
+					App.emptyState( 'search', App.t( 'panel.tickets.nothingFound' ),
+						esc( App.t( Tickets.query
+							? 'panel.tickets.noMatch'
+							: 'panel.tickets.nothingSold' ) ) )
 				) + ( response.meta && response.meta.total
-					? '<p class="hint spaced">' + response.data.length + ' of ' + response.meta.total + ' shown.</p>'
+					? '<p class="hint spaced">' + esc( App.t( 'panel.tickets.shown', {
+						count: App.number( response.data.length ),
+						total: App.number( response.meta.total ),
+					} ) ) + '</p>'
 					: '' );
 
 				host.querySelectorAll( '[data-release]' ).forEach( function ( button ) {
@@ -145,14 +165,13 @@
 
 	Tickets.release = function ( App, ticketId ) {
 		App.modal( {
-			title: 'Release this seat?',
-			submitLabel: 'Release',
-			body: '<p>The ticket is voided and the seat goes back on sale straight away. The booking ' +
-				'is recorded as refunded for that seat — settle the money in whatever took the payment.</p>',
+			title: App.t( 'panel.tickets.releaseTitle' ),
+			submitLabel: App.t( 'panel.tickets.releaseSubmit' ),
+			body: '<p>' + esc( App.t( 'panel.tickets.releaseBody' ) ) + '</p>',
 			onSubmit: function () {
 				return App.request( 'POST', '/tickets/' + ticketId + '/release', {} )
 					.then( function () {
-						App.toast( 'Seat released.' );
+						App.toast( App.t( 'panel.tickets.released' ) );
 						Tickets.load( App );
 					} );
 			},
@@ -169,14 +188,6 @@
 
 	function badge( text, tone ) {
 		return '<span class="badge badge--' + tone + '">' + esc( text ) + '</span>';
-	}
-
-	function formatTime( value ) {
-		var date = new Date( value );
-
-		return isNaN( date.getTime() ) ? '' : date.toLocaleString( undefined, {
-			day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-		} );
 	}
 
 	global.SeatmapTickets = Tickets;

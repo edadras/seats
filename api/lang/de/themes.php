@@ -43,6 +43,14 @@ return [
     'revert' => 'Diesen Stand wiederherstellen',
     'reverted' => 'Theme wiederhergestellt.',
     'trimmed' => 'Ein Teil Ihres Stylesheets war nicht erlaubt und wurde entfernt. Der Rest wurde gespeichert.',
+    'descriptions' => [
+        'aurora' => 'Hell, großzügig und ruhig. Fotos und lange Texte kommen hier am besten zur Geltung.',
+        'noir' => 'Dunkel und kontraststark. Gemacht für Konzerte, Clubs und späte Vorstellungen.',
+        'playbill' => 'Warmes Papier und Serifenüberschriften, wie ein gedrucktes Programmheft.',
+        'marquee' => 'Laut. Schmale Versalien, harte Kanten und eine Schlagzeile, die man von der Straße liest.',
+        'atrium' => 'Museumsstill. Breite Ränder, feine Linien, nichts schreit.',
+        'kiosk' => 'Dicht und praktisch. Für eine Spielzeit mit vierzig Terminen, nicht für eine Gala.',
+    ],
     'groups' => [
         'colour' => 'Farbe',
         'type' => 'Schrift',

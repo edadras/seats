@@ -23,6 +23,11 @@
 
 	var SEAT_R = Chart.SEAT_SIZE / 2;
 
+	/** The catalogue, read per call — see the note on the same helper in chart.js. */
+	function t( key, replace ) {
+		return global.SeatmapI18n.t( key, replace );
+	}
+
 	function History( limit ) {
 		this.limit = limit || 60;
 		this.past = [];
@@ -190,7 +195,7 @@
 
 	Editor.prototype.mutate = function ( callback ) {
 		if ( this.locked ) {
-			this.onStatus( 'This chart is locked. Unlock it to make changes.' );
+			this.onStatus( t( 'panel.hints.readOnly' ) );
 
 			return;
 		}
@@ -1018,7 +1023,7 @@
 	Editor.prototype.setTool = function ( tool ) {
 		this.tool = tool;
 		this.draft = null;
-		this.onStatus( STATUS[ tool ] || STATUS.select );
+		this.onStatus( t( 'panel.hints.' + ( HINTED[ tool ] ? tool : 'select' ) ) );
 		this.canvas.style.cursor = 'pan' === tool ? 'grab' : 'crosshair';
 
 		if ( 'select' === tool ) {
@@ -1026,23 +1031,14 @@
 		}
 	};
 
-	var STATUS = {
-		select: 'Select — Shift + Click to add or remove objects from selection. Ctrl+D to deselect',
-		sameType: 'Select same type — Click select of the same type. Shift + Click to add or remove types from selection. Ctrl+D to deselect',
-		lasso: 'Lasso — drag around the seats you want',
-		pan: 'Pan — drag to move the view',
-		row: 'Row — drag to draw a straight row of seats',
-		curvedRow: 'Curved row — drag to draw, then set the curve in the panel',
-		section: 'Section — click each corner, then press Enter to close the shape',
-		area: 'Area — drag to draw a general admission area',
-		table: 'Table — click to place a table',
-		booth: 'Booth — drag to draw a booth',
-		shape: 'Shape — drag to draw',
-		line: 'Line — click each point, then press Enter',
-		text: 'Text — click to place a label',
-		image: 'Image — drag to place the floor plan you are tracing',
-		icon: 'Icon — click to place',
-		focalPoint: 'Focal point — click the spot the venue faces, usually the middle of the stage',
+	/*
+	 * Tools that have a sentence of their own under `panel.hints`. Anything not in here falls back
+	 * to the select hint, which is the honest answer for a tool that does not draw.
+	 */
+	var HINTED = {
+		select: true, sameType: true, lasso: true, pan: true, row: true, curvedRow: true,
+		section: true, area: true, table: true, booth: true, shape: true, line: true,
+		text: true, image: true, icon: true, focalPoint: true,
 	};
 
 	Editor.prototype.bindPointer = function () {
@@ -1474,7 +1470,10 @@
 					return;
 				}
 
-				var label = window.prompt( 'Section name', 'Section ' + ( countOfType( container, 'section' ) + 1 ) );
+				var label = window.prompt(
+					t( 'panel.prompt.sectionName' ),
+					t( 'panel.prompt.sectionDefault', { number: countOfType( container, 'section' ) + 1 } )
+				);
 
 				if ( ! label ) {
 					return;

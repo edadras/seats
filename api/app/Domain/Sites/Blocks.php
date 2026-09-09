@@ -26,20 +26,30 @@ class Blocks
     /** Tags the `html` block keeps. Everything else, including every attribute, is stripped. */
     private const ALLOWED_TAGS = '<p><br><strong><em><b><i><u><ul><ol><li><h2><h3><h4><blockquote><a><table><thead><tbody><tr><th><td>';
 
+    /** The block picker in the panel, named in whatever language the panel is being read in. */
     public static function describe(): array
     {
-        return [
-            ['type' => 'heading', 'name' => 'Heading', 'icon' => 'text'],
-            ['type' => 'richText', 'name' => 'Text', 'icon' => 'text'],
-            ['type' => 'image', 'name' => 'Image', 'icon' => 'image'],
-            ['type' => 'buttons', 'name' => 'Buttons', 'icon' => 'cursor'],
-            ['type' => 'eventList', 'name' => 'What’s on', 'icon' => 'calendar'],
-            ['type' => 'eventDetail', 'name' => 'Event and seat picker', 'icon' => 'seat'],
-            ['type' => 'faq', 'name' => 'Questions', 'icon' => 'help'],
-            ['type' => 'venueMap', 'name' => 'Finding us', 'icon' => 'map'],
-            ['type' => 'divider', 'name' => 'Divider', 'icon' => 'minus'],
-            ['type' => 'html', 'name' => 'Custom HTML', 'icon' => 'shape'],
+        $icons = [
+            'heading' => 'text',
+            'richText' => 'text',
+            'image' => 'image',
+            'buttons' => 'cursor',
+            'eventList' => 'calendar',
+            'eventDetail' => 'seat',
+            'faq' => 'help',
+            'venueMap' => 'map',
+            'divider' => 'minus',
+            'html' => 'shape',
         ];
+
+        return array_map(
+            fn (string $type) => [
+                'type' => $type,
+                'name' => __('site.blocks.'.$type),
+                'icon' => $icons[$type],
+            ],
+            self::TYPES
+        );
     }
 
     /**

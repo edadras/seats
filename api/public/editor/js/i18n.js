@@ -117,6 +117,19 @@
 	};
 
 	/**
+	 * Whether the catalogue actually holds this key.
+	 *
+	 * `t()` deliberately never returns nothing, so it cannot answer this. The few places that need
+	 * to know are the ones showing a name the *customer* invented — a role they created themselves —
+	 * where there is no translation to find and inventing one would be a lie.
+	 */
+	I18n.has = function ( key ) {
+		return 'string' === typeof key.split( '.' ).reduce( function ( carry, part ) {
+			return carry && typeof carry === 'object' ? carry[ part ] : undefined;
+		}, this.messages );
+	};
+
+	/**
 	 * How many decimal places a currency has, from the browser's own ICU data.
 	 *
 	 * Two for a euro, none for a rial, three for a dinar. Asked rather than assumed, because

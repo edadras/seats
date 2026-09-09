@@ -14,6 +14,11 @@
 	var Chart = global.SeatmapChart;
 	var icon = global.SeatmapIcon;
 
+	/** The catalogue, read per call — see the note on the same helper in chart.js. */
+	function t( key, replace ) {
+		return global.SeatmapI18n.t( key, replace );
+	}
+
 	function Inspector( root, editor, options ) {
 		this.root = root;
 		this.editor = editor;
@@ -50,8 +55,8 @@
 		switch ( object.type ) {
 			case 'row': this.renderRow( object ); break;
 			case 'section': this.renderSectionObject( object ); break;
-			case 'area': this.renderArea( object, 'Area' ); break;
-			case 'booth': this.renderArea( object, 'Booth' ); break;
+			case 'area': this.renderArea( object, t( 'panel.inspector.area' ) ); break;
+			case 'booth': this.renderArea( object, t( 'panel.inspector.booth' ) ); break;
 			case 'table': this.renderTable( object ); break;
 			case 'text': this.renderText( object ); break;
 			case 'shape': this.renderShape( object ); break;
@@ -72,7 +77,7 @@
 		this.title( chart.name );
 
 		var places = this.section();
-		places.appendChild( stat( report.places.toLocaleString(), 1 === report.places ? 'place' : 'places' ) );
+		places.appendChild( placeCount( report.places ) );
 
 		// The checklist from the designer, each line answering a question that only bites once the
 		// chart is being sold against.
@@ -80,10 +85,11 @@
 			places.appendChild( checkRow( check ) );
 		} );
 
-		var categories = this.section( 'Categories', 'Manage', function () { self.onManageCategories(); } );
+		var categories = this.section( t( 'panel.inspector.categories' ), t( 'panel.inspector.manage' ),
+			function () { self.onManageCategories(); } );
 
 		if ( ! ( chart.categories || [] ).length ) {
-			categories.appendChild( el( 'p', 'hint', 'No categories yet. Every bookable object needs one.' ) );
+			categories.appendChild( el( 'p', 'hint', t( 'panel.inspector.noCategories' ) ) );
 		}
 
 		( chart.categories || [] ).forEach( function ( category ) {
@@ -91,7 +97,7 @@
 		} );
 
 		if ( report.errors.length ) {
-			var issues = this.section( 'Problems' );
+			var issues = this.section( t( 'panel.inspector.problems' ) );
 
 			report.errors.slice( 0, 12 ).forEach( function ( issue ) {
 				issues.appendChild( issueRow( issue.message, 'error' ) );
@@ -99,7 +105,7 @@
 		}
 
 		if ( report.warnings.length ) {
-			var warnings = this.section( 'Worth a look' );
+			var warnings = this.section( t( 'panel.inspector.worthALook' ) );
 
 			report.warnings.slice( 0, 12 ).forEach( function ( issue ) {
 				warnings.appendChild( issueRow( issue.message, 'warning' ) );
@@ -113,10 +119,12 @@
 		var chart = { version: 2, categories: this.editor.chart.categories, floors: [ { key: 's', canvas: this.editor.floor().canvas, objects: section.objects || [] } ] };
 		var report = Chart.validate( chart );
 
-		this.title( ( Chart.objectLabel( section ) || 'Section' ) + ' section' );
+		this.title( t( 'panel.inspector.sectionTitle', {
+			label: Chart.objectLabel( section ) || t( 'panel.inspector.section' ),
+		} ) );
 
 		var body = this.section();
-		body.appendChild( stat( report.places.toLocaleString(), 1 === report.places ? 'place' : 'places' ) );
+		body.appendChild( placeCount( report.places ) );
 
 		report.checks.slice( 0, 3 ).forEach( function ( check ) {
 			body.appendChild( checkRow( check ) );
@@ -128,33 +136,33 @@
 	Inspector.prototype.renderRow = function ( row ) {
 		var self = this;
 
-		this.title( 'Row' );
+		this.title( t( 'panel.inspector.row' ) );
 		this.categoryField( row );
 
-		var geometry = this.section( 'Row' );
+		var geometry = this.section( t( 'panel.inspector.row' ) );
 
-		this.number( geometry, 'Number of seats', row.seats.length, 0, 500, 1, function ( value ) {
+		this.number( geometry, t( 'panel.inspector.numberOfSeats' ), row.seats.length, 0, 500, 1, function ( value ) {
 			self.change( function () { Chart.setRowSeatCount( row, value ); } );
 		} );
 
-		this.number( geometry, 'Rotation', row.rotation, -360, 360, 1, function ( value ) {
+		this.number( geometry, t( 'panel.inspector.rotation' ), row.rotation, -360, 360, 1, function ( value ) {
 			self.change( function () { row.rotation = value; } );
 		}, '°' );
 
 		// Curve is the sagitta as a percentage of the row's length, so the number means the same
 		// thing whether the row has six seats or sixty.
-		this.number( geometry, 'Curve', row.curve, -60, 60, 1, function ( value ) {
+		this.number( geometry, t( 'panel.inspector.curve' ), row.curve, -60, 60, 1, function ( value ) {
 			self.change( function () { row.curve = value; } );
 		} );
 
-		this.number( geometry, 'Seat spacing', row.seatSpacing, 0, 60, 1, function ( value ) {
+		this.number( geometry, t( 'panel.inspector.seatSpacing' ), row.seatSpacing, 0, 60, 1, function ( value ) {
 			self.change( function () { row.seatSpacing = value; } );
 		}, 'pt' );
 
-		var sectionLabeling = this.section( 'Section labeling' );
+		var sectionLabeling = this.section( t( 'panel.inspector.sectionLabeling' ) );
 		var parent = this.editor.container();
 
-		this.text( sectionLabeling, 'Section label', parent && parent.labeling ? parent.labeling.label : '', function ( value ) {
+		this.text( sectionLabeling, t( 'panel.inspector.sectionLabel' ), parent && parent.labeling ? parent.labeling.label : '', function ( value ) {
 			if ( parent && parent.labeling ) {
 				self.change( function () { parent.labeling.label = value; } );
 			}
@@ -163,9 +171,9 @@
 		this.rowLabelingFields( row );
 		this.seatLabelingFields( row );
 
-		var misc = this.section( 'Miscellaneous' );
+		var misc = this.section( t( 'panel.inspector.miscellaneous' ) );
 
-		this.text( misc, 'Entrance', row.entrance || '', function ( value ) {
+		this.text( misc, t( 'panel.inspector.entrance' ), row.entrance || '', function ( value ) {
 			self.change( function () { row.entrance = value || null; } );
 		} );
 	};
@@ -179,26 +187,27 @@
 	Inspector.prototype.rowLabelingFields = function ( row ) {
 		var self = this;
 		var labeling = row.labeling || ( row.labeling = Chart.defaultRowLabeling( 'A' ) );
-		var body = this.section( 'Row labeling', labeling.locked ? 'Unlock' : null, function () {
+		var body = this.section( t( 'panel.inspector.rowLabeling' ),
+			labeling.locked ? t( 'panel.inspector.unlock' ) : null, function () {
 			self.change( function () { labeling.locked = false; } );
 		} );
 
-		this.checkbox( body, 'Enabled', labeling.enabled, function ( value ) {
+		this.checkbox( body, t( 'panel.inspector.enabled' ), labeling.enabled, function ( value ) {
 			self.change( function () { labeling.enabled = value; } );
 		}, labeling.locked );
 
-		this.text( body, 'Label', labeling.label, function ( value ) {
+		this.text( body, t( 'panel.inspector.label' ), labeling.label, function ( value ) {
 			self.change( function () { labeling.label = value; } );
 		}, labeling.locked );
 
-		this.text( body, 'Displayed label', labeling.displayedLabel == null ? '' : labeling.displayedLabel, function ( value ) {
+		this.text( body, t( 'panel.inspector.displayedLabel' ), labeling.displayedLabel == null ? '' : labeling.displayedLabel, function ( value ) {
 			// Empty means "show the label itself" rather than "show nothing".
 			self.change( function () { labeling.displayedLabel = value === '' ? null : value; } );
 		}, labeling.locked, labeling.label );
 
 		this.rowLabelPosition( body, labeling );
 
-		this.text( body, 'Displayed type', labeling.displayedType, function ( value ) {
+		this.text( body, t( 'panel.inspector.displayedType' ), labeling.displayedType, function ( value ) {
 			self.change( function () { labeling.displayedType = value; } );
 		}, labeling.locked );
 	};
@@ -210,7 +219,7 @@
 	Inspector.prototype.rowLabelPosition = function ( body, labeling ) {
 		var self = this;
 		var line = el( 'div', 'insp-field' );
-		line.appendChild( el( 'label', '', 'Position' ) );
+		line.appendChild( el( 'label', '', t( 'panel.inspector.position' ) ) );
 
 		var control = el( 'div', 'ends' );
 		var start = el( 'button', 'ends__cap', labeling.label || 'A' );
@@ -219,8 +228,8 @@
 
 		start.type = 'button';
 		end.type = 'button';
-		start.setAttribute( 'aria-label', 'Label at the start of the row' );
-		end.setAttribute( 'aria-label', 'Label at the end of the row' );
+		start.setAttribute( 'aria-label', t( 'panel.inspector.labelAtStart' ) );
+		end.setAttribute( 'aria-label', t( 'panel.inspector.labelAtEnd' ) );
 
 		function paint() {
 			start.classList.toggle( 'is-on', 'both' === labeling.position || 'start' === labeling.position );
@@ -261,9 +270,10 @@
 
 	Inspector.prototype.seatLabelingFields = function ( owner ) {
 		var self = this;
-		var labeling = owner.seatLabeling || ( owner.seatLabeling = { scheme: 'numeric', displayedType: 'Seat', locked: false } );
+		var labeling = owner.seatLabeling || ( owner.seatLabeling = { scheme: 'numeric', displayedType: t( 'panel.chart.seat' ), locked: false } );
 
-		var body = this.section( 'Seat labeling', labeling.locked ? 'Unlock' : 'Clear', function () {
+		var body = this.section( t( 'panel.inspector.seatLabeling' ),
+			t( labeling.locked ? 'panel.inspector.unlock' : 'panel.inspector.clear' ), function () {
 			self.change( function () {
 				if ( labeling.locked ) {
 					labeling.locked = false;
@@ -277,11 +287,11 @@
 			return { value: key, label: Chart.SEAT_LABEL_SCHEMES[ key ].label };
 		} );
 
-		this.select( body, 'Labels', labeling.scheme, options, function ( value ) {
+		this.select( body, t( 'panel.inspector.labels' ), labeling.scheme, options, function ( value ) {
 			self.change( function () { Chart.renumberRow( owner, value ); } );
 		}, labeling.locked );
 
-		this.text( body, 'Displayed type', labeling.displayedType, function ( value ) {
+		this.text( body, t( 'panel.inspector.displayedType' ), labeling.displayedType, function ( value ) {
 			self.change( function () { labeling.displayedType = value; } );
 		}, labeling.locked );
 	};
@@ -289,7 +299,9 @@
 	Inspector.prototype.renderSeats = function ( seats ) {
 		var self = this;
 
-		this.title( 1 === seats.length ? 'Seat' : seats.length + ' seats' );
+		this.title( 1 === seats.length
+			? t( 'panel.inspector.seat' )
+			: t( 'panel.inspector.seats', { count: seats.length } ) );
 
 		var first = seats[ 0 ].seat;
 
@@ -297,15 +309,15 @@
 			seats.forEach( function ( entry ) { entry.seat.categoryKey = key; } );
 		} );
 
-		var body = this.section( 'Seat' );
+		var body = this.section( t( 'panel.inspector.seat' ) );
 
 		if ( 1 === seats.length ) {
-			this.text( body, 'Label', first.label, function ( value ) {
+			this.text( body, t( 'panel.inspector.label' ), first.label, function ( value ) {
 				self.change( function () { first.label = value; } );
 			} );
 		}
 
-		this.checkbox( body, 'Accessible', first.accessible, function ( value ) {
+		this.checkbox( body, t( 'panel.inspector.accessible' ), first.accessible, function ( value ) {
 			self.change( function () {
 				seats.forEach( function ( entry ) { entry.seat.accessible = value; } );
 			} );
@@ -313,15 +325,15 @@
 
 		// An "empty" seat holds a gap in the row — a pillar, a camera position, a wheelchair bay —
 		// without shifting every seat after it.
-		this.checkbox( body, 'Empty placeholder', 'empty' === first.type, function ( value ) {
+		this.checkbox( body, t( 'panel.inspector.emptyPlaceholder' ), 'empty' === first.type, function ( value ) {
 			self.change( function () {
 				seats.forEach( function ( entry ) { entry.seat.type = value ? 'empty' : 'seat'; } );
 			} );
 		} );
 
-		var misc = this.section( 'Miscellaneous' );
+		var misc = this.section( t( 'panel.inspector.miscellaneous' ) );
 
-		this.text( misc, 'Entrance', first.entrance || '', function ( value ) {
+		this.text( misc, t( 'panel.inspector.entrance' ), first.entrance || '', function ( value ) {
 			self.change( function () {
 				seats.forEach( function ( entry ) { entry.seat.entrance = value || null; } );
 			} );
@@ -331,27 +343,27 @@
 	Inspector.prototype.renderSectionObject = function ( section ) {
 		var self = this;
 
-		this.title( 'Section' );
+		this.title( t( 'panel.inspector.section' ) );
 		this.categoryField( section );
 
-		var body = this.section( 'Section' );
+		var body = this.section( t( 'panel.inspector.section' ) );
 
-		this.text( body, 'Label', section.labeling.label, function ( value ) {
+		this.text( body, t( 'panel.inspector.label' ), section.labeling.label, function ( value ) {
 			self.change( function () {
 				section.labeling.label = value;
 				section.label = value;
 			} );
 		} );
 
-		this.checkbox( body, 'Label visible', section.labeling.visible, function ( value ) {
+		this.checkbox( body, t( 'panel.inspector.labelVisible' ), section.labeling.visible, function ( value ) {
 			self.change( function () { section.labeling.visible = value; } );
 		} );
 
-		this.number( body, 'Font size', section.labeling.fontSize, 6, 120, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.fontSize' ), section.labeling.fontSize, 6, 120, 1, function ( value ) {
 			self.change( function () { section.labeling.fontSize = value; } );
 		}, 'pt' );
 
-		var contents = this.section( 'Contents' );
+		var contents = this.section( t( 'panel.inspector.contents' ) );
 		var counts = {};
 
 		( section.objects || [] ).forEach( function ( object ) {
@@ -365,18 +377,21 @@
 			}
 		} );
 
-		contents.appendChild( el( 'div', 'insp-static', seatCount + ' seats in ' + ( counts.row || 0 ) + ' rows' ) );
+		contents.appendChild( el( 'div', 'insp-static', t( 'panel.inspector.seatsInRows', {
+			seats: seatCount,
+			rows: counts.row || 0,
+		} ) ) );
 
 		var open = el( 'button', 'btn btn--block' );
 		open.type = 'button';
 		open.innerHTML = icon( 'seat', { size: 15 } );
-		open.appendChild( document.createTextNode( 'Edit seats in this section' ) );
+		open.appendChild( document.createTextNode( t( 'panel.inspector.editSeats' ) ) );
 		open.addEventListener( 'click', function () { self.editor.enterSection( section.key ); } );
 		contents.appendChild( open );
 
-		var misc = this.section( 'Miscellaneous' );
+		var misc = this.section( t( 'panel.inspector.miscellaneous' ) );
 
-		this.text( misc, 'Entrance', section.entrance || '', function ( value ) {
+		this.text( misc, t( 'panel.inspector.entrance' ), section.entrance || '', function ( value ) {
 			self.change( function () { section.entrance = value || null; } );
 		} );
 	};
@@ -387,60 +402,61 @@
 		this.title( title );
 		this.categoryField( area );
 
-		var shape = this.section( 'Shape' );
+		var shape = this.section( t( 'panel.inspector.shape' ) );
 
-		this.number( shape, 'Width', area.shape.width, 10, 20000, 1, function ( value ) {
+		this.number( shape, t( 'panel.inspector.width' ), area.shape.width, 10, 20000, 1, function ( value ) {
 			self.change( function () { area.shape.width = value; } );
 		}, 'pt' );
 
-		this.number( shape, 'Height', area.shape.height, 10, 20000, 1, function ( value ) {
+		this.number( shape, t( 'panel.inspector.height' ), area.shape.height, 10, 20000, 1, function ( value ) {
 			self.change( function () { area.shape.height = value; } );
 		}, 'pt' );
 
-		this.number( shape, 'Rotation', area.shape.rotation, -360, 360, 1, function ( value ) {
+		this.number( shape, t( 'panel.inspector.rotation' ), area.shape.rotation, -360, 360, 1, function ( value ) {
 			self.change( function () { area.shape.rotation = value; } );
 		}, '°' );
 
-		this.number( shape, 'Corner radius', area.shape.cornerRadius, 0, 400, 1, function ( value ) {
+		this.number( shape, t( 'panel.inspector.cornerRadius' ), area.shape.cornerRadius, 0, 400, 1, function ( value ) {
 			self.change( function () { area.shape.cornerRadius = value; } );
 		}, 'pt' );
 
-		this.checkbox( shape, 'Translucent', area.translucent, function ( value ) {
+		this.checkbox( shape, t( 'panel.inspector.translucent' ), area.translucent, function ( value ) {
 			self.change( function () { area.translucent = value; } );
 		} );
 
-		var transform = this.section( 'Transform' );
+		var transform = this.section( t( 'panel.inspector.transform' ) );
 
-		this.slider( transform, 'Scale', area.scale == null ? 1 : area.scale, 0.2, 3, 0.05, function ( value ) {
+		this.slider( transform, t( 'panel.inspector.scale' ), area.scale == null ? 1 : area.scale, 0.2, 3, 0.05, function ( value ) {
 			self.change( function () { area.scale = value; } );
 		} );
 
 		var labeling = area.labeling;
-		var labelBody = this.section( 'Area labeling', labeling.locked ? 'Unlock' : null, function () {
+		var labelBody = this.section( t( 'panel.inspector.areaLabeling' ),
+			labeling.locked ? t( 'panel.inspector.unlock' ) : null, function () {
 			self.change( function () { labeling.locked = false; } );
 		} );
 
-		this.text( labelBody, 'Label', labeling.label, function ( value ) {
+		this.text( labelBody, t( 'panel.inspector.label' ), labeling.label, function ( value ) {
 			self.change( function () { labeling.label = value; } );
 		}, labeling.locked );
 
-		this.text( labelBody, 'Displayed label', labeling.displayedLabel == null ? '' : labeling.displayedLabel, function ( value ) {
+		this.text( labelBody, t( 'panel.inspector.displayedLabel' ), labeling.displayedLabel == null ? '' : labeling.displayedLabel, function ( value ) {
 			self.change( function () { labeling.displayedLabel = value === '' ? null : value; } );
 		}, labeling.locked, labeling.label );
 
-		this.checkbox( labelBody, 'Visible', labeling.visible, function ( value ) {
+		this.checkbox( labelBody, t( 'panel.inspector.visible' ), labeling.visible, function ( value ) {
 			self.change( function () { labeling.visible = value; } );
 		} );
 
-		this.number( labelBody, 'Font size', labeling.fontSize, 6, 200, 1, function ( value ) {
+		this.number( labelBody, t( 'panel.inspector.fontSize' ), labeling.fontSize, 6, 200, 1, function ( value ) {
 			self.change( function () { labeling.fontSize = value; } );
 		}, 'pt' );
 
-		this.number( labelBody, 'Position X', labeling.positionX || 0, -50, 50, 1, function ( value ) {
+		this.number( labelBody, t( 'panel.inspector.positionX' ), labeling.positionX || 0, -50, 50, 1, function ( value ) {
 			self.change( function () { labeling.positionX = value; } );
 		}, '%' );
 
-		this.number( labelBody, 'Position Y', labeling.positionY || 0, -50, 50, 1, function ( value ) {
+		this.number( labelBody, t( 'panel.inspector.positionY' ), labeling.positionY || 0, -50, 50, 1, function ( value ) {
 			self.change( function () { labeling.positionY = value; } );
 		}, '%' );
 
@@ -456,11 +472,11 @@
 	Inspector.prototype.capacityFields = function ( object ) {
 		var self = this;
 		var capacity = object.capacity || ( object.capacity = { type: 'generalAdmission', places: 1 } );
-		var body = this.section( 'Capacity' );
+		var body = this.section( t( 'panel.inspector.capacity' ) );
 
-		this.select( body, 'Type', capacity.type, [
-			{ value: 'generalAdmission', label: 'General Admission' },
-			{ value: 'fixed', label: 'Fixed occupancy' },
+		this.select( body, t( 'panel.inspector.type' ), capacity.type, [
+			{ value: 'generalAdmission', label: t( 'panel.inspector.generalAdmission' ) },
+			{ value: 'fixed', label: t( 'panel.inspector.fixedOccupancy' ) },
 		], function ( value ) {
 			self.change( function () { capacity.type = value; } );
 		} );
@@ -468,12 +484,12 @@
 		body.appendChild( el(
 			'p',
 			'hint',
-			'generalAdmission' === capacity.type
-				? 'Multiple users can select places in a general admission area.'
-				: 'The whole object is sold once, to this many people.'
+			t( 'generalAdmission' === capacity.type
+				? 'panel.inspector.generalAdmissionHint'
+				: 'panel.inspector.fixedHint' )
 		) );
 
-		this.number( body, 'Places', capacity.places, 1, 100000, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.places' ), capacity.places, 1, 100000, 1, function ( value ) {
 			self.change( function () { capacity.places = value; } );
 		} );
 	};
@@ -481,46 +497,46 @@
 	Inspector.prototype.renderTable = function ( table ) {
 		var self = this;
 
-		this.title( 'Table' );
+		this.title( t( 'panel.inspector.table' ) );
 		this.categoryField( table );
 
-		var body = this.section( 'Table' );
+		var body = this.section( t( 'panel.inspector.table' ) );
 
-		this.text( body, 'Label', table.labeling.label, function ( value ) {
+		this.text( body, t( 'panel.inspector.label' ), table.labeling.label, function ( value ) {
 			self.change( function () {
 				table.labeling.label = value;
 				table.label = value;
 			} );
 		} );
 
-		this.select( body, 'Shape', table.shape, [
-			{ value: 'round', label: 'Round' },
-			{ value: 'rectangular', label: 'Rectangular' },
+		this.select( body, t( 'panel.inspector.shape' ), table.shape, [
+			{ value: 'round', label: t( 'panel.inspector.round' ) },
+			{ value: 'rectangular', label: t( 'panel.inspector.rectangular' ) },
 		], function ( value ) {
 			self.change( function () { table.shape = value; } );
 		} );
 
-		this.number( body, 'Number of seats', table.seats.length, 0, 40, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.numberOfSeats' ), table.seats.length, 0, 40, 1, function ( value ) {
 			self.change( function () { Chart.setRowSeatCount( table, value ); } );
 		} );
 
-		this.number( body, 'Width', table.width, 20, 1000, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.width' ), table.width, 20, 1000, 1, function ( value ) {
 			self.change( function () { table.width = value; } );
 		}, 'pt' );
 
-		this.number( body, 'Height', table.height, 20, 1000, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.height' ), table.height, 20, 1000, 1, function ( value ) {
 			self.change( function () { table.height = value; } );
 		}, 'pt' );
 
-		this.number( body, 'Rotation', table.rotation, -360, 360, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.rotation' ), table.rotation, -360, 360, 1, function ( value ) {
 			self.change( function () { table.rotation = value; } );
 		}, '°' );
 
-		var booking = this.section( 'Booking' );
+		var booking = this.section( t( 'panel.inspector.booking' ) );
 
-		this.select( booking, 'Book as', table.bookAs, [
-			{ value: 'seat', label: 'Individual seats' },
-			{ value: 'table', label: 'The whole table' },
+		this.select( booking, t( 'panel.inspector.bookAs' ), table.bookAs, [
+			{ value: 'seat', label: t( 'panel.inspector.individualSeats' ) },
+			{ value: 'table', label: t( 'panel.inspector.wholeTable' ) },
 		], function ( value ) {
 			self.change( function () { table.bookAs = value; } );
 		} );
@@ -528,9 +544,7 @@
 		booking.appendChild( el(
 			'p',
 			'hint',
-			'table' === table.bookAs
-				? 'One booking takes the table and every chair at it.'
-				: 'Each chair is sold separately, like any other seat.'
+			t( 'table' === table.bookAs ? 'panel.inspector.tableHint' : 'panel.inspector.seatHint' )
 		) );
 
 		this.seatLabelingFields( table );
@@ -539,23 +553,23 @@
 	Inspector.prototype.renderText = function ( text ) {
 		var self = this;
 
-		this.title( 'Text' );
+		this.title( t( 'panel.inspector.text' ) );
 
-		var body = this.section( 'Text' );
+		var body = this.section( t( 'panel.inspector.text' ) );
 
-		this.text( body, 'Content', text.text, function ( value ) {
+		this.text( body, t( 'panel.inspector.content' ), text.text, function ( value ) {
 			self.change( function () { text.text = value; } );
 		} );
 
-		this.number( body, 'Font size', text.fontSize, 6, 200, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.fontSize' ), text.fontSize, 6, 200, 1, function ( value ) {
 			self.change( function () { text.fontSize = value; } );
 		}, 'pt' );
 
-		this.number( body, 'Rotation', text.rotation || 0, -360, 360, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.rotation' ), text.rotation || 0, -360, 360, 1, function ( value ) {
 			self.change( function () { text.rotation = value; } );
 		}, '°' );
 
-		this.color( body, 'Colour', text.color || '#3a3f4b', function ( value ) {
+		this.color( body, t( 'panel.inspector.colour' ), text.color || '#3a3f4b', function ( value ) {
 			self.change( function () { text.color = value; } );
 		} );
 
@@ -565,45 +579,45 @@
 	Inspector.prototype.renderShape = function ( shape ) {
 		var self = this;
 
-		this.title( 'Shape' );
+		this.title( t( 'panel.inspector.shape' ) );
 
-		var body = this.section( 'Shape' );
+		var body = this.section( t( 'panel.inspector.shape' ) );
 
-		this.select( body, 'Kind', shape.kind, [
-			{ value: 'rect', label: 'Rectangle' },
-			{ value: 'ellipse', label: 'Ellipse' },
-			{ value: 'stage', label: 'Stage' },
-			{ value: 'aisle', label: 'Aisle' },
-			{ value: 'wall', label: 'Wall' },
-			{ value: 'entrance', label: 'Entrance' },
-			{ value: 'exit', label: 'Exit' },
+		this.select( body, t( 'panel.inspector.kind' ), shape.kind, [
+			{ value: 'rect', label: t( 'panel.inspector.rectangle' ) },
+			{ value: 'ellipse', label: t( 'panel.inspector.ellipse' ) },
+			{ value: 'stage', label: t( 'panel.inspector.stage' ) },
+			{ value: 'aisle', label: t( 'panel.inspector.aisle' ) },
+			{ value: 'wall', label: t( 'panel.inspector.wall' ) },
+			{ value: 'entrance', label: t( 'panel.inspector.entrance' ) },
+			{ value: 'exit', label: t( 'panel.inspector.exit' ) },
 		], function ( value ) {
 			self.change( function () { shape.kind = value; } );
 		} );
 
-		this.text( body, 'Label', shape.label || '', function ( value ) {
+		this.text( body, t( 'panel.inspector.label' ), shape.label || '', function ( value ) {
 			self.change( function () { shape.label = value || null; } );
 		} );
 
 		if ( ! shape.points ) {
-			this.number( body, 'Width', shape.width, 1, 20000, 1, function ( value ) {
+			this.number( body, t( 'panel.inspector.width' ), shape.width, 1, 20000, 1, function ( value ) {
 				self.change( function () { shape.width = value; } );
 			}, 'pt' );
 
-			this.number( body, 'Height', shape.height, 1, 20000, 1, function ( value ) {
+			this.number( body, t( 'panel.inspector.height' ), shape.height, 1, 20000, 1, function ( value ) {
 				self.change( function () { shape.height = value; } );
 			}, 'pt' );
 
-			this.number( body, 'Corner radius', shape.cornerRadius || 0, 0, 400, 1, function ( value ) {
+			this.number( body, t( 'panel.inspector.cornerRadius' ), shape.cornerRadius || 0, 0, 400, 1, function ( value ) {
 				self.change( function () { shape.cornerRadius = value; } );
 			}, 'pt' );
 		}
 
-		this.number( body, 'Rotation', shape.rotation || 0, -360, 360, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.rotation' ), shape.rotation || 0, -360, 360, 1, function ( value ) {
 			self.change( function () { shape.rotation = value; } );
 		}, '°' );
 
-		this.color( body, 'Fill', shape.fill || '#c8ccd4', function ( value ) {
+		this.color( body, t( 'panel.inspector.fill' ), shape.fill || '#c8ccd4', function ( value ) {
 			self.change( function () { shape.fill = value; } );
 		} );
 
@@ -613,23 +627,23 @@
 	Inspector.prototype.renderImage = function ( image ) {
 		var self = this;
 
-		this.title( 'Image' );
+		this.title( t( 'panel.inspector.image' ) );
 
-		var body = this.section( 'Image' );
+		var body = this.section( t( 'panel.inspector.image' ) );
 
-		this.number( body, 'Width', image.width, 10, 20000, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.width' ), image.width, 10, 20000, 1, function ( value ) {
 			self.change( function () { image.width = value; } );
 		}, 'pt' );
 
-		this.number( body, 'Height', image.height, 10, 20000, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.height' ), image.height, 10, 20000, 1, function ( value ) {
 			self.change( function () { image.height = value; } );
 		}, 'pt' );
 
-		this.slider( body, 'Opacity', image.opacity == null ? 1 : image.opacity, 0.1, 1, 0.05, function ( value ) {
+		this.slider( body, t( 'panel.inspector.opacity' ), image.opacity == null ? 1 : image.opacity, 0.1, 1, 0.05, function ( value ) {
 			self.change( function () { image.opacity = value; } );
 		} );
 
-		body.appendChild( el( 'p', 'hint', 'Trace over a scanned floor plan, then delete or hide the image.' ) );
+		body.appendChild( el( 'p', 'hint', t( 'panel.inspector.imageHint' ) ) );
 
 		this.layerField( image );
 	};
@@ -637,24 +651,24 @@
 	Inspector.prototype.renderIcon = function ( icon ) {
 		var self = this;
 
-		this.title( 'Icon' );
+		this.title( t( 'panel.inspector.icon' ) );
 
-		var body = this.section( 'Icon' );
+		var body = this.section( t( 'panel.inspector.icon' ) );
 
-		this.select( body, 'Symbol', icon.name, [
-			{ value: 'wheelchair', label: 'Wheelchair' },
-			{ value: 'toilets', label: 'Toilets' },
-			{ value: 'bar', label: 'Bar' },
-			{ value: 'food', label: 'Food' },
-			{ value: 'entrance', label: 'Entrance' },
-			{ value: 'exit', label: 'Exit' },
-			{ value: 'stairs', label: 'Stairs' },
-			{ value: 'lift', label: 'Lift' },
+		this.select( body, t( 'panel.inspector.symbol' ), icon.name, [
+			{ value: 'wheelchair', label: t( 'panel.inspector.wheelchair' ) },
+			{ value: 'toilets', label: t( 'panel.inspector.toilets' ) },
+			{ value: 'bar', label: t( 'panel.inspector.bar' ) },
+			{ value: 'food', label: t( 'panel.inspector.food' ) },
+			{ value: 'entrance', label: t( 'panel.inspector.entrance' ) },
+			{ value: 'exit', label: t( 'panel.inspector.exit' ) },
+			{ value: 'stairs', label: t( 'panel.inspector.stairs' ) },
+			{ value: 'lift', label: t( 'panel.inspector.lift' ) },
 		], function ( value ) {
 			self.change( function () { icon.name = value; } );
 		} );
 
-		this.number( body, 'Size', icon.size, 8, 120, 1, function ( value ) {
+		this.number( body, t( 'panel.inspector.size' ), icon.size, 8, 120, 1, function ( value ) {
 			self.change( function () { icon.size = value; } );
 		}, 'pt' );
 
@@ -669,12 +683,15 @@
 			types[ object.type ] = ( types[ object.type ] || 0 ) + 1;
 		} );
 
-		this.title( objects.length + ' objects' );
+		this.title( t( 'panel.inspector.objects', { count: objects.length } ) );
 
-		var body = this.section( 'Selection' );
+		var body = this.section( t( 'panel.inspector.selection' ) );
 
 		Object.keys( types ).forEach( function ( type ) {
-			body.appendChild( el( 'div', 'insp-static', types[ type ] + ' × ' + type ) );
+			body.appendChild( el( 'div', 'insp-static', t( 'panel.inspector.typeCount', {
+				count: types[ type ],
+				type: t( 'panel.objectTypes.' + type ),
+			} ) ) );
 		} );
 
 		// Category is the one property worth setting across a mixed selection — it is how a whole
@@ -683,21 +700,21 @@
 			objects.forEach( function ( object ) { object.categoryKey = key; } );
 		} );
 
-		var arrange = this.section( 'Arrange' );
+		var arrange = this.section( t( 'panel.inspector.arrange' ) );
 		var grid = el( 'div', 'arrange' );
 		arrange.appendChild( grid );
 
 		[
-			[ 'Align left', function () { self.editor.alignSelection( 'left' ); } ],
-			[ 'Align centre', function () { self.editor.alignSelection( 'center' ); } ],
-			[ 'Align right', function () { self.editor.alignSelection( 'right' ); } ],
-			[ 'Align top', function () { self.editor.alignSelection( 'top' ); } ],
-			[ 'Align middle', function () { self.editor.alignSelection( 'middle' ); } ],
-			[ 'Align bottom', function () { self.editor.alignSelection( 'bottom' ); } ],
-			[ 'Distribute across', function () { self.editor.distributeSelection( 'x' ); } ],
-			[ 'Distribute down', function () { self.editor.distributeSelection( 'y' ); } ],
+			[ 'alignLeft', function () { self.editor.alignSelection( 'left' ); } ],
+			[ 'alignCentre', function () { self.editor.alignSelection( 'center' ); } ],
+			[ 'alignRight', function () { self.editor.alignSelection( 'right' ); } ],
+			[ 'alignTop', function () { self.editor.alignSelection( 'top' ); } ],
+			[ 'alignMiddle', function () { self.editor.alignSelection( 'middle' ); } ],
+			[ 'alignBottom', function () { self.editor.alignSelection( 'bottom' ); } ],
+			[ 'distributeAcross', function () { self.editor.distributeSelection( 'x' ); } ],
+			[ 'distributeDown', function () { self.editor.distributeSelection( 'y' ); } ],
 		].forEach( function ( entry ) {
-			var button = el( 'button', 'btn btn--sm', entry[ 0 ] );
+			var button = el( 'button', 'btn btn--sm', t( 'panel.inspector.' + entry[ 0 ] ) );
 			button.type = 'button';
 			button.addEventListener( 'click', entry[ 1 ] );
 			grid.appendChild( button );
@@ -708,9 +725,10 @@
 
 	Inspector.prototype.categoryField = function ( object, apply ) {
 		var self = this;
-		var body = this.section( 'Category', 'Manage', function () { self.onManageCategories(); } );
+		var body = this.section( t( 'panel.inspector.category' ), t( 'panel.inspector.manage' ),
+			function () { self.onManageCategories(); } );
 
-		var options = [ { value: '', label: 'No category assigned' } ].concat(
+		var options = [ { value: '', label: t( 'panel.inspector.noCategory' ) } ].concat(
 			( this.editor.chart.categories || [] ).map( function ( category ) {
 				return { value: category.key, label: category.label, color: category.color };
 			} )
@@ -729,10 +747,10 @@
 
 	Inspector.prototype.layerField = function ( object ) {
 		var self = this;
-		var body = this.section( 'Layer' );
+		var body = this.section( t( 'panel.inspector.layer' ) );
 
 		this.select( body, null, object.layer || 'interactive', Chart.LAYERS.map( function ( layer ) {
-			return { value: layer, label: Chart.LAYER_LABELS[ layer ] };
+			return { value: layer, label: t( 'panel.chart.layers.' + layer ) };
 		} ), function ( value ) {
 			self.change( function () { object.layer = value; } );
 		} );
@@ -786,8 +804,8 @@
 		up.type = 'button';
 		down.innerHTML = icon( 'minus', { size: 14 } );
 		up.innerHTML = icon( 'plus', { size: 14 } );
-		down.setAttribute( 'aria-label', 'Decrease ' + label );
-		up.setAttribute( 'aria-label', 'Increase ' + label );
+		down.setAttribute( 'aria-label', t( 'panel.inspector.decrease', { label: label } ) );
+		up.setAttribute( 'aria-label', t( 'panel.inspector.increase', { label: label } ) );
 
 		input.type = 'number';
 		input.setAttribute( 'aria-label', label );
@@ -933,6 +951,13 @@
 	/**
 	 * One number and the word for what it counts, so the figure is what the eye lands on.
 	 */
+	function placeCount( places ) {
+		return stat(
+			global.SeatmapI18n.number( places ),
+			t( 1 === places ? 'panel.chart.place' : 'panel.chart.places' )
+		);
+	}
+
 	function stat( value, label ) {
 		var wrap = el( 'div', 'stat' );
 
@@ -972,7 +997,7 @@
 			var flag = el( 'span', 'muted' );
 
 			flag.innerHTML = icon( 'accessibility', { size: 15 } );
-			flag.setAttribute( 'data-tip', 'Accessible' );
+			flag.setAttribute( 'data-tip', t( 'panel.inspector.accessible' ) );
 			line.appendChild( flag );
 		}
 
