@@ -30,6 +30,7 @@
 		{ key: 'sites', label: 'Websites', icon: 'globe' },
 		{ key: 'themes', label: 'Themes', icon: 'palette' },
 		{ key: 'reports', label: 'Reports', icon: 'chart' },
+		{ key: 'messaging', label: 'Messages', icon: 'mail' },
 		{ key: 'connections', label: 'Connections', icon: 'plug' },
 		{ key: 'modules', label: 'Modules', icon: 'puzzle' },
 		{ key: 'team', label: 'Team', icon: 'users' },
@@ -372,6 +373,7 @@
 			case 'sites': return window.SeatmapSites.renderList( this );
 			case 'themes': return window.SeatmapThemes.render( this );
 			case 'reports': return window.SeatmapReports.render( this );
+			case 'messaging': return window.SeatmapMessaging.render( this );
 			case 'modules': return window.SeatmapModules.render( this );
 			case 'team': return window.SeatmapTeam.render( this );
 			case 'audit': return window.SeatmapAudit.render( this );

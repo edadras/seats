@@ -1,14 +1,13 @@
 <?php
 
-namespace App\Domain\Sites\Payments;
+namespace App\Modules;
 
-use App\Modules\ModuleContext;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 /**
- * The one way a payment module talks to the outside world.
+ * The one way a module talks to the outside world.
  *
  * Modules get a context, not a container (ADR-0004 §2), so they cannot reach for an HTTP client of
  * their own with whatever timeout they felt like. This is that client: a timeout that is short
@@ -16,10 +15,10 @@ use Illuminate\Support\Facades\Http;
  * failure a retry fixes, and a log line on the way out that names the module rather than the URL's
  * host.
  *
- * Nothing here is gateway-specific. What a request means is the gateway's business; that it is
+ * Nothing here is provider-specific. What a request means is the module's business; that it is
  * bounded, logged and attributable is the platform's.
  */
-class GatewayHttp
+class OutboundHttp
 {
     public const TIMEOUT_SECONDS = 12;
 
@@ -53,7 +52,7 @@ class GatewayHttp
     private function log(string $method, string $url, Response $response): Response
     {
         if (! $response->successful()) {
-            $this->context->log('warning', 'Gateway call failed', [
+            $this->context->log('warning', 'Outbound call failed', [
                 'method' => $method,
                 // The path only. A query string on a payment endpoint can carry a reference or a
                 // token, and a log is not the place for either.

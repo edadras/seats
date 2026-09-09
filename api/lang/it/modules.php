@@ -42,6 +42,56 @@ return [
         'not_configured' => 'Compila ciò che serve al modulo prima di attivarlo.',
     ],
     'seatmap' => [
+        'kavenegar' => [
+            'name' => 'Kavenegar',
+            'description' => 'Invia SMS in Iran tramite Kavenegar.',
+            'settings' => [
+                'api_key' => 'Chiave API',
+                'api_key_hint' => 'Dal tuo pannello Kavenegar. Sola scrittura: salvata cifrata e mai più mostrata.',
+                'sender' => 'Linea mittente',
+                'sender_hint' => 'La tua linea dedicata. Vuoto usa quella condivisa del conto.',
+            ],
+        ],
+        'sms_ir' => [
+            'name' => 'SMS.ir',
+            'description' => 'Invia SMS in Iran tramite SMS.ir.',
+            'settings' => [
+                'api_key' => 'Chiave API',
+                'api_key_hint' => 'Dal cruscotto SMS.ir. Sola scrittura: salvata cifrata e mai più mostrata.',
+                'line_number' => 'Numero di linea',
+                'line_number_hint' => 'SMS.ir non invia senza: si chiede qui, non alle otto di sera nel registro.',
+            ],
+        ],
+        'twilio' => [
+            'name' => 'Twilio',
+            'description' => 'Invia SMS fuori dall’Iran tramite Twilio.',
+            'settings' => [
+                'account_sid' => 'Account SID',
+                'account_sid_hint' => 'Inizia con AC, dalla console Twilio.',
+                'auth_token' => 'Auth token',
+                'auth_token_hint' => 'Sola scrittura: salvato cifrato e mai più mostrato.',
+                'from' => 'Numero mittente',
+                'from_hint' => 'Un numero o un identificativo alfanumerico approvato da Twilio.',
+            ],
+        ],
+        'telegram' => [
+            'name' => 'Telegram',
+            'description' => 'Scrivi agli acquirenti con un bot Telegram tuo.',
+            'settings' => [
+                'bot_token' => 'Token del bot',
+                'bot_token_hint' => 'Da @BotFather. Un bot può scrivere solo a chi ha iniziato la conversazione: arriva quindi a chi ha scelto di essere raggiungibile.',
+            ],
+        ],
+        'whatsapp' => [
+            'name' => 'WhatsApp',
+            'description' => 'Scrivi agli acquirenti con la Cloud API di WhatsApp. Il testo libero vale solo entro 24 ore dal loro ultimo messaggio; oltre, Meta richiede un modello approvato, e qui si invia testo semplice.',
+            'settings' => [
+                'access_token' => 'Token di accesso',
+                'access_token_hint' => 'Dalla tua app Meta. Sola scrittura: salvato cifrato e mai più mostrato.',
+                'phone_number_id' => 'ID del numero',
+                'phone_number_id_hint' => 'L’id del numero in WhatsApp Manager — non il numero stesso.',
+            ],
+        ],
         'zarinpal' => [
             'name' => 'Zarinpal',
             'description' => 'Accetta carte bancarie iraniane tramite Zarinpal. Prezzi in rial o toman — indicalo, la differenza è dieci volte.',

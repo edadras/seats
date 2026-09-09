@@ -452,6 +452,191 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /messaging:
+    get:
+      operationId: getMessagingSettings
+      tags: [Messaging]
+      summary: What this account tells buyers, and on what
+      description: >
+        Every kind of message, the channels each goes out on, the languages available, and any
+        wording the organiser has written. A kind with no template of its own uses the platform's,
+        translated — so an account that has configured nothing still sends real messages.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kinds:
+                    type: array
+                    items: { $ref: "#/components/schemas/MessageKind" }
+                  channels:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string, examples: [email, sms.kavenegar, telegram] }
+                        name: { type: string }
+                        address_kind: { type: string, enum: [email, phone, handle] }
+
+  /messaging/log:
+    get:
+      operationId: listMessageDeliveries
+      tags: [Messaging]
+      summary: What was sent, and what happened to it
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [queued, sent, refused, unavailable] }
+        - name: kind
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MessageDelivery" }
+
+  /messaging/test:
+    post:
+      operationId: sendTestMessage
+      tags: [Messaging]
+      summary: Send the wording to somebody, with example values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, channel, locale, to]
+              properties:
+                kind: { type: string }
+                channel: { type: string }
+                locale: { type: string }
+                to: { type: string }
+      responses:
+        "200":
+          description: Attempted — the status says whether it went
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [queued, sent, refused, unavailable] }
+                  reason: { type: [string, 'null'] }
+                  preview: { type: [string, 'null'] }
+
+  /messaging/{kind}/channels/{channel}:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema: { type: string }
+      - name: channel
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      operationId: setMessageChannel
+      tags: [Messaging]
+      summary: Turn a channel on or off for one kind of message
+      description: >
+        A buyer is entitled to be told their order was confirmed, so email cannot be switched off
+        for the messages that are not optional. An organiser chooses how a buyer is told, not
+        whether.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+        "422":
+          description: That message cannot be switched off
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /messaging/{kind}/{channel}/{locale}:
+    parameters:
+      - name: kind
+        in: path
+        required: true
+        schema: { type: string }
+      - name: channel
+        in: path
+        required: true
+        schema: { type: string }
+      - name: locale
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getMessageTemplate
+      tags: [Messaging]
+      summary: The wording that would be used right now
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageTemplate" }
+    put:
+      operationId: saveMessageTemplate
+      tags: [Messaging]
+      summary: Replace the wording
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                subject: { type: [string, 'null'], maxLength: 200 }
+                body: { type: string, maxLength: 4000 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved: { type: boolean }
+    delete:
+      operationId: resetMessageTemplate
+      tags: [Messaging]
+      summary: Put the platform's wording back
+      responses:
+        "200":
+          description: Reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reset: { type: boolean }
+
   /reports/sources:
     get:
       operationId: listReportSources
@@ -3156,6 +3341,56 @@ components:
         failures: { type: integer }
         last_failure_at: { type: [string, "null"], format: date-time }
         last_message: { type: [string, "null"] }
+
+    MessageKind:
+      type: object
+      properties:
+        key: { type: string, examples: [order.confirmed, order.cancelled, event.reminder] }
+        name: { type: string }
+        description: { type: string }
+        placeholders:
+          type: array
+          description: What a template may substitute. Anything else renders as itself.
+          items: { type: string }
+        optional:
+          type: boolean
+          description: False for messages a buyer is entitled to.
+        channels:
+          type: array
+          items: { type: string }
+
+    MessageTemplate:
+      type: object
+      properties:
+        kind: { type: string }
+        channel: { type: string }
+        locale: { type: string }
+        subject: { type: string }
+        body: { type: string }
+        is_default:
+          type: boolean
+          description: True when this is the platform's wording rather than the organiser's.
+        placeholders:
+          type: array
+          items: { type: string }
+
+    MessageDelivery:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string }
+        channel: { type: string }
+        recipient: { type: string }
+        status:
+          type: string
+          enum: [queued, sent, refused, unavailable]
+          description: >
+            `refused` is the provider saying no to this message and is never retried; `unavailable`
+            is the provider being unreachable and always is.
+        reason: { type: [string, 'null'] }
+        preview: { type: [string, 'null'] }
+        attempts: { type: integer }
+        created_at: { type: string, format: date-time }
 
     ReportSource:
       type: object

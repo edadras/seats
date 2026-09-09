@@ -22,6 +22,7 @@
     <script src="{{ asset('editor/js/pricing.js') }}"></script>
     <script src="{{ asset('editor/js/themes.js') }}"></script>
     <script src="{{ asset('editor/js/reports.js') }}"></script>
+    <script src="{{ asset('editor/js/messaging.js') }}"></script>
     <script src="{{ asset('editor/js/seat-prices.js') }}"></script>
     <script src="{{ asset('editor/js/i18n.js') }}"></script>
     <script src="{{ asset('editor/js/panel.js') }}"></script>

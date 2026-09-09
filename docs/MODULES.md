@@ -132,7 +132,7 @@ returns a `PaymentIntent`, `settle()` says what happened. Five first-party ones 
 
 Four things the platform does for you, and one it insists on:
 
-- **Talking out.** Use `App\Domain\Sites\Payments\GatewayHttp`. A module gets a context, not a
+- **Talking out.** Use `App\Domain\Sites\Payments\OutboundHttp`. A module gets a context, not a
   container, so it cannot reach for an HTTP client with whatever timeout it felt like; this one is
   bounded, retried once at the connection level only, and logs failures against your module's key.
 
@@ -152,6 +152,30 @@ Four things the platform does for you, and one it insists on:
 - **Money.** Amounts arrive in the currency's minor unit, which is what this platform stores.
   Convert if your gateway wants something else, through `App\Support\Locale\Money`, and never
   by dividing by a hundred: the rial has no minor unit and the dinar has three.
+
+## Writing a messaging channel
+
+A channel implements `App\Modules\Contracts\MessageChannel`: it is handed a recipient, an already
+rendered and already translated message, and says what happened. Five ship in `modules/` —
+Kavenegar, SMS.ir, Twilio, Telegram, WhatsApp.
+
+The one thing that matters more than the API call is which of the three answers you return:
+
+- `DeliveryResult::sent($reference)` — carry the provider's own id if it gives you one; the
+  delivery log is what somebody reads at a window when a buyer says nothing arrived.
+- `DeliveryResult::refused($reason)` — the provider understood and said no. **Never retried.** A
+  landline is still a landline tomorrow, and asking again is how an account gets rate-limited for
+  messaging people who said no.
+- `DeliveryResult::unavailable($reason)` — the provider could not be reached. **Always retried**,
+  by `messages:retry`, up to four attempts.
+
+Collapsing those two means either giving up on messages that would have gone, or hammering a
+provider that has already refused. Read the status code rather than guessing: a 4xx is usually
+about the message, a 5xx about the provider.
+
+`addressKind()` says what a recipient looks like — `email`, `phone` or `handle` — so a buyer who
+has no address of that kind is simply not sent that one, rather than sent something that cannot
+arrive.
 
 ## Installing one
 

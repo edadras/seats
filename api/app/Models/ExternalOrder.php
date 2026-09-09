@@ -46,6 +46,11 @@ class ExternalOrder extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function apiClient()
+    {
+        return $this->belongsTo(ApiClient::class);
+    }
+
     public function hold()
     {
         return $this->belongsTo(Hold::class);

@@ -2,7 +2,7 @@
 
 namespace Modules\Seatmap\Stripe;
 
-use App\Domain\Sites\Payments\GatewayHttp;
+use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
 use App\Models\ExternalOrder;
@@ -117,9 +117,9 @@ class StripeGateway implements PaymentGateway
 
     /* --------------------------------------------------------------------------- internals */
 
-    private function http(): GatewayHttp
+    private function http(): OutboundHttp
     {
-        return new GatewayHttp($this->context);
+        return new OutboundHttp($this->context);
     }
 
     private function headers(array $extra = []): array

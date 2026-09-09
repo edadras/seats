@@ -20,3 +20,12 @@ Schedule::call(function () {
  * `settle()` is idempotent by contract, which is what makes asking again safe.
  */
 Schedule::command('payments:reconcile')->everyTenMinutes()->withoutOverlapping()->runInBackground();
+
+/*
+ * Messages that could not be sent, and the reminder the night before.
+ *
+ * Retries are only for a provider that could not be reached — a refusal stays refused, because
+ * asking a provider that already said no is how a platform gets rate-limited for nothing.
+ */
+Schedule::command('messages:retry')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
+Schedule::command('messages:remind')->hourly()->withoutOverlapping()->runInBackground();

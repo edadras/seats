@@ -1,0 +1,30 @@
+{
+    "key": "seatmap/twilio",
+    "name": "Twilio",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\Twilio\\Provider",
+    "extends": ["messaging"],
+    "settings": [
+        {
+            "key": "account_sid",
+            "type": "string",
+            "required": true,
+            "label_key": "modules.seatmap.twilio.settings.account_sid",
+            "hint_key": "modules.seatmap.twilio.settings.account_sid_hint"
+        },
+        {
+            "key": "auth_token",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.twilio.settings.auth_token",
+            "hint_key": "modules.seatmap.twilio.settings.auth_token_hint"
+        },
+        {
+            "key": "from",
+            "type": "string",
+            "required": true,
+            "label_key": "modules.seatmap.twilio.settings.from",
+            "hint_key": "modules.seatmap.twilio.settings.from_hint"
+        }
+    ]
+}

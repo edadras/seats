@@ -56,6 +56,10 @@ class WooCommerceController extends Controller
             'buyer' => ['sometimes', 'array'],
             'buyer.name' => ['nullable', 'string', 'max:200'],
             'buyer.email' => ['nullable', 'email', 'max:200'],
+            // The same fields registration takes. A shop often only learns the phone number and
+            // the customer's language at payment, and both decide how they are told about it.
+            'buyer.phone' => ['nullable', 'string', 'max:50'],
+            'buyer.locale' => ['nullable', 'string', 'max:10'],
         ]);
 
         $order = $this->orders->confirm(

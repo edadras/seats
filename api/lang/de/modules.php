@@ -42,6 +42,56 @@ return [
         'not_configured' => 'Tragen Sie ein, was dieses Modul braucht, bevor Sie es einschalten.',
     ],
     'seatmap' => [
+        'kavenegar' => [
+            'name' => 'Kavenegar',
+            'description' => 'SMS im Iran über Kavenegar senden.',
+            'settings' => [
+                'api_key' => 'API-Schlüssel',
+                'api_key_hint' => 'Aus Ihrem Kavenegar-Panel. Nur schreibbar: verschlüsselt gespeichert, nie wieder angezeigt.',
+                'sender' => 'Absenderleitung',
+                'sender_hint' => 'Ihre eigene Leitung. Leer nimmt die gemeinsame Ihres Kontos.',
+            ],
+        ],
+        'sms_ir' => [
+            'name' => 'SMS.ir',
+            'description' => 'SMS im Iran über SMS.ir senden.',
+            'settings' => [
+                'api_key' => 'API-Schlüssel',
+                'api_key_hint' => 'Aus Ihrem SMS.ir-Dashboard. Nur schreibbar: verschlüsselt gespeichert, nie wieder angezeigt.',
+                'line_number' => 'Leitungsnummer',
+                'line_number_hint' => 'SMS.ir sendet ohne sie nicht — deshalb wird sie hier verlangt und nicht abends im Protokoll entdeckt.',
+            ],
+        ],
+        'twilio' => [
+            'name' => 'Twilio',
+            'description' => 'SMS außerhalb des Iran über Twilio senden.',
+            'settings' => [
+                'account_sid' => 'Account SID',
+                'account_sid_hint' => 'Beginnt mit AC, aus Ihrer Twilio-Konsole.',
+                'auth_token' => 'Auth-Token',
+                'auth_token_hint' => 'Nur schreibbar: verschlüsselt gespeichert, nie wieder angezeigt.',
+                'from' => 'Absendernummer',
+                'from_hint' => 'Eine Nummer oder eine von Twilio freigegebene Absenderkennung.',
+            ],
+        ],
+        'telegram' => [
+            'name' => 'Telegram',
+            'description' => 'Käufer über einen eigenen Telegram-Bot benachrichtigen.',
+            'settings' => [
+                'bot_token' => 'Bot-Token',
+                'bot_token_hint' => 'Von @BotFather. Ein Bot kann nur schreiben, wer ihn zuerst angeschrieben hat — es erreicht also Käufer, die erreichbar sein wollten.',
+            ],
+        ],
+        'whatsapp' => [
+            'name' => 'WhatsApp',
+            'description' => 'Käufer über die WhatsApp Cloud API benachrichtigen. Freier Text geht nur innerhalb von 24 Stunden nach deren letzter Nachricht; danach verlangt Meta eine freigegebene Vorlage, und dies sendet einfachen Text.',
+            'settings' => [
+                'access_token' => 'Access Token',
+                'access_token_hint' => 'Aus Ihrer Meta-App. Nur schreibbar: verschlüsselt gespeichert, nie wieder angezeigt.',
+                'phone_number_id' => 'Telefonnummern-ID',
+                'phone_number_id_hint' => 'Die Nummern-ID aus dem WhatsApp Manager — nicht die Rufnummer.',
+            ],
+        ],
         'zarinpal' => [
             'name' => 'Zarinpal',
             'description' => 'Iranische Bankkarten über Zarinpal annehmen. Preise in Rial oder Toman — sagen Sie welche, der Unterschied ist Faktor zehn.',

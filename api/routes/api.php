@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\EventController;
+use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
@@ -109,6 +110,17 @@ Route::prefix('v1')->group(function () {
         // Read-only, by construction. An audit trail an administrator can edit is a diary.
         Route::get('audit', [AuditController::class, 'index']);
         Route::get('audit/facets', [AuditController::class, 'facets']);
+
+        // ---- Messaging -----------------------------------------------------------------
+        // The wording is the organiser's; the fallback is ours, translated. The log is here
+        // because "did the buyer get their confirmation" is asked with somebody waiting.
+        Route::get('messaging', [MessagingController::class, 'index']);
+        Route::get('messaging/log', [MessagingController::class, 'log']);
+        Route::post('messaging/test', [MessagingController::class, 'test'])->middleware('throttle:20,1');
+        Route::put('messaging/{kind}/channels/{channel}', [MessagingController::class, 'setChannel']);
+        Route::get('messaging/{kind}/{channel}/{locale}', [MessagingController::class, 'template']);
+        Route::put('messaging/{kind}/{channel}/{locale}', [MessagingController::class, 'saveTemplate']);
+        Route::delete('messaging/{kind}/{channel}/{locale}', [MessagingController::class, 'resetTemplate']);
 
         // ---- Modules (ADR-0004) --------------------------------------------------------
         // There is no install endpoint and there will not be one: what code runs on a server is

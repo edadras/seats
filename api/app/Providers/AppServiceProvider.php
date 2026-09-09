@@ -17,6 +17,15 @@ class AppServiceProvider extends ServiceProvider
         // One tenant binding per request/job. Everything scoped resolves through this instance.
         $this->app->singleton(TenantContext::class);
 
+        /*
+         * Both registries cache what the enabled modules contribute, keyed by tenant, and both
+         * rebuild when the tenant changes. That only works if everybody shares one — two copies
+         * would each build their own set, and a module enabled halfway through a request would be
+         * visible to one and not the other.
+         */
+        $this->app->singleton(\App\Domain\Sites\Payments\GatewayRegistry::class);
+        $this->app->singleton(\App\Domain\Messaging\ChannelRegistry::class);
+
         $this->app->singleton(PriceSigner::class, function () {
             $key = (string) config('seatmap.signing_key');
 

@@ -1,0 +1,23 @@
+{
+    "key": "seatmap/sms-ir",
+    "name": "SMS.ir",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\SmsIr\\Provider",
+    "extends": ["messaging"],
+    "settings": [
+        {
+            "key": "api_key",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.sms_ir.settings.api_key",
+            "hint_key": "modules.seatmap.sms_ir.settings.api_key_hint"
+        },
+        {
+            "key": "line_number",
+            "type": "string",
+            "required": true,
+            "label_key": "modules.seatmap.sms_ir.settings.line_number",
+            "hint_key": "modules.seatmap.sms_ir.settings.line_number_hint"
+        }
+    ]
+}

@@ -1686,3 +1686,33 @@
 
 .spark__label { fill: var(--text-muted); }
 .spark__value { fill: var(--text); font-variant-numeric: tabular-nums; }
+
+/* --- messages ---------------------------------------------------------------------------- */
+
+.kind {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	inline-size: 100%;
+	padding: var(--s-3);
+	text-align: start;
+	border: 1px solid var(--border);
+	border-radius: var(--r-md);
+	background: var(--surface);
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.kind:hover { border-color: var(--border-strong); }
+.kind .muted { font-size: var(--text-xs); line-height: 1.4; }
+.theme-group.is-open .kind { border-color: var(--accent); box-shadow: var(--ring); }
+
+.kind__channels {
+	display: none;
+	flex-direction: column;
+	gap: var(--s-1);
+	padding: var(--s-3) var(--s-3) 0;
+}
+
+.theme-group.is-open .kind__channels { display: flex; }

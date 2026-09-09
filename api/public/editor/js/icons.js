@@ -37,6 +37,8 @@
 		close: '<path d="M6 6l12 12M18 6L6 18"/>',
 		search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-3.5-3.5"/>',
 		settings: '<circle cx="12" cy="12" r="3.1"/><path d="M12 2.8h.9l.4 2.2a7.2 7.2 0 0 1 1.9 1.1l2.1-.8.9 1.5-1.7 1.5a7.2 7.2 0 0 1 0 2.2l1.7 1.5-.9 1.5-2.1-.8a7.2 7.2 0 0 1-1.9 1.1l-.4 2.2h-1.8l-.4-2.2a7.2 7.2 0 0 1-1.9-1.1l-2.1.8-.9-1.5 1.7-1.5a7.2 7.2 0 0 1 0-2.2L5.6 6.8l.9-1.5 2.1.8a7.2 7.2 0 0 1 1.9-1.1l.4-2.2Z"/>',
+		/* An envelope, for messages. */
+		mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/>',
 		/* A little bar chart, for reports. */
 		chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
 		download: '<path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/>',

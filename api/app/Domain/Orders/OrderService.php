@@ -32,6 +32,7 @@ class OrderService
         private readonly AuditLogger $audit,
         private readonly TenantContext $tenantContext,
         private readonly WebhookDispatcher $webhooks,
+        private readonly \App\Domain\Messaging\OrderMessages $messages,
     ) {}
 
     /** Register an order against a hold — called as soon as WooCommerce creates the order. */
@@ -226,6 +227,11 @@ class OrderService
                 'total_amount' => $order->total_amount,
             ]);
 
+            // The buyer is told, on whatever channels this organiser has turned on. Failures are
+            // recorded and swallowed inside: an order that fails because a text message could not
+            // be sent is a worse outcome than a text message that arrives late.
+            $this->messages->confirmed($order);
+
             $this->webhooks->dispatch($order->tenant_id, 'order.confirmed', [
                 'external_order_id' => $order->external_order_id,
                 'event_public_id' => $event->public_id,
@@ -286,6 +292,8 @@ class OrderService
                 'external_order_id' => $order->external_order_id,
                 'reason' => $reason,
             ]);
+
+            $this->messages->cancelled($order);
 
             $this->webhooks->dispatch($order->tenant_id, 'order.cancelled', [
                 'external_order_id' => $order->external_order_id,

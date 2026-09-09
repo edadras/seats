@@ -1,0 +1,23 @@
+{
+    "key": "seatmap/kavenegar",
+    "name": "Kavenegar",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\Kavenegar\\Provider",
+    "extends": ["messaging"],
+    "settings": [
+        {
+            "key": "api_key",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.kavenegar.settings.api_key",
+            "hint_key": "modules.seatmap.kavenegar.settings.api_key_hint"
+        },
+        {
+            "key": "sender",
+            "type": "string",
+            "required": false,
+            "label_key": "modules.seatmap.kavenegar.settings.sender",
+            "hint_key": "modules.seatmap.kavenegar.settings.sender_hint"
+        }
+    ]
+}

@@ -2,7 +2,7 @@
 
 namespace Modules\Seatmap\Zarinpal;
 
-use App\Domain\Sites\Payments\GatewayHttp;
+use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
 use App\Models\ExternalOrder;
@@ -110,9 +110,9 @@ class ZarinpalGateway implements PaymentGateway
 
     /* --------------------------------------------------------------------------- internals */
 
-    private function http(): GatewayHttp
+    private function http(): OutboundHttp
     {
-        return new GatewayHttp($this->context);
+        return new OutboundHttp($this->context);
     }
 
     private function base(): string

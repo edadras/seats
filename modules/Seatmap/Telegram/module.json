@@ -1,0 +1,16 @@
+{
+    "key": "seatmap/telegram",
+    "name": "Telegram",
+    "version": "1.0.0",
+    "provider": "Modules\\Seatmap\\Telegram\\Provider",
+    "extends": ["messaging"],
+    "settings": [
+        {
+            "key": "bot_token",
+            "type": "secret",
+            "required": true,
+            "label_key": "modules.seatmap.telegram.settings.bot_token",
+            "hint_key": "modules.seatmap.telegram.settings.bot_token_hint"
+        }
+    ]
+}

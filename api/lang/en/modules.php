@@ -42,6 +42,56 @@ return [
         'not_configured' => 'Fill in what this module needs before turning it on.',
     ],
     'seatmap' => [
+        'kavenegar' => [
+            'name' => 'Kavenegar',
+            'description' => 'Send SMS in Iran through Kavenegar.',
+            'settings' => [
+                'api_key' => 'API key',
+                'api_key_hint' => 'From your Kavenegar panel. Write-only: stored encrypted and never shown again.',
+                'sender' => 'Sender line',
+                'sender_hint' => 'Your dedicated line. Blank uses the shared line on your account.',
+            ],
+        ],
+        'sms_ir' => [
+            'name' => 'SMS.ir',
+            'description' => 'Send SMS in Iran through SMS.ir.',
+            'settings' => [
+                'api_key' => 'API key',
+                'api_key_hint' => 'From your SMS.ir dashboard. Write-only: stored encrypted and never shown again.',
+                'line_number' => 'Line number',
+                'line_number_hint' => 'SMS.ir will not send without one, so it is required here rather than discovered at eight in the evening.',
+            ],
+        ],
+        'twilio' => [
+            'name' => 'Twilio',
+            'description' => 'Send SMS outside Iran through Twilio.',
+            'settings' => [
+                'account_sid' => 'Account SID',
+                'account_sid_hint' => 'Starts with AC, from your Twilio console.',
+                'auth_token' => 'Auth token',
+                'auth_token_hint' => 'Write-only: stored encrypted and never shown again.',
+                'from' => 'From number',
+                'from_hint' => 'A number or alphanumeric sender id Twilio has approved for you.',
+            ],
+        ],
+        'telegram' => [
+            'name' => 'Telegram',
+            'description' => 'Message buyers through a Telegram bot you own.',
+            'settings' => [
+                'bot_token' => 'Bot token',
+                'bot_token_hint' => 'From @BotFather. A bot can only message people who have started a conversation with it, so this reaches buyers who chose to be reachable.',
+            ],
+        ],
+        'whatsapp' => [
+            'name' => 'WhatsApp',
+            'description' => 'Message buyers through the WhatsApp Cloud API. Free text only works within 24 hours of their last message; outside that Meta requires an approved template, and this sends plain text.',
+            'settings' => [
+                'access_token' => 'Access token',
+                'access_token_hint' => 'From your Meta app. Write-only: stored encrypted and never shown again.',
+                'phone_number_id' => 'Phone number ID',
+                'phone_number_id_hint' => 'The number id from WhatsApp Manager — not the phone number itself.',
+            ],
+        ],
         'zarinpal' => [
             'name' => 'Zarinpal',
             'description' => 'Take Iranian bank cards through Zarinpal. Prices in rials or tomans — say which, because the difference is a factor of ten.',
