@@ -2695,7 +2695,7 @@ paths:
                       per_page: { type: integer }
                       total: { type: integer }
                       last_page: { type: integer }
-                      expected: { type: integer, description: Tickets for tonight, whatever the filter. }
+                      expected: { type: integer, description: "Tickets for tonight, whatever the filter." }
                       arrived: { type: integer }
                   event:
                     type: object
@@ -4519,9 +4519,9 @@ components:
         email: { type: string }
         reference: { type: string }
         seat: { type: string }
-        quantity: { type: integer, description: More than one only for standing places. }
+        quantity: { type: integer, description: "More than one only for standing places." }
         ticket_type: { type: [string, "null"] }
-        code: { type: string, description: The ticket code's visible prefix, for reading aloud. }
+        code: { type: string, description: "The ticket code's visible prefix, for reading aloud." }
         arrived: { type: boolean }
         arrived_at: { type: [string, "null"], format: date-time }
 
