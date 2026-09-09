@@ -61,6 +61,7 @@ return [
         'tickets.release' => 'Void a ticket and free its seat',
         'orders.view' => 'See orders and what they were worth',
         'orders.refund' => 'Refund an order',
+        'orders.sell' => 'Sell and comp at the window',
         'checkins.view' => 'See who has come in',
         'devices.manage' => 'Pair and revoke door scanners',
         'sites.view' => 'See websites',

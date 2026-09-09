@@ -60,6 +60,7 @@ return [
         'tickets.release' => 'Ein Ticket stornieren und den Platz freigeben',
         'orders.view' => 'Bestellungen und ihre Beträge sehen',
         'orders.refund' => 'Eine Bestellung erstatten',
+        'orders.sell' => 'Am Schalter verkaufen und Freikarten geben',
         'checkins.view' => 'Sehen, wer hereingekommen ist',
         'devices.manage' => 'Einlassgeräte koppeln und sperren',
         'sites.view' => 'Websites sehen',

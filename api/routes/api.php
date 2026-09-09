@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\SignupController;
 use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuditController;
+use App\Http\Controllers\Api\V1\Management\BoxOfficeController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
@@ -122,6 +123,12 @@ Route::prefix('v1')->group(function () {
         Route::get('discounts/{discount}', [DiscountController::class, 'show']);
         Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
         Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
+
+        // ---- The counter -------------------------------------------------------------------
+        // Selling to the person in front of you: cash, an invoice to a school, or a comp.
+        Route::get('events/{event}/counter', [BoxOfficeController::class, 'counter']);
+        Route::post('events/{event}/sell', [BoxOfficeController::class, 'sell'])
+            ->middleware('throttle:60,1');
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);

@@ -60,6 +60,7 @@ return [
         'tickets.release' => 'إبطال تذكرة وتحرير مقعدها',
         'orders.view' => 'رؤية الطلبات وقيمتها',
         'orders.refund' => 'ردّ قيمة طلب',
+        'orders.sell' => 'البيع عند الشباك ومنح تذاكر مجانية',
         'checkins.view' => 'رؤية من دخل',
         'devices.manage' => 'اقتران أجهزة الباب وإلغاؤها',
         'sites.view' => 'رؤية المواقع',

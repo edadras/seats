@@ -60,6 +60,7 @@ return [
         'tickets.release' => 'Annuler un billet et libérer sa place',
         'orders.view' => 'Voir les commandes et leur montant',
         'orders.refund' => 'Rembourser une commande',
+        'orders.sell' => 'Vendre au guichet et offrir des places',
         'checkins.view' => 'Voir qui est entré',
         'devices.manage' => 'Appairer et révoquer les scanners',
         'sites.view' => 'Voir les sites',

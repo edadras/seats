@@ -20,6 +20,7 @@
     <script src="{{ asset('editor/js/tickets.js') }}"></script>
     <script src="{{ asset('editor/js/customers.js') }}"></script>
     <script src="{{ asset('editor/js/orders.js') }}"></script>
+    <script src="{{ asset('editor/js/counter.js') }}"></script>
     <script src="{{ asset('editor/js/discounts.js') }}"></script>
     <script src="{{ asset('editor/js/modules.js') }}"></script>
     <script src="{{ asset('editor/js/team.js') }}"></script>

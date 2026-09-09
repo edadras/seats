@@ -60,6 +60,7 @@ return [
         'tickets.release' => 'Annullare un biglietto e liberarne il posto',
         'orders.view' => 'Vedere gli ordini e i loro importi',
         'orders.refund' => 'Rimborsare un ordine',
+        'orders.sell' => 'Vendere al botteghino e omaggiare',
         'checkins.view' => 'Vedere chi è entrato',
         'devices.manage' => 'Abbinare e revocare gli scanner',
         'sites.view' => 'Vedere i siti',

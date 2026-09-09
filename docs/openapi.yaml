@@ -50,6 +50,7 @@ tags:
   - name: Tickets
   - name: Orders
   - name: Discounts
+  - name: Box office
   - name: Customers
   - name: Notifications
   - name: Sites
@@ -2512,6 +2513,140 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  /events/{event}/counter:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getCounter
+      tags: [Box office]
+      summary: The hall as somebody at a window needs it
+      description: |
+        Requires `orders.sell`. Every seat in the published map, with what it costs and whether it
+        can be sold right now. Seats already sold or in somebody's cart are returned too, marked as
+        such: a clerk asked for "A5" needs to be told it has gone, not left to wonder why it is
+        missing from a list.
+      responses:
+        "200":
+          description: The hall
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currency: { type: string }
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key: { type: string }
+                        name: { type: string }
+                        rows:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              key: { type: string }
+                              name: { type: string }
+                              seats:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    id: { type: string, format: uuid }
+                                    label: { type: string }
+                                    accessible: { type: boolean }
+                                    state: { type: string }
+                                    amount: { type: [integer, "null"] }
+                  areas:
+                    type: array
+                    items: { type: object }
+                  ticket_types:
+                    type: array
+                    items: { $ref: "#/components/schemas/TicketType" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /events/{event}/sell:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    post:
+      operationId: sellAtCounter
+      tags: [Box office]
+      summary: Sell, reserve or give away seats at the window
+      description: |
+        Requires `orders.sell`.
+
+        Not a second order path. The counter makes a hold through the same service — the same
+        locking, the same price snapshot, the same refusal when somebody online got there first —
+        and confirms it through the same order lifecycle, so a seat sold here is a seat sold, with
+        a ticket, a QR code and a row in every report. What differs is only what is written down
+        about the money.
+
+        Held and confirmed in one step, because there is nobody to come back later: a window sale
+        that left a hold behind would be a seat locked for ten minutes because the clerk was
+        interrupted.
+
+        `payment` says which of three things happened. `paid` means the money was taken elsewhere —
+        cash, or the venue's own card terminal. `owed` means they will pay on the night, and the
+        ticket is issued anyway because it is a reservation. `comp` means it is a gift and the
+        order is worth nothing, because a report that counted free seats as revenue would overstate
+        the evening by exactly the generosity of the house.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [buyer, payment]
+              properties:
+                seat_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                areas:
+                  type: object
+                  additionalProperties: { type: integer, minimum: 1 }
+                seat_types:
+                  type: object
+                  additionalProperties: { type: string, format: uuid }
+                area_types:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties: { type: integer, minimum: 1 }
+                buyer:
+                  type: object
+                  required: [name]
+                  properties:
+                    name: { type: string, maxLength: 120 }
+                    email: { type: [string, "null"], format: email }
+                    phone: { type: [string, "null"] }
+                payment: { type: string, enum: [paid, owed, comp] }
+                note: { type: [string, "null"], maxLength: 200 }
+                send_tickets:
+                  type: boolean
+                  description: Refused without an email address to send them to.
+      responses:
+        "201":
+          description: Sold
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  reference: { type: string }
+                  status: { type: string }
+                  total_amount: { type: integer }
+                  currency: { type: string }
+                  payment: { type: string, enum: [paid, owed, comp] }
+                  seats: { type: integer }
+                  tickets_sent: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Somebody else took one of those seats first
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /customers:
     get:

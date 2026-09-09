@@ -41,6 +41,10 @@ final class Permissions
         'tickets.release' => 'boxoffice',
         'orders.view' => 'boxoffice',
         'orders.refund' => 'boxoffice',
+        // Selling at the window, and giving a seat away. Separate from refunding because they are
+        // separate jobs: a volunteer on the door can be trusted to hand out comps for tonight
+        // without also being able to move money back onto somebody's card.
+        'orders.sell' => 'boxoffice',
 
         // --- The door ------------------------------------------------------------------
         'checkins.view' => 'door',
@@ -91,7 +95,7 @@ final class Permissions
         'admin' => [
             'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
-            'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
+            'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish', 'domains.manage',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
@@ -102,7 +106,7 @@ final class Permissions
         'manager' => [
             'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
-            'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
+            'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
@@ -111,7 +115,7 @@ final class Permissions
         ],
         'box_office' => [
             'events.view', 'venues.view', 'maps.view',
-            'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
+            'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
             'checkins.view',
             'reports.attendance.view', 'reports.orders.view',
         ],

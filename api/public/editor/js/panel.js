@@ -32,6 +32,7 @@
 		{ group: null, items: [ { key: 'overview', icon: 'grid' } ] },
 		{ group: 'programme', items: [
 			{ key: 'events', icon: 'calendar' },
+			{ key: 'counter', icon: 'ticket' },
 			{ key: 'orders', icon: 'file' },
 			{ key: 'tickets', icon: 'ticket' },
 			{ key: 'discounts', icon: 'tag' },
@@ -542,6 +543,7 @@
 			case 'audit': return window.SeatmapAudit.render( this );
 			case 'tickets': return window.SeatmapTickets.render( this );
 			case 'customers': return window.SeatmapCustomers.render( this );
+			case 'counter': return window.SeatmapCounter.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
 			case 'events': return this.renderEvents();
