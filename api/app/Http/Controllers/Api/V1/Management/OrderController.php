@@ -111,6 +111,10 @@ class OrderController extends Controller
             'can_resend' => $order->allocations->contains(
                 fn ($allocation) => 'issued' === $allocation->ticket?->status
             ),
+            // Read back rather than recomputed: this is what was charged, and an event whose fee
+            // or tax rate changed since must not rewrite an old booking's history.
+            'totals' => $order->metadata['totals'] ?? null,
+            'discount' => $order->metadata['discount'] ?? null,
         ]);
     }
 

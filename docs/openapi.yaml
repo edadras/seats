@@ -449,6 +449,36 @@ paths:
                   type: array
                   description: Omit to leave existing overrides alone; send [] to clear them.
                   items: { $ref: "#/components/schemas/SeatOverride" }
+                booking_fee_kind:
+                  type: string
+                  enum: [none, per_order, per_ticket]
+                  description: Where the fixed part of the booking fee is applied.
+                booking_fee_amount:
+                  type: integer
+                  minimum: 0
+                  description: Minor units. Charged once per booking, or once per ticket.
+                booking_fee_percent:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: Added on top of the fixed part, as a share of the ticket subtotal.
+                booking_fee_label: { type: [string, "null"], maxLength: 60 }
+                tax_rate:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000
+                  description: >
+                    Basis points, not per cent: 1900 is 19% and 875 is 8.75%. Rates with a fraction
+                    are ordinary, and a whole-per-cent field is a field somebody rounds a tax rate
+                    into.
+                tax_included:
+                  type: boolean
+                  description: >
+                    Whether the prices above already contain the tax. Most of Europe advertises
+                    tax-inclusive prices and most of North America does not; getting it backwards
+                    is a whole VAT rate of error in either direction, so it is asked rather than
+                    assumed.
+                tax_label: { type: [string, "null"], maxLength: 40 }
       responses:
         "200":
           description: Pricing replaced

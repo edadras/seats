@@ -87,6 +87,14 @@ class SiteController extends Controller
             'status' => ['sometimes', 'in:draft,live'],
             'brand' => ['sometimes', 'array'],
             'google_signin' => ['sometimes', 'boolean'],
+            // Who is issuing invoices from this shop, and under what tax number. Switched on and
+            // filled in, or not offered at all — see Site::offersInvoices.
+            'invoices_enabled' => ['sometimes', 'boolean'],
+            'legal_name' => ['sometimes', 'nullable', 'string', 'max:160'],
+            'tax_number' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'billing_address' => ['sometimes', 'nullable', 'string', 'max:600'],
+            'invoice_footer' => ['sometimes', 'nullable', 'string', 'max:300'],
+            'invoice_prefix' => ['sometimes', 'nullable', 'string', 'max:12', 'regex:/^[A-Za-z0-9-]*$/'],
         ]);
 
         // Offered only where the platform has credentials to offer it with. A switch that turns on
@@ -483,6 +491,12 @@ class SiteController extends Controller
             'locale' => $site->locale,
             'timezone' => $site->timezone,
             'currency' => $site->currency,
+            'invoices_enabled' => (bool) $site->invoices_enabled,
+            'legal_name' => $site->legal_name,
+            'tax_number' => $site->tax_number,
+            'billing_address' => $site->billing_address,
+            'invoice_footer' => $site->invoice_footer,
+            'invoice_prefix' => $site->invoice_prefix,
             'brand' => $site->brand ?? [],
             'status' => $site->status,
             'google_signin' => (bool) $site->google_signin,

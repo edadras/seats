@@ -96,4 +96,23 @@ return [
         'needName' => 'Donnez un nom à ce type de billet.',
         'saved' => 'Types de billets enregistrés.',
     ],
+
+    'extras' => [
+        'title' => 'Les frais et la taxe',
+        'subtitle' => 'Ce qui s’ajoute à une réservation en plus des billets. Les deux apparaissent sur leur propre ligne au paiement et sont enregistrés sur la commande, pour qu’une facture puisse dire quelle part de la somme était quoi.',
+        'feeKind' => 'Frais de réservation',
+        'feeKinds' => [
+            'none' => 'Aucuns',
+            'per_order' => 'Une fois par réservation',
+            'per_ticket' => 'Pour chaque billet',
+        ],
+        'feeAmount' => 'Part fixe',
+        'feePercent' => 'Et ce pourcentage',
+        'feeLabel' => 'Comment les nommer',
+        'feeLabelHint' => 'Laissé vide, on lit « Frais de réservation » dans la langue de l’acheteur.',
+        'taxRate' => 'Taux de taxe (%)',
+        'taxLabel' => 'Nom de la taxe',
+        'taxIncluded' => 'Les prix ci-dessus incluent déjà la taxe',
+        'taxIncludedHint' => 'Coché, le total ne bouge pas et la taxe est présentée comme la part qui en relève. Décoché, elle s’ajoute par-dessus.',
+    ],
 ];

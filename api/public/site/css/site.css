@@ -898,6 +898,18 @@ hr { border: none; }
 	font-size: 0.85rem;
 }
 
+/* "I need an invoice", closed until somebody does. */
+.invoice-ask > summary {
+	cursor: pointer;
+	font-weight: 600;
+	font-family: var(--font-heading);
+}
+
+.invoice-ask[open] > summary { margin-block-end: 0.9rem; }
+
+/* A booking fee, or the tax already inside the price. */
+.summary-lines__extra { color: var(--text-muted); }
+
 /* Who a ticket is for, under the seat it belongs to. */
 .summary-lines__note {
 	display: block;

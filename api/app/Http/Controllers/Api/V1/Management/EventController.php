@@ -14,6 +14,7 @@ use App\Models\SeatMap;
 use App\Support\Audit\AuditLogger;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -123,10 +124,23 @@ class EventController extends Controller
             'overrides.*.amount' => ['nullable', 'integer', 'min:0'],
             'overrides.*.zone_key' => ['nullable', 'string', 'max:60'],
             'overrides.*.note' => ['nullable', 'string', 'max:255'],
+            // The two amounts on a booking that are not the ticket. Sent with the prices because
+            // they are the same decision — what this evening costs — made on the same screen.
+            'booking_fee_kind' => ['sometimes', Rule::in(['none', 'per_order', 'per_ticket'])],
+            'booking_fee_amount' => ['sometimes', 'integer', 'min:0'],
+            'booking_fee_percent' => ['sometimes', 'integer', 'min:0', 'max:100'],
+            'booking_fee_label' => ['nullable', 'string', 'max:60'],
+            // Basis points: 1900 is 19%, 875 is 8.75%.
+            'tax_rate' => ['sometimes', 'integer', 'min:0', 'max:10000'],
+            'tax_included' => ['sometimes', 'boolean'],
+            'tax_label' => ['nullable', 'string', 'max:40'],
         ]);
 
         DB::transaction(function () use ($event, $data) {
-            $event->update(['currency' => mb_strtoupper($data['currency'])]);
+            $event->update(['currency' => mb_strtoupper($data['currency'])] + array_intersect_key($data, array_flip([
+                'booking_fee_kind', 'booking_fee_amount', 'booking_fee_percent', 'booking_fee_label',
+                'tax_rate', 'tax_included', 'tax_label',
+            ])));
 
             EventPriceZone::where('event_id', $event->id)->delete();
 
@@ -301,6 +315,13 @@ class EventController extends Controller
             'ends_at' => $event->ends_at?->toIso8601String(),
             'timezone' => $event->timezone,
             'currency' => $event->currency,
+            'booking_fee_kind' => $event->booking_fee_kind,
+            'booking_fee_amount' => (int) $event->booking_fee_amount,
+            'booking_fee_percent' => (int) $event->booking_fee_percent,
+            'booking_fee_label' => $event->booking_fee_label,
+            'tax_rate' => (int) $event->tax_rate,
+            'tax_included' => (bool) $event->tax_included,
+            'tax_label' => $event->tax_label,
             'venue_id' => $event->venue_id,
             'seat_map_id' => $event->seat_map_id,
             'seat_map_version_id' => $event->seat_map_version_id,

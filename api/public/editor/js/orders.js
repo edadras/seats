@@ -218,6 +218,8 @@
 					tile( App.t( 'panel.orders.channel' ), order.channel || '—', '' ) +
 				'</div>' +
 
+				Orders.breakdown( App, order ) +
+
 				'<h3 class="subhead">' + esc( App.t( 'panel.orders.whatWasBought' ) ) + '</h3>' +
 				App.table(
 					[
@@ -370,6 +372,63 @@
 					} );
 			},
 		} );
+	};
+
+	/**
+	 * Where the money went: tickets, discount, fee, tax.
+	 *
+	 * Read back from what was written at the moment of sale, never recomputed. An event whose fee
+	 * or tax rate changed since must not rewrite what an old booking was charged — and a box office
+	 * asked "why is this €38 for €45 of seats" needs the answer that was true then.
+	 */
+	Orders.breakdown = function ( App, order ) {
+		var totals = order.totals;
+
+		if ( ! totals ) {
+			return '';
+		}
+
+		var rows = [
+			[ App.t( 'panel.orders.totals.tickets' ), totals.tickets ],
+		];
+
+		if ( totals.discount ) {
+			rows.push( [
+				order.discount
+					? App.t( 'panel.orders.totals.discountWith', { code: order.discount.code } )
+					: App.t( 'panel.orders.totals.discount' ),
+				-totals.discount,
+			] );
+		}
+
+		if ( totals.fee ) {
+			rows.push( [ totals.fee_label || App.t( 'panel.orders.totals.fee' ), totals.fee ] );
+		}
+
+		if ( totals.tax ) {
+			rows.push( [
+				App.t( totals.tax_included
+					? 'panel.orders.totals.taxIncluded'
+					: 'panel.orders.totals.tax', {
+					name: totals.tax_label || App.t( 'panel.orders.totals.taxName' ),
+					rate: App.number( totals.tax_rate / 100 ),
+				} ),
+				totals.tax,
+			] );
+		}
+
+		rows.push( [ App.t( 'panel.orders.totals.total' ), totals.total ] );
+
+		return '<h3 class="subhead">' + esc( App.t( 'panel.orders.totals.title' ) ) + '</h3>' +
+			App.table(
+				[ App.t( 'panel.orders.totals.what' ), { label: App.t( 'panel.orders.total' ), numeric: true } ],
+				rows.map( function ( row, index ) {
+					return '<tr' + ( index === rows.length - 1 ? ' class="is-strong"' : '' ) + '>' +
+						'<td>' + esc( row[ 0 ] ) + '</td>' +
+						'<td class="tnum">' + esc( App.money( row[ 1 ], order.currency ) ) + '</td>' +
+					'</tr>';
+				} ).join( '' )
+			);
 	};
 
 	/* --------------------------------------------------------------------------- helpers */

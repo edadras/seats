@@ -135,11 +135,13 @@ class Discounts
     }
 
     /**
-     * Take the discount off an order that has just been registered, and write down what happened.
+     * Spend the code against an order and write down what happened.
      *
-     * The order's own total is the thing charged and the thing shown on the confirmation, so it is
-     * the thing that has to change; `metadata.discount` keeps the arithmetic beside it, because an
-     * organiser looking at a €38 order for €45 of seats needs to be able to see why.
+     * The order's *total* is not set here. A booking is tickets, less this discount, plus a fee,
+     * plus tax, and only one place may do that arithmetic — App\Domain\Orders\OrderTotals — or
+     * the confirmation, the invoice and the amount charged start disagreeing by a fee.
+     * `metadata.discount` keeps this half of it beside the order, because an organiser looking at
+     * a €38 booking for €45 of seats needs to be able to see why.
      */
     public function applyTo(ExternalOrder $order, DiscountCode $code, int $amount): bool
     {
@@ -151,7 +153,6 @@ class Discounts
         }
 
         $order->forceFill([
-            'total_amount' => $subtotal - $amount,
             'metadata' => ($order->metadata ?? []) + [
                 'discount' => [
                     'code' => $code->code,

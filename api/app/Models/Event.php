@@ -17,6 +17,8 @@ class Event extends Model
         'tenant_id', 'venue_id', 'seat_map_id', 'seat_map_version_id', 'public_id',
         'name', 'description', 'image_url', 'category', 'status', 'starts_at', 'ends_at', 'timezone', 'currency',
         'hold_ttl_seconds', 'max_extends', 'max_seats_per_order', 'refund_policy', 'settings',
+        'booking_fee_kind', 'booking_fee_amount', 'booking_fee_percent', 'booking_fee_label',
+        'tax_rate', 'tax_included', 'tax_label',
     ];
 
     protected $casts = [
@@ -27,6 +29,10 @@ class Event extends Model
         'max_extends' => 'integer',
         'max_seats_per_order' => 'integer',
         'availability_version' => 'integer',
+        'booking_fee_amount' => 'integer',
+        'booking_fee_percent' => 'integer',
+        'tax_rate' => 'integer',
+        'tax_included' => 'boolean',
     ];
 
     public function getRouteKeyName(): string

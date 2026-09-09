@@ -96,4 +96,23 @@ return [
         'needName' => 'Dai un nome a questo tipo di biglietto.',
         'saved' => 'Tipi di biglietto salvati.',
     ],
+
+    'extras' => [
+        'title' => 'Diritti e imposta',
+        'subtitle' => 'Ciò che si aggiunge a una prenotazione oltre ai biglietti. Entrambi compaiono su una riga propria al pagamento e restano scritti sull’ordine, così una fattura può dire quale parte della somma era cosa.',
+        'feeKind' => 'Diritti di prevendita',
+        'feeKinds' => [
+            'none' => 'Nessuno',
+            'per_order' => 'Una volta per prenotazione',
+            'per_ticket' => 'Per ogni biglietto',
+        ],
+        'feeAmount' => 'Parte fissa',
+        'feePercent' => 'E questa percentuale',
+        'feeLabel' => 'Come chiamarli',
+        'feeLabelHint' => 'Lasciato vuoto si legge «Diritti di prevendita» nella lingua di chi compra.',
+        'taxRate' => 'Aliquota (%)',
+        'taxLabel' => 'Come chiamare l’imposta',
+        'taxIncluded' => 'I prezzi qui sopra comprendono già l’imposta',
+        'taxIncludedHint' => 'Se spuntato il totale non cambia e l’imposta è mostrata come la parte che le compete. Se no, si somma sopra.',
+    ],
 ];

@@ -1458,6 +1458,8 @@
 .on-own-line { display: block; }
 .nowrap { white-space: nowrap; }
 .is-muted td { opacity: 0.6; }
+/* The line a breakdown adds up to. */
+.is-strong td { font-weight: 700; border-block-start: 1px solid var(--border); }
 .select--sm { block-size: 1.75rem; font-size: var(--text-xs); padding-inline-end: var(--s-5); }
 
 /*

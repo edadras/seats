@@ -96,4 +96,23 @@ return [
         'needName' => 'Give this ticket type a name.',
         'saved' => 'Ticket types saved.',
     ],
+
+    'extras' => [
+        'title' => 'The fee and the tax',
+        'subtitle' => 'What is added to a booking beyond the tickets. Both are shown as their own lines at checkout, and both are recorded on the order so an invoice can say what part of the money was what.',
+        'feeKind' => 'Booking fee',
+        'feeKinds' => [
+            'none' => 'None',
+            'per_order' => 'Once per booking',
+            'per_ticket' => 'For every ticket',
+        ],
+        'feeAmount' => 'Fixed part',
+        'feePercent' => 'And this much per cent',
+        'feeLabel' => 'What to call it',
+        'feeLabelHint' => 'Left empty it reads “Booking fee” in the buyer’s language.',
+        'taxRate' => 'Tax rate (%)',
+        'taxLabel' => 'What to call the tax',
+        'taxIncluded' => 'The prices above already include the tax',
+        'taxIncludedHint' => 'Tick this and the total does not move — the tax is shown as the part of it that is tax. Untick it and the tax is added on top.',
+    ],
 ];

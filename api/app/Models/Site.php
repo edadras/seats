@@ -21,12 +21,15 @@ class Site extends Model
     protected $fillable = [
         'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'timezone',
         'currency', 'brand', 'status', 'google_signin', 'published_at',
+        'invoices_enabled', 'legal_name', 'tax_number', 'billing_address',
+        'invoice_footer', 'invoice_prefix',
     ];
 
     protected $casts = [
         'brand' => 'array',
         'google_signin' => 'boolean',
         'published_at' => 'datetime',
+            'invoices_enabled' => 'boolean',
     ];
 
     /**
@@ -75,6 +78,20 @@ class Site extends Model
     {
         return (bool) $this->google_signin
             && app(\App\Domain\Sites\Auth\GoogleIdentity::class)->configured();
+    }
+
+    /**
+     * Whether this shop can issue an invoice at all.
+     *
+     * Switched on *and* filled in: an invoice with no issuing entity and no tax number is not a
+     * document anybody's accounts department will take, so offering the button would be a promise
+     * this site cannot keep.
+     */
+    public function offersInvoices(): bool
+    {
+        return (bool) $this->invoices_enabled
+            && '' !== trim((string) ($this->legal_name ?: $this->name))
+            && '' !== trim((string) $this->billing_address);
     }
 
     public function isLive(): bool

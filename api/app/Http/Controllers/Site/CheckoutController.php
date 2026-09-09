@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Discounts\DiscountOffer;
 use App\Domain\Discounts\Discounts;
+use App\Domain\Invoicing\InvoiceIssuer;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\StorefrontCheckout;
 use App\Domain\Sites\Themes;
@@ -14,6 +15,7 @@ use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\Site;
 use App\Support\Locale\Money;
+use App\Support\Pdf\InvoicePdf;
 use App\Support\Pdf\TicketPdf;
 use App\Support\Qr\QrRenderer;
 use Illuminate\Http\Request;
@@ -60,6 +62,9 @@ class CheckoutController extends Controller
         }
 
         $off = $offer ? $offer->amount : 0;
+        // The same arithmetic the payment will use, asked of the same code. A summary that adds
+        // up differently from the charge is the one bug a checkout must not have.
+        $totals = StorefrontCheckout::totalsFor($hold, $off);
 
         return $this->view($site, 'site.checkout', [
             'title' => 'Checkout · '.$site->name,
@@ -71,10 +76,14 @@ class CheckoutController extends Controller
                 'amount' => $off,
             ] : null,
             'discountError' => $error,
-            'total' => (int) $hold->total_amount - $off,
+            'extras' => $totals->extraLines(),
+            'total' => $totals->total,
             'currency' => $hold->currency,
             'expires_at' => $hold->expires_at,
             'gateways' => $this->gateways->enabledFor($site),
+            // Only asked for where an invoice can actually be issued. A company address field on a
+            // site that cannot produce the document is a question with no purpose.
+            'invoices' => $site->offersInvoices(),
         ]);
     }
 
@@ -157,6 +166,11 @@ class CheckoutController extends Controller
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['nullable', 'string', 'max:40'],
             'gateway' => ['required', 'string', 'max:40'],
+            // Asked for only when the buyer says they need an invoice, and kept only then.
+            'invoice' => ['sometimes', 'boolean'],
+            'company' => ['nullable', 'string', 'max:160'],
+            'tax_number' => ['nullable', 'string', 'max:60'],
+            'billing_address' => ['nullable', 'string', 'max:400'],
         ]);
 
         $allowed = array_map(fn ($g) => $g->key(), $this->gateways->enabledFor($site));
@@ -173,6 +187,12 @@ class CheckoutController extends Controller
         // typing the code and pressing pay is time in which it could have run out.
         $offer = $this->offerFor($request, $hold);
 
+        $billing = ($site->offersInvoices() && $request->boolean('invoice')) ? array_filter([
+            'company' => $data['company'] ?? null,
+            'tax_number' => $data['tax_number'] ?? null,
+            'address' => $data['billing_address'] ?? null,
+        ]) : [];
+
         try {
             [$order, $intent] = $this->checkout->place(
                 $site,
@@ -181,6 +201,7 @@ class CheckoutController extends Controller
                 $data['gateway'],
                 $site->url('/order/'.$reference),
                 $offer?->isAllowed() ? $offer : null,
+                $billing,
             );
         } catch (ApiException $e) {
             if ('discount_used_up' !== $e->errorCode()) {
@@ -292,6 +313,31 @@ class CheckoutController extends Controller
     }
 
     /**
+     * The invoice for this booking, made on the first ask.
+     *
+     * Issued lazily rather than with every order: a number handed to a booking that was never paid
+     * for is a gap in a sequence somebody later has to explain to an auditor.
+     */
+    public function invoice(Request $request, string $reference)
+    {
+        $site = $request->attributes->get('site');
+        $order = $this->ownOrder($request, $reference);
+        $issuer = app(InvoiceIssuer::class);
+
+        if (! $issuer->isEligible($site, $order)) {
+            throw new NotFoundHttpException('No invoice for this order.');
+        }
+
+        $invoice = $issuer->issue($site, $order);
+
+        return response(app(InvoicePdf::class)->render($invoice), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.InvoiceIssuer::filename($invoice).'"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
      * The order this browser bought, or nothing.
      *
      * A booking reference is short and printed on the confirmation page, so it is not a secret.
@@ -325,6 +371,7 @@ class CheckoutController extends Controller
             'title' => 'Your tickets · '.$site->name,
             'order' => $order,
             'tokens' => $tokens,
+            'invoice' => app(InvoiceIssuer::class)->isEligible($site, $order),
             'qr' => fn (string $token) => $this->qr->dataUri($token, 200),
         ]);
     }

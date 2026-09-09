@@ -35,6 +35,33 @@
                     </div>
                 </div>
 
+                @if ($invoices)
+                    {{-- A company address is a question most buyers cannot answer, so it is behind
+                         a checkbox and closed by default. Native <details>: no JavaScript, and it
+                         works on a phone on venue Wi-Fi. --}}
+                    <details class="checkout__step invoice-ask">
+                        <summary>{{ __('site.invoice.ask') }}</summary>
+
+                        <div class="field">
+                            <label for="company">{{ __('site.invoice.company') }}</label>
+                            <input id="company" name="company" maxlength="160" value="{{ old('company') }}">
+                        </div>
+
+                        <div class="field">
+                            <label for="tax_number">{{ __('site.invoice.taxNumberLabel') }}</label>
+                            <input id="tax_number" name="tax_number" maxlength="60" value="{{ old('tax_number') }}">
+                        </div>
+
+                        <div class="field">
+                            <label for="billing_address">{{ __('site.invoice.address') }}</label>
+                            <textarea id="billing_address" name="billing_address" rows="3"
+                                      maxlength="400">{{ old('billing_address') }}</textarea>
+                        </div>
+
+                        <input type="hidden" name="invoice" value="1">
+                    </details>
+                @endif
+
                 <div class="checkout__step">
                     <h2>{{ __('site.howToPay') }}</h2>
 
@@ -75,6 +102,15 @@
                             <span>−{{ $money($discount['amount']) }}</span>
                         </li>
                     @endif
+
+                    {{-- A booking fee is added to the total; an inclusive tax is already inside it
+                         and is shown as a note, not as another thing to add up. --}}
+                    @foreach ($extras as $extra)
+                        <li class="summary-lines__extra">
+                            <span>{{ $extra['label'] }}</span>
+                            <span>{{ empty($extra['informational']) ? '' : '(' }}{{ $money($extra['amount']) }}{{ empty($extra['informational']) ? '' : ')' }}</span>
+                        </li>
+                    @endforeach
                 </ul>
 
                 <p class="summary-total"><span>{{ __('site.total') }}</span><span>{{ $money($total) }}</span></p>

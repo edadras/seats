@@ -241,6 +241,7 @@
 			[ 'menus', 'list', 'menus' ],
 			[ 'domains', 'globe', 'addressNav' ],
 			[ 'signin', 'user', 'signinNav' ],
+			[ 'invoicing', 'file', 'invoicingNav' ],
 		].forEach( function ( entry ) {
 			var button = node( 'button', 'nav-item' );
 			button.innerHTML = icon( entry[ 1 ], { size: 15 } ) +
@@ -268,6 +269,7 @@
 			case 'menus': return Sites.paintMenus( App );
 			case 'domains': return Sites.paintDomains( App );
 			case 'signin': return Sites.paintSignIn( App );
+			case 'invoicing': return Sites.paintInvoicing( App );
 			default: return Sites.paintPage( App );
 		}
 	};
@@ -1217,6 +1219,90 @@
 			} );
 		}
 	};
+
+	/**
+	 * Who issues the invoices, and under what tax number.
+	 *
+	 * The switch alone is not enough: an invoice with no issuing entity and no address is not a
+	 * document anybody's accounts department will accept, so the site offers the button only when
+	 * both are filled in — and this screen says so rather than letting an organiser discover it
+	 * from a buyer's complaint.
+	 */
+	Sites.paintInvoicing = function ( App ) {
+		var site = Sites.state.site;
+		var host = document.getElementById( 'site-main' );
+
+		host.innerHTML =
+			'<div class="site-pane">' +
+				'<div class="page-head page-head--inline">' +
+					'<div class="page-head__text">' +
+						'<h1>' + esc( App.t( 'panel.sites.invoicingTitle' ) ) + '</h1>' +
+						'<p class="page-head__desc">' +
+							esc( App.t( 'panel.sites.invoicingDescription' ) ) + '</p>' +
+					'</div>' +
+				'</div>' +
+				'<div class="card card--pad">' +
+					'<label class="switch switch--row">' +
+						'<input type="checkbox" id="inv-enabled"' +
+							( site.invoices_enabled ? ' checked' : '' ) + '>' +
+						'<span class="switch__track"><span class="switch__thumb"></span></span>' +
+						'<span>' + esc( App.t( 'panel.sites.invoicingToggle' ) ) + '</span>' +
+					'</label>' +
+					'<div class="stack spaced">' +
+						field( App, 'inv-legal', 'panel.sites.legalName', site.legal_name,
+							'panel.sites.legalNameHint' ) +
+						field( App, 'inv-tax', 'panel.sites.taxNumber', site.tax_number ) +
+						'<div class="field"><label class="field__label" for="inv-address">' +
+							esc( App.t( 'panel.sites.billingAddress' ) ) + '</label>' +
+							'<textarea class="input" id="inv-address" rows="4" maxlength="600">' +
+								esc( site.billing_address || '' ) + '</textarea></div>' +
+						field( App, 'inv-footer', 'panel.sites.invoiceFooter', site.invoice_footer,
+							'panel.sites.invoiceFooterHint' ) +
+						field( App, 'inv-prefix', 'panel.sites.invoicePrefix', site.invoice_prefix,
+							'panel.sites.invoicePrefixHint' ) +
+					'</div>' +
+					'<p class="spaced">' +
+						'<button class="btn btn--primary" id="inv-save">' +
+							esc( App.t( 'panel.common.save' ) ) + '</button>' +
+					'</p>' +
+				'</div>' +
+			'</div>';
+
+		document.getElementById( 'inv-save' ).addEventListener( 'click', function () {
+			var payload = {
+				invoices_enabled: document.getElementById( 'inv-enabled' ).checked,
+				legal_name: value( 'inv-legal' ) || null,
+				tax_number: value( 'inv-tax' ) || null,
+				billing_address: value( 'inv-address' ) || null,
+				invoice_footer: value( 'inv-footer' ) || null,
+				invoice_prefix: value( 'inv-prefix' ).toUpperCase() || null,
+			};
+
+			App.request( 'PATCH', '/sites/' + site.id, payload )
+				.then( function ( updated ) {
+					Object.keys( payload ).forEach( function ( key ) { site[ key ] = updated[ key ]; } );
+
+					App.toast( App.t( updated.invoices_enabled && updated.billing_address
+						? 'panel.sites.invoicingSaved'
+						: 'panel.sites.invoicingIncomplete' ) );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+	};
+
+	function field( App, id, key, value, hintKey ) {
+		return '<div class="field"><label class="field__label" for="' + id + '">' +
+			esc( App.t( key ) ) + '</label>' +
+			'<input class="input" id="' + id + '" value="' + esc( value || '' ) + '">' +
+			( hintKey ? '<span class="field__hint">' + esc( App.t( hintKey ) ) + '</span>' : '' ) +
+		'</div>';
+	}
+
+	function value( id ) {
+		var element = document.getElementById( id );
+
+		return element ? String( element.value ).trim() : '';
+	}
 
 	Sites.domainCard = function ( App, domain ) {
 		var card = node( 'div', 'domain' );

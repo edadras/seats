@@ -28,6 +28,11 @@
                 <a class="button" href="/order/{{ $order->external_order_id }}/tickets"
                    download>{{ __('site.downloadTickets') }}</a>
 
+                @if (! empty($invoice))
+                    <a class="button button--quiet" href="/order/{{ $order->external_order_id }}/invoice"
+                       download>{{ __('site.invoice.download') }}</a>
+                @endif
+
                 @if ($order->event)
                     <a class="button button--secondary"
                        href="/events/{{ $order->event->public_id }}/calendar.ics"

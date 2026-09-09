@@ -126,6 +126,49 @@
 					)
 					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ) ) ) +
 
+				'<h3 class="subhead">' + esc( App.t( 'pricing.extras.title' ) ) + '</h3>' +
+				'<p class="hint">' + esc( App.t( 'pricing.extras.subtitle' ) ) + '</p>' +
+				'<div class="field-duo">' +
+					'<div class="field"><label class="field__label" for="fee-kind">' +
+						esc( App.t( 'pricing.extras.feeKind' ) ) + '</label>' +
+						'<select class="select" id="fee-kind">' +
+							[ 'none', 'per_order', 'per_ticket' ].map( function ( kind ) {
+								return '<option value="' + kind + '"' +
+									( kind === ( event.booking_fee_kind || 'none' ) ? ' selected' : '' ) + '>' +
+									esc( App.t( 'pricing.extras.feeKinds.' + kind ) ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+					'<div class="field"><label class="field__label" for="fee-amount">' +
+						esc( App.t( 'pricing.extras.feeAmount' ) ) + '</label>' +
+						'<input class="input tnum" id="fee-amount" type="number" min="0" ' +
+							'step="' + ( Pricing.decimals( currency ) ? Math.pow( 10, -Pricing.decimals( currency ) ).toFixed( Pricing.decimals( currency ) ) : '1' ) + '" ' +
+							'value="' + esc( Pricing.asMajor( event.booking_fee_amount, currency ) ) + '"></div>' +
+					'<div class="field"><label class="field__label" for="fee-percent">' +
+						esc( App.t( 'pricing.extras.feePercent' ) ) + '</label>' +
+						'<input class="input tnum" id="fee-percent" type="number" min="0" max="100" value="' +
+							esc( event.booking_fee_percent || 0 ) + '"></div>' +
+				'</div>' +
+				'<div class="field"><label class="field__label" for="fee-label">' +
+					esc( App.t( 'pricing.extras.feeLabel' ) ) + '</label>' +
+					'<input class="input" id="fee-label" maxlength="60" value="' +
+						esc( event.booking_fee_label || '' ) + '">' +
+					'<span class="field__hint">' + esc( App.t( 'pricing.extras.feeLabelHint' ) ) + '</span></div>' +
+				'<div class="field-duo">' +
+					'<div class="field"><label class="field__label" for="tax-rate">' +
+						esc( App.t( 'pricing.extras.taxRate' ) ) + '</label>' +
+						// Basis points on the wire, per cent on the screen: nobody types 1900 for 19%.
+						'<input class="input tnum" id="tax-rate" type="number" min="0" max="100" step="0.01" value="' +
+							esc( ( ( event.tax_rate || 0 ) / 100 ).toFixed( 2 ) ) + '"></div>' +
+					'<div class="field"><label class="field__label" for="tax-label">' +
+						esc( App.t( 'pricing.extras.taxLabel' ) ) + '</label>' +
+						'<input class="input" id="tax-label" maxlength="40" value="' +
+							esc( event.tax_label || '' ) + '"></div>' +
+				'</div>' +
+				'<label class="perms__row"><input type="checkbox" class="checkbox" id="tax-included"' +
+					( false === event.tax_included ? '' : ' checked' ) + '>' +
+					'<span>' + esc( App.t( 'pricing.extras.taxIncluded' ) ) + '</span></label>' +
+				'<p class="hint">' + esc( App.t( 'pricing.extras.taxIncludedHint' ) ) + '</p>' +
+
 				'<h3 class="subhead">' + esc( App.t( 'pricing.types.title' ) ) + '</h3>' +
 				'<p class="hint">' + esc( App.t( 'pricing.types.subtitle' ) ) + '</p>' +
 				( Pricing.types.length
@@ -470,11 +513,23 @@
 			return zone.onMap && null === zone.amount;
 		} );
 
+		var decimals = Pricing.decimals( currency );
+
 		App.request( 'PUT', '/events/' + Pricing.eventId + '/pricing', {
 			currency: currency,
 			zones: priced.map( function ( zone ) {
 				return { key: zone.key, name: zone.name, amount: zone.amount, color: zone.color };
 			} ),
+			booking_fee_kind: document.getElementById( 'fee-kind' ).value,
+			booking_fee_amount: Math.round(
+				Number( document.getElementById( 'fee-amount' ).value || 0 ) * Math.pow( 10, decimals )
+			),
+			booking_fee_percent: Math.round( Number( document.getElementById( 'fee-percent' ).value || 0 ) ),
+			booking_fee_label: document.getElementById( 'fee-label' ).value.trim() || null,
+			// Back to basis points, so 8.75% survives the round trip as 875 rather than as 9.
+			tax_rate: Math.round( Number( document.getElementById( 'tax-rate' ).value || 0 ) * 100 ),
+			tax_included: document.getElementById( 'tax-included' ).checked,
+			tax_label: document.getElementById( 'tax-label' ).value.trim() || null,
 		} ).then( function () {
 			App.toast( unpriced.length
 				? App.t( 'pricing.savedWithGaps', { count: App.number( unpriced.length ) } )
@@ -482,6 +537,15 @@
 
 			App.renderEvents();
 		} ).catch( function ( error ) { App.toast( error.message, true ); } );
+	};
+
+	/** Minor units as the number a person types, in the currency's own decimal places. */
+	Pricing.asMajor = function ( minor, currency ) {
+		var decimals = Pricing.decimals( currency );
+
+		return decimals
+			? ( ( minor || 0 ) / Math.pow( 10, decimals ) ).toFixed( decimals )
+			: String( minor || 0 );
 	};
 
 	/**

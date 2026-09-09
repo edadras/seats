@@ -5,6 +5,7 @@ namespace App\Domain\Sites;
 use App\Domain\Discounts\DiscountOffer;
 use App\Domain\Discounts\Discounts;
 use App\Domain\Orders\OrderService;
+use App\Domain\Orders\OrderTotals;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\Payments\PaymentIntent;
 use App\Exceptions\ApiException;
@@ -73,6 +74,7 @@ class StorefrontCheckout
         string $gatewayKey,
         string $returnUrl,
         ?DiscountOffer $offer = null,
+        array $billing = [],
     ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
@@ -88,7 +90,8 @@ class StorefrontCheckout
             self::referenceFor($hold),
             $hold->token,
             $buyer,
-            ['source' => 'hosted_site', 'site_id' => $site->id, 'gateway' => $gateway->key()],
+            ['source' => 'hosted_site', 'site_id' => $site->id, 'gateway' => $gateway->key()]
+                + ($billing === [] ? [] : ['billing' => $billing]),
         );
 
         /*
@@ -107,6 +110,24 @@ class StorefrontCheckout
             }
 
             $order->refresh();
+        }
+
+        /*
+         * What the booking actually comes to.
+         *
+         * The hold knows what the seats cost and nothing else. The fee and the tax belong to the
+         * event, and the discount has just been spent, so the total is settled here — once, before
+         * the gateway is told an amount — and written onto the order with its arithmetic beside it.
+         * The confirmation page and the invoice read that back rather than recomputing it, so
+         * neither can drift from what was charged.
+         */
+        if ($registered) {
+            $totals = self::totalsFor($hold, (int) (($order->metadata['discount']['amount'] ?? 0)));
+
+            $order->forceFill([
+                'total_amount' => $totals->total,
+                'metadata' => ($order->metadata ?? []) + ['totals' => $totals->toArray()],
+            ])->save();
         }
 
         $intent = $gateway->begin($order, [
@@ -166,6 +187,30 @@ class StorefrontCheckout
         }
 
         return $order;
+    }
+
+    /**
+     * The booking's arithmetic, from the hold and the event it is for.
+     *
+     * Public and static because the checkout screen needs the same answer before there is an order
+     * to read it from — and it must be the same answer, computed by the same code, or the summary
+     * promises a number the payment does not honour.
+     */
+    public static function totalsFor(Hold $hold, int $discount = 0): OrderTotals
+    {
+        $snapshot = $hold->price_snapshot['decoded'] ?? [];
+        $places = count($snapshot['seats'] ?? []);
+
+        foreach ($snapshot['areas'] ?? [] as $area) {
+            $places += max(1, (int) ($area['quantity'] ?? 1));
+        }
+
+        return OrderTotals::for(
+            $hold->event ?? $hold->loadMissing('event')->event,
+            (int) $hold->total_amount,
+            $discount,
+            $places,
+        );
     }
 
     /**

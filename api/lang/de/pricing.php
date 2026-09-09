@@ -96,4 +96,23 @@ return [
         'needName' => 'Geben Sie dieser Ticketart einen Namen.',
         'saved' => 'Ticketarten gespeichert.',
     ],
+
+    'extras' => [
+        'title' => 'Gebühr und Steuer',
+        'subtitle' => 'Was zu einer Buchung außer den Tickets hinzukommt. Beides erscheint an der Kasse als eigene Zeile und wird auf der Bestellung festgehalten, damit eine Rechnung sagen kann, welcher Teil des Geldes was war.',
+        'feeKind' => 'Buchungsgebühr',
+        'feeKinds' => [
+            'none' => 'Keine',
+            'per_order' => 'Einmal je Buchung',
+            'per_ticket' => 'Für jedes Ticket',
+        ],
+        'feeAmount' => 'Fester Teil',
+        'feePercent' => 'Und so viel Prozent',
+        'feeLabel' => 'Wie sie heißen soll',
+        'feeLabelHint' => 'Leer gelassen steht dort „Buchungsgebühr“ in der Sprache des Käufers.',
+        'taxRate' => 'Steuersatz (%)',
+        'taxLabel' => 'Wie die Steuer heißen soll',
+        'taxIncluded' => 'Die Preise oben enthalten die Steuer bereits',
+        'taxIncludedHint' => 'Angehakt bleibt die Summe gleich und die Steuer wird als der darin enthaltene Anteil ausgewiesen. Ohne Haken kommt sie oben drauf.',
+    ],
 ];
