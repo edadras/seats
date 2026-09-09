@@ -47,9 +47,23 @@ class AuditController extends Controller
             ->orderByDesc('id')
             ->paginate(min((int) ($data['per_page'] ?? 50), 200));
 
-        // Names for the ids, resolved in one query rather than one per row.
-        $actors = User::whereIn('id', $logs->pluck('actor_id')->filter()->unique())
-            ->pluck('name', 'id');
+        /*
+         * Names for the ids, resolved in one query rather than one per row.
+         *
+         * Only the rows whose actor was a *person*. An `actor_id` is a user's UUID, an API key's
+         * `ak_…` id, or a device's id, depending on `actor_type` — and `users.id` is a uuid column,
+         * so handing Postgres an `ak_…` is not an empty result but a 500. It took a signed request
+         * from a shop to put such a row in the table, which is why this screen worked in every
+         * test and broke the first time a WooCommerce store sold a seat.
+         */
+        $actors = User::whereIn(
+            'id',
+            $logs->getCollection()
+                ->where('actor_type', 'user')
+                ->pluck('actor_id')
+                ->filter()
+                ->unique()
+        )->pluck('name', 'id');
 
         return $this->paginated($logs, fn (AuditLog $log) => [
             'id' => $log->id,

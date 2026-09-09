@@ -281,6 +281,37 @@ class AccessControlTest extends TestCase
     }
 
     #[Test]
+    public function the_audit_log_reads_when_a_shop_wrote_a_row_and_not_only_when_a_person_did(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $admin = $this->makeUser($fixture['tenant'], 'admin');
+
+        // What a signed request from a WooCommerce store leaves behind: an actor that is a key,
+        // not a person. `actor_id` is then an `ak_…` id rather than a UUID, and the screen used to
+        // hand that straight to `users.id` — a uuid column, so Postgres answered with a 500 rather
+        // than an empty result. It took a real shop selling a real seat to put such a row in the
+        // table, which is why every test passed and the screen still broke.
+        AuditLog::create([
+            'tenant_id' => $fixture['tenant']->id,
+            'actor_type' => 'api_key',
+            'actor_id' => 'ak_xa3smlenyhtg9fewzz5jwxa8',
+            'action' => 'order.confirmed',
+            'subject_type' => 'Order',
+            'subject_id' => (string) \Illuminate\Support\Str::uuid(),
+            'subject_label' => 'WC-1043',
+            'created_at' => now(),
+        ]);
+
+        $entry = $this->actingAs($admin)->getJson('/v1/audit')->assertOk()->json('data.0');
+
+        $this->assertSame('order.confirmed', $entry['action']);
+        $this->assertSame('api_key', $entry['actor']['type']);
+        $this->assertSame('ak_xa3smlenyhtg9fewzz5jwxa8', $entry['actor']['id']);
+        // A key has no name in `users`; the type is what says what it was.
+        $this->assertNull($entry['actor']['name']);
+    }
+
+    #[Test]
     public function the_audit_log_never_carries_a_secret(): void
     {
         $fixture = $this->makeSellableEvent();
