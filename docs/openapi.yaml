@@ -48,6 +48,7 @@ tags:
   - name: Embed
   - name: WooCommerce
   - name: Tickets
+  - name: Orders
   - name: Customers
   - name: Notifications
   - name: Sites
@@ -2096,6 +2097,161 @@ paths:
               schema: { $ref: "#/components/schemas/Ticket" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [Orders]
+      summary: Every booking, however it was bought
+      description: |
+        The box office's own list. `q` searches the reference, the buyer's name and their email —
+        the three things somebody at a window is holding.
+
+        Requires `orders.view`. Refunding was reachable only over the signed integration API before
+        this, which is the right answer for a shop that owns the money and no answer at all for an
+        organiser selling from their own site.
+      parameters:
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, refunded, partially_refunded]
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/PanelOrder" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /orders/{order}:
+    parameters:
+      - name: order
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getOrderFromPanel
+      tags: [Orders]
+      summary: One booking, with its seats and what the buyer was told
+      description: >
+        The seats and their tickets, and the delivery log for this order — because the question a
+        box office is actually asked is "did they get it", and the answer is a row rather than an
+        inference about whether a provider was up.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PanelOrderDetail" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /orders/{order}/refund:
+    parameters:
+      - name: order
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: refundOrderFromPanel
+      tags: [Orders]
+      summary: Refund all of a booking, or the seats named
+      description: |
+        Requires `orders.refund`. The seats go back on sale (or are held back, per the event's
+        refund policy) and the tickets are voided.
+
+        **This does not move money**, and does not pretend to: the organiser refunds where they
+        took the payment. A platform that marked an order refunded while the card was never
+        credited would be worse than one that says plainly which half it did.
+
+        Omitting `seat_ids` refunds everything, which is also the only way to refund a standing
+        place — those have no seat id to name.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                seat_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                reason: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Refunded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PanelOrder" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /orders/{order}/cancel:
+    parameters:
+      - name: order
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: cancelOrderFromPanel
+      tags: [Orders]
+      summary: Cancel a booking nobody paid for
+      description: >
+        Requires `orders.refund`. Nothing was paid, so nothing is refunded: the held seats go back
+        on sale. Calling it on an order that is already cancelled or refunded answers with its
+        current state rather than failing.
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PanelOrder" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /orders/{order}/resend:
+    parameters:
+      - name: order
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: resendOrderTickets
+      tags: [Orders]
+      summary: Send the buyer their tickets again
+      description: |
+        Requires `tickets.release`, because it necessarily kills the codes that were emailed — the
+        platform keeps a hash of those and cannot hand them back — and that is the same power.
+
+        Every ticket still `issued` gets a new code; used and voided ones are left alone. Audited
+        as `order.tickets_resent`.
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: integer }
+                  to: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /customers:
     get:
       operationId: listCustomers
@@ -3712,6 +3868,68 @@ components:
         subject: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
         read: { type: boolean }
+
+    PanelOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        status: { type: string, enum: [pending, confirmed, cancelled, refunded, partially_refunded] }
+        currency: { type: string }
+        total_amount: { type: integer }
+        placed_at: { type: string, format: date-time }
+        buyer_name: { type: [string, "null"] }
+        buyer_email: { type: [string, "null"] }
+        seats: { type: integer, description: "Places still held on this order." }
+        event:
+          type: [object, "null"]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            starts_at: { type: string, format: date-time }
+
+    PanelOrderDetail:
+      allOf:
+        - $ref: "#/components/schemas/PanelOrder"
+        - type: object
+          properties:
+            buyer:
+              type: object
+              properties:
+                name: { type: [string, "null"] }
+                email: { type: [string, "null"] }
+                phone: { type: [string, "null"] }
+            channel: { type: [string, "null"], description: "The shop or site it was sold through." }
+            confirmed_at: { type: [string, "null"], format: date-time }
+            cancelled_at: { type: [string, "null"], format: date-time }
+            refunded_at: { type: [string, "null"], format: date-time }
+            can_resend: { type: boolean }
+            lines:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  seat_id: { type: [string, "null"], format: uuid }
+                  section: { type: [string, "null"] }
+                  row: { type: [string, "null"] }
+                  seat: { type: [string, "null"] }
+                  quantity: { type: integer }
+                  amount: { type: integer }
+                  status: { type: string, enum: [active, released, void] }
+                  ticket_status: { type: [string, "null"], enum: [issued, used, void, null] }
+                  used_at: { type: [string, "null"], format: date-time }
+            messages:
+              type: array
+              items:
+                type: object
+                properties:
+                  kind: { type: string }
+                  channel: { type: string }
+                  recipient: { type: string }
+                  status: { type: string }
+                  reason: { type: [string, "null"] }
+                  created_at: { type: string, format: date-time }
 
     Money:
       type: object

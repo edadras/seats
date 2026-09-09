@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\NotificationController;
+use App\Http\Controllers\Api\V1\Management\OrderController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
@@ -95,6 +96,17 @@ Route::prefix('v1')->group(function () {
         Route::get('customers', [CustomerController::class, 'index']);
         Route::get('customers/export', [CustomerController::class, 'export']);
         Route::get('customers/{customer}', [CustomerController::class, 'show']);
+
+        // ---- The box office ---------------------------------------------------------------
+        // Refunding was reachable only over the signed integration API, which is the right answer
+        // for a shop that owns the money and no answer at all for an organiser selling from their
+        // own site.
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{order}', [OrderController::class, 'show']);
+        Route::post('orders/{order}/refund', [OrderController::class, 'refund']);
+        Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
+        Route::post('orders/{order}/resend', [OrderController::class, 'resend'])
+            ->middleware('throttle:20,1');
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);
