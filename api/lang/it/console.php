@@ -1,0 +1,144 @@
+<?php
+
+/**
+ * La console della piattaforma stessa — le schermate che leggono le persone che la mandano avanti.
+ *
+ * I nomi delle azioni nel registro degli operatori non sono tradotti: sono identificatori stabili in
+ * un registro che si rilegge anni dopo, e un registro le cui parole cambiano è il registro di
+ * niente.
+ */
+return [
+    'brand' => 'Console',
+    'title' => 'Console della piattaforma',
+    'subtitle' => 'Per chi la manda avanti, non per chi la usa.',
+    'signIn' => 'Accedi',
+    'email' => 'E-mail',
+    'password' => 'Password',
+    'platform' => 'Piattaforma',
+    'signOut' => 'Esci',
+    'sections' => 'Sezioni',
+    'language' => 'Lingua',
+    'failed' => 'Richiesta non riuscita',
+    'save' => 'Salva',
+    'none' => '—',
+
+    'levels' => [
+        'support' => 'Supporto',
+        'operator' => 'Operatore',
+    ],
+
+    'nav' => [
+        'overview' => 'Quadro generale',
+        'tenants' => 'Organizzatori',
+        'sites' => 'Siti web',
+        'plans' => 'Piani',
+        'audit' => 'Registro operatori',
+    ],
+
+    'status' => [
+        'active' => 'Attivo',
+        'suspended' => 'Sospeso',
+        'cancelled' => 'Cessato',
+        'live' => 'In linea',
+        'draft' => 'Bozza',
+    ],
+
+    'overview' => [
+        'description' => 'La piattaforma, in numeri.',
+        'tenants' => 'Organizzatori',
+        'tenantsMeta' => ':active attivi · :suspended sospesi',
+        'newThisMonth' => 'Nuovi questo mese',
+        'sitesLive' => 'Siti in linea',
+        'sitesMeta' => ':count in totale',
+        'domains' => 'Domini verificati',
+        'events' => 'Eventi in vendita',
+        'tickets' => 'Biglietti emessi',
+        'ticketsMeta' => ':count posti questo mese',
+        'takings' => 'Incassi, per valuta',
+        'currency' => 'Valuta',
+        'orders' => 'Ordini',
+        'takenThisMonth' => 'Incassato questo mese',
+        'nothingSold' => 'Questo mese non è stato venduto nulla.',
+    ],
+
+    'tenants' => [
+        'description' => 'Ogni account sulla piattaforma.',
+        'name' => 'Nome',
+        'status' => 'Stato',
+        'plan' => 'Piano',
+        'people' => 'Persone',
+        'sites' => 'Siti',
+        'since' => 'Dal',
+        'open' => 'Apri',
+        'back' => 'Tutti gli organizzatori',
+        'noPlan' => 'nessun piano',
+        'summary' => ':slug · :plan · :events eventi · :tickets biglietti emessi',
+        'peopleHeading' => 'Persone',
+        'sitesHeading' => 'Siti web',
+        'email' => 'E-mail',
+        'role' => 'Ruolo',
+        'siteName' => 'Nome',
+        'addresses' => 'Indirizzi',
+        'impersonate' => 'Apri il loro pannello',
+        'suspend' => 'Sospendi',
+        'reinstate' => 'Riattiva',
+        'whySuspend' => 'Perché questo account viene sospeso?',
+    ],
+
+    'sites' => [
+        'description' => 'Ogni sito che questa piattaforma serve.',
+        'site' => 'Sito',
+        'tenant' => 'Organizzatore',
+        'status' => 'Stato',
+        'theme' => 'Tema',
+        'addresses' => 'Indirizzi',
+        'unverified' => '(non verificato)',
+        'noAddress' => 'nessun indirizzo',
+    ],
+
+    'plans' => [
+        'description' => 'Quanto costa un account e che cosa gli è consentito.',
+        'plan' => 'Piano',
+        'price' => 'Prezzo',
+        'limits' => 'Limiti',
+        'subscribers' => 'Iscritti',
+        'status' => 'Stato',
+        'edit' => 'Modifica',
+        'new' => 'Nuovo piano',
+        'free' => 'Gratuito',
+        'noLimits' => 'Nessun limite',
+        'separator' => ' · ',
+        'unlimited' => '∞',
+        'perMonth' => ':price / mese',
+        'perYear' => ':price / anno',
+        'back' => 'Tutti i piani',
+        'editHint' => 'Cambiare un prezzo cambia quanto le persone pagheranno al rinnovo successivo.',
+        'key' => 'Chiave',
+        'keyHint' => 'Minuscole e trattini. Non modificabile in seguito: un abbonamento vi punta.',
+        'name' => 'Nome',
+        'priceField' => 'Prezzo, in unità minori',
+        'priceHint' => '4900 sono 49,00 €. Zero è gratuito.',
+        'currency' => 'Valuta',
+        'billed' => 'Fatturazione',
+        'monthly' => 'Mensile',
+        'yearly' => 'Annuale',
+        'limitField' => 'Limite di :limit',
+        'limitHint' => 'Vuoto significa nessun limite.',
+        'onSignup' => 'Sulla schermata di iscrizione',
+        'limitNames' => [
+            'max_venues' => 'Sedi',
+            'max_events' => 'Eventi',
+            'max_seats_per_map' => 'Posti per piantina',
+        ],
+    ],
+
+    'audit' => [
+        'description' => 'Che cosa hanno fatto le persone che mandano avanti questa piattaforma dentro gli account altrui.',
+        'when' => 'Quando',
+        'action' => 'Azione',
+        'operator' => 'Operatore',
+        'tenant' => 'Organizzatore',
+        'detail' => 'Dettaglio',
+        'from' => 'Da',
+    ],
+];

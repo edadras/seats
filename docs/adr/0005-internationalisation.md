@@ -138,3 +138,47 @@ catalogue, and every key in the catalogue is looked up by something. Keys assemb
 second copy of the tool list living in a lint. Beyond that, `api/locale_smoke.mjs` drives the real
 panel in Persian and German and asserts both that the translations appear and that a list of
 formerly hard-coded English strings does not.
+
+## Amendment, 2026-09: the console too, and a way to choose
+
+Two things were left over from the amendment above, and both are now done.
+
+**The console is no longer English.** The reasoning for leaving it English was that a handful of
+operators read it and they can read English. That holds only while the platform is run by one
+office: support staff, resellers and the on-call operator of a self-hosted deployment are not
+required to be English speakers, and a screen that can suspend an organiser's account is a poor
+place to guess. `api/lang/*/console.php` is the catalogue, and `tools/panel-strings-check.mjs`
+now checks the panel and the console as two separate surfaces — a `console.…` key looked up by
+panel.js is a failure, which is the mistake worth catching between two applications that share a
+directory.
+
+It is delivered differently, and deliberately: the console page renders its own catalogue into the
+document rather than fetching `/v1/i18n`. That endpoint is public and serves every panel visitor,
+and there is no reason for an organiser's browser to download the words of a screen they may not
+open. Because the page is rendered by the server, choosing a language is a reload with `?lang=`,
+which `LocaleResolver` already understood and already remembers for the session.
+
+Two things stay in English on that screen, for the same reason the keyboard keys did:
+
+- **the audit actions** (`console.signed_in`, `tenant.suspended`) — stable identifiers in a log read
+  back years later, and a log whose entries change wording is a log of nothing;
+- **plan and theme keys** — `pro` is what a subscription points at.
+
+**There is now a way to choose a language.** `I18n.choose` had existed since the i18n work and
+nothing called it: the panel's language came from the account and the `Accept-Language` header, and
+a person who wanted a different one had no way to say so. Both the panel and the console now carry
+a menu in the sidebar footer, and the console carries a second one on its sign-in card — somebody
+who cannot read the sign-in screen cannot reach the switch on the other side of it. Each locale is
+listed in its own language, never in the reader's: somebody looking for Persian is looking for
+فارسی, and "Persian" is exactly the word they cannot read.
+
+The two applications share the choice through `localStorage`, because they are read by the same
+person in the same browser. The console cannot see localStorage from the server, so its first load
+in a session redirects once with `?lang=`; the session remembers it and no further redirect
+happens.
+
+One bug came out of this that is worth recording, because it is invisible in English. Persian and
+Arabic render digits in their own shapes, and a middle dot between two of them reads as another
+digit: "۲۰ · سالن‌ها" is easily read as "۲۰۰". The list separator is therefore a translated string
+rather than a literal in the code — `،` in Persian and Arabic, ` · ` elsewhere. Punctuation is part
+of a language, not part of a layout.

@@ -98,4 +98,11 @@ return [
     'invitation_invalid' => 'Questo invito non è valido, oppure è già stato usato.',
     'invitation_expired' => 'Questo invito è scaduto. Chiedine uno nuovo.',
     'already_a_member' => 'Questa persona fa già parte di questo account.',
+
+    // --- La console della piattaforma -------------------------------------------------------
+    'too_many_attempts' => 'Troppi tentativi. Riprova fra :seconds secondi.',
+    'unknown_plan' => 'Questo piano non esiste.',
+    'no_owner' => 'Questo account non ha nessuno per cui agire.',
+    'support_may_not_change' => 'Gli account di supporto possono guardare, non cambiare.',
+    'plan_in_use' => 'Ci sono organizzatori su questo piano. Disattivalo invece di eliminarlo: lo toglie dalla schermata di iscrizione e lascia loro dove sono.',
 ];

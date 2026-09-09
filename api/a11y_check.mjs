@@ -144,10 +144,19 @@ for ( let i = 0; i < 14; i++ ) {
 
 		const style = getComputedStyle( el );
 
+		/*
+		 * Themes routinely remove the browser default, so the design system draws its own — and it
+		 * draws it two ways. Buttons and links take the shared `:focus-visible` outline; form
+		 * controls take `outline: none` and a box-shadow ring instead, because an outline outside a
+		 * bordered field reads as a second border. Both are focus indicators, and a check that knew
+		 * only about outlines called a perfectly visible field unfocusable.
+		 */
+		const outlined = style.outlineStyle !== 'none' && parseFloat( style.outlineWidth ) > 0;
+		const ringed = style.boxShadow !== 'none' && '' !== style.boxShadow;
+
 		return {
 			name: ( el.getAttribute( 'aria-label' ) || el.textContent || el.tagName ).trim().slice( 0, 28 ),
-			// Themes routinely remove the browser default, so the design system draws its own.
-			visible: style.outlineStyle !== 'none' && parseFloat( style.outlineWidth ) > 0,
+			visible: outlined || ringed,
 		};
 	} );
 

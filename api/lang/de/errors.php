@@ -98,4 +98,11 @@ return [
     'invitation_invalid' => 'Diese Einladung ist ungültig oder wurde bereits benutzt.',
     'invitation_expired' => 'Diese Einladung ist abgelaufen. Fordern Sie eine neue an.',
     'already_a_member' => 'Diese Person gehört bereits zu diesem Konto.',
+
+    // --- Die Plattform-Konsole --------------------------------------------------------------
+    'too_many_attempts' => 'Zu viele Versuche. Versuchen Sie es in :seconds Sekunden erneut.',
+    'unknown_plan' => 'Diesen Tarif gibt es nicht.',
+    'no_owner' => 'Für dieses Konto gibt es niemanden, in dessen Namen gehandelt werden könnte.',
+    'support_may_not_change' => 'Support-Konten dürfen sehen, nicht ändern.',
+    'plan_in_use' => 'Auf diesem Tarif sind Veranstalter. Deaktivieren Sie ihn stattdessen — das nimmt ihn von der Anmeldeseite und lässt die Bestehenden, wo sie sind.',
 ];

@@ -6,14 +6,18 @@
  * code, no route and no token handling, because the day those merge is the day a bug in one is a
  * bug in the other and the blast radius is everybody.
  *
- * Its strings are English only, and that is a decision rather than an oversight: this screen is
- * read by the handful of people who run the platform, not by its customers, and pretending
- * otherwise would mean six translations nobody reads.
+ * It speaks the same six languages as everything else. The catalogue arrives in the page rather
+ * than from `/v1/i18n` — that endpoint is public and serves every panel visitor, and an organiser's
+ * browser has no business downloading the words of a screen they may not open. Because the page is
+ * rendered by the server, switching language is a reload with `?lang=`, which LocaleResolver then
+ * remembers for the session.
  */
 ( function ( global ) {
 	'use strict';
 
 	var icon = global.SeatmapIcon;
+
+	var STORE = { token: 'seatmap_console_token', locale: 'seatmap.locale' };
 
 	var Console = {
 		root: null,
@@ -22,28 +26,132 @@
 		level: 'support',
 		view: 'overview',
 		data: {},
+		i18n: { locale: 'en', icu: 'en-GB', messages: {}, locales: [] },
 	};
 
+	/* Only the key and the icon: the label is looked up when the nav is painted. */
 	var NAV = [
-		{ key: 'overview', label: 'Overview', icon: 'chart' },
-		{ key: 'tenants', label: 'Organisers', icon: 'users' },
-		{ key: 'sites', label: 'Websites', icon: 'globe' },
-		{ key: 'plans', label: 'Plans', icon: 'tag' },
-		{ key: 'audit', label: 'Operator log', icon: 'history' },
+		{ key: 'overview', icon: 'chart' },
+		{ key: 'tenants', icon: 'users' },
+		{ key: 'sites', icon: 'globe' },
+		{ key: 'plans', icon: 'tag' },
+		{ key: 'audit', icon: 'history' },
 	];
 
 	Console.init = function () {
 		Console.root = document.getElementById( 'console' );
 		Console.api = Console.root.dataset.api;
-		Console.token = global.sessionStorage.getItem( 'seatmap_console_token' );
+		Console.token = global.sessionStorage.getItem( STORE.token );
+
+		try {
+			Console.i18n = JSON.parse( Console.root.dataset.i18n || '{}' );
+		} catch ( error ) {
+			// A console that opens in English beats a console that does not open.
+		}
+
+		if ( Console.adoptStoredLanguage() ) {
+			return;
+		}
 
 		Console.token ? Console.load() : Console.showLogin();
+	};
+
+	/**
+	 * Honour a language chosen anywhere in this browser.
+	 *
+	 * The panel and the console are different applications read by the same person, and somebody
+	 * who set the panel to German meant the language, not the screen. The server cannot see
+	 * localStorage, so the first load in a session redirects once with `?lang=`; the session then
+	 * remembers it and no further redirect happens.
+	 */
+	Console.adoptStoredLanguage = function () {
+		var stored = null;
+
+		try {
+			stored = global.localStorage.getItem( STORE.locale );
+		} catch ( error ) {
+			return false;
+		}
+
+		var known = ( Console.i18n.locales || [] ).some( function ( entry ) {
+			return entry.code === stored;
+		} );
+
+		if ( ! stored || ! known || stored === Console.i18n.locale ) {
+			return false;
+		}
+
+		global.location.replace( global.location.pathname + '?lang=' + encodeURIComponent( stored ) );
+
+		return true;
+	};
+
+	/** A reload in another language, remembered for this browser and for this session. */
+	Console.chooseLanguage = function ( locale ) {
+		try {
+			global.localStorage.setItem( STORE.locale, locale );
+		} catch ( error ) {
+			// Storage off: the session still carries the choice, it just does not outlive it.
+		}
+
+		global.location.assign( global.location.pathname + '?lang=' + encodeURIComponent( locale ) );
+	};
+
+	/**
+	 * Look up `console.some.key`, substituting `:name`.
+	 *
+	 * A missing key returns its own last segment rather than nothing, for the same reason the
+	 * panel's does: a button labelled "suspend" is usable and a button labelled nothing is not.
+	 */
+	Console.t = function ( key, replace ) {
+		var value = key.split( '.' ).reduce( function ( carry, part ) {
+			return carry && typeof carry === 'object' ? carry[ part ] : undefined;
+		}, Console.i18n.messages );
+
+		if ( 'string' !== typeof value ) {
+			return key.split( '.' ).pop();
+		}
+
+		return replace
+			? Object.keys( replace ).reduce( function ( carry, name ) {
+				return carry.split( ':' + name ).join( String( replace[ name ] ) );
+			}, value )
+			: value;
+	};
+
+	/** Whether the catalogue really has this key — for the values operators invent themselves. */
+	Console.has = function ( key ) {
+		return 'string' === typeof key.split( '.' ).reduce( function ( carry, part ) {
+			return carry && typeof carry === 'object' ? carry[ part ] : undefined;
+		}, Console.i18n.messages );
+	};
+
+	/** The language menu, shown on the sign-in card and again in the sidebar. */
+	Console.languageField = function ( id ) {
+		return '<select class="select select--sm" id="' + id + '" aria-label="' +
+			esc( t( 'console.language' ) ) + '">' +
+			( Console.i18n.locales || [] ).map( function ( entry ) {
+				return '<option value="' + esc( entry.code ) + '"' +
+					( entry.code === Console.i18n.locale ? ' selected' : '' ) + '>' +
+					esc( entry.native ) + '</option>';
+			} ).join( '' ) +
+			'</select>';
+	};
+
+	Console.bindLanguage = function ( id ) {
+		var select = document.getElementById( id );
+
+		if ( select ) {
+			select.addEventListener( 'change', function () { Console.chooseLanguage( select.value ); } );
+		}
 	};
 
 	/* --------------------------------------------------------------------------- transport */
 
 	Console.request = function ( method, path, body ) {
-		var headers = { Accept: 'application/json' };
+		// The console's language travels with every call, so a refusal the *server* composes comes
+		// back in the language the console is being read in.
+		var headers = { Accept: 'application/json', 'X-Seatmap-Locale': Console.i18n.locale };
 
 		if ( body ) {
 			headers[ 'Content-Type' ] = 'application/json';
@@ -64,7 +172,9 @@
 						Console.signOut();
 					}
 
-					var error = new Error( ( data.error && data.error.message ) || 'Request failed' );
+					var error = new Error(
+						( data.error && data.error.message ) || t( 'console.failed' )
+					);
 					error.code = data.error && data.error.code;
 
 					throw error;
@@ -81,17 +191,25 @@
 		Console.root.innerHTML =
 			'<div class="auth"><form class="auth__card" id="console-login">' +
 				'<div class="auth__brand"><span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) +
-					'</span>Console</div>' +
-				'<h1 class="auth__title">Platform console</h1>' +
-				'<p class="auth__sub">For the people who run this, not the people who use it.</p>' +
-				'<div class="field"><label class="field__label" for="c-email">Email</label>' +
+					'</span>' + esc( t( 'console.brand' ) ) + '</div>' +
+				'<h1 class="auth__title">' + esc( t( 'console.title' ) ) + '</h1>' +
+				'<p class="auth__sub">' + esc( t( 'console.subtitle' ) ) + '</p>' +
+				'<div class="field"><label class="field__label" for="c-email">' +
+					esc( t( 'console.email' ) ) + '</label>' +
 					'<input class="input" id="c-email" type="email" required autocomplete="username"></div>' +
-				'<div class="field"><label class="field__label" for="c-password">Password</label>' +
+				'<div class="field"><label class="field__label" for="c-password">' +
+					esc( t( 'console.password' ) ) + '</label>' +
 					'<input class="input" id="c-password" type="password" required ' +
 					'autocomplete="current-password"></div>' +
 				'<div class="issue issue--error" id="c-error" role="alert" hidden></div>' +
-				'<button class="btn btn--primary btn--lg btn--block" type="submit">Sign in</button>' +
+				'<button class="btn btn--primary btn--lg btn--block" type="submit">' +
+					esc( t( 'console.signIn' ) ) + '</button>' +
+				// On the sign-in card as well as inside: somebody who cannot read this screen
+				// cannot get past it to the switch on the other side.
+				'<p class="auth__foot">' + Console.languageField( 'c-login-lang' ) + '</p>' +
 			'</form></div>';
+
+		Console.bindLanguage( 'c-login-lang' );
 
 		var form = document.getElementById( 'console-login' );
 		var problem = document.getElementById( 'c-error' );
@@ -109,7 +227,7 @@
 				password: document.getElementById( 'c-password' ).value,
 			} ).then( function ( response ) {
 				Console.token = response.token;
-				global.sessionStorage.setItem( 'seatmap_console_token', response.token );
+				global.sessionStorage.setItem( STORE.token, response.token );
 				Console.load();
 			} ).catch( function ( error ) {
 				problem.innerHTML = icon( 'alert', { size: 16 } ) + '<span>' + esc( error.message ) + '</span>';
@@ -119,7 +237,7 @@
 	};
 
 	Console.signOut = function () {
-		global.sessionStorage.removeItem( 'seatmap_console_token' );
+		global.sessionStorage.removeItem( STORE.token );
 		Console.token = null;
 		Console.showLogin();
 	};
@@ -153,15 +271,20 @@
 				'<aside class="sidebar">' +
 					'<div class="sidebar__brand">' +
 						'<span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) + '</span>' +
-						'<span class="grow">Console</span>' +
+						'<span class="grow">' + esc( t( 'console.brand' ) ) + '</span>' +
 					'</div>' +
-					'<nav class="sidebar__nav" id="c-nav" aria-label="Sections"></nav>' +
-					'<div class="sidebar__footer"><div class="account">' +
+					'<nav class="sidebar__nav" id="c-nav" aria-label="' +
+						esc( t( 'console.sections' ) ) + '"></nav>' +
+					'<div class="sidebar__footer">' +
+						'<div class="sidebar__language">' + Console.languageField( 'c-lang' ) + '</div>' +
+						'<div class="account">' +
 						'<div class="account__body">' +
-							'<div class="account__name">Platform</div>' +
-							'<div class="account__meta">' + esc( titleCase( Console.level ) ) + '</div>' +
+							'<div class="account__name">' + esc( t( 'console.platform' ) ) + '</div>' +
+							'<div class="account__meta">' +
+								esc( t( 'console.levels.' + Console.level ) ) + '</div>' +
 						'</div>' +
-						'<button class="icon-btn icon-btn--sm" id="c-signout" aria-label="Sign out">' +
+						'<button class="icon-btn icon-btn--sm" id="c-signout" aria-label="' +
+							esc( t( 'console.signOut' ) ) + '">' +
 							icon( 'logout', { size: 16 } ) + '</button>' +
 					'</div></div>' +
 				'</aside>' +
@@ -175,13 +298,16 @@
 
 			button.className = 'nav-item';
 			button.dataset.view = entry.key;
-			button.innerHTML = icon( entry.icon, { size: 17 } ) + '<span>' + esc( entry.label ) + '</span>';
+			button.innerHTML = icon( entry.icon, { size: 17 } ) +
+				'<span>' + esc( t( 'console.nav.' + entry.key ) ) + '</span>';
 			button.addEventListener( 'click', function () { Console.go( entry.key ); } );
 			nav.appendChild( button );
 		} );
 
 		document.getElementById( 'c-signout' )
 			.addEventListener( 'click', function () { Console.signOut(); } );
+
+		Console.bindLanguage( 'c-lang' );
 	};
 
 	Console.go = function ( view ) {
@@ -222,32 +348,42 @@
 		var data = Console.data.overview;
 
 		var stats = [
-			[ 'Organisers', data.tenants.total, data.tenants.active + ' active · ' + data.tenants.suspended + ' suspended' ],
-			[ 'New this month', data.tenants.new_this_month, '' ],
-			[ 'Websites live', data.sites.live, data.sites.total + ' in total' ],
-			[ 'Verified domains', data.sites.domains_verified, '' ],
-			[ 'Events on sale', data.selling.events, '' ],
-			[ 'Tickets issued', data.selling.tickets_issued, data.selling.seats_sold_this_month + ' seats this month' ],
+			[ 'tenants', data.tenants.total, t( 'console.overview.tenantsMeta', {
+				active: number( data.tenants.active ),
+				suspended: number( data.tenants.suspended ),
+			} ) ],
+			[ 'newThisMonth', data.tenants.new_this_month, '' ],
+			[ 'sitesLive', data.sites.live, t( 'console.overview.sitesMeta', {
+				count: number( data.sites.total ),
+			} ) ],
+			[ 'domains', data.sites.domains_verified, '' ],
+			[ 'events', data.selling.events, '' ],
+			[ 'tickets', data.selling.tickets_issued, t( 'console.overview.ticketsMeta', {
+				count: number( data.selling.seats_sold_this_month ),
+			} ) ],
 		].map( function ( entry ) {
 			return '<div class="stat stat--block">' +
-				'<span class="stat__value tnum">' + esc( entry[ 1 ] ) + '</span>' +
-				'<span class="stat__label">' + esc( entry[ 0 ] ) + '</span>' +
+				'<span class="stat__value tnum">' + esc( number( entry[ 1 ] ) ) + '</span>' +
+				'<span class="stat__label">' + esc( t( 'console.overview.' + entry[ 0 ] ) ) + '</span>' +
 				( entry[ 2 ] ? '<span class="muted">' + esc( entry[ 2 ] ) + '</span>' : '' ) +
 			'</div>';
 		} ).join( '' );
 
 		var takings = ( data.takings_this_month || [] ).length
-			? Console.table( [ 'Currency', 'Orders', 'Taken this month' ],
-				data.takings_this_month.map( function ( row ) {
-					return '<tr><td class="table__primary">' + esc( row.currency ) + '</td>' +
-						'<td class="tnum">' + esc( row.orders ) + '</td>' +
-						'<td class="tnum">' + esc( money( row.total, row.currency ) ) + '</td></tr>';
-				} ).join( '' ) )
-			: '<p class="muted">Nothing has been sold this month.</p>';
+			? Console.table( [
+				t( 'console.overview.currency' ),
+				t( 'console.overview.orders' ),
+				t( 'console.overview.takenThisMonth' ),
+			], data.takings_this_month.map( function ( row ) {
+				return '<tr><td class="table__primary">' + esc( row.currency ) + '</td>' +
+					'<td class="tnum">' + esc( number( row.orders ) ) + '</td>' +
+					'<td class="tnum">' + esc( money( row.total, row.currency ) ) + '</td></tr>';
+			} ).join( '' ) )
+			: '<p class="muted">' + esc( t( 'console.overview.nothingSold' ) ) + '</p>';
 
-		Console.page( 'Overview', 'The platform, in numbers.',
+		Console.page( t( 'console.nav.overview' ), t( 'console.overview.description' ),
 			'<div class="stat-grid">' + stats + '</div>' +
-			'<h3 class="subhead">Takings, by currency</h3>' + takings );
+			'<h3 class="subhead">' + esc( t( 'console.overview.takings' ) ) + '</h3>' + takings );
 	};
 
 	Console.tenants = function () {
@@ -257,17 +393,26 @@
 					'<td class="table__primary">' + esc( tenant.name ) +
 						'<span class="muted on-own-line">' + esc( tenant.slug ) + '</span></td>' +
 					'<td>' + badge( tenant.status ) + '</td>' +
-					'<td>' + esc( tenant.plan_name || '—' ) + '</td>' +
-					'<td class="tnum">' + esc( tenant.people ) + '</td>' +
-					'<td class="tnum">' + esc( tenant.sites ) + '</td>' +
+					'<td>' + esc( tenant.plan_name || t( 'console.none' ) ) + '</td>' +
+					'<td class="tnum">' + esc( number( tenant.people ) ) + '</td>' +
+					'<td class="tnum">' + esc( number( tenant.sites ) ) + '</td>' +
 					'<td class="muted nowrap">' + esc( date( tenant.created_at ) ) + '</td>' +
 					'<td class="table__actions">' +
-						'<button class="btn btn--sm" data-tenant="' + esc( tenant.id ) + '">Open</button>' +
+						'<button class="btn btn--sm" data-tenant="' + esc( tenant.id ) + '">' +
+						esc( t( 'console.tenants.open' ) ) + '</button>' +
 					'</td></tr>';
 			} ).join( '' );
 
-			Console.page( 'Organisers', 'Every account on the platform.',
-				Console.table( [ 'Name', 'Status', 'Plan', 'People', 'Sites', 'Since', '' ], rows ) );
+			Console.page( t( 'console.nav.tenants' ), t( 'console.tenants.description' ),
+				Console.table( [
+					t( 'console.tenants.name' ),
+					t( 'console.tenants.status' ),
+					t( 'console.tenants.plan' ),
+					t( 'console.tenants.people' ),
+					t( 'console.tenants.sites' ),
+					t( 'console.tenants.since' ),
+					'',
+				], rows ) );
 
 			each( '[data-tenant]', function ( button ) {
 				button.addEventListener( 'click', function () { Console.tenant( button.dataset.tenant ); } );
@@ -278,9 +423,9 @@
 	Console.tenant = function ( id ) {
 		Console.request( 'GET', '/admin/tenants/' + id ).then( function ( tenant ) {
 			var people = tenant.members.map( function ( person ) {
-				return '<tr><td class="table__primary">' + esc( person.name || '—' ) + '</td>' +
+				return '<tr><td class="table__primary">' + esc( person.name || t( 'console.none' ) ) + '</td>' +
 					'<td>' + esc( person.email || '' ) + '</td>' +
-					'<td>' + esc( titleCase( person.role ) ) + '</td>' +
+					'<td>' + esc( role( person.role ) ) + '</td>' +
 					'<td>' + ( person.suspended ? badge( 'suspended' ) : badge( 'active' ) ) + '</td></tr>';
 			} ).join( '' );
 
@@ -288,31 +433,49 @@
 				return '<tr><td class="table__primary">' + esc( site.name ) + '</td>' +
 					'<td>' + badge( site.status ) + '</td>' +
 					'<td>' + site.domains.map( function ( domain ) {
-						return esc( domain.hostname ) + ( domain.verified ? '' : ' <span class="muted">(unverified)</span>' );
+						return esc( domain.hostname ) + ( domain.verified
+							? ''
+							: ' <span class="muted">' + esc( t( 'console.sites.unverified' ) ) + '</span>' );
 					} ).join( '<br>' ) + '</td></tr>';
 			} ).join( '' );
 
 			var operator = 'operator' === Console.level;
 
 			Console.page( tenant.name,
-				tenant.slug + ' · ' + ( tenant.plan_name || 'no plan' ) + ' · ' +
-					tenant.events + ' events · ' + tenant.tickets + ' tickets issued',
-				'<h3 class="subhead">People</h3>' +
-					Console.table( [ 'Name', 'Email', 'Role', '' ], people ) +
-				'<h3 class="subhead">Websites</h3>' +
-					Console.table( [ 'Name', 'Status', 'Addresses' ], sites ),
-				'<button class="btn" id="c-back">All organisers</button>' +
+				t( 'console.tenants.summary', {
+					slug: tenant.slug,
+					plan: tenant.plan_name || t( 'console.tenants.noPlan' ),
+					events: number( tenant.events ),
+					tickets: number( tenant.tickets ),
+				} ),
+				'<h3 class="subhead">' + esc( t( 'console.tenants.peopleHeading' ) ) + '</h3>' +
+					Console.table( [
+						t( 'console.tenants.name' ),
+						t( 'console.tenants.email' ),
+						t( 'console.tenants.role' ),
+						'',
+					], people ) +
+				'<h3 class="subhead">' + esc( t( 'console.tenants.sitesHeading' ) ) + '</h3>' +
+					Console.table( [
+						t( 'console.tenants.siteName' ),
+						t( 'console.tenants.status' ),
+						t( 'console.tenants.addresses' ),
+					], sites ),
+				'<button class="btn" id="c-back">' + esc( t( 'console.tenants.back' ) ) + '</button>' +
 				( operator
-					? '<button class="btn" id="c-impersonate">Open their panel</button>' +
+					? '<button class="btn" id="c-impersonate">' +
+							esc( t( 'console.tenants.impersonate' ) ) + '</button>' +
 						( 'active' === tenant.status
-							? '<button class="btn btn--danger" id="c-suspend">Suspend</button>'
-							: '<button class="btn btn--primary" id="c-reinstate">Reinstate</button>' )
+							? '<button class="btn btn--danger" id="c-suspend">' +
+								esc( t( 'console.tenants.suspend' ) ) + '</button>'
+							: '<button class="btn btn--primary" id="c-reinstate">' +
+								esc( t( 'console.tenants.reinstate' ) ) + '</button>' )
 					: '' ) );
 
 			bind( 'c-back', function () { Console.go( 'tenants' ); } );
 
 			bind( 'c-suspend', function () {
-				var reason = global.prompt( 'Why is this account being suspended?' );
+				var reason = global.prompt( t( 'console.tenants.whySuspend' ) );
 
 				if ( null === reason ) {
 					return;
@@ -355,14 +518,22 @@
 					'<td>' + esc( site.theme ) + '</td>' +
 					'<td>' + ( site.domains.length
 						? site.domains.map( function ( domain ) {
-							return esc( domain.hostname ) +
-								( domain.verified ? '' : ' <span class="muted">(unverified)</span>' );
+							return esc( domain.hostname ) + ( domain.verified
+								? ''
+								: ' <span class="muted">' + esc( t( 'console.sites.unverified' ) ) + '</span>' );
 						} ).join( '<br>' )
-						: '<span class="muted">no address yet</span>' ) + '</td></tr>';
+						: '<span class="muted">' + esc( t( 'console.sites.noAddress' ) ) + '</span>' ) +
+						'</td></tr>';
 			} ).join( '' );
 
-			Console.page( 'Websites', 'Every site this platform serves.',
-				Console.table( [ 'Site', 'Organiser', 'Status', 'Theme', 'Addresses' ], rows ) );
+			Console.page( t( 'console.nav.sites' ), t( 'console.sites.description' ),
+				Console.table( [
+					t( 'console.sites.site' ),
+					t( 'console.sites.tenant' ),
+					t( 'console.sites.status' ),
+					t( 'console.sites.theme' ),
+					t( 'console.sites.addresses' ),
+				], rows ) );
 		} ).catch( fail );
 	};
 
@@ -373,23 +544,30 @@
 			var rows = body.data.map( function ( plan ) {
 				return '<tr><td class="table__primary">' + esc( plan.name ) +
 						'<span class="muted on-own-line">' + esc( plan.key ) + '</span></td>' +
-					'<td class="tnum">' + esc( plan.price_amount
-						? money( plan.price_amount, plan.currency ) + ' / ' + plan.interval
-						: 'Free' ) + '</td>' +
+					'<td class="tnum">' + esc( price( plan ) ) + '</td>' +
 					'<td class="muted">' + esc( limits( plan.limits ) ) + '</td>' +
-					'<td class="tnum">' + esc( plan.subscribers ) + '</td>' +
+					'<td class="tnum">' + esc( number( plan.subscribers ) ) + '</td>' +
 					'<td>' + ( plan.is_active ? badge( 'active' ) : badge( 'draft' ) ) + '</td>' +
 					'<td class="table__actions">' +
 						( 'operator' === Console.level
-							? '<button class="btn btn--sm" data-plan="' + esc( plan.id ) + '">Edit</button>'
+							? '<button class="btn btn--sm" data-plan="' + esc( plan.id ) + '">' +
+								esc( t( 'console.plans.edit' ) ) + '</button>'
 							: '' ) +
 					'</td></tr>';
 			} ).join( '' );
 
-			Console.page( 'Plans', 'What an account costs, and what it may do.',
-				Console.table( [ 'Plan', 'Price', 'Limits', 'On it', 'Status', '' ], rows ),
+			Console.page( t( 'console.nav.plans' ), t( 'console.plans.description' ),
+				Console.table( [
+					t( 'console.plans.plan' ),
+					t( 'console.plans.price' ),
+					t( 'console.plans.limits' ),
+					t( 'console.plans.subscribers' ),
+					t( 'console.plans.status' ),
+					'',
+				], rows ),
 				'operator' === Console.level
-					? '<button class="btn btn--primary" id="c-new-plan">New plan</button>'
+					? '<button class="btn btn--primary" id="c-new-plan">' +
+						esc( t( 'console.plans.new' ) ) + '</button>'
 					: '' );
 
 			bind( 'c-new-plan', function () { Console.editPlan( null ); } );
@@ -413,31 +591,36 @@
 	Console.editPlan = function ( plan ) {
 		var editing = !! plan;
 
-		Console.page( editing ? plan.name : 'New plan',
-			editing ? 'Changing a price changes what people pay at their next renewal.' : '',
+		Console.page( editing ? plan.name : t( 'console.plans.new' ),
+			editing ? t( 'console.plans.editHint' ) : '',
 			'<form class="stack" id="c-plan-form" style="max-inline-size:34rem">' +
 				( editing
 					? ''
-					: '<div class="field"><label class="field__label" for="p-key">Key</label>' +
+					: '<div class="field"><label class="field__label" for="p-key">' +
+						esc( t( 'console.plans.key' ) ) + '</label>' +
 						'<input class="input" id="p-key" required pattern="[a-z0-9-]+" maxlength="40">' +
-						'<span class="field__hint">Lower case and dashes. Cannot be changed later — ' +
-						'a subscription points at it.</span></div>' ) +
-				'<div class="field"><label class="field__label" for="p-name">Name</label>' +
+						'<span class="field__hint">' + esc( t( 'console.plans.keyHint' ) ) +
+						'</span></div>' ) +
+				'<div class="field"><label class="field__label" for="p-name">' +
+					esc( t( 'console.plans.name' ) ) + '</label>' +
 					'<input class="input" id="p-name" required maxlength="80" value="' +
 					esc( editing ? plan.name : '' ) + '"></div>' +
-				'<div class="field"><label class="field__label" for="p-price">Price, in minor units</label>' +
+				'<div class="field"><label class="field__label" for="p-price">' +
+					esc( t( 'console.plans.priceField' ) ) + '</label>' +
 					'<input class="input tnum" id="p-price" type="number" min="0" required value="' +
 					esc( editing ? plan.price_amount : 0 ) + '">' +
-					'<span class="field__hint">4900 is €49.00. Zero is free.</span></div>' +
-				'<div class="field"><label class="field__label" for="p-currency">Currency</label>' +
+					'<span class="field__hint">' + esc( t( 'console.plans.priceHint' ) ) + '</span></div>' +
+				'<div class="field"><label class="field__label" for="p-currency">' +
+					esc( t( 'console.plans.currency' ) ) + '</label>' +
 					'<input class="input input--code" id="p-currency" maxlength="3" required value="' +
 					esc( editing ? plan.currency : 'EUR' ) + '"></div>' +
-				'<div class="field"><label class="field__label" for="p-interval">Billed</label>' +
+				'<div class="field"><label class="field__label" for="p-interval">' +
+					esc( t( 'console.plans.billed' ) ) + '</label>' +
 					'<select class="select" id="p-interval">' +
 						'<option value="month"' + ( editing && 'month' === plan.interval ? ' selected' : '' ) +
-							'>Monthly</option>' +
+							'>' + esc( t( 'console.plans.monthly' ) ) + '</option>' +
 						'<option value="year"' + ( editing && 'year' === plan.interval ? ' selected' : '' ) +
-							'>Yearly</option>' +
+							'>' + esc( t( 'console.plans.yearly' ) ) + '</option>' +
 					'</select></div>' +
 				( Console.data.limitKeys || [] ).map( function ( key ) {
 					var value = editing && plan.limits && undefined !== plan.limits[ key ]
@@ -445,17 +628,19 @@
 						: '';
 
 					return '<div class="field"><label class="field__label" for="p-' + key + '">' +
-						esc( titleCase( key ) ) + ' limit</label>' +
+						esc( t( 'console.plans.limitField', { limit: limitName( key ) } ) ) + '</label>' +
 						'<input class="input tnum" id="p-' + key + '" type="number" min="0" value="' +
 						esc( null === value ? '' : value ) + '">' +
-						'<span class="field__hint">Blank means no limit.</span></div>';
+						'<span class="field__hint">' + esc( t( 'console.plans.limitHint' ) ) +
+						'</span></div>';
 				} ).join( '' ) +
 				'<label class="perms__row"><input type="checkbox" class="checkbox" id="p-active"' +
 					( ! editing || plan.is_active ? ' checked' : '' ) +
-					'><span>On the signup screen</span></label>' +
+					'><span>' + esc( t( 'console.plans.onSignup' ) ) + '</span></label>' +
 			'</form>',
-			'<button class="btn" id="c-plans-back">All plans</button>' +
-			'<button class="btn btn--primary" id="c-plan-save">Save</button>' );
+			'<button class="btn" id="c-plans-back">' + esc( t( 'console.plans.back' ) ) + '</button>' +
+			'<button class="btn btn--primary" id="c-plan-save">' +
+				esc( t( 'console.save' ) ) + '</button>' );
 
 		bind( 'c-plans-back', function () { Console.go( 'plans' ); } );
 
@@ -489,15 +674,23 @@
 			var rows = body.data.map( function ( entry ) {
 				return '<tr><td class="muted nowrap">' + esc( date( entry.created_at ) ) + '</td>' +
 					'<td class="table__primary">' + esc( entry.action ) + '</td>' +
-					'<td>' + esc( entry.operator || '—' ) + '</td>' +
-					'<td>' + esc( entry.tenant || '—' ) + '</td>' +
+					'<td>' + esc( entry.operator || t( 'console.none' ) ) + '</td>' +
+					'<td>' + esc( entry.tenant || t( 'console.none' ) ) + '</td>' +
 					'<td class="muted">' + esc( JSON.stringify( entry.context || {} ) ) + '</td>' +
 					'<td class="muted">' + esc( entry.ip || '' ) + '</td></tr>';
 			} ).join( '' );
 
-			Console.page( 'Operator log',
-				'What the people who run this platform did inside other people’s accounts.',
-				Console.table( [ 'When', 'Action', 'Operator', 'Organiser', 'Detail', 'From' ], rows ) );
+			// The action names are not translated: they are stable identifiers written into a log
+			// read back years later, and a log whose entries change wording is a log of nothing.
+			Console.page( t( 'console.nav.audit' ), t( 'console.audit.description' ),
+				Console.table( [
+					t( 'console.audit.when' ),
+					t( 'console.audit.action' ),
+					t( 'console.audit.operator' ),
+					t( 'console.audit.tenant' ),
+					t( 'console.audit.detail' ),
+					t( 'console.audit.from' ),
+				], rows ) );
 		} ).catch( fail );
 	};
 
@@ -530,31 +723,70 @@
 		Array.prototype.forEach.call( document.querySelectorAll( selector ), visit );
 	}
 
+	/** Short, because it appears once per label. */
+	function t( key, replace ) {
+		return Console.t( key, replace );
+	}
+
 	function badge( status ) {
 		var tone = { active: 'ok', live: 'ok', suspended: 'danger', cancelled: 'danger', draft: 'neutral' };
+		var key = 'console.status.' + status;
 
 		return '<span class="badge badge--' + ( tone[ status ] || 'neutral' ) + '">' +
-			esc( titleCase( status ) ) + '</span>';
+			esc( Console.has( key ) ? t( key ) : titleCase( status ) ) + '</span>';
+	}
+
+	/**
+	 * A role the platform defines has a name; one an organiser invented for itself does not, and
+	 * inventing a translation for it would be worse than showing what they called it.
+	 */
+	function role( key ) {
+		return Console.has( 'team.roles.' + key ) ? t( 'team.roles.' + key ) : titleCase( key );
+	}
+
+	function limitName( key ) {
+		return Console.has( 'console.plans.limitNames.' + key )
+			? t( 'console.plans.limitNames.' + key )
+			: titleCase( key );
+	}
+
+	function price( plan ) {
+		if ( ! plan.price_amount ) {
+			return t( 'console.plans.free' );
+		}
+
+		return t( 'year' === plan.interval ? 'console.plans.perYear' : 'console.plans.perMonth', {
+			price: money( plan.price_amount, plan.currency ),
+		} );
 	}
 
 	function limits( set ) {
 		var keys = Object.keys( set || {} );
 
 		if ( ! keys.length ) {
-			return 'No limits';
+			return t( 'console.plans.noLimits' );
 		}
 
+		// The separator is a translated string: a middle dot between Persian digits reads as
+		// another digit, and this line is nothing but digits.
 		return keys.map( function ( key ) {
-			return titleCase( key ) + ': ' + ( null === set[ key ] ? '∞' : set[ key ] );
-		} ).join( ' · ' );
+			return limitName( key ) + ': ' +
+				( null === set[ key ] ? t( 'console.plans.unlimited' ) : number( set[ key ] ) );
+		} ).join( t( 'console.plans.separator' ) );
 	}
 
+	/**
+	 * Money in the currency charged and the shape this operator reads.
+	 *
+	 * The decimal places come from the currency, not from a guess: assuming two turns 500,000 rials
+	 * into 5,000, and an operator reading the month's takings is exactly who must not see that.
+	 */
 	function money( minorUnits, currency ) {
 		try {
 			var places = new Intl.NumberFormat( 'en', { style: 'currency', currency: currency } )
 				.resolvedOptions().minimumFractionDigits;
 
-			return new Intl.NumberFormat( 'en', {
+			return new Intl.NumberFormat( Console.i18n.icu, {
 				style: 'currency',
 				currency: currency,
 				minimumFractionDigits: places,
@@ -565,14 +797,27 @@
 		}
 	}
 
+	function number( value ) {
+		try {
+			return new Intl.NumberFormat( Console.i18n.icu ).format( value );
+		} catch ( error ) {
+			return String( value );
+		}
+	}
+
+	/** The reader's language *and* calendar — the ICU locale carries both. */
 	function date( value ) {
 		if ( ! value ) {
 			return '';
 		}
 
-		return new Date( value ).toLocaleString( 'en-GB', {
-			day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-		} );
+		try {
+			return new Intl.DateTimeFormat( Console.i18n.icu, {
+				day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+			} ).format( new Date( value ) );
+		} catch ( error ) {
+			return String( value );
+		}
 	}
 
 	function titleCase( value ) {

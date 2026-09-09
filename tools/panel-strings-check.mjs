@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * The panel's keys and its catalogue have to agree, in both directions.
+ * A screen's keys and its catalogue have to agree, in both directions.
  *
- * `tools/i18n-check.mjs` keeps the six locales level with each other. It cannot see the panel: a key
- * can be perfectly translated in six languages and looked up nowhere, and a screen can look up a key
- * nobody ever wrote. Both failures are silent — `t()` never throws, it returns the last segment of
- * the key — so a mistyped `panel.venues.desciption` renders the word "desciption" on the screen and
- * nothing anywhere goes red.
+ * `tools/i18n-check.mjs` keeps the six locales level with each other. It cannot see the screens: a
+ * key can be perfectly translated in six languages and looked up nowhere, and a screen can look up
+ * a key nobody ever wrote. Both failures are silent — `t()` never throws, it returns the last
+ * segment of the key — so a mistyped `panel.venues.desciption` renders the word "desciption" on the
+ * screen and nothing anywhere goes red.
  *
- * So this reads `api/public/editor/js/*.js` and asserts:
+ * So this reads `api/public/editor/js/*.js` and asserts, for the panel and for the platform console
+ * separately:
  *
- *   1. every `panel.…` key the panel looks up exists in api/lang/en/panel.php;
+ *   1. every key the JavaScript looks up exists in the matching catalogue;
  *   2. every key in that catalogue is looked up by something.
  *
  * Keys built at run time — `'panel.tools.' + tool.key` — are counted as a prefix, which marks
@@ -25,8 +26,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const catalogue = path.join(root, 'api', 'lang', 'en', 'panel.php');
 const scriptDir = path.join(root, 'api', 'public', 'editor', 'js');
+
+/*
+ * The console is checked apart from the panel because it is a separate application that happens to
+ * live in the same directory: its catalogue is rendered into its own page rather than served from
+ * /v1/i18n, and only console.js may read it. Checking them together would let a `console.…` key
+ * looked up by the panel pass, which is precisely the mistake worth catching.
+ *
+ * `team` is listed as a namespace the console may borrow from: role names have one home, and the
+ * console page is handed that one sub-array rather than a second translation of the same six words.
+ */
+const SURFACES = [
+	{ label: 'panel', namespaces: ['panel'], scripts: (file) => file !== 'console.js' },
+	{ label: 'console', namespaces: ['console'], borrowed: ['team'], scripts: (file) => file === 'console.js' },
+];
 
 function flatten(value, prefix = '', out = []) {
 	for (const [key, entry] of Object.entries(value)) {
@@ -42,46 +56,59 @@ function flatten(value, prefix = '', out = []) {
 	return out;
 }
 
-const defined = new Set(
-	flatten(
-		JSON.parse(
-			execFileSync('php', ['-r', 'echo json_encode(require $argv[1], JSON_UNESCAPED_UNICODE);', catalogue], {
-				encoding: 'utf8',
-			})
-		)
-	).map((key) => `panel.${key}`)
-);
+function catalogueKeys(namespace) {
+	const file = path.join(root, 'api', 'lang', 'en', `${namespace}.php`);
+	const json = execFileSync(
+		'php',
+		['-r', 'echo json_encode(require $argv[1], JSON_UNESCAPED_UNICODE);', file],
+		{ encoding: 'utf8' }
+	);
 
-const exact = new Set();
-const prefixes = new Set();
-
-for (const file of fs.readdirSync(scriptDir).filter((f) => f.endsWith('.js'))) {
-	const source = fs.readFileSync(path.join(scriptDir, file), 'utf8');
-
-	// 'panel.a.b' followed by a + is a key being assembled; anything else is a whole key.
-	for (const match of source.matchAll(/'(panel\.[A-Za-z0-9_.]*)'(\s*\+)?/g)) {
-		(match[2] ? prefixes : exact).add(match[1]);
-	}
+	return flatten(JSON.parse(json)).map((key) => `${namespace}.${key}`);
 }
 
 const problems = [];
 
-for (const key of [...exact].sort()) {
-	if (!defined.has(key)) {
-		problems.push(`looked up but not in the catalogue: ${key}`);
+for (const surface of SURFACES) {
+	// Only the surface's own namespaces have to be fully used; a borrowed one is somebody else's
+	// catalogue, and the console reading six of `team`'s keys does not make the rest of it dead.
+	const owned = new Set(surface.namespaces.flatMap(catalogueKeys));
+	const borrowed = new Set((surface.borrowed ?? []).flatMap(catalogueKeys));
+	const reachable = [...surface.namespaces, ...(surface.borrowed ?? [])];
+	const pattern = new RegExp(`'((?:${reachable.join('|')})\\.[A-Za-z0-9_.]*)'(\\s*\\+)?`, 'g');
+
+	const exact = new Set();
+	const prefixes = new Set();
+
+	for (const file of fs.readdirSync(scriptDir).filter((f) => f.endsWith('.js') && surface.scripts(f))) {
+		const source = fs.readFileSync(path.join(scriptDir, file), 'utf8');
+
+		// 'panel.a.b' followed by a + is a key being assembled; anything else is a whole key.
+		for (const match of source.matchAll(pattern)) {
+			(match[2] ? prefixes : exact).add(match[1]);
+		}
 	}
+
+	for (const key of [...exact].sort()) {
+		if (!owned.has(key) && !borrowed.has(key)) {
+			problems.push(`${surface.label}: looked up but not in the catalogue: ${key}`);
+		}
+	}
+
+	for (const key of [...owned].sort()) {
+		const used = exact.has(key) || [...prefixes].some((prefix) => key.startsWith(prefix));
+
+		if (!used) {
+			problems.push(`${surface.label}: in the catalogue but nothing looks it up: ${key}`);
+		}
+	}
+
+	console.log(
+		`${surface.label.padEnd(9)} ${owned.size} keys defined, ` +
+			`${exact.size} looked up by name, ${prefixes.size} built at run time`
+	);
 }
 
-for (const key of [...defined].sort()) {
-	const used = exact.has(key) || [...prefixes].some((prefix) => key.startsWith(prefix));
-
-	if (!used) {
-		problems.push(`in the catalogue but nothing looks it up: ${key}`);
-	}
-}
-
-console.log(`Catalogue:  ${defined.size} keys in api/lang/en/panel.php`);
-console.log(`Looked up:  ${exact.size} keys, ${prefixes.size} built at run time`);
 console.log('-'.repeat(68));
 
 if (problems.length) {
@@ -90,8 +117,8 @@ if (problems.length) {
 	}
 
 	console.error('-'.repeat(68));
-	console.error(`${problems.length} PROBLEM(S). The panel and its catalogue have drifted apart.`);
+	console.error(`${problems.length} PROBLEM(S). A screen and its catalogue have drifted apart.`);
 	process.exit(1);
 }
 
-console.log('THE PANEL AND ITS CATALOGUE AGREE');
+console.log('EVERY SCREEN AGREES WITH ITS CATALOGUE');

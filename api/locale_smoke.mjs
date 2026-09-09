@@ -11,6 +11,10 @@
  *   2. the English ones are *not* — a hard-coded string put back into panel.js, sites.js or the
  *      inspector shows up here as an English word on a Persian screen.
  *
+ * The platform console gets the same treatment at the end, in both languages. It is a separate
+ * application with a separate login and a catalogue delivered a different way, so proving the panel
+ * is translated proves nothing at all about it.
+ *
  * Run against a freshly seeded server:
  *
  *   php artisan migrate:fresh --seed --force
@@ -66,6 +70,7 @@ const LANGUAGES = [
 	{
 		code: 'fa',
 		dir: 'rtl',
+		console: [ 'کنسول پلتفرم', 'برگزارکنندگان', 'طرح‌ها', 'گزارش اپراتور', 'نمای کلی' ],
 		nav: [ 'رویدادها', 'بلیت‌ها', 'نقشه‌های صندلی', 'سالن‌ها', 'وب‌سایت‌ها', 'تیم' ],
 		designer: [ 'ذخیرهٔ پیش‌نویس', 'انتشار', 'لایهٔ انتخاب', 'همهٔ اشیا' ],
 		inspector: [ 'دسته‌ها', 'جایگاه' ],
@@ -75,6 +80,7 @@ const LANGUAGES = [
 	{
 		code: 'de',
 		dir: 'ltr',
+		console: [ 'Plattform-Konsole', 'Veranstalter', 'Tarife', 'Betreiberprotokoll', 'Überblick' ],
 		nav: [ 'Veranstaltungen', 'Tickets', 'Saalpläne', 'Spielstätten', 'Websites', 'Team' ],
 		designer: [ 'Entwurf speichern', 'Veröffentlichen', 'Auswahlebene', 'Alle Objekte' ],
 		inspector: [ 'Kategorien', 'Plätze' ],
@@ -92,6 +98,12 @@ const ENGLISH = [
 	'Seat maps', 'Save draft', 'Selection layer', 'All objects', 'Any status', 'Not used',
 	'Checked in', 'New seat map', 'Open designer', 'Publish page', 'Add an address',
 	'No categories yet', 'Number of seats', 'Displayed label', 'Keyboard shortcuts',
+];
+
+/* The console's own former English, kept apart because it is a separate application. */
+const CONSOLE_ENGLISH = [
+	'Platform console', 'Organisers', 'Operator log', 'Overview', 'New plan', 'All organisers',
+	'Takings, by currency', 'Every account on the platform',
 ];
 
 for ( const language of LANGUAGES ) {
@@ -165,6 +177,59 @@ for ( const language of LANGUAGES ) {
 		( word ) => ( designer + site + tickets + sidebar ).includes( fold( word ) )
 	);
 	check( 'no English left on any of those screens', leaks.length === 0, leaks.join( ', ' ) );
+
+	await page.close();
+}
+
+/*
+ * The console.
+ *
+ * Its page is rendered by the server, so the language is chosen with `?lang=` rather than by
+ * writing to localStorage — which is also the path a person takes when they pick a language from
+ * the menu on the sign-in card.
+ */
+for ( const language of LANGUAGES ) {
+	console.log( `Console in ${ language.code }` );
+
+	const page = await browser.newPage( { viewport: { width: 1400, height: 900 } } );
+
+	await page.goto( `${ BASE }/console?lang=${ language.code }`, { waitUntil: 'networkidle' } );
+
+	const dir = await page.evaluate( () => document.documentElement.getAttribute( 'dir' ) );
+	check( 'document direction', dir === language.dir, dir );
+
+	const login = await textOf( page );
+	check( 'the sign-in card is translated', login.includes( fold( language.console[ 0 ] ) ) );
+	check( 'and offers a language to sign in in',
+		await page.locator( '#c-login-lang' ).isVisible() );
+
+	await page.fill( '#c-email', 'operator@seatmap.test' );
+	await page.fill( '#c-password', 'password' );
+	await page.click( '#console-login button[type=submit]' );
+	await page.waitForSelector( '.sidebar', { timeout: 10000 } );
+	await page.waitForTimeout( 400 );
+
+	const overview = await textOf( page );
+
+	await page.click( '.nav-item[data-view=plans]' );
+	await page.waitForTimeout( 400 );
+	const plans = await textOf( page );
+
+	await page.click( '.nav-item[data-view=audit]' );
+	await page.waitForTimeout( 400 );
+	const audit = await textOf( page );
+
+	// The first entry is the sign-in card's title, which is checked above and is gone once the
+	// shell paints; everything after it belongs to the screens behind the login.
+	const seen = overview + plans + audit;
+	const missing = language.console.slice( 1 ).filter( ( word ) => ! seen.includes( fold( word ) ) );
+	check( 'every console screen is translated', missing.length === 0, missing.join( ', ' ) );
+
+	const leaks = CONSOLE_ENGLISH.filter( ( word ) => seen.includes( fold( word ) ) );
+	check( 'no English left on any of them', leaks.length === 0, leaks.join( ', ' ) );
+
+	// The language menu is in the sidebar too, so a choice can be changed after signing in.
+	check( 'the language can be changed from inside', await page.locator( '#c-lang' ).isVisible() );
 
 	await page.close();
 }

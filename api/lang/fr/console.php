@@ -1,0 +1,144 @@
+<?php
+
+/**
+ * La console de la plateforme elle-même — les écrans que lisent ceux qui la font tourner.
+ *
+ * Les noms d’actions du journal des opérateurs ne sont pas traduits : ce sont des identifiants
+ * stables dans un journal relu des années plus tard, et un journal dont les mots changent est un
+ * journal de rien.
+ */
+return [
+    'brand' => 'Console',
+    'title' => 'Console de la plateforme',
+    'subtitle' => 'Pour celles et ceux qui la font tourner, pas pour celles et ceux qui l’utilisent.',
+    'signIn' => 'Se connecter',
+    'email' => 'E-mail',
+    'password' => 'Mot de passe',
+    'platform' => 'Plateforme',
+    'signOut' => 'Se déconnecter',
+    'sections' => 'Sections',
+    'language' => 'Langue',
+    'failed' => 'Échec de la requête',
+    'save' => 'Enregistrer',
+    'none' => '—',
+
+    'levels' => [
+        'support' => 'Support',
+        'operator' => 'Exploitation',
+    ],
+
+    'nav' => [
+        'overview' => 'Vue d’ensemble',
+        'tenants' => 'Organisateurs',
+        'sites' => 'Sites web',
+        'plans' => 'Forfaits',
+        'audit' => 'Journal des opérateurs',
+    ],
+
+    'status' => [
+        'active' => 'Actif',
+        'suspended' => 'Suspendu',
+        'cancelled' => 'Résilié',
+        'live' => 'En ligne',
+        'draft' => 'Brouillon',
+    ],
+
+    'overview' => [
+        'description' => 'La plateforme, en chiffres.',
+        'tenants' => 'Organisateurs',
+        'tenantsMeta' => ':active actifs · :suspended suspendus',
+        'newThisMonth' => 'Nouveaux ce mois-ci',
+        'sitesLive' => 'Sites en ligne',
+        'sitesMeta' => ':count au total',
+        'domains' => 'Domaines vérifiés',
+        'events' => 'Événements en vente',
+        'tickets' => 'Billets émis',
+        'ticketsMeta' => ':count places ce mois-ci',
+        'takings' => 'Recettes, par devise',
+        'currency' => 'Devise',
+        'orders' => 'Commandes',
+        'takenThisMonth' => 'Encaissé ce mois-ci',
+        'nothingSold' => 'Rien n’a été vendu ce mois-ci.',
+    ],
+
+    'tenants' => [
+        'description' => 'Tous les comptes de la plateforme.',
+        'name' => 'Nom',
+        'status' => 'Statut',
+        'plan' => 'Forfait',
+        'people' => 'Personnes',
+        'sites' => 'Sites',
+        'since' => 'Depuis',
+        'open' => 'Ouvrir',
+        'back' => 'Tous les organisateurs',
+        'noPlan' => 'aucun forfait',
+        'summary' => ':slug · :plan · :events événements · :tickets billets émis',
+        'peopleHeading' => 'Personnes',
+        'sitesHeading' => 'Sites web',
+        'email' => 'E-mail',
+        'role' => 'Rôle',
+        'siteName' => 'Nom',
+        'addresses' => 'Adresses',
+        'impersonate' => 'Ouvrir leur panneau',
+        'suspend' => 'Suspendre',
+        'reinstate' => 'Rétablir',
+        'whySuspend' => 'Pourquoi ce compte est-il suspendu ?',
+    ],
+
+    'sites' => [
+        'description' => 'Tous les sites que cette plateforme sert.',
+        'site' => 'Site',
+        'tenant' => 'Organisateur',
+        'status' => 'Statut',
+        'theme' => 'Thème',
+        'addresses' => 'Adresses',
+        'unverified' => '(non vérifié)',
+        'noAddress' => 'pas encore d’adresse',
+    ],
+
+    'plans' => [
+        'description' => 'Ce que coûte un compte, et ce qu’il a le droit de faire.',
+        'plan' => 'Forfait',
+        'price' => 'Prix',
+        'limits' => 'Limites',
+        'subscribers' => 'Abonnés',
+        'status' => 'Statut',
+        'edit' => 'Modifier',
+        'new' => 'Nouveau forfait',
+        'free' => 'Gratuit',
+        'noLimits' => 'Aucune limite',
+        'separator' => ' · ',
+        'unlimited' => '∞',
+        'perMonth' => ':price / mois',
+        'perYear' => ':price / an',
+        'back' => 'Tous les forfaits',
+        'editHint' => 'Changer un prix change ce que les gens paieront au prochain renouvellement.',
+        'key' => 'Clé',
+        'keyHint' => 'Minuscules et tirets. Non modifiable ensuite — un abonnement pointe dessus.',
+        'name' => 'Nom',
+        'priceField' => 'Prix, en unités mineures',
+        'priceHint' => '4900 vaut 49,00 €. Zéro est gratuit.',
+        'currency' => 'Devise',
+        'billed' => 'Facturation',
+        'monthly' => 'Mensuelle',
+        'yearly' => 'Annuelle',
+        'limitField' => 'Limite : :limit',
+        'limitHint' => 'Vide signifie sans limite.',
+        'onSignup' => 'Sur l’écran d’inscription',
+        'limitNames' => [
+            'max_venues' => 'Lieux',
+            'max_events' => 'Événements',
+            'max_seats_per_map' => 'Places par plan',
+        ],
+    ],
+
+    'audit' => [
+        'description' => 'Ce que celles et ceux qui font tourner cette plateforme ont fait dans les comptes des autres.',
+        'when' => 'Quand',
+        'action' => 'Action',
+        'operator' => 'Opérateur',
+        'tenant' => 'Organisateur',
+        'detail' => 'Détail',
+        'from' => 'Depuis',
+    ],
+];

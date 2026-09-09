@@ -320,7 +320,9 @@
 					'</div>' +
 					'<nav class="sidebar__nav" id="nav" aria-label="' +
 						esc( this.t( 'panel.nav.sections' ) ) + '"></nav>' +
-					'<div class="sidebar__footer"><div class="account">' +
+					'<div class="sidebar__footer">' +
+						'<div class="sidebar__language">' + this.languageField( 'locale' ) + '</div>' +
+						'<div class="account">' +
 						'<span class="account__avatar" aria-hidden="true">' + esc( initials( name ) ) + '</span>' +
 						'<div class="account__body">' +
 							'<div class="account__name">' + esc( name ) + '</div>' +
@@ -349,11 +351,32 @@
 
 		document.getElementById( 'signout' ).addEventListener( 'click', function () { self.signOut(); } );
 
+		var language = document.getElementById( 'locale' );
+
+		language.addEventListener( 'change', function () { i18n.choose( language.value ); } );
+
 		// An account that has not verified its address gets a bar it can act on, not a nag: the
 		// code box is in it, and everything else on the panel still works.
 		window.SeatmapSignup.banner( this );
 
 		this.route( 'events' );
+	};
+
+	/**
+	 * The language menu.
+	 *
+	 * Every locale in its own language, never in the reader's: somebody looking for Persian is
+	 * looking for فارسی, and "Persian" is exactly the word they cannot read.
+	 */
+	App.languageField = function ( id ) {
+		return '<select class="select select--sm" id="' + esc( id ) + '" aria-label="' +
+			esc( this.t( 'site.language' ) ) + '">' +
+			i18n.locales.map( function ( entry ) {
+				return '<option value="' + esc( entry.code ) + '"' +
+					( entry.code === i18n.locale ? ' selected' : '' ) + '>' +
+					esc( entry.native ) + '</option>';
+			} ).join( '' ) +
+			'</select>';
 	};
 
 	App.paintThemeButton = function () {

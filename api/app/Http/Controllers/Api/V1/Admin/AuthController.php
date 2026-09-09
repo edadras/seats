@@ -41,9 +41,14 @@ class AuthController extends Controller
 
         foreach ($keys as $key) {
             if (RateLimiter::tooManyAttempts($key, 10)) {
-                throw new ApiException('too_many_attempts', sprintf(
-                    'Too many attempts. Try again in %d seconds.', RateLimiter::availableIn($key)
-                ), 429);
+                throw new ApiException(
+                    'too_many_attempts',
+                    'Too many attempts. Try again shortly.',
+                    429,
+                    [],
+                    null,
+                    ['seconds' => RateLimiter::availableIn($key)],
+                );
             }
         }
 

@@ -104,6 +104,18 @@
 	border-block-start: 1px solid var(--border-subtle);
 }
 
+/*
+ * The language menu, above the account row rather than beside it: the account row is already three
+ * things wide, and a fourth turned the organiser's name into an ellipsis.
+ */
+.sidebar__language {
+	padding: 0 var(--s-3) var(--s-2);
+}
+
+.sidebar__language .select {
+	inline-size: 100%;
+}
+
 .account {
 	display: flex;
 	align-items: center;

@@ -98,4 +98,11 @@ return [
     'invitation_invalid' => 'Cette invitation n’est pas valide, ou elle a déjà servi.',
     'invitation_expired' => 'Cette invitation a expiré. Demandez-en une nouvelle.',
     'already_a_member' => 'Cette personne fait déjà partie de ce compte.',
+
+    // --- La console de la plateforme --------------------------------------------------------
+    'too_many_attempts' => 'Trop de tentatives. Réessayez dans :seconds secondes.',
+    'unknown_plan' => 'Ce forfait n’existe pas.',
+    'no_owner' => 'Ce compte n’a personne au nom de qui agir.',
+    'support_may_not_change' => 'Les comptes support peuvent regarder, pas modifier.',
+    'plan_in_use' => 'Des organisateurs sont sur ce forfait. Désactivez-le plutôt — cela le retire de l’écran d’inscription et les laisse où ils sont.',
 ];

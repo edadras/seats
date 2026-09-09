@@ -102,4 +102,11 @@ return [
     'invitation_invalid' => 'That invitation is not valid, or it has already been used.',
     'invitation_expired' => 'That invitation has expired. Ask for a new one.',
     'already_a_member' => 'That person is already part of this account.',
+
+    // --- The platform console ---------------------------------------------------------------
+    'too_many_attempts' => 'Too many attempts. Try again in :seconds seconds.',
+    'unknown_plan' => 'There is no such plan.',
+    'no_owner' => 'That account has nobody to act as.',
+    'support_may_not_change' => 'Support accounts can look, not change.',
+    'plan_in_use' => 'Organisers are on this plan. Deactivate it instead — that takes it off the signup screen and leaves them where they are.',
 ];
