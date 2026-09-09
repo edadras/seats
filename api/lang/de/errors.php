@@ -38,6 +38,7 @@ return [
     'order_cancelled' => 'Diese Bestellung wurde storniert.',
     'refund_exceeds_order' => 'Sie können nicht mehr erstatten, als die Bestellung wert ist.',
     'payment_failed' => 'Die Zahlung ist nicht zustande gekommen. Es wurde nichts abgebucht.',
+    'discount_used_up' => 'Dieser Code wurde soeben zum letzten Mal eingelöst. Es wurde nichts abgebucht.',
     'payment_verification_failed' => 'Wir konnten diese Zahlung beim Anbieter nicht bestätigen. Falls Geld abgebucht wurde, melden Sie sich – wir finden es.',
 
     // --- Saalpläne --------------------------------------------------------------------------

@@ -25,6 +25,9 @@ final class Permissions
         'events.manage' => 'programme',
         'events.publish' => 'programme',
         'pricing.manage' => 'programme',
+        // Giving money away is a pricing decision, so it sits with pricing rather than with the
+        // box office: finding a booking and inventing a half-price code are different jobs.
+        'discounts.manage' => 'programme',
 
         // --- Venue and seating ---------------------------------------------------------
         'venues.view' => 'seating',
@@ -86,7 +89,7 @@ final class Permissions
      */
     public const ROLES = [
         'admin' => [
-            'events.view', 'events.manage', 'events.publish', 'pricing.manage',
+            'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
             'checkins.view', 'devices.manage',
@@ -97,7 +100,7 @@ final class Permissions
             'audit.view', 'account.manage',
         ],
         'manager' => [
-            'events.view', 'events.manage', 'events.publish', 'pricing.manage',
+            'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund',
             'checkins.view', 'devices.manage',

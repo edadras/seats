@@ -49,6 +49,7 @@ tags:
   - name: WooCommerce
   - name: Tickets
   - name: Orders
+  - name: Discounts
   - name: Customers
   - name: Notifications
   - name: Sites
@@ -2252,6 +2253,143 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /discounts:
+    get:
+      operationId: listDiscounts
+      tags: [Discounts]
+      summary: Every discount code this account has
+      description: |
+        Requires `discounts.manage`. `live` is computed, not stored: a code whose status says
+        `active` but whose end date has passed takes nothing off anything, and reporting it as
+        active is how an organiser spends an afternoon wondering why nobody can use it.
+      parameters:
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, paused] }
+        - name: q
+          in: query
+          description: Matches the code or its description.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: The codes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/DiscountCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createDiscount
+      tags: [Discounts]
+      summary: Make a code
+      description: |
+        The code is normalised — trimmed and upper-cased — so `earlybird` and ` EarlyBird ` are one
+        code and not three near-misses. A percentage above 100 and a fixed amount without a
+        currency are both refused: the first is a payment to the buyer, the second would match
+        every currency, and nothing in this system converts one currency into another.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiscountCodeWrite" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiscountCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: An account already has a code with that name
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /discounts/suggest:
+    get:
+      operationId: suggestDiscountCode
+      tags: [Discounts]
+      summary: A code nobody has to invent
+      description: |
+        Eight characters from an alphabet with no O and no I, checked against this account's
+        existing codes. It is a suggestion, not a reservation: nothing is written.
+      responses:
+        "200":
+          description: A free code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /discounts/{discount}:
+    parameters:
+      - name: discount
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getDiscount
+      tags: [Discounts]
+      summary: One code, and who has used it
+      responses:
+        "200":
+          description: The code
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiscountCodeDetail" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateDiscount
+      tags: [Discounts]
+      summary: Change a code, or pause it
+      description: |
+        `code` is ignored here. Renaming a code would break every poster it is printed on and leave
+        its redemptions pointing at a name that never existed, so pausing is the way to stop one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiscountCodeWrite" }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiscountCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteDiscount
+      tags: [Discounts]
+      summary: Delete a code that has never been used
+      description: |
+        A code that has paid for an order cannot be deleted — that order would be left at a price
+        with no reason beside it. `discount_in_use` says so; pause it instead.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: The code has been used
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /customers:
     get:
       operationId: listCustomers
@@ -3930,6 +4068,64 @@ components:
                   status: { type: string }
                   reason: { type: [string, "null"] }
                   created_at: { type: string, format: date-time }
+
+    DiscountCode:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        description: { type: [string, "null"] }
+        event_id: { type: [string, "null"], format: uuid }
+        event_name: { type: [string, "null"] }
+        kind: { type: string, enum: [percent, fixed] }
+        value:
+          type: integer
+          description: "Per cent for `percent`; minor units for `fixed`."
+        currency: { type: [string, "null"], description: "Set for `fixed` only." }
+        starts_at: { type: [string, "null"], format: date-time }
+        ends_at: { type: [string, "null"], format: date-time }
+        max_uses: { type: [integer, "null"] }
+        used_count: { type: integer }
+        min_seats: { type: integer }
+        status: { type: string, enum: [active, paused] }
+        live:
+          type: boolean
+          description: "Switched on, started, not finished and not used up — computed, not stored."
+        created_at: { type: string, format: date-time }
+
+    DiscountCodeWrite:
+      type: object
+      properties:
+        code: { type: string, maxLength: 40, description: "Create only; ignored on update." }
+        description: { type: [string, "null"], maxLength: 160 }
+        event_id: { type: [string, "null"], format: uuid, description: "Null means every event." }
+        kind: { type: string, enum: [percent, fixed] }
+        value: { type: integer, minimum: 1 }
+        currency: { type: [string, "null"], minLength: 3, maxLength: 3 }
+        starts_at: { type: [string, "null"], format: date-time }
+        ends_at: { type: [string, "null"], format: date-time }
+        max_uses: { type: [integer, "null"], minimum: 1 }
+        min_seats: { type: [integer, "null"], minimum: 1 }
+        status: { type: string, enum: [active, paused] }
+
+    DiscountCodeDetail:
+      allOf:
+        - $ref: "#/components/schemas/DiscountCode"
+        - type: object
+          properties:
+            redemptions:
+              type: array
+              description: The fifty most recent uses.
+              items:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  amount: { type: integer }
+                  currency: { type: string }
+                  at: { type: string, format: date-time }
+                  order_id: { type: [string, "null"] }
+                  order_status: { type: [string, "null"] }
+                  buyer: { type: [string, "null"] }
 
     Money:
       type: object

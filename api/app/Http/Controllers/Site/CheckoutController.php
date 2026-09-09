@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Discounts\DiscountOffer;
+use App\Domain\Discounts\Discounts;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\StorefrontCheckout;
 use App\Domain\Sites\Themes;
+use App\Exceptions\ApiException;
 use App\Domain\Sites\TicketMailer;
 use App\Http\Controllers\Controller;
 use App\Models\ExternalOrder;
@@ -29,6 +32,7 @@ class CheckoutController extends Controller
         private readonly GatewayRegistry $gateways,
         private readonly TicketMailer $mail,
         private readonly QrRenderer $qr,
+        private readonly Discounts $discounts,
     ) {}
 
     public function show(Request $request)
@@ -42,15 +46,72 @@ class CheckoutController extends Controller
 
         $snapshot = $hold->price_snapshot['decoded'] ?? [];
 
+        // Re-asked on every render rather than remembered: a code that has run out, been paused or
+        // expired since the buyer typed it must stop taking money off before they pay, not after.
+        $offer = $this->offerFor($request, $hold);
+        $error = $this->discountError($request);
+
+        if ($offer && ! $offer->isAllowed()) {
+            // It worked when they typed it and does not now. Drop it and say why, rather than
+            // showing a reduced total that the payment step would quietly disagree with.
+            $request->session()->forget('seatmap_discount');
+            $error = $error ?: __('site.discount.refused.'.$offer->reason);
+            $offer = null;
+        }
+
+        $off = $offer ? $offer->amount : 0;
+
         return $this->view($site, 'site.checkout', [
             'title' => 'Checkout · '.$site->name,
             'hold' => $hold,
             'lines' => $this->lines($snapshot),
-            'total' => $hold->total_amount,
+            'subtotal' => (int) $hold->total_amount,
+            'discount' => $offer ? [
+                'code' => $offer->code->code,
+                'amount' => $off,
+            ] : null,
+            'discountError' => $error,
+            'total' => (int) $hold->total_amount - $off,
             'currency' => $hold->currency,
             'expires_at' => $hold->expires_at,
             'gateways' => $this->gateways->enabledFor($site),
         ]);
+    }
+
+    /**
+     * Try a code the buyer typed.
+     *
+     * Nothing is written here — a discount is only spent when there is an order to spend it on.
+     * What is kept is the spelling, in this buyer's own session, so the code cannot be put on
+     * somebody else's basket by a link.
+     */
+    public function applyDiscount(Request $request)
+    {
+        $hold = $this->heldSeats($request);
+
+        if (! $hold) {
+            return redirect('/')->with('seatmap_message', __('site.holdGone'));
+        }
+
+        $typed = (string) $request->input('code', '');
+        $offer = $this->offer($hold, $typed);
+
+        if (! $offer->isAllowed()) {
+            $request->session()->forget('seatmap_discount');
+
+            return redirect('/checkout')->with('seatmap_discount_error', $offer->reason);
+        }
+
+        $request->session()->put('seatmap_discount', $offer->code->code);
+
+        return redirect('/checkout');
+    }
+
+    public function removeDiscount(Request $request)
+    {
+        $request->session()->forget('seatmap_discount');
+
+        return redirect('/checkout');
     }
 
     /**
@@ -108,13 +169,33 @@ class CheckoutController extends Controller
         // order exists — so the reference is derived from the hold, the same way the order id is.
         $reference = $this->reference($hold);
 
-        [$order, $intent] = $this->checkout->place(
-            $site,
-            $hold,
-            ['name' => $data['name'], 'email' => $data['email'], 'phone' => $data['phone'] ?? null],
-            $data['gateway'],
-            $site->url('/order/'.$reference),
-        );
+        // Priced again, here, a moment before the money moves. Everything between the buyer
+        // typing the code and pressing pay is time in which it could have run out.
+        $offer = $this->offerFor($request, $hold);
+
+        try {
+            [$order, $intent] = $this->checkout->place(
+                $site,
+                $hold,
+                ['name' => $data['name'], 'email' => $data['email'], 'phone' => $data['phone'] ?? null],
+                $data['gateway'],
+                $site->url('/order/'.$reference),
+                $offer?->isAllowed() ? $offer : null,
+            );
+        } catch (ApiException $e) {
+            if ('discount_used_up' !== $e->errorCode()) {
+                throw $e;
+            }
+
+            // Somebody else took the last use of the code between this buyer reading the total and
+            // pressing pay. Nothing has been charged: they are sent back to a checkout that no
+            // longer claims a discount, with their seats still held.
+            $request->session()->forget('seatmap_discount');
+
+            return redirect('/checkout')->with('seatmap_discount_error', 'used_up');
+        }
+
+        $request->session()->forget('seatmap_discount');
 
         $request->session()->forget('seatmap_hold');
         $request->session()->put('seatmap_order', $order->external_order_id);
@@ -273,6 +354,50 @@ class CheckoutController extends Controller
         $hold = Hold::with('event')->where('token', $token)->first();
 
         return $hold && $hold->isActive() ? $hold : null;
+    }
+
+    /** The code this session is carrying, priced against this hold. Null when there is none. */
+    private function offerFor(Request $request, Hold $hold): ?DiscountOffer
+    {
+        $typed = (string) $request->session()->get('seatmap_discount', '');
+
+        return '' === $typed ? null : $this->offer($hold, $typed);
+    }
+
+    private function offer(Hold $hold, string $typed): DiscountOffer
+    {
+        return $this->discounts->offer(
+            $typed,
+            $hold->event,
+            (int) $hold->total_amount,
+            (string) $hold->currency,
+            $this->seatCount($hold->price_snapshot['decoded'] ?? []),
+        );
+    }
+
+    /** Why the last attempt was refused, said once. */
+    private function discountError(Request $request): ?string
+    {
+        $reason = $request->session()->get('seatmap_discount_error');
+
+        return $reason ? __('site.discount.refused.'.$reason) : null;
+    }
+
+    /**
+     * How many places this basket is for.
+     *
+     * A standing area is a quantity, not a row, so counting hold items would say "two or more
+     * people" is one — and "at least four tickets" is the most common thing a code asks for.
+     */
+    private function seatCount(array $snapshot): int
+    {
+        $count = count($snapshot['seats'] ?? []);
+
+        foreach ($snapshot['areas'] ?? [] as $area) {
+            $count += max(1, (int) ($area['quantity'] ?? 1));
+        }
+
+        return $count;
     }
 
     private function lines(array $snapshot): array

@@ -50,6 +50,7 @@ return [
         'events.manage' => 'Creare e modificare eventi',
         'events.publish' => 'Mettere un evento in vendita',
         'pricing.manage' => 'Impostare i prezzi',
+        'discounts.manage' => 'Creare e modificare codici sconto',
         'venues.view' => 'Vedere le sedi',
         'venues.manage' => 'Creare e modificare sedi',
         'maps.view' => 'Vedere le piante',

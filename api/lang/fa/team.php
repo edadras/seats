@@ -50,6 +50,7 @@ return [
         'events.manage' => 'ساخت و ویرایش رویداد',
         'events.publish' => 'باز کردن فروش رویداد',
         'pricing.manage' => 'تعیین قیمت',
+        'discounts.manage' => 'ساخت و ویرایش کدهای تخفیف',
         'venues.view' => 'دیدن سالن‌ها',
         'venues.manage' => 'ساخت و ویرایش سالن',
         'maps.view' => 'دیدن نقشهٔ صندلی',

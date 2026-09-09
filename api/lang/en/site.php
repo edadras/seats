@@ -117,6 +117,25 @@ return [
     'yourSeats' => 'Your seats',
     'total' => 'Total',
     'heldUntil' => 'Held until :time.',
+    'discount' => [
+        'label' => 'Discount code',
+        'placeholder' => 'e.g. EARLYBIRD',
+        'apply' => 'Apply',
+        'applied' => 'applied',
+        'remove' => 'Remove',
+        'line' => 'Discount (:code)',
+        'refused' => [
+            'unknown' => 'We don’t know that code.',
+            'paused' => 'That code isn’t being accepted at the moment.',
+            'not_started' => 'That code isn’t valid yet.',
+            'expired' => 'That code has expired.',
+            'used_up' => 'That code has been used up.',
+            'wrong_event' => 'That code isn’t for this event.',
+            'wrong_currency' => 'That code is in a different currency.',
+            'too_few_seats' => 'That code needs more tickets than you have chosen.',
+            'nothing_off' => 'That code takes nothing off this booking.',
+        ],
+    ],
     'holdExpired' => 'Your reservation expired. Please choose your seats again.',
 
     // --- Confirmation -----------------------------------------------------------------------

@@ -50,6 +50,7 @@ return [
         'events.manage' => 'Veranstaltungen anlegen und bearbeiten',
         'events.publish' => 'Eine Veranstaltung in den Verkauf geben',
         'pricing.manage' => 'Preise festlegen',
+        'discounts.manage' => 'Rabattcodes anlegen und bearbeiten',
         'venues.view' => 'Spielstätten sehen',
         'venues.manage' => 'Spielstätten anlegen und bearbeiten',
         'maps.view' => 'Saalpläne sehen',

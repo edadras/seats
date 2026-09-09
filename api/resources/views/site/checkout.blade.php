@@ -61,9 +61,42 @@
                     @foreach ($lines as $line)
                         <li><span>{{ $line['label'] }}</span><span>{{ $money($line['amount']) }}</span></li>
                     @endforeach
+
+                    @if ($discount)
+                        <li class="summary-lines__off">
+                            <span>{{ __('site.discount.line', ['code' => $discount['code']]) }}</span>
+                            <span>−{{ $money($discount['amount']) }}</span>
+                        </li>
+                    @endif
                 </ul>
 
                 <p class="summary-total"><span>{{ __('site.total') }}</span><span>{{ $money($total) }}</span></p>
+
+                {{-- Its own form, outside the one that pays: pressing enter in a discount box must
+                     try the code, never buy the tickets. --}}
+                @if ($discount)
+                    <form class="promo promo--applied" method="POST" action="/checkout/discount/remove">
+                        @csrf
+                        <p class="promo__held">
+                            <strong>{{ $discount['code'] }}</strong>
+                            <span class="muted">{{ __('site.discount.applied') }}</span>
+                        </p>
+                        <button class="button button--quiet" type="submit">{{ __('site.discount.remove') }}</button>
+                    </form>
+                @else
+                    <form class="promo" method="POST" action="/checkout/discount">
+                        @csrf
+                        <label class="promo__label" for="discount-code">{{ __('site.discount.label') }}</label>
+                        <div class="promo__row">
+                            <input id="discount-code" name="code" maxlength="40" autocomplete="off"
+                                   spellcheck="false" placeholder="{{ __('site.discount.placeholder') }}">
+                            <button class="button button--quiet" type="submit">{{ __('site.discount.apply') }}</button>
+                        </div>
+                        @if ($discountError)
+                            <p class="field__error">{{ $discountError }}</p>
+                        @endif
+                    </form>
+                @endif
 
                 @if ($expires_at)
                     <p class="summary-hold" data-expires="{{ $expires_at->toIso8601String() }}">

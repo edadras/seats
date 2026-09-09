@@ -50,6 +50,7 @@ return [
         'events.manage' => 'إنشاء الفعاليات وتحريرها',
         'events.publish' => 'طرح فعالية للبيع',
         'pricing.manage' => 'تحديد الأسعار',
+        'discounts.manage' => 'إنشاء رموز الخصم وتعديلها',
         'venues.view' => 'رؤية القاعات',
         'venues.manage' => 'إنشاء القاعات وتحريرها',
         'maps.view' => 'رؤية مخططات المقاعد',

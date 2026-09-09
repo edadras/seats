@@ -42,6 +42,7 @@ return [
     'order_cancelled' => 'This order was cancelled.',
     'refund_exceeds_order' => 'You cannot refund more than the order is worth.',
     'payment_failed' => 'The payment did not go through. Nothing has been charged.',
+    'discount_used_up' => 'That code has just been used for the last time. Nothing has been charged.',
     'payment_verification_failed' => 'We could not verify that payment with the gateway. If money left your account, contact us and we will find it.',
 
     // --- Seat maps --------------------------------------------------------------------------

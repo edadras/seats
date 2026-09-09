@@ -114,6 +114,25 @@ return [
     'yourSeats' => 'Ihre Plätze',
     'total' => 'Summe',
     'heldUntil' => 'Reserviert bis :time.',
+    'discount' => [
+        'label' => 'Rabattcode',
+        'placeholder' => 'z. B. EARLYBIRD',
+        'apply' => 'Einlösen',
+        'applied' => 'eingelöst',
+        'remove' => 'Entfernen',
+        'line' => 'Rabatt (:code)',
+        'refused' => [
+            'unknown' => 'Diesen Code kennen wir nicht.',
+            'paused' => 'Dieser Code wird derzeit nicht angenommen.',
+            'not_started' => 'Dieser Code gilt noch nicht.',
+            'expired' => 'Dieser Code ist abgelaufen.',
+            'used_up' => 'Dieser Code ist aufgebraucht.',
+            'wrong_event' => 'Dieser Code gilt nicht für diese Veranstaltung.',
+            'wrong_currency' => 'Dieser Code lautet auf eine andere Währung.',
+            'too_few_seats' => 'Dieser Code braucht mehr Tickets, als Sie gewählt haben.',
+            'nothing_off' => 'Dieser Code zieht von dieser Buchung nichts ab.',
+        ],
+    ],
     'holdExpired' => 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie Ihre Plätze erneut.',
 
     // --- Bestätigung ------------------------------------------------------------------------

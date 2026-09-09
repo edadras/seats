@@ -34,6 +34,7 @@
 			{ key: 'events', icon: 'calendar' },
 			{ key: 'orders', icon: 'file' },
 			{ key: 'tickets', icon: 'ticket' },
+			{ key: 'discounts', icon: 'tag' },
 		] },
 		{ group: 'venue', items: [
 			{ key: 'maps', icon: 'map' },
@@ -542,6 +543,7 @@
 			case 'tickets': return window.SeatmapTickets.render( this );
 			case 'customers': return window.SeatmapCustomers.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
+			case 'discounts': return window.SeatmapDiscounts.render( this );
 			case 'events': return this.renderEvents();
 			default: return this.renderOverview();
 		}

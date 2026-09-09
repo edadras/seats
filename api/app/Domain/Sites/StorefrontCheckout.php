@@ -2,6 +2,8 @@
 
 namespace App\Domain\Sites;
 
+use App\Domain\Discounts\DiscountOffer;
+use App\Domain\Discounts\Discounts;
 use App\Domain\Orders\OrderService;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\Payments\PaymentIntent;
@@ -31,6 +33,7 @@ class StorefrontCheckout
         private readonly OrderService $orders,
         private readonly GatewayRegistry $gateways,
         private readonly TenantContext $tenantContext,
+        private readonly Discounts $discounts,
     ) {}
 
     /** The client a site sells through, created on first use so an older site does not need a backfill. */
@@ -63,8 +66,14 @@ class StorefrontCheckout
      * Nothing about the amount comes from the request. The hold carries the server's own price
      * snapshot; this reads it and charges that (threat T3).
      */
-    public function place(Site $site, Hold $hold, array $buyer, string $gatewayKey, string $returnUrl): array
-    {
+    public function place(
+        Site $site,
+        Hold $hold,
+        array $buyer,
+        string $gatewayKey,
+        string $returnUrl,
+        ?DiscountOffer $offer = null,
+    ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
                 'Your seats are %s. Please choose again.', $hold->currentState()
@@ -74,7 +83,7 @@ class StorefrontCheckout
         $gateway = $this->gateways->get($gatewayKey);
         $client = $this->clientFor($site);
 
-        [$order] = $this->orders->register(
+        [$order, $registered] = $this->orders->register(
             $client,
             self::referenceFor($hold),
             $hold->token,
@@ -82,9 +91,29 @@ class StorefrontCheckout
             ['source' => 'hosted_site', 'site_id' => $site->id, 'gateway' => $gateway->key()],
         );
 
+        /*
+         * The discount is spent here, between registering the order and asking for the money.
+         *
+         * Before the gateway, because the gateway is told an amount and that amount has to be the
+         * one the buyer agreed to. Only on a first registration, because a retried submit lands on
+         * the same order, and an order that already carries the discount must not carry it twice.
+         */
+        if ($offer && $registered && $offer->isAllowed()) {
+            if (! $this->discounts->applyTo($order, $offer->code, $offer->amount)) {
+                throw ApiException::conflict(
+                    'discount_used_up',
+                    'That code has just been used for the last time.'
+                );
+            }
+
+            $order->refresh();
+        }
+
         $intent = $gateway->begin($order, [
-            'amount' => (int) $hold->total_amount,
-            'currency' => (string) $hold->currency,
+            // The order's total, not the hold's: a discount has already been taken off one and not
+            // the other, and the buyer must be charged what the confirmation will say they paid.
+            'amount' => (int) $order->total_amount,
+            'currency' => (string) $order->currency,
             // Where the buyer ends up, and where the *gateway* should send them on the way: the
             // second is built here rather than in each module, so five modules cannot have five
             // opinions about what this site's address is.

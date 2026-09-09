@@ -34,6 +34,12 @@ Route::middleware('site')->group(function () {
     Route::get('checkout/resume', [CheckoutController::class, 'resume'])->middleware('throttle:30,1');
     Route::get('checkout', [CheckoutController::class, 'show']);
     Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1');
+    // Throttled harder than the rest of checkout: a discount box is a place to guess codes, and
+    // guessing is cheap unless it is rationed.
+    Route::post('checkout/discount', [CheckoutController::class, 'applyDiscount'])
+        ->middleware('throttle:10,1');
+    Route::post('checkout/discount/remove', [CheckoutController::class, 'removeDiscount'])
+        ->middleware('throttle:20,1');
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
     // The same tickets, laid out for paper and for the browser's own "Save as PDF".
     Route::get('order/{reference}/tickets', [CheckoutController::class, 'tickets']);

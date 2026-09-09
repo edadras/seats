@@ -51,6 +51,7 @@ return [
         'events.manage' => 'Create and edit events',
         'events.publish' => 'Put an event on sale',
         'pricing.manage' => 'Set prices',
+        'discounts.manage' => 'Create and edit discount codes',
         'venues.view' => 'See venues',
         'venues.manage' => 'Create and edit venues',
         'maps.view' => 'See seat maps',

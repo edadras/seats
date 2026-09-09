@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Management\ApiClientController;
 use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
+use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
@@ -107,6 +108,15 @@ Route::prefix('v1')->group(function () {
         Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
         Route::post('orders/{order}/resend', [OrderController::class, 'resend'])
             ->middleware('throttle:20,1');
+
+        // ---- Discount codes ---------------------------------------------------------------
+        // `suggest` before `{discount}`, or the word "suggest" is a code id that matches nothing.
+        Route::get('discounts', [DiscountController::class, 'index']);
+        Route::get('discounts/suggest', [DiscountController::class, 'suggest']);
+        Route::post('discounts', [DiscountController::class, 'store']);
+        Route::get('discounts/{discount}', [DiscountController::class, 'show']);
+        Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
+        Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
 
         Route::get('tickets', [TicketController::class, 'index']);
         Route::get('tickets/{ticket}', [TicketController::class, 'show']);

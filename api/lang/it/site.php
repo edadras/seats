@@ -113,6 +113,25 @@ return [
     'yourSeats' => 'I tuoi posti',
     'total' => 'Totale',
     'heldUntil' => 'Tenuti fino alle :time.',
+    'discount' => [
+        'label' => 'Codice sconto',
+        'placeholder' => 'es. EARLYBIRD',
+        'apply' => 'Applica',
+        'applied' => 'applicato',
+        'remove' => 'Rimuovi',
+        'line' => 'Sconto (:code)',
+        'refused' => [
+            'unknown' => 'Non conosciamo questo codice.',
+            'paused' => 'Questo codice al momento non viene accettato.',
+            'not_started' => 'Questo codice non è ancora valido.',
+            'expired' => 'Questo codice è scaduto.',
+            'used_up' => 'Questo codice è esaurito.',
+            'wrong_event' => 'Questo codice non vale per questo evento.',
+            'wrong_currency' => 'Questo codice è in un’altra valuta.',
+            'too_few_seats' => 'Questo codice richiede più biglietti di quelli che hai scelto.',
+            'nothing_off' => 'Questo codice non toglie nulla a questa prenotazione.',
+        ],
+    ],
     'holdExpired' => 'La tua prenotazione è scaduta. Scegli di nuovo i posti.',
 
     // --- Conferma ---------------------------------------------------------------------------

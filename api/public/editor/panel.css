@@ -204,6 +204,14 @@
 .row--wrap { flex-wrap: wrap; }
 .grow { flex: 1; min-inline-size: 0; }
 .field--narrow { inline-size: 6rem; flex: none; }
+/* Two or three short fields that belong to one decision — a kind, its number and its currency —
+   kept on one line so the decision reads as one thing, and stacked when there is no room. */
+.field-duo {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+	gap: var(--s-4);
+	align-items: start;
+}
 /* Separates a block from the field group above it without a bespoke rule each time. */
 .spaced { margin-block-start: var(--s-4); }
 

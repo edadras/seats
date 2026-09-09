@@ -38,6 +38,7 @@ return [
     'order_cancelled' => 'Cette commande a été annulée.',
     'refund_exceeds_order' => 'Vous ne pouvez pas rembourser plus que le montant de la commande.',
     'payment_failed' => 'Le paiement n’a pas abouti. Rien n’a été débité.',
+    'discount_used_up' => 'Ce code vient d’être utilisé pour la dernière fois. Rien n’a été débité.',
     'payment_verification_failed' => 'Nous n’avons pas pu confirmer ce paiement auprès de la passerelle. Si de l’argent a quitté votre compte, contactez-nous et nous le retrouverons.',
 
     // --- Plans de salle ---------------------------------------------------------------------
