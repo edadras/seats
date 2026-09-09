@@ -149,14 +149,22 @@ check( 'the seats reached the cart', 2 === lines, `${ lines } lines` );
 // The seat is written on the cart line by the plugin, not by the product — the product is one
 // generic "Seat" for the whole venue. The Cart block fills its lines in after the page settles,
 // so wait for the text rather than reading whatever is there the moment navigation ends.
+//
+// What it looks for is the section, row and seat the buyer just chose, and not the English
+// sentence they are usually wrapped in: that sentence is a translated string, so a shop running
+// in Persian or German would fail this check while behaving perfectly. The three values are the
+// venue's own names and read the same in every language.
+const parts = chosen.map( ( line ) => line.split( '·' ).map( ( part ) => part.trim() ) );
+
 const named = await page
 	.waitForFunction(
-		() => {
-			const matches = document.body.innerText.match( /row [A-Za-z0-9]+, seat/g );
+		( seats ) => {
+			const text = document.body.innerText;
+			const found = seats.filter( ( seat ) => seat.every( ( part ) => text.includes( part ) ) );
 
-			return matches && matches.length >= 2 ? matches.length : false;
+			return found.length >= seats.length ? found.length : false;
 		},
-		null,
+		parts,
 		{ timeout: 15000 }
 	)
 	.then( ( handle ) => handle.jsonValue() )
