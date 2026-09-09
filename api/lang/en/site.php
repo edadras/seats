@@ -102,6 +102,8 @@ return [
     'bookNow' => 'Book now',
     'from' => 'From :price',
     'soldOut' => 'Sold out',
+    'otherDates' => 'Other dates',
+    'moreDates' => 'One more date|:count more dates',
     'doorsOpen' => 'Doors open at :time',
     'eventDate' => ':date at :time',
 

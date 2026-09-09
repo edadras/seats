@@ -1159,6 +1159,7 @@
 						actionButton( 'event-edit', event.id, self.t( 'panel.events.edit' ), 'settings' ) +
 						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
 						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
+						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
 						'</td></tr>';
 				} ).join( '' );
 
@@ -1210,6 +1211,18 @@
 				self.main().querySelectorAll( '[data-prices]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
 						window.SeatmapPricing.open( self, button.dataset.prices );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-repeat]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						var event = results[ 0 ].data.filter( function ( row ) {
+							return row.id === button.dataset.repeat;
+						} )[ 0 ];
+
+						if ( event ) {
+							self.repeatEvent( event );
+						}
 					} );
 				} );
 
@@ -1418,6 +1431,84 @@
 	 * That one is deliberately absent: an event keeps selling against the version published when it
 	 * was created, and moving a live event onto another chart would strand every seat already sold.
 	 */
+	/**
+	 * Put the same production on again on other nights.
+	 *
+	 * Dates typed one per line rather than picked one at a time: a three-week run is twenty-one
+	 * dates, and twenty-one visits to a date picker is not a feature, it is a punishment. Weekly
+	 * and daily buttons fill the box, and what is in the box is still editable — a run that skips
+	 * Mondays is a run somebody edits by deleting two lines.
+	 */
+	App.repeatEvent = function ( event ) {
+		var self = this;
+		var starts = event.starts_at ? new Date( event.starts_at ) : new Date();
+
+		var stamp = function ( date ) {
+			var pad = function ( n ) { return ( n < 10 ? '0' : '' ) + n; };
+
+			return date.getFullYear() + '-' + pad( date.getMonth() + 1 ) + '-' + pad( date.getDate() ) +
+				'T' + pad( date.getHours() ) + ':' + pad( date.getMinutes() );
+		};
+
+		var host = this.modal( {
+			title: this.t( 'panel.events.repeatTitle', { name: event.name } ),
+			submitLabel: this.t( 'panel.events.repeatSubmit' ),
+			body:
+				'<div class="stack">' +
+					'<p class="hint">' + esc( this.t( 'panel.events.repeatHint' ) ) + '</p>' +
+					'<div class="row row--wrap">' +
+						'<button class="btn btn--sm" type="button" data-fill="1">' +
+							esc( this.t( 'panel.events.repeatDaily' ) ) + '</button>' +
+						'<button class="btn btn--sm" type="button" data-fill="7">' +
+							esc( this.t( 'panel.events.repeatWeekly' ) ) + '</button>' +
+					'</div>' +
+					'<div class="field"><label class="field__label" for="repeat-dates">' +
+						esc( this.t( 'panel.events.repeatDates' ) ) + '</label>' +
+						'<textarea class="input input--code" id="repeat-dates" rows="8" ' +
+							'placeholder="' + esc( stamp( starts ) ) + '"></textarea>' +
+						'<span class="field__hint">' + esc( this.t( 'panel.events.repeatFormat' ) ) +
+						'</span></div>' +
+				'</div>',
+			onSubmit: function () {
+				var dates = document.getElementById( 'repeat-dates' ).value
+					.split( '\n' )
+					.map( function ( line ) { return line.trim(); } )
+					.filter( Boolean );
+
+				if ( ! dates.length ) {
+					self.toast( self.t( 'panel.events.repeatNeedDates' ), true );
+
+					return true;
+				}
+
+				return self.request( 'POST', '/events/' + event.id + '/repeat', { dates: dates } )
+					.then( function ( result ) {
+						self.toast( self.t( 'panel.events.repeated', {
+							count: self.number( result.data.length ),
+						} ) );
+						self.renderEvents();
+					} );
+			},
+		} );
+
+		host.querySelectorAll( '[data-fill]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var step = Number( button.dataset.fill );
+				var lines = [];
+
+				// Six more nights after this one, which is a week's run or a week of Fridays.
+				for ( var i = 1; i <= 6; i++ ) {
+					var next = new Date( starts.getTime() );
+
+					next.setDate( next.getDate() + i * step );
+					lines.push( stamp( next ) );
+				}
+
+				document.getElementById( 'repeat-dates' ).value = lines.join( '\n' );
+			} );
+		} );
+	};
+
 	App.editEvent = function ( event ) {
 		var self = this;
 

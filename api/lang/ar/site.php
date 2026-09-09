@@ -98,6 +98,8 @@ return [
     'bookNow' => 'احجز الآن',
     'from' => 'من :price',
     'soldOut' => 'نفدت التذاكر',
+    'otherDates' => 'مواعيد أخرى',
+    'moreDates' => 'موعد آخر|:count مواعيد أخرى',
     'doorsOpen' => 'تُفتح الأبواب في :time',
     'eventDate' => ':date في :time',
 

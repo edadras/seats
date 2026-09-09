@@ -46,6 +46,19 @@ class PlanLimits
             'Your plan includes :limit events. Ask us to move you up a plan.');
     }
 
+    /**
+     * Room for several at once.
+     *
+     * A run of twenty nights is created in one request, and checking the limit one event at a time
+     * would let nineteen of them through before the twentieth was refused — leaving an account
+     * over its plan and a half-made season to tidy up.
+     */
+    public function assertCanAddEvents(int $count): void
+    {
+        $this->assert('max_events', Event::count() + max(0, $count - 1), 'event_limit_reached',
+            'Your plan includes :limit events. Ask us to move you up a plan.');
+    }
+
     private function assert(string $key, int $current, string $code, string $message): void
     {
         $limit = $this->limit($key);

@@ -98,6 +98,8 @@ return [
     'bookNow' => 'رزرو کنید',
     'from' => 'از :price',
     'soldOut' => 'تمام شد',
+    'otherDates' => 'تاریخ‌های دیگر',
+    'moreDates' => 'یک تاریخ دیگر|:count تاریخ دیگر',
     'doorsOpen' => 'درها ساعت :time باز می‌شود',
     'eventDate' => ':date ساعت :time',
 

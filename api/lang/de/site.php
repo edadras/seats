@@ -99,6 +99,8 @@ return [
     'bookNow' => 'Jetzt buchen',
     'from' => 'Ab :price',
     'soldOut' => 'Ausverkauft',
+    'otherDates' => 'Weitere Termine',
+    'moreDates' => 'Ein weiterer Termin|:count weitere Termine',
     'doorsOpen' => 'Einlass ab :time',
     'eventDate' => ':date um :time',
 

@@ -96,6 +96,26 @@
         </section>
     @endif
 
+    @if (! empty($event['other_dates']))
+        {{-- The rest of the run. Somebody who cannot come on Tuesday should not have to go back to
+             the programme and hunt for Wednesday. --}}
+        <section class="shell section section--tight">
+            <h2 class="dates__title">{{ __('site.otherDates') }}</h2>
+            <ul class="dates">
+                @foreach ($event['other_dates'] as $date)
+                    <li class="dates__item @if ($date['sold_out']) dates__item--gone @endif">
+                        <a class="dates__link" href="{{ $date['url'] }}">
+                            <span class="dates__when">{{ $date['when'] }}</span>
+                            <span class="dates__state">
+                                {{ $date['sold_out'] ? __('site.soldOut') : __('site.book') }}
+                            </span>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @if (! empty($event['waiting_list']))
         {{-- Offered where there is a queue worth joining: a night that has sold out, or one whose
              sale has closed. Seats come back all the time — a refund, a hold that expired — and

@@ -297,6 +297,37 @@ class EventController extends Controller
         ]);
     }
 
+    /**
+     * Put the same production on again on other nights.
+     *
+     * Copies what describes the production — prices, ticket types, blocked seats, the fee and the
+     * tax — and nothing that describes a night. The copies start as drafts, because "on sale" is a
+     * decision somebody makes about a specific evening and not something that should happen by
+     * being copied.
+     */
+    public function repeat(Request $request, Event $event)
+    {
+        $this->authorize($request, 'events.manage');
+
+        $data = $request->validate([
+            'dates' => ['required', 'array', 'min:1', 'max:60'],
+            'dates.*' => ['required', 'date'],
+            'series_name' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        app(\App\Support\Plans\PlanLimits::class)->assertCanAddEvents(count($data['dates']));
+
+        $made = app(\App\Domain\Events\EventRepeater::class)->repeat(
+            $event,
+            array_map(fn (string $when) => new \DateTimeImmutable($when), $data['dates']),
+            $data['series_name'] ?? null,
+        );
+
+        return response()->json([
+            'data' => array_map(fn (Event $copy) => $this->present($copy), $made),
+        ], 201);
+    }
+
     private function present(Event $event): array
     {
         // A no-op on the list, which eager-loads both; the safety net is for the single-model

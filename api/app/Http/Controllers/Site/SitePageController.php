@@ -278,12 +278,28 @@ class SitePageController extends Controller
                 });
             })
             ->orderBy('starts_at')
-            ->limit($limit)
+            // Fetched wider than asked for, because a run of twenty nights collapses to one card
+            // and the page would otherwise show one production where it meant to show ten.
+            ->limit($limit * 4)
             ->get();
+
+        /*
+         * A three-week run is one thing to decide about, not twenty-one.
+         *
+         * The programme shows the next night of each production and says how many more there are;
+         * the event's own page lists the rest. Without this a visitor looking for "which night can
+         * I come" has to read twenty-one identical cards to find out.
+         */
+        $runs = $events->whereNotNull('series_id')->groupBy('series_id')->map->count();
+
+        $events = $events
+            ->unique(fn (Event $event) => $event->series_id ? 'series:'.$event->series_id : $event->id)
+            ->take($limit)
+            ->values();
 
         $locale = app()->getLocale();
 
-        return $events->map(function (Event $event) use ($site, $locale) {
+        return $events->map(function (Event $event) use ($site, $locale, $runs) {
             $starts = $event->starts_at?->setTimezone($event->timezone ?: $site->timezone);
             $summary = $this->availability->summaryForEvent($event);
             $cheapest = $event->priceZones->min('amount');
@@ -304,6 +320,8 @@ class SitePageController extends Controller
                 'venue' => $event->venue?->name,
                 'from_price' => null === $cheapest ? null : $this->money($cheapest, $event->currency),
                 'sold_out' => 0 === (int) ($summary['available'] ?? 0),
+                // "and four more nights", said once on the card rather than as four more cards.
+                'more_dates' => max(0, (int) ($runs[$event->series_id] ?? 1) - 1),
             ];
         })->all();
     }
@@ -356,9 +374,52 @@ class SitePageController extends Controller
              * Seats come back all the time; until now they went back on sale silently, to whoever
              * happened to be looking.
              */
+            // The other nights of the same run, so somebody who cannot come on Tuesday does not
+            // have to go back to the programme and hunt for Wednesday.
+            'other_dates' => $this->otherDates($site, $event),
             'waiting_list' => ('cancelled' !== $event->status)
                 && ('closed' === $event->status || ($onSale && 0 === app(WaitingList::class)->freePlaces($event))),
         ] + $this->cover($event->name);
+    }
+
+    /**
+     * The rest of the run, from this night's point of view.
+     *
+     * Only nights that are actually on sale and still ahead: a list that offered last Tuesday, or
+     * a draft nobody has published, would be a page telling a visitor to buy something they cannot.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function otherDates(Site $site, Event $event): array
+    {
+        if (! $event->series_id) {
+            return [];
+        }
+
+        $locale = app()->getLocale();
+
+        return Event::where('series_id', $event->series_id)
+            ->whereKeyNot($event->id)
+            ->where('status', 'published')
+            ->whereNotNull('seat_map_version_id')
+            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->orderBy('starts_at')
+            ->limit(40)
+            ->get()
+            ->map(function (Event $other) use ($site, $locale) {
+                $starts = $other->starts_at?->setTimezone($other->timezone ?: $site->timezone);
+                $summary = $this->availability->summaryForEvent($other);
+
+                return [
+                    'url' => '/events/'.$other->public_id,
+                    'when' => Dates::longWhen($starts, $locale),
+                    'day' => Dates::day($starts, $locale),
+                    'month' => Dates::month($starts, $locale),
+                    'time' => Dates::shortWhen($starts, $locale),
+                    'sold_out' => 0 === (int) ($summary['available'] ?? 0),
+                ];
+            })
+            ->all();
     }
 
     /**

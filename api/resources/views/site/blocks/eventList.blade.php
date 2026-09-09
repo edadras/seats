@@ -82,6 +82,12 @@
                         <div class="event-card__body">
                             <h3 class="event-card__name" dir="auto">{{ $event['name'] }}</h3>
                             <p class="event-card__meta">{{ $event['time'] }}@if ($event['venue']) · {{ $event['venue'] }}@endif</p>
+
+                            @if (! empty($event['more_dates']))
+                                {{-- A three-week run is one thing to decide about, not twenty-one
+                                     identical cards. The rest of the nights are on its own page. --}}
+                                <p class="event-card__run">{{ trans_choice('site.moreDates', $event['more_dates'], ['count' => \App\Support\Locale\Money::number($event['more_dates'])]) }}</p>
+                            @endif
                         </div>
 
                         <div class="event-card__foot">

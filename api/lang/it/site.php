@@ -98,6 +98,8 @@ return [
     'bookNow' => 'Prenota',
     'from' => 'Da :price',
     'soldOut' => 'Esaurito',
+    'otherDates' => 'Altre date',
+    'moreDates' => 'Un’altra data|Altre :count date',
     'doorsOpen' => 'Apertura porte alle :time',
     'eventDate' => ':date alle :time',
 

@@ -412,6 +412,67 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
 
+  /events/{event}/repeat:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    post:
+      operationId: repeatEvent
+      tags: [Events]
+      summary: Put the same production on again on other nights
+      description: |
+        Requires `events.manage`.
+
+        A three-week run is twenty-one events, and it has to be: each night has its own hall, its
+        own inventory and its own tickets, and pretending otherwise is how a seat sold on Tuesday
+        turns up as sold on Wednesday. What nobody should type twenty-one times is the prices, the
+        concessions and the two seats behind the pillar.
+
+        So this copies everything that describes the *production* — price zones, ticket types,
+        blocked seats and seat-level prices, the booking fee and the tax — and nothing that
+        describes a *night*: no orders, no holds, no availability, and no note about a booking that
+        has nothing to do with next Tuesday.
+
+        The copies start as drafts. Being on sale is a decision somebody makes about a specific
+        evening, not something that should happen by being copied.
+
+        The original and its copies end up in one run, which is what lets a programme page show a
+        three-week production as one card rather than as twenty-one identical ones. Repeating again
+        joins the same run rather than starting a second.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dates]
+              properties:
+                dates:
+                  type: array
+                  minItems: 1
+                  maxItems: 60
+                  items: { type: string, format: date-time }
+                series_name:
+                  type: [string, "null"]
+                  maxLength: 200
+                  description: Only read the first time; afterwards the run already has a name.
+      responses:
+        "201":
+          description: The nights created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Event" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: The plan does not have room for that many events
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/pricing:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     put:

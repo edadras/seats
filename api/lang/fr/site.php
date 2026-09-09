@@ -98,6 +98,8 @@ return [
     'bookNow' => 'Réserver',
     'from' => 'À partir de :price',
     'soldOut' => 'Complet',
+    'otherDates' => 'Autres dates',
+    'moreDates' => 'Une autre date|:count autres dates',
     'doorsOpen' => 'Ouverture des portes à :time',
     'eventDate' => 'Le :date à :time',
 
