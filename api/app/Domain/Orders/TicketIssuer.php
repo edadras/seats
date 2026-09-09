@@ -53,6 +53,43 @@ class TicketIssuer
         return $ticket;
     }
 
+    /**
+     * Mint a fresh code for a ticket that already exists, and kill the old one.
+     *
+     * A buyer who lost the email needs their ticket back, and the platform cannot give them the
+     * one it sent: the database keeps a hash, and nothing can recover the code from it. So the
+     * only honest answer is a new code — which necessarily stops the old one working, because two
+     * live codes for one seat is two people at one chair.
+     *
+     * A used ticket is not reissued. Its holder is already inside, and a working code for a seat
+     * somebody is sitting in is worth nothing to them and something to everybody else.
+     *
+     * @return Ticket|null the ticket carrying its new plaintext token, or null if there was
+     *                     nothing reissuable
+     */
+    public function reissue(Allocation $allocation): ?Ticket
+    {
+        $ticket = Ticket::where('allocation_id', $allocation->id)
+            ->where('status', 'issued')
+            ->first();
+
+        if (! $ticket) {
+            return null;
+        }
+
+        [$token, $hash] = $this->generateToken();
+
+        $ticket->forceFill([
+            'token_hash' => $hash,
+            'token_prefix' => substr($token, 0, 12),
+            'issued_at' => now(),
+        ])->save();
+
+        $ticket->plainToken = $token;
+
+        return $ticket;
+    }
+
     public function void(Allocation $allocation): void
     {
         Ticket::where('allocation_id', $allocation->id)

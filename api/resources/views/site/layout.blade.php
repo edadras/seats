@@ -62,6 +62,16 @@
             </nav>
         @endif
 
+        @if ($site->offersSignIn())
+            <a class="nav__link nav__link--account" href="/account">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.8" aria-hidden="true">
+                    <path d="M4 20a8 8 0 0 1 16 0"/><circle cx="12" cy="8" r="4"/>
+                </svg>
+                {{ __('site.account.link') }}
+            </a>
+        @endif
+
         <details class="langs">
             <summary class="langs__button" aria-label="{{ __('site.language') }}">
                 <svg class="langs__globe" width="16" height="16" viewBox="0 0 24 24" fill="none"

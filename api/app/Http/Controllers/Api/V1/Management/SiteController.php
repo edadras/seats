@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Management;
 
 use App\Domain\Sites\Blocks;
 use App\Domain\Sites\Payments\GatewayRegistry;
+use App\Domain\Sites\Auth\GoogleIdentity;
 use App\Domain\Sites\SiteProvisioner;
 use App\Domain\Sites\SiteResolver;
 use App\Domain\Sites\Themes;
@@ -85,7 +86,17 @@ class SiteController extends Controller
             'currency' => ['sometimes', 'string', 'size:3'],
             'status' => ['sometimes', 'in:draft,live'],
             'brand' => ['sometimes', 'array'],
+            'google_signin' => ['sometimes', 'boolean'],
         ]);
+
+        // Offered only where the platform has credentials to offer it with. A switch that turns on
+        // a button leading to a Google error page is worse than no switch.
+        if (! empty($data['google_signin']) && ! app(GoogleIdentity::class)->configured()) {
+            throw ApiException::unprocessable(
+                'signin_not_configured',
+                'This platform has not been given Google credentials, so buyers cannot sign in yet.'
+            );
+        }
 
         if (isset($data['theme_key']) && ! Themes::exists($data['theme_key'])) {
             throw ApiException::unprocessable('unknown_theme', 'That theme does not exist.');
@@ -460,6 +471,9 @@ class SiteController extends Controller
             'currency' => $site->currency,
             'brand' => $site->brand ?? [],
             'status' => $site->status,
+            'google_signin' => (bool) $site->google_signin,
+            // So the screen can say why the switch is unavailable rather than showing a dead one.
+            'signin_available' => app(GoogleIdentity::class)->configured(),
             'url' => $site->canonicalHost() ? $site->url('/') : null,
             'domains' => $site->domains->map(fn ($d) => $this->presentDomain($d))->values(),
         ];

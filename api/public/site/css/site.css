@@ -982,6 +982,123 @@ hr { border: none; }
 	padding: 6px;
 }
 
+
+/* --- a buyer's own page -------------------------------------------------------------------
+ *
+ * Signing in with Google gives this site an address it can trust, and the address is the whole
+ * account: everything below is "the orders bought with it". So the page has two states and no
+ * settings — sign in, and here is what you bought.
+ */
+
+.nav__link--account {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	border: 1px solid var(--hairline);
+	color: var(--text);
+}
+
+.account__out {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	font-size: 0.9rem;
+}
+
+.button--quiet {
+	min-block-size: 2.4rem;
+	padding-inline: 1rem;
+	background: transparent;
+	border-color: var(--border);
+	color: var(--text);
+	font-weight: 500;
+}
+
+.button--quiet:hover { background: var(--surface-veil); filter: none; }
+
+.signin {
+	max-inline-size: 34rem;
+	padding: clamp(1.5rem, 4vw, 2.5rem);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--lift);
+}
+
+/* Google's own button, to Google's own guidance: their mark, on white, with our text beside it. */
+.button--google {
+	margin-block: 1.25rem 0.5rem;
+	background: #fff;
+	border-color: #dadce0;
+	color: #3c4043;
+	font-weight: 500;
+}
+
+.button--google:hover { filter: none; background: #f8f9fa; box-shadow: var(--lift); }
+.google-g { flex: none; }
+
+.orders { display: grid; gap: 1rem; }
+
+.order {
+	padding: clamp(1rem, 3vw, 1.5rem);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--lift);
+}
+
+.order__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.order__event { margin: 0; font-size: 1.15rem; }
+.order__head p { margin: 0.2rem 0 0; font-size: 0.9rem; }
+.order__figures { display: flex; align-items: center; gap: 0.6rem; }
+.order__total { font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.pillbox {
+	padding: 0.15rem 0.6rem;
+	border-radius: var(--radius-pill);
+	background: var(--accent-soft);
+	color: var(--text);
+	font-size: 0.8rem;
+}
+
+.pillbox--used { background: var(--surface-sunken); color: var(--text-muted); }
+
+.order__lines {
+	margin: 1rem 0 0;
+	padding: 0;
+	list-style: none;
+	border-block-start: 1px solid var(--hairline);
+}
+
+.order__lines li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.55rem 0;
+	border-block-end: 1px solid var(--hairline);
+}
+
+.order__lines li:last-child { border-block-end: none; }
+
+.order__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem 1rem;
+	margin-block-start: 1rem;
+}
+
+.order__actions .field__hint { margin: 0; max-inline-size: 26rem; }
+
 @media print {
 	.masthead, .footer, .skip { display: none; }
 	.ticket { box-shadow: none; break-inside: avoid; }

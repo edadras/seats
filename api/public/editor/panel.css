@@ -1333,6 +1333,9 @@
 
 .switch input:checked + .switch__track { background: var(--accent); }
 
+/* The same switch, given a line of its own with a full-size label beside it. */
+.switch--row { font-size: var(--text-md); color: var(--text); }
+
 /* translate, not `inset-inline-start`, so the thumb slides the correct way in both directions
    without a second rule: the logical axis already knows which way "forward" is. */
 .switch input:checked + .switch__track .switch__thumb { transform: translateX(1.05rem); }

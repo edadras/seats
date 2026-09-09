@@ -76,6 +76,26 @@ return [
     ],
 
     /*
+     | Signing a buyer in.
+     |
+     | One Google client for the whole platform, with one redirect URI: a customer's own domain
+     | cannot be registered in our Google project, and asking every organiser to create their own
+     | Google Cloud project would mean nobody turns this on. So the round trip to Google happens on
+     | the platform's own host and hands the buyer back to their site with a one-time token.
+     |
+     | Unset credentials mean the feature does not exist: no button on any site, and the panel says
+     | why rather than offering a switch that cannot work.
+     */
+    'signin' => [
+        'google' => [
+            'client_id' => (string) env('GOOGLE_CLIENT_ID', ''),
+            'client_secret' => (string) env('GOOGLE_CLIENT_SECRET', ''),
+            // Defaults to <app.url>/auth/google/callback, which is what to register with Google.
+            'redirect' => (string) env('GOOGLE_REDIRECT_URL', ''),
+        ],
+    ],
+
+    /*
      | Modules (ADR-0004).
      |
      | `path` is where installed modules live. What is installed is a property of the deployment —

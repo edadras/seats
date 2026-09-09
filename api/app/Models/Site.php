@@ -20,11 +20,12 @@ class Site extends Model
 
     protected $fillable = [
         'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'timezone',
-        'currency', 'brand', 'status', 'published_at',
+        'currency', 'brand', 'status', 'google_signin', 'published_at',
     ];
 
     protected $casts = [
         'brand' => 'array',
+        'google_signin' => 'boolean',
         'published_at' => 'datetime',
     ];
 
@@ -62,6 +63,18 @@ class Site extends Model
     public function apiClient()
     {
         return $this->belongsTo(ApiClient::class);
+    }
+
+    /**
+     * Whether this site offers "sign in with Google" to its buyers.
+     *
+     * Both halves have to be true: the organiser turned it on, and the platform has credentials to
+     * turn it on *with*. A button that leads to a Google error page is worse than no button.
+     */
+    public function offersSignIn(): bool
+    {
+        return (bool) $this->google_signin
+            && app(\App\Domain\Sites\Auth\GoogleIdentity::class)->configured();
     }
 
     public function isLive(): bool

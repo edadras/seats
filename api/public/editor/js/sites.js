@@ -240,6 +240,7 @@
 			[ 'design', 'palette', 'design' ],
 			[ 'menus', 'list', 'menus' ],
 			[ 'domains', 'globe', 'addressNav' ],
+			[ 'signin', 'user', 'signinNav' ],
 		].forEach( function ( entry ) {
 			var button = node( 'button', 'nav-item' );
 			button.innerHTML = icon( entry[ 1 ], { size: 15 } ) +
@@ -266,6 +267,7 @@
 			case 'design': return Sites.paintDesign( App );
 			case 'menus': return Sites.paintMenus( App );
 			case 'domains': return Sites.paintDomains( App );
+			case 'signin': return Sites.paintSignIn( App );
 			default: return Sites.paintPage( App );
 		}
 	};
@@ -1158,6 +1160,62 @@
 		domains.forEach( function ( domain ) {
 			list.appendChild( Sites.domainCard( App, domain ) );
 		} );
+	};
+
+	/**
+	 * Whether buyers may sign in, and what they get if they do.
+	 *
+	 * The switch is only a switch where the platform has Google credentials to offer. Where it has
+	 * none, this says so plainly rather than showing a control that would fail: an organiser who
+	 * turns something on and finds a Google error page has been lied to by the panel.
+	 */
+	Sites.paintSignIn = function ( App ) {
+		var site = Sites.state.site;
+		var host = document.getElementById( 'site-main' );
+		var available = false !== site.signin_available;
+
+		host.innerHTML =
+			'<div class="site-pane">' +
+				'<div class="page-head page-head--inline">' +
+					'<div class="page-head__text">' +
+						'<h1>' + esc( App.t( 'panel.sites.signinTitle' ) ) + '</h1>' +
+						'<p class="page-head__desc">' + esc( App.t( 'panel.sites.signinDescription' ) ) + '</p>' +
+					'</div>' +
+				'</div>' +
+				'<div class="card card--pad">' +
+					( available
+						? '<label class="switch switch--row">' +
+							'<input type="checkbox" id="signin-toggle"' +
+								( site.google_signin ? ' checked' : '' ) + '>' +
+							'<span class="switch__track"><span class="switch__thumb"></span></span>' +
+							'<span>' + esc( App.t( 'panel.sites.signinToggle' ) ) + '</span>' +
+						'</label>'
+						: '<p class="muted">' + esc( App.t( 'panel.sites.signinUnavailable' ) ) + '</p>' ) +
+					'<p class="hint spaced">' + esc( App.t( 'panel.sites.signinHint' ) ) + '</p>' +
+					( site.url
+						? '<p class="hint"><code>' + esc( site.url.replace( /\/$/, '' ) + '/account' ) +
+							'</code></p>'
+						: '' ) +
+				'</div>' +
+			'</div>';
+
+		var toggle = document.getElementById( 'signin-toggle' );
+
+		if ( toggle ) {
+			toggle.addEventListener( 'change', function () {
+				App.request( 'PATCH', '/sites/' + site.id, { google_signin: toggle.checked } )
+					.then( function ( updated ) {
+						site.google_signin = updated.google_signin;
+						App.toast( App.t( updated.google_signin
+							? 'panel.sites.signinOn'
+							: 'panel.sites.signinOff' ) );
+					} )
+					.catch( function ( error ) {
+						toggle.checked = ! toggle.checked;
+						App.toast( error.message, true );
+					} );
+			} );
+		}
 	};
 
 	Sites.domainCard = function ( App, domain ) {

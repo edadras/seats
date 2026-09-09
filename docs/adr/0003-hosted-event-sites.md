@@ -196,3 +196,38 @@ application from the panel, and it is built as one.
   `PlanLimits::KEYS`. Scans are deliberately not limited: cutting off a door on a busy night
   because a counter passed a number would be the platform breaking the one thing a venue cannot
   recover from.
+
+## Amendment, 2026-09: buyers signing in, and why the round trip happens on our host
+
+Organisers asked for their buyers to be able to sign in with Google and find what they had bought.
+Two things about the design are forced rather than chosen.
+
+**The redirect URI is ours, not theirs.** Google will only send somebody back to a URI registered
+in advance in the project that owns the client. Sites here live on organisers' own domains, which
+this platform learns about after the fact and cannot register; and asking every organiser to create
+a Google Cloud project of their own means nobody turns the feature on. So there is one client for
+the whole platform and one redirect URI on the platform's own host, and the buyer is handed back to
+their site with a token that is good for sixty seconds and one use. Nothing about the buyer travels
+in that URL, and the `state` Google carries is a random nonce — what it *means* is kept here,
+because a state that says which site to return to is a state an attacker can write.
+
+**There is no buyer account table.** Signing in with Google proves an email address, and orders
+already carry the address they were bought with, so the address is the account. A `buyer_accounts`
+table would be a second copy of every buyer's name and address, sitting beside the orders and
+drifting from them — the same argument that keeps the customer directory derived (ADR-0006's
+amendment). What the session holds after signing in is an address Google said it had verified, and
+a display name to greet them with.
+
+Consequences worth stating:
+
+- **An address Google has not verified is refused.** `email_verified: false` means Google knows an
+  account claims that address and has not checked it. This platform matches orders by address;
+  accepting an unverified one would hand somebody else's tickets to whoever claimed their email.
+- **Getting a ticket back means replacing it.** The platform keeps a hash of the code it emailed
+  and cannot recover the code itself, so "send me my tickets again" is necessarily "issue new
+  codes and stop the old ones working". That is a real consequence for a buyer who has passed a
+  ticket to a friend, so it is a button with a warning beside it rather than something that
+  happens when the page loads, and it is a POST so that no prefetch can invalidate a ticket.
+- **It is off until an organiser turns it on**, and unavailable entirely where the platform has no
+  Google credentials — in which case the panel says so instead of offering a switch that would
+  lead to a Google error page.

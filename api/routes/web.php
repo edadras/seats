@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\CheckinAppController;
 use App\Http\Controllers\FrontDoorController;
+use App\Http\Controllers\GoogleSignInController;
+use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\SitePageController;
 use App\Http\Controllers\Site\StoreController;
@@ -40,7 +42,29 @@ Route::middleware('site')->group(function () {
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
     Route::get('events/{event}', [SitePageController::class, 'event']);
+
+    /*
+     * A buyer's own page. `/account` renders for anybody — signed in it lists their orders,
+     * signed out it offers the button — and the rest of these 404 on a site that does not offer
+     * signing in at all.
+     */
+    Route::get('account', [BuyerAccountController::class, 'show']);
+    Route::get('account/google', [BuyerAccountController::class, 'start'])->middleware('throttle:20,1');
+    Route::get('account/google/finish', [BuyerAccountController::class, 'finish'])
+        ->middleware('throttle:20,1');
+    Route::post('account/sign-out', [BuyerAccountController::class, 'signOut']);
+    // A POST because it mints new codes and kills the old ones: a link a browser can prefetch
+    // must never be able to invalidate somebody's ticket.
+    Route::post('account/orders/{reference}/tickets', [BuyerAccountController::class, 'tickets'])
+        ->middleware('throttle:10,1');
 });
+
+/*
+ * The one redirect URI registered with Google, for every site on this platform. Ahead of the front
+ * door because it belongs to the platform on every host, and outside the site group because there
+ * is no site in its Host — the site it belongs to is named by the state it carries.
+ */
+Route::get('auth/google/callback', GoogleSignInController::class)->middleware('throttle:60,1');
 
 /*
  * The platform's own console. Ahead of the front door, and a separate page from the panel: they
