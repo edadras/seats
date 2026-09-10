@@ -24,6 +24,7 @@ return [
 
     // --- Posti, prenotazioni e capienza -----------------------------------------------------
     'seat_unavailable' => 'Uno di quei posti non è più disponibile.',
+    'no_seats_together' => "Non ci sono così tanti posti vicini.",
     'capacity_unavailable' => 'Non restano così tanti posti.',
     'hold_expired' => 'La tua prenotazione è scaduta. Scegli di nuovo i posti.',
     'hold_not_found' => 'Quella prenotazione non esiste più.',

@@ -97,7 +97,43 @@ class Seatmap_Rest {
 			}
 		}
 
-		if ( ! $seat_ids && ! $areas ) {
+		/*
+		 * Everything else the picker can ask for.
+		 *
+		 * The widget is one shared implementation and it does not know which host it is inside, so
+		 * whatever it can send on a hosted site it can send here. Dropping these quietly is how a
+		 * concession, an arrival window or a "four together" request turns into a full-price single
+		 * seat with no explanation.
+		 */
+		$seat_types = array();
+
+		foreach ( (array) $request->get_param( 'seat_types' ) as $seat_id => $type_id ) {
+			$seat_types[ sanitize_text_field( (string) $seat_id ) ] = sanitize_text_field( (string) $type_id );
+		}
+
+		$area_types = array();
+
+		foreach ( (array) $request->get_param( 'area_types' ) as $object_id => $split ) {
+			$parts = array();
+
+			foreach ( (array) $split as $type_id => $quantity ) {
+				$quantity = (int) $quantity;
+
+				if ( $quantity > 0 ) {
+					$parts[ sanitize_text_field( (string) $type_id ) ] = $quantity;
+				}
+			}
+
+			if ( $parts ) {
+				$area_types[ sanitize_text_field( (string) $object_id ) ] = $parts;
+			}
+		}
+
+		$entry_slot = sanitize_text_field( (string) $request->get_param( 'entry_slot_id' ) );
+		$together   = (array) $request->get_param( 'best_available' );
+		$wanted     = isset( $together['quantity'] ) ? (int) $together['quantity'] : 0;
+
+		if ( ! $seat_ids && ! $areas && $wanted < 1 ) {
 			return new WP_Error(
 				'seatmap_no_seats',
 				__( 'Choose at least one seat or place.', 'seatmap-connect' ),
@@ -114,10 +150,19 @@ class Seatmap_Rest {
 
 		$response = $client->get_public_post(
 			'/v1/embed/events/' . rawurlencode( $event_id ) . '/holds',
-			array(
-				'seat_ids'   => $seat_ids,
-				'areas'      => (object) $areas,
-				'session_id' => Seatmap_Cart::session_id(),
+			array_filter(
+				array(
+					'seat_ids'       => $seat_ids,
+					'areas'          => (object) $areas,
+					'seat_types'     => (object) $seat_types,
+					'area_types'     => (object) $area_types,
+					'entry_slot_id'  => $entry_slot ? $entry_slot : null,
+					'best_available' => $wanted > 0 ? array( 'quantity' => $wanted ) : null,
+					'session_id'     => Seatmap_Cart::session_id(),
+				),
+				static function ( $value ) {
+					return null !== $value;
+				}
 			)
 		);
 
@@ -127,10 +172,16 @@ class Seatmap_Rest {
 			return new WP_Error(
 				$response->get_error_code(),
 				$response->get_error_message(),
-				array(
-					'status'                            => in_array( $data['code'] ?? '', array( 'seat_unavailable', 'capacity_unavailable' ), true ) ? 409 : 400,
-					'unavailable_seat_ids'              => $data['details']['unavailable_seat_ids'] ?? array(),
-					'unavailable_capacity_object_ids'   => $data['details']['unavailable_capacity_object_ids'] ?? array(),
+				array_merge(
+					// Whatever the API said about the refusal, verbatim: the picker branches on
+					// these, and a plugin that forwarded only the two it knew about in 2024 would
+					// silence every reason invented since.
+					(array) ( $data['details'] ?? array() ),
+					array(
+						'status'                          => in_array( $data['code'] ?? '', array( 'seat_unavailable', 'capacity_unavailable', 'entry_slot_full' ), true ) ? 409 : 400,
+						'unavailable_seat_ids'            => $data['details']['unavailable_seat_ids'] ?? array(),
+						'unavailable_capacity_object_ids' => $data['details']['unavailable_capacity_object_ids'] ?? array(),
+					)
 				)
 			);
 		}

@@ -93,11 +93,11 @@ msgstr "Plätze sind reserviert, Zahlung ausstehend."
 msgid "Seatmap: reconciliation found this order already confirmed."
 msgstr "Seatmap: Der Abgleich hat diese Bestellung bereits als bestätigt vorgefunden."
 
-#: includes/class-seatmap-rest.php:103
+#: includes/class-seatmap-rest.php:139
 msgid "Choose at least one seat or place."
 msgstr "Wählen Sie mindestens einen Platz."
 
-#: includes/class-seatmap-rest.php:112 includes/class-seatmap-widget.php:108
+#: includes/class-seatmap-rest.php:148 includes/class-seatmap-widget.php:108
 msgid "Seat booking is not available right now."
 msgstr "Die Platzbuchung ist gerade nicht verfügbar."
 
@@ -378,23 +378,40 @@ msgstr "%s entfernen"
 msgid "Seat list"
 msgstr "Sitzplatzliste"
 
+#: includes/class-seatmap-widget.php:210
+msgid "Seats together"
+msgstr "Plätze nebeneinander"
+
 #: includes/class-seatmap-widget.php:211
+msgid "Find seats"
+msgstr "Plätze finden"
+
+#. translators: %d: the largest number of adjacent seats left.
+#: includes/class-seatmap-widget.php:213
+msgid "The most seats side by side is %d. Try that many, or pick from the plan."
+msgstr "Höchstens %d Plätze liegen nebeneinander. Versuchen Sie es damit, oder wählen Sie im Plan."
+
+#: includes/class-seatmap-widget.php:214
+msgid "There are no seats left."
+msgstr "Es sind keine Plätze mehr frei."
+
+#: includes/class-seatmap-widget.php:217
 msgid "Arrival time"
 msgstr "Einlasszeit"
 
-#: includes/class-seatmap-widget.php:212
+#: includes/class-seatmap-widget.php:218
 msgid "Choose when you will arrive"
 msgstr "Wählen Sie Ihre Einlasszeit"
 
-#: includes/class-seatmap-widget.php:213
+#: includes/class-seatmap-widget.php:219
 msgid "That arrival time filled up while you were choosing. Please pick another."
 msgstr "Diese Einlasszeit ist gerade voll geworden. Bitte wählen Sie eine andere."
 
-#: includes/class-seatmap-widget.php:214
+#: includes/class-seatmap-widget.php:220
 msgid "Choose an arrival time before reserving."
 msgstr "Wählen Sie eine Einlasszeit, bevor Sie reservieren."
 
-#: includes/class-seatmap-widget.php:225
+#: includes/class-seatmap-widget.php:231
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "Für die Platzwahl wird JavaScript gebraucht. Bitte schalten Sie es ein oder wenden Sie sich an die Kasse."
 

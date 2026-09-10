@@ -39,6 +39,7 @@ class BoxOfficeController extends Controller
         private readonly HoldService $holds,
         private readonly OrderService $orders,
         private readonly AvailabilityService $availability,
+        private readonly \App\Domain\Availability\BestAvailable $best,
         private readonly TicketMailer $mail,
         private readonly AuditLogger $audit,
     ) {}
@@ -105,6 +106,30 @@ class BoxOfficeController extends Controller
      * Hold and confirm together: there is nobody to come back later. A window sale that left a
      * hold behind would be a seat locked for ten minutes because the clerk was interrupted.
      */
+    /**
+     * "Four together" at the window.
+     *
+     * A suggestion rather than a hold: the person at the counter is looking at the buyer, not at a
+     * clock, and a hold taken on their behalf would be a hold they have to remember to release
+     * when the conversation goes another way. The seats come back named so they can be read out.
+     */
+    public function suggest(Request $request, Event $event)
+    {
+        $this->authorize($request, 'orders.sell');
+
+        $data = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
+            'max_amount' => ['nullable', 'integer', 'min:0'],
+            'zone_key' => ['nullable', 'string', 'max:60'],
+            'section_key' => ['nullable', 'string', 'max:60'],
+            'prefer' => ['nullable', 'in:best,cheapest'],
+        ]);
+
+        return response()->json([
+            'data' => $this->best->find($event, (int) $data['quantity'], $data),
+        ]);
+    }
+
     public function sell(Request $request, Event $event)
     {
         $this->authorize($request, 'orders.sell');

@@ -71,6 +71,14 @@
 		this.entrySlots = [];
 		this.entrySlotId = null;
 		this.entryEl = null;
+		/*
+		 * "Four together, please."
+		 *
+		 * The commonest thing anybody asks a box office, and a puzzle rather than a purchase on a
+		 * plan that is three-quarters full. The server chooses and holds in one movement — a
+		 * suggestion the buyer had to confirm is a suggestion somebody else can take in between.
+		 */
+		this.together = 0;
 		this.cursor = null;
 		this.view = { scale: 1, x: 0, y: 0 };
 		this.maxSeats = config.event.max_seats_per_order || 10;
@@ -1020,6 +1028,12 @@
 		var summary = document.createElement( 'div' );
 		summary.className = 'seatmap-widget__summary';
 
+		// Before "your selection", not under it: this is the way to make a selection, and putting
+		// it beneath that heading reads as though four seats had already been chosen.
+		if ( this.seated ) {
+			summary.appendChild( this.buildTogether() );
+		}
+
 		var heading = document.createElement( 'h3' );
 		heading.textContent = this.i18n.yourSelection;
 		summary.appendChild( heading );
@@ -1058,6 +1072,67 @@
 		summary.appendChild( this.submitEl );
 
 		return summary;
+	};
+
+	/**
+	 * The shortcut past the plan: how many, side by side.
+	 *
+	 * Offered before the seats rather than after them, because a buyer who wants four together is
+	 * not going to find them by clicking and would otherwise leave. Choosing chairs by hand still
+	 * works and is still the thing the plan is for; this is for everybody else.
+	 */
+	SeatmapWidget.prototype.buildTogether = function () {
+		var self = this;
+		var wrap = document.createElement( 'div' );
+
+		wrap.className = 'seatmap-widget__together';
+
+		var label = document.createElement( 'label' );
+
+		label.className = 'seatmap-widget__together-label';
+		label.textContent = this.i18n.seatsTogether;
+		label.setAttribute( 'for', this.id( 'together' ) );
+
+		var picker = document.createElement( 'select' );
+
+		picker.className = 'seatmap-widget__together-count';
+		picker.id = this.id( 'together' );
+
+		for ( var n = 1; n <= Math.min( 10, this.maxSeats ); n++ ) {
+			var option = document.createElement( 'option' );
+
+			option.value = String( n );
+			option.textContent = this.formatCount( n );
+			picker.appendChild( option );
+		}
+
+		var button = document.createElement( 'button' );
+
+		button.type = 'button';
+		// Its own look rather than the host page's button class: this sits beside a select inside
+		// the widget's own panel, and a shop's primary button there would outshout the one that
+		// actually takes the money.
+		button.className = 'seatmap-widget__together-go';
+		button.textContent = this.i18n.findSeats;
+		button.addEventListener( 'click', function () {
+			self.reserveTogether( Number( picker.value ) || 1 );
+		} );
+
+		wrap.appendChild( label );
+		wrap.appendChild( picker );
+		wrap.appendChild( button );
+
+		this.togetherEl = wrap;
+
+		return wrap;
+	};
+
+	/** An id nobody else on the page shares, for a label that has to point at its own field. */
+	SeatmapWidget.prototype.id = function ( name ) {
+		this.idPrefix = this.idPrefix ||
+			'seatmap-' + Math.random().toString( 36 ).slice( 2, 8 );
+
+		return this.idPrefix + '-' + name;
 	};
 
 	/**
@@ -2430,6 +2505,34 @@
 		this.submitEl.disabled = ! this.totalChosen() || this.needsEntrySlot();
 	};
 
+	/**
+	 * Ask the server for n seats side by side, and take them.
+	 *
+	 * Anything the buyer had already picked is left alone and not sent: this is a different request
+	 * from theirs, and quietly merging the two would hand somebody six seats when they asked for
+	 * four.
+	 */
+	SeatmapWidget.prototype.reserveTogether = function ( quantity ) {
+		if ( this.busy ) {
+			return;
+		}
+
+		if ( this.needsEntrySlot() ) {
+			this.announce( this.i18n.arrivalNeeded );
+
+			return;
+		}
+
+		this.busy = true;
+		this.announce( this.i18n.working );
+		this.post( {
+			event_public_id: this.config.eventPublicId,
+			best_available: { quantity: quantity },
+			entry_slot_id: this.entrySlotId,
+			session_id: this.config.sessionId,
+		} );
+	};
+
 	SeatmapWidget.prototype.reserve = function () {
 		if ( this.busy || ! this.totalChosen() ) {
 			return;
@@ -2488,25 +2591,40 @@
 			}
 		} );
 
+		this.post( {
+			event_public_id: this.config.eventPublicId,
+			seat_ids: seatIds,
+			areas: areas,
+			seat_types: seatTypes,
+			area_types: areaTypes,
+			// Null on nearly every event. Where it is not, it is the window this booking is for,
+			// and the server refuses the hold without it rather than guessing one.
+			entry_slot_id: this.entrySlotId,
+			// Only the public embed API asks for this — it has no session to know a browser by.
+			// A shop's own route already knows whose cart this is and ignores it.
+			session_id: this.config.sessionId,
+		} );
+	};
+
+	/**
+	 * Ask for a hold, and deal with every way that can end.
+	 *
+	 * Shared by the two ways of asking — chairs picked by hand, and n seats side by side chosen by
+	 * the server — because what happens after the request is identical and two copies of it is two
+	 * places for a lost error message to hide.
+	 */
+	SeatmapWidget.prototype.post = function ( body ) {
+		var self = this;
+
+		this.submitEl.disabled = true;
+
 		fetch( this.holdEndpoint(), {
 			method: 'POST',
 			credentials: 'same-origin',
 			// The header is named by whoever booted the widget: WordPress wants X-WP-Nonce, a
 			// first-party site wants its own CSRF header. The widget does not care which.
 			headers: nonceHeaders( this.config, { 'Content-Type': 'application/json' } ),
-			body: JSON.stringify( {
-				event_public_id: this.config.eventPublicId,
-				seat_ids: seatIds,
-				areas: areas,
-				seat_types: seatTypes,
-				area_types: areaTypes,
-				// Null on nearly every event. Where it is not, it is the window this booking is
-				// for, and the server refuses the hold without it rather than guessing one.
-				entry_slot_id: this.entrySlotId,
-				// Only the public embed API asks for this — it has no session to know a browser
-				// by. A shop's own route already knows whose cart this is and ignores it.
-				session_id: this.config.sessionId,
-			} ),
+			body: JSON.stringify( body ),
 		} )
 			.then( function ( response ) {
 				return response.json().then( function ( body ) {
@@ -2552,15 +2670,52 @@
 	 * Drop exactly the seats the API named, keep the rest of the selection, and refresh — the buyer
 	 * should not have to start over because one seat went.
 	 */
+	/**
+	 * Why a hold was refused, whichever host said so.
+	 *
+	 * The two hosts wrap a refusal differently and always have: a hosted site answers with the
+	 * platform's own envelope, `{ error: { code, details } }`, and WordPress answers with a
+	 * WP_Error, `{ code, data }`. Reading only one of them meant that on a hosted site every
+	 * refusal — including "somebody just took that seat" — came out as "something went wrong",
+	 * with the taken chair still sitting in the buyer's selection.
+	 */
+	SeatmapWidget.prototype.refusal = function ( body ) {
+		var error = ( body && body.error ) || body || {};
+
+		return {
+			code: error.code || '',
+			message: error.message || '',
+			details: error.details || ( body && body.data ) || {},
+		};
+	};
+
 	SeatmapWidget.prototype.handleHoldFailure = function ( body ) {
-		var taken = ( body && body.data && body.data.unavailable_seat_ids ) || [];
-		var fullAreas = ( body && body.data && body.data.unavailable_capacity_object_ids ) || [];
+		var refusal = this.refusal( body );
+		var taken = refusal.details.unavailable_seat_ids || [];
+		var fullAreas = refusal.details.unavailable_capacity_object_ids || [];
 		var self = this;
+
+		/*
+		 * There is no run of that many seats side by side.
+		 *
+		 * The server says how many there are, because "no" on its own sends the buyer back to the
+		 * plan to work out for themselves whether three together exist. Zero means the house has
+		 * nothing at all left, which is a different sentence.
+		 */
+		if ( 'no_seats_together' === refusal.code ) {
+			var largest = refusal.details.largest_together || 0;
+
+			this.announce( largest
+				? this.i18n.someTogether.replace( '%d', this.formatCount( largest ) )
+				: this.i18n.noneTogether );
+
+			return;
+		}
 
 		// The window filled between this buyer choosing it and pressing the button. Unchoose it
 		// and say so: everything they picked is still in the summary, and the next poll will show
 		// which windows are left.
-		if ( body && 'entry_slot_full' === body.code ) {
+		if ( 'entry_slot_full' === refusal.code ) {
 			this.entrySlotId = null;
 			this.announce( this.i18n.arrivalFull );
 			this.updateSubmitState();
@@ -2593,7 +2748,7 @@
 
 			this.announce( this.i18n.seatTaken );
 		} else {
-			this.announce( ( body && body.message ) || this.i18n.genericError );
+			this.announce( refusal.message || this.i18n.genericError );
 		}
 
 		this.cursor = null; // Force a full refresh rather than an incremental one.

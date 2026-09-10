@@ -59,21 +59,43 @@ class StoreController extends Controller
             'area_types.*' => ['array', 'max:20'],
             'area_types.*.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
             'entry_slot_id' => ['sometimes', 'nullable', 'uuid'],
+            // "Four together, please", instead of naming the chairs. The server chooses and holds
+            // in one movement, because a suggestion a buyer has to confirm is a suggestion somebody
+            // else can take in between.
+            'best_available' => ['sometimes', 'array'],
+            'best_available.quantity' => ['required_with:best_available', 'integer', 'min:1',
+                'max:'.config('seatmap.hold.max_seats')],
+            'best_available.max_amount' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'best_available.zone_key' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'best_available.section_key' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'best_available.prefer' => ['sometimes', 'nullable', 'in:best,cheapest'],
+            'best_available.ticket_type_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
 
         $event = $this->event($data['event_public_id']);
 
-        $hold = $this->holds->create(
-            $event,
-            $data['seat_ids'] ?? [],
-            $this->sessionId($request),
-            null,
-            $request->ip(),
-            $data['areas'] ?? [],
-            $data['seat_types'] ?? [],
-            $data['area_types'] ?? [],
-            $data['entry_slot_id'] ?? null,
-        );
+        $hold = ($data['best_available'] ?? null)
+            ? $this->holds->createBestAvailable(
+                $event,
+                (int) $data['best_available']['quantity'],
+                $this->sessionId($request),
+                null,
+                $request->ip(),
+                $data['best_available'],
+                ['all' => $data['best_available']['ticket_type_id'] ?? null],
+                $data['entry_slot_id'] ?? null,
+            )
+            : $this->holds->create(
+                $event,
+                $data['seat_ids'] ?? [],
+                $this->sessionId($request),
+                null,
+                $request->ip(),
+                $data['areas'] ?? [],
+                $data['seat_types'] ?? [],
+                $data['area_types'] ?? [],
+                $data['entry_slot_id'] ?? null,
+            );
 
         // The token goes in the session, not to the browser as an identifier it could swap: the
         // checkout reads the buyer's hold from here and prices it from the server's own snapshot.

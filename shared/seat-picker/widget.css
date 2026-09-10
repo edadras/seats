@@ -594,6 +594,66 @@
 	color: var(--seatmap-muted);
 }
 
+/* --- seats together ----------------------------------------------------------------------
+ *
+ * The shortcut past the plan, at the top of the summary: how many, side by side. First in the
+ * column because a buyer who wants four together will not find them by clicking.
+ */
+
+.seatmap-widget__together {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin: 0 0 0.9rem;
+	padding: 0 0 0.9rem;
+	border-block-end: 1px solid var(--seatmap-border);
+}
+
+.seatmap-widget__together-label {
+	flex: 1 1 100%;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--seatmap-muted);
+}
+
+.seatmap-widget__together-count {
+	flex: 0 0 4.5rem;
+	padding: 0.45rem 0.5rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-surface);
+	color: inherit;
+	font: inherit;
+	font-size: 0.9rem;
+}
+
+.seatmap-widget__together-go {
+	flex: 1 1 auto;
+	min-block-size: 2.25rem;
+	padding-inline: 0.9rem;
+	border: 1px solid var(--seatmap-border);
+	border-radius: var(--seatmap-radius-sm);
+	background: var(--seatmap-surface);
+	color: inherit;
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.seatmap-widget__together-go:hover:not(:disabled) {
+	border-color: var(--seatmap-accent);
+	color: var(--seatmap-accent);
+}
+
+.seatmap-widget__together-count:focus-visible {
+	outline: 2px solid var(--seatmap-accent);
+	outline-offset: 1px;
+}
+
 /* --- timed entry -------------------------------------------------------------------------
  *
  * A choice that has to be made before anything else, so it sits above the seats rather than

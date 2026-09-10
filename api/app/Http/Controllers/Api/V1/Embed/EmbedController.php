@@ -149,19 +149,41 @@ class EmbedController extends Controller
             'session_id' => ['required', 'string', 'max:100'],
             // Which arrival window, on an event that sells timed entry.
             'entry_slot_id' => ['sometimes', 'nullable', 'uuid'],
+            // "Four together, please", instead of naming the chairs. The server chooses and holds
+            // in one movement, because a suggestion a buyer has to confirm is a suggestion somebody
+            // else can take in between.
+            'best_available' => ['sometimes', 'array'],
+            'best_available.quantity' => ['required_with:best_available', 'integer', 'min:1',
+                'max:'.config('seatmap.hold.max_seats')],
+            'best_available.max_amount' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'best_available.zone_key' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'best_available.section_key' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'best_available.prefer' => ['sometimes', 'nullable', 'in:best,cheapest'],
+            'best_available.ticket_type_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
 
-        $hold = $this->holds->create(
-            $event,
-            $data['seat_ids'] ?? [],
-            $data['session_id'],
-            null,
-            $request->ip(),
-            $data['areas'] ?? [],
-            $data['seat_types'] ?? [],
-            $data['area_types'] ?? [],
-            $data['entry_slot_id'] ?? null,
-        );
+        $hold = ($data['best_available'] ?? null)
+            ? $this->holds->createBestAvailable(
+                $event,
+                (int) $data['best_available']['quantity'],
+                $data['session_id'],
+                null,
+                $request->ip(),
+                $data['best_available'],
+                ['all' => $data['best_available']['ticket_type_id'] ?? null],
+                $data['entry_slot_id'] ?? null,
+            )
+            : $this->holds->create(
+                $event,
+                $data['seat_ids'] ?? [],
+                $data['session_id'],
+                null,
+                $request->ip(),
+                $data['areas'] ?? [],
+                $data['seat_types'] ?? [],
+                $data['area_types'] ?? [],
+                $data['entry_slot_id'] ?? null,
+            );
 
         /*
          * Where to send the buyer to pay.

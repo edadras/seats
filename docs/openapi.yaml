@@ -842,6 +842,59 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/best-available:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: suggestBestAvailable
+      tags: [Box office]
+      summary: Four together, at the window
+      description: |
+        Requires `orders.sell`. A suggestion rather than a hold: the person at the counter is
+        looking at a buyer, not at a clock, and a hold taken on their behalf is a hold they have to
+        remember to release when the conversation goes another way. The website's own path holds
+        atomically instead — see `best_available` on the hold endpoints.
+
+        The same arithmetic answers both. Together means physically adjacent; "best" means the
+        organiser's own price list; a wheelchair space is never offered.
+      parameters:
+        - name: quantity
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: max_amount
+          in: query
+          description: "The most to pay per seat, in minor units."
+          schema: { type: integer, minimum: 0 }
+        - name: zone_key
+          in: query
+          schema: { type: string, maxLength: 60 }
+        - name: section_key
+          in: query
+          schema: { type: string, maxLength: 60 }
+        - name: prefer
+          in: query
+          schema: { type: string, enum: [best, cheapest], default: best }
+      responses:
+        "200":
+          description: The seats, named so they can be read out. Empty when there is no such run.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        seat_id: { type: string, format: uuid }
+                        section: { type: string }
+                        row: { type: string }
+                        label: { type: string }
+                        amount: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/entry-slots:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -2464,6 +2517,38 @@ paths:
                   additionalProperties:
                     type: object
                     additionalProperties: { type: integer, minimum: 1 }
+                best_available:
+                  type: object
+                  description: |
+                    "Four together, please" — the commonest thing anybody asks a box office, and a
+                    puzzle rather than a purchase on a plan that is three-quarters full. Sent
+                    instead of `seat_ids`: the server chooses and holds in one movement, because a
+                    suggestion the buyer has to confirm is a suggestion somebody else can take in
+                    between.
+
+                    Together means physically adjacent, not merely in the same row. What "best"
+                    means is the organiser's own price list — they ranked their seats when they
+                    priced them — and nothing is invented on top of it. Wheelchair spaces are never
+                    handed out this way: they are a need rather than a preference.
+
+                    Refused with `no_seats_together`, whose details name the largest group that
+                    could be had, so a client can offer a number instead of a shrug.
+                  required: [quantity]
+                  properties:
+                    quantity: { type: integer, minimum: 1 }
+                    max_amount:
+                      type: [integer, "null"]
+                      description: "The most the buyer will pay per seat, in minor units."
+                    zone_key: { type: [string, "null"] }
+                    section_key: { type: [string, "null"] }
+                    prefer:
+                      type: string
+                      enum: [best, cheapest]
+                      default: best
+                    ticket_type_id:
+                      type: [string, "null"]
+                      format: uuid
+                      description: "One type for the whole group; nobody asks for four together and a concession in the middle."
                 entry_slot_id:
                   type: [string, "null"]
                   format: uuid

@@ -1604,6 +1604,29 @@
 	background: var(--surface);
 }
 
+/* "Four together, please" — the first thing asked at a window, so the first thing in the basket. */
+.counter__together {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--s-2);
+	margin-block-end: var(--s-4);
+	padding-block-end: var(--s-4);
+	border-block-end: 1px solid var(--border-subtle);
+}
+
+.counter__together-label {
+	flex: 1 1 100%;
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.counter__together .input { flex: 0 0 5rem; }
+.counter__together .btn { flex: 1 1 auto; }
+
 .counter__lines { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
 
 .counter__lines li {

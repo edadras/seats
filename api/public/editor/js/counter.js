@@ -111,10 +111,32 @@
 						: Counter.blocksMarkup( App ) ) +
 					Counter.areasMarkup( App ) +
 				'</div>' +
-				'<aside class="counter__basket">' + Counter.basketMarkup( App ) + '</aside>' +
+				'<aside class="counter__basket">' + Counter.togetherMarkup( App ) +
+					Counter.basketMarkup( App ) + '</aside>' +
 			'</div>';
 
 		Counter.bindHall();
+	};
+
+	/**
+	 * "Four together, please."
+	 *
+	 * The commonest request at a window, and until now the clerk had to find them by eye on a plan
+	 * three-quarters full. This asks the same code the website asks and drops the answer into the
+	 * basket, where it can still be changed before anything is sold.
+	 */
+	Counter.togetherMarkup = function ( App ) {
+		if ( ! ( Counter.hall.sections || [] ).length ) {
+			return '';
+		}
+
+		return '<div class="counter__together">' +
+			'<label class="counter__together-label" for="counter-together">' +
+				esc( App.t( 'panel.boxOffice.together' ) ) + '</label>' +
+			'<input class="input tnum" id="counter-together" type="number" min="1" max="10" value="2">' +
+			'<button class="btn btn--sm" id="counter-find">' +
+				esc( App.t( 'panel.boxOffice.findSeats' ) ) + '</button>' +
+		'</div>';
 	};
 
 	Counter.blocksMarkup = function ( App ) {
@@ -337,6 +359,45 @@
 
 				Counter.paintHall();
 			} );
+		} );
+
+		bind( 'counter-find', function () {
+			var App = Counter.App;
+			var wanted = Number( ( document.getElementById( 'counter-together' ) || {} ).value ) || 1;
+
+			App.request( 'GET', '/events/' + Counter.eventId + '/best-available?quantity=' + wanted )
+				.then( function ( response ) {
+					var seats = response.data || [];
+
+					if ( ! seats.length ) {
+						App.toast( App.t( 'panel.boxOffice.noneTogether' ), true );
+
+						return;
+					}
+
+					// The suggestion replaces whatever was in the basket rather than adding to it:
+					// a clerk who asks twice means "not those, these".
+					Counter.selected = {};
+					Counter.types = {};
+
+					var fallback = ( Counter.hall.ticket_types || [] ).filter( function ( type ) {
+						return type.is_default;
+					} )[ 0 ];
+
+					seats.forEach( function ( seat ) {
+						Counter.selected[ seat.seat_id ] = {
+							label: [ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ),
+							amount: seat.amount,
+						};
+
+						if ( fallback ) {
+							Counter.types[ seat.seat_id ] = fallback.id;
+						}
+					} );
+
+					Counter.paintHall();
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
 		} );
 
 		each( '[data-area-plus]', function ( button ) {

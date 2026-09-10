@@ -39,7 +39,61 @@ class HoldService
         private readonly PriceSigner $signer,
         private readonly TenantContext $tenantContext,
         private readonly \App\Domain\Events\EntrySlots $slots,
+        private readonly \App\Domain\Availability\BestAvailable $bestAvailable,
     ) {}
+
+    /**
+     * "Four together, please" — chosen and held in one movement.
+     *
+     * Choosing has to happen outside the transaction, because it reads the whole house, and the
+     * house can change between reading it and locking four chairs in it. So this is a retry rather
+     * than a lock: pick, try, and if somebody took one of them in between, pick again from what is
+     * left. Three attempts, because a fourth failure is not bad luck — it is an on-sale where every
+     * request is fighting for the same seats, and queueing there is better than thrashing.
+     *
+     * @param  array{max_amount?: ?int, zone_key?: ?string, section_key?: ?string, prefer?: ?string}  $filters
+     */
+    public function createBestAvailable(
+        Event $event,
+        int $quantity,
+        string $sessionId,
+        ?string $apiClientId = null,
+        ?string $ip = null,
+        array $filters = [],
+        array $seatTypes = [],
+        ?string $entrySlotId = null,
+    ): Hold {
+        $lastFailure = null;
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $seats = $this->bestAvailable->findOrFail($event, $quantity, $filters);
+            $seatIds = array_column($seats, 'seat_id');
+
+            // One ticket type for the whole group: nobody says "four together, and make the third
+            // one a concession" — they say it afterwards, on the seats they can now see.
+            $types = [];
+
+            foreach ($seatIds as $seatId) {
+                if ($seatTypes['all'] ?? null) {
+                    $types[$seatId] = $seatTypes['all'];
+                }
+            }
+
+            try {
+                return $this->create(
+                    $event, $seatIds, $sessionId, $apiClientId, $ip, [], $types, [], $entrySlotId
+                );
+            } catch (ApiException $e) {
+                if ('seat_unavailable' !== $e->errorCode()) {
+                    throw $e;
+                }
+
+                $lastFailure = $e;
+            }
+        }
+
+        throw $lastFailure;
+    }
 
     /**
      * @param  list<string>  $seatIds     Named seats.

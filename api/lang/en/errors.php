@@ -28,6 +28,7 @@ return [
 
     // --- Seats, holds and capacity ----------------------------------------------------------
     'seat_unavailable' => 'One of those seats is no longer available.',
+    'no_seats_together' => "There is no run of that many seats side by side.",
     'capacity_unavailable' => 'There are not that many places left.',
     'hold_expired' => 'Your reservation expired. Please choose your seats again.',
     'hold_not_found' => 'That reservation no longer exists.',

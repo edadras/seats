@@ -21,6 +21,28 @@ class AvailabilityService
      */
     public function forEvent(Event $event): array
     {
+        return array_map(fn (array $seat) => [
+            'seat_id' => $seat['seat_id'],
+            'state' => $seat['state'],
+            'amount' => $seat['amount'],
+            'zone_key' => $seat['zone_key'],
+        ], $this->placedSeats($event));
+    }
+
+    /**
+     * The same seats, with where they sit and what they are called.
+     *
+     * One definition of "available" for the picker and for whoever is choosing seats on a buyer's
+     * behalf: the state, the price and the precedence are computed once, here, and the extra
+     * columns are the ones you need to answer "four together" — which row, and where along it.
+     *
+     * @return list<array{seat_id: string, state: string, amount: int|null, zone_key: string|null,
+     *                    section_id: string, section_key: string, section_name: string,
+     *                    row_id: string, row_name: string, label: string, accessible: bool,
+     *                    x: float, y: float, floor_key: string|null}>
+     */
+    public function placedSeats(Event $event): array
+    {
         if (! $event->seat_map_version_id) {
             return [];
         }
@@ -36,6 +58,16 @@ class AvailabilityService
             'state' => $row->state,
             'amount' => $row->amount === null ? null : (int) $row->amount,
             'zone_key' => $row->zone_key,
+            'section_id' => $row->section_id,
+            'section_key' => $row->section_key,
+            'section_name' => $row->section_name,
+            'row_id' => $row->row_id,
+            'row_name' => $row->row_name,
+            'label' => $row->label,
+            'accessible' => (bool) $row->accessible,
+            'x' => (float) $row->x,
+            'y' => (float) $row->y,
+            'floor_key' => $row->floor_key,
         ], $rows);
     }
 
@@ -194,8 +226,15 @@ class AvailabilityService
                     ELSE 'available'
                 END AS state,
                 COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
-                COALESCE(o.zone_key, sp.zone_key) AS zone_key
+                COALESCE(o.zone_key, sp.zone_key) AS zone_key,
+                sp.x, sp.y, sp.floor_key,
+                s.label, s.accessible,
+                sec.id AS section_id, sec.key AS section_key, sec.name AS section_name,
+                r.id AS row_id, r.name AS row_name
             FROM seat_placements sp
+            JOIN seats s ON s.id = sp.seat_id
+            JOIN sections sec ON sec.id = s.section_id
+            JOIN seat_rows r ON r.id = s.seat_row_id
             LEFT JOIN event_seat_overrides o
                 ON o.event_id = :event_id AND o.seat_id = sp.seat_id
             LEFT JOIN allocations a

@@ -24,6 +24,7 @@ return [
 
     // --- Plätze, Reservierungen und Kapazität -----------------------------------------------
     'seat_unavailable' => 'Einer dieser Plätze ist nicht mehr verfügbar.',
+    'no_seats_together' => "So viele Plätze liegen nirgends nebeneinander.",
     'capacity_unavailable' => 'So viele Plätze sind nicht mehr frei.',
     'hold_expired' => 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie Ihre Plätze erneut.',
     'hold_not_found' => 'Diese Reservierung gibt es nicht mehr.',

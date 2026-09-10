@@ -104,6 +104,9 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}/questions', [EventQuestionController::class, 'index']);
         Route::put('events/{event}/questions', [EventQuestionController::class, 'replace']);
         // When people may come in, on an event whose limit is the room rather than the chair.
+        // "Four together, please" — the commonest request at a window, answered by the same code
+        // that answers it on the website.
+        Route::get('events/{event}/best-available', [BoxOfficeController::class, 'suggest']);
         Route::get('events/{event}/entry-slots', [EntrySlotController::class, 'index']);
         Route::put('events/{event}/entry-slots', [EntrySlotController::class, 'replace']);
         Route::post('events/{event}/entry-slots/generate', [EntrySlotController::class, 'generate']);
