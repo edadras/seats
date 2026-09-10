@@ -28,6 +28,9 @@ Route::middleware('site')->group(function () {
             ->middleware('throttle:120,1');
         Route::post('hold', [StoreController::class, 'hold'])->middleware('throttle:30,1');
         Route::post('release', [StoreController::class, 'release'])->middleware('throttle:60,1');
+        // Throttled hard, like the discount box and for a sharper reason: a presale code is worth
+        // guessing, and guessing is cheap unless it is rationed.
+        Route::post('unlock', [StoreController::class, 'unlock'])->middleware('throttle:8,1');
     });
 
     // Where a picker embedded on somebody else's website sends the buyer to pay. It carries a

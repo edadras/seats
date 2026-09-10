@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Access\AccessCodes;
+use App\Domain\Access\SaleWindow;
 use App\Domain\Availability\AvailabilityService;
 use App\Domain\SeatMaps\PublishedGeometry;
 use App\Domain\Sites\Themes;
@@ -127,7 +129,10 @@ class SitePageController extends Controller
     private function structuredData(Site $site, Event $event): array
     {
         $cheapest = $event->priceZones->min('amount');
-        $onSale = 'published' === $event->status && null !== $event->seat_map_version_id;
+        // The general sale, not this visitor's: a search engine holds no presale code, and
+        // advertising an offer that only a mailing list can take is advertising it to the wrong
+        // people.
+        $onSale = SaleWindow::isOpenToAll($event);
 
         $data = [
             '@context' => 'https://schema.org',
@@ -337,7 +342,22 @@ class SitePageController extends Controller
         }
 
         $starts = $event->starts_at?->setTimezone($event->timezone ?: $site->timezone);
-        $onSale = 'published' === $event->status && null !== $event->seat_map_version_id;
+        /*
+         * Whether the picker is drawn at all, and if not, why not.
+         *
+         * A presale is a third answer to a question that used to have two: the event is on sale,
+         * but not to this visitor unless they hold a code. So the page renders the box instead of
+         * the seats, and unlocking the box is what turns the seats on — server-side, on a reload,
+         * because whether somebody may buy is never a decision a script on their own page makes.
+         */
+        $sale = SaleWindow::state($event);
+        $held = request()->session()->get('seatmap_access_code');
+        $unlocked = SaleWindow::OPEN === $sale || (
+            SaleWindow::CLOSED !== $sale
+            && $held
+            && app(AccessCodes::class)->offer($held, $event)->ok
+        );
+        $onSale = SaleWindow::CLOSED !== $sale && $unlocked;
 
         // One id, used by both the container and the boot payload: the picker finds its element
         // by that id, so two random values would leave the page with a div and nothing in it.
@@ -360,9 +380,18 @@ class SitePageController extends Controller
                 ? null
                 : $this->money($cheapest, $event->currency),
             'on_sale' => $onSale,
-            'closed_message' => match ($event->status) {
-                'cancelled' => __('site.closed.cancelled'),
-                'closed' => __('site.closed.closed'),
+            // Where the sale is open but this visitor is not in it, the page offers the box
+            // instead of the seats. The two states are different sentences and different shapes.
+            'sale_state' => $sale,
+            'needs_code' => ! $unlocked && SaleWindow::takesCodes($event),
+            'opens_at' => SaleWindow::opensAt($event)
+                ? Dates::longWhen(SaleWindow::opensAt($event), app()->getLocale())
+                : null,
+            'closed_message' => match (true) {
+                'cancelled' === $event->status => __('site.closed.cancelled'),
+                'closed' === $event->status => __('site.closed.closed'),
+                SaleWindow::PRESALE === $sale => __('site.access.presaleOnly'),
+                SaleWindow::WAITING === $sale => __('site.access.notOpenYet'),
                 default => __('site.closed.notYet'),
             },
             // The organiser's own sentence, where they gave one. "Cancelled" alone sends somebody

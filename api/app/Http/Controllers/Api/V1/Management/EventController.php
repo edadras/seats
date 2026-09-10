@@ -442,6 +442,8 @@ class EventController extends Controller
             'refunds' => ['sometimes', Rule::in(\App\Domain\Refunds\RefundPolicy::KINDS)],
             'refund_window_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
             'refund_keeps_fee' => ['sometimes', 'boolean'],
+            'presale_starts_at' => ['sometimes', 'nullable', 'date'],
+            'on_sale_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:presale_starts_at'],
         ]);
     }
 
@@ -516,6 +518,11 @@ class EventController extends Controller
             'refunds' => $event->refunds,
             'refund_window_hours' => (int) $event->refund_window_hours,
             'refund_keeps_fee' => (bool) $event->refund_keeps_fee,
+            'presale_starts_at' => $event->presale_starts_at?->toIso8601String(),
+            'on_sale_at' => $event->on_sale_at?->toIso8601String(),
+            // What the sale is doing right now, so a screen does not have to work it out from
+            // two instants and a clock it may not share.
+            'sale_state' => \App\Domain\Access\SaleWindow::state($event),
             'availability_version' => $event->availability_version,
 
             /*

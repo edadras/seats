@@ -295,4 +295,18 @@ return [
         'doors' => 'Début',
         'code' => 'Code',
     ],
+
+    'access' => [
+        'haveACode' => 'Vous avez un code ?',
+        'unlock' => 'Déverrouiller',
+        'presaleOnly' => "C'est une prévente. Il faut un code pour réserver.",
+        'notOpenYet' => "La réservation pour cette représentation n'est pas encore ouverte.",
+        'opensOn' => 'La vente générale ouvre :when.',
+        'unknown_code' => "Ce code n'est pas le bon.",
+        'code_not_live' => 'Ce code ne fonctionne pas en ce moment.',
+        'code_used_up' => "Ce code a servi autant de fois qu'il le pouvait.",
+        'presale_not_open' => "La prévente n'est pas encore ouverte.",
+        'event_not_sellable' => "Cette représentation n'est pas en vente.",
+        'tryAgain' => "Quelque chose s'est mal passé. Réessayez.",
+    ],
 ];

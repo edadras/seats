@@ -184,4 +184,14 @@ return [
     'google_wallet_not_set_up' => 'Questo account non ha un emittente Google Wallet.',
     'google_service_account_unreadable' => 'Quel file di account di servizio non si è potuto leggere.',
     'google_signing_failed' => "Il pass non si è potuto firmare con quell'account di servizio.",
+
+    // --- Presale and access codes -------------------------------------------------------------
+    'access_code_required' => 'Questo evento è in prevendita. Per prenotare serve un codice.',
+    'unknown_code' => 'Quel codice non è giusto.',
+    'code_not_live' => 'Quel codice al momento non funziona.',
+    'code_used_up' => 'Quel codice è stato usato tutte le volte che poteva.',
+    'presale_not_open' => 'La prevendita non è ancora aperta.',
+    'access_code_seat_limit' => 'Quel codice vale per :count posti alla volta.',
+    'access_code_taken' => 'Hai già un codice con quel nome.',
+    'access_code_in_use' => "Questo codice ha fatto entrare qualcuno. Mettilo in pausa invece di cancellarlo — cancellarlo lascerebbe quelle prenotazioni senza spiegazione.",
 ];

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Management\AuditController;
 use App\Http\Controllers\Api\V1\Management\BoxOfficeController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
+use App\Http\Controllers\Api\V1\Management\AccessCodeController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\DoorListController;
 use App\Http\Controllers\Api\V1\Management\EntrySlotController;
@@ -172,6 +173,14 @@ Route::prefix('v1')->group(function () {
         Route::get('discounts/{discount}', [DiscountController::class, 'show']);
         Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
         Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
+
+        // The other kind of code: not what a buyer pays, but whether they may buy at all.
+        Route::get('access-codes', [AccessCodeController::class, 'index']);
+        Route::get('access-codes/suggest', [AccessCodeController::class, 'suggest']);
+        Route::post('access-codes', [AccessCodeController::class, 'store']);
+        Route::get('access-codes/{accessCode}', [AccessCodeController::class, 'show']);
+        Route::patch('access-codes/{accessCode}', [AccessCodeController::class, 'update']);
+        Route::delete('access-codes/{accessCode}', [AccessCodeController::class, 'destroy']);
 
         // ---- The counter -------------------------------------------------------------------
         // Selling to the person in front of you: cash, an invoice to a school, or a comp.

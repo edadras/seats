@@ -299,4 +299,18 @@ return [
         'doors' => 'Starts',
         'code' => 'Code',
     ],
+
+    'access' => [
+        'haveACode' => 'Have a code?',
+        'unlock' => 'Unlock',
+        'presaleOnly' => 'This is a presale. A code is needed to book.',
+        'notOpenYet' => 'Booking for this performance has not opened yet.',
+        'opensOn' => 'General booking opens :when.',
+        'unknown_code' => 'That code is not right.',
+        'code_not_live' => 'That code is not working at the moment.',
+        'code_used_up' => 'That code has been used as often as it can be.',
+        'presale_not_open' => 'The presale has not opened yet.',
+        'event_not_sellable' => 'This performance is not on sale.',
+        'tryAgain' => 'Something went wrong. Try again.',
+    ],
 ];

@@ -39,6 +39,7 @@
 			{ key: 'questions', icon: 'file' },
 			{ key: 'entryslots', icon: 'clock' },
 			{ key: 'discounts', icon: 'tag' },
+			{ key: 'access', icon: 'lock' },
 		] },
 		{ group: 'venue', items: [
 			{ key: 'maps', icon: 'map' },
@@ -616,6 +617,7 @@
 			case 'questions': return window.SeatmapQuestions.render( this );
 			case 'entryslots': return window.SeatmapEntrySlots.render( this );
 			case 'security': return window.SeatmapSecurity.render( this );
+			case 'access': return window.SeatmapAccess.render( this );
 			case 'wallet': return window.SeatmapWallet.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
@@ -1499,6 +1501,26 @@
 			'placeholder="https://" value="' + esc( ( event && event.image_url ) || '' ) + '">' +
 			'<span class="field__hint">' + esc( App.t( 'panel.events.artworkHint' ) ) + '</span></div>' +
 
+			/*
+			 * When the sale opens, and to whom.
+			 *
+			 * Two instants rather than a status, because a status has to be flipped by somebody at
+			 * midnight and nobody is awake at midnight. Both empty is what every night that has
+			 * never heard of a presale carries, and it means on sale as soon as it is published.
+			 */
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-presale">' +
+			esc( App.t( 'panel.events.presaleFrom' ) ) + '</label>' +
+			'<input class="input" id="e-presale" name="presale_starts_at" type="datetime-local" value="' +
+			esc( localStamp( event && event.presale_starts_at ) ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.presaleFromHint' ) ) + '</span></div>' +
+			'<div class="field"><label class="field__label" for="e-onsale">' +
+			esc( App.t( 'panel.events.onSaleFrom' ) ) + '</label>' +
+			'<input class="input" id="e-onsale" name="on_sale_at" type="datetime-local" value="' +
+			esc( localStamp( event && event.on_sale_at ) ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.onSaleFromHint' ) ) + '</span></div>' +
+			'</div>' +
+
 			// The refund terms. Written here rather than in a settings screen because they belong
 			// to this night: a matinee for schools and a sold-out final are not the same promise.
 			'<div class="field-duo">' +
@@ -1531,6 +1553,13 @@
 			'</div>';
 	}
 
+	/** A local wall-clock string from a datetime-local input, as the instant the API is told. */
+	function instantOrNull( value ) {
+		var text = String( value == null ? '' : value ).trim();
+
+		return '' === text ? null : new Date( text ).toISOString();
+	}
+
 	/** Empty is nothing, not an empty string: `''` is not a URL and would fail validation. */
 	function orNull( value ) {
 		var text = String( value == null ? '' : value ).trim();
@@ -1554,6 +1583,9 @@
 			// An unticked checkbox is absent from a form, which is not the same as false — and a
 			// fee quietly kept because a box was empty is a fee somebody complains about.
 			refund_keeps_fee: null !== data.get( 'refund_keeps_fee' ),
+			// An empty box is "no presale", not the epoch.
+			presale_starts_at: instantOrNull( data.get( 'presale_starts_at' ) ),
+			on_sale_at: instantOrNull( data.get( 'on_sale_at' ) ),
 		};
 	}
 

@@ -184,4 +184,14 @@ return [
     'google_wallet_not_set_up' => 'Dieses Konto hat keinen Google-Wallet-Herausgeber.',
     'google_service_account_unreadable' => 'Diese Dienstkonto-Datei war nicht lesbar.',
     'google_signing_failed' => 'Der Pass ließ sich mit diesem Dienstkonto nicht signieren.',
+
+    // --- Presale and access codes -------------------------------------------------------------
+    'access_code_required' => 'Diese Veranstaltung ist im Vorverkauf. Zum Buchen wird ein Code gebraucht.',
+    'unknown_code' => 'Dieser Code stimmt nicht.',
+    'code_not_live' => 'Dieser Code funktioniert im Moment nicht.',
+    'code_used_up' => 'Dieser Code ist so oft genutzt worden, wie er konnte.',
+    'presale_not_open' => 'Der Vorverkauf hat noch nicht begonnen.',
+    'access_code_seat_limit' => 'Dieser Code gilt für :count Plätze auf einmal.',
+    'access_code_taken' => 'Sie haben bereits einen Code mit diesem Namen.',
+    'access_code_in_use' => 'Dieser Code hat jemanden hereingelassen. Pausieren Sie ihn lieber — löschen ließe jene Buchungen unerklärt.',
 ];

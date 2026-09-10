@@ -59,6 +59,10 @@ class StoreController extends Controller
             'area_types.*' => ['array', 'max:20'],
             'area_types.*.*' => ['integer', 'min:1', 'max:'.config('seatmap.hold.max_seats')],
             'entry_slot_id' => ['sometimes', 'nullable', 'uuid'],
+            // A presale code, where this event is not yet open to everybody. Taken from the body
+            // as well as the session, because the picker sends it the moment it is unlocked and
+            // a session that lost it must not silently sell at the wrong time.
+            'access_code' => ['sometimes', 'nullable', 'string', 'max:40'],
             // "Four together, please", instead of naming the chairs. The server chooses and holds
             // in one movement, because a suggestion a buyer has to confirm is a suggestion somebody
             // else can take in between.
@@ -73,6 +77,7 @@ class StoreController extends Controller
         ]);
 
         $event = $this->event($data['event_public_id']);
+        $accessCode = $data['access_code'] ?? $request->session()->get('seatmap_access_code');
 
         $hold = ($data['best_available'] ?? null)
             ? $this->holds->createBestAvailable(
@@ -84,6 +89,7 @@ class StoreController extends Controller
                 $data['best_available'],
                 ['all' => $data['best_available']['ticket_type_id'] ?? null],
                 $data['entry_slot_id'] ?? null,
+                $accessCode,
             )
             : $this->holds->create(
                 $event,
@@ -95,6 +101,7 @@ class StoreController extends Controller
                 $data['seat_types'] ?? [],
                 $data['area_types'] ?? [],
                 $data['entry_slot_id'] ?? null,
+                $accessCode,
             );
 
         // The token goes in the session, not to the browser as an identifier it could swap: the
@@ -105,6 +112,46 @@ class StoreController extends Controller
             (new HoldResource($hold->load('event')))->toArray($request) + ['cart_url' => '/checkout'],
             201
         );
+    }
+
+    /**
+     * "I have a code" — before any seats are chosen.
+     *
+     * Answering here rather than at the first hold is the difference between a buyer being told
+     * the sale is not open to them and a buyer choosing four seats and then being told. Nothing is
+     * reserved: two people may both be told yes and only one of them get in, which is true of
+     * every sale and is why the real check happens under the lock at hold time.
+     *
+     * The accepted code goes in the session, so the picker does not have to carry it through every
+     * request and a reload does not lock somebody out of a sale they were already in.
+     */
+    public function unlock(Request $request)
+    {
+        $data = $request->validate([
+            'event_public_id' => ['required', 'string', 'max:60'],
+            'code' => ['required', 'string', 'max:40'],
+        ]);
+
+        $event = $this->event($data['event_public_id']);
+        $offer = app(\App\Domain\Access\AccessCodes::class)->offer($data['code'], $event);
+
+        if (! $offer->ok) {
+            return response()->json([
+                'ok' => false,
+                // The reason, not a bare no: "that code is not right" and "that presale opens on
+                // Friday" send a person to two different next steps, and only one is the telephone.
+                'reason' => $offer->reason,
+                'message' => __('site.access.'.$offer->reason),
+            ], 422);
+        }
+
+        $request->session()->put('seatmap_access_code', $offer->code->code);
+
+        return response()->json([
+            'ok' => true,
+            'label' => $offer->code->label,
+            'max_seats' => $offer->code->max_seats,
+        ]);
     }
 
     public function release(Request $request)

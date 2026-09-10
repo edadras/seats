@@ -15,6 +15,7 @@ class Hold extends Model
         'tenant_id', 'event_id', 'seat_map_version_id', 'token', 'session_id', 'source',
         'api_client_id', 'status', 'expires_at', 'extends_used', 'currency', 'total_amount',
         'price_snapshot', 'external_order_id', 'released_at', 'converted_at', 'ip', 'entry_slot_id',
+        'access_code_id',
     ];
 
     protected $hidden = ['ip'];

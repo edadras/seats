@@ -63,6 +63,16 @@ export async function seatedEvent(base, device = 'smoke') {
  * legitimate shape, not a failure.
  */
 export async function openASection(page) {
+	/*
+	 * Wait for the picker to have drawn *something* first.
+	 *
+	 * The stage appears before the side list is filled in, so counting section buttons the
+	 * instant the stage exists finds none, decides the room has no sections, and leaves a caller
+	 * looking for seats inside a section nobody opened. Either shape settles this wait: a hall
+	 * with sections lists them, a warehouse sold by the head lists its places.
+	 */
+	await page.waitForSelector('.seatmap-widget__blocks, .seatmap-widget__list', { timeout: 15000 });
+
 	const sections = page.locator('.seatmap-widget__block:not([disabled])');
 
 	if (0 === await sections.count()) {

@@ -295,4 +295,18 @@ return [
         'doors' => 'Inizio',
         'code' => 'Codice',
     ],
+
+    'access' => [
+        'haveACode' => 'Hai un codice?',
+        'unlock' => 'Sblocca',
+        'presaleOnly' => 'Questa è una prevendita. Per prenotare serve un codice.',
+        'notOpenYet' => 'Le prenotazioni per questa rappresentazione non sono ancora aperte.',
+        'opensOn' => 'La vendita generale apre :when.',
+        'unknown_code' => 'Quel codice non è giusto.',
+        'code_not_live' => 'Quel codice al momento non funziona.',
+        'code_used_up' => 'Quel codice è stato usato tutte le volte che poteva.',
+        'presale_not_open' => 'La prevendita non è ancora aperta.',
+        'event_not_sellable' => 'Questa rappresentazione non è in vendita.',
+        'tryAgain' => 'Qualcosa è andato storto. Riprova.',
+    ],
 ];

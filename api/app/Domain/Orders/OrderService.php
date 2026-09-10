@@ -34,6 +34,7 @@ class OrderService
         private readonly WebhookDispatcher $webhooks,
         private readonly \App\Domain\Messaging\OrderMessages $messages,
         private readonly \App\Domain\Notifications\Notifier $notifier,
+        private readonly \App\Domain\Access\AccessCodes $access,
     ) {}
 
     /** Register an order against a hold — called as soon as WooCommerce creates the order. */
@@ -213,6 +214,10 @@ class OrderService
                 ->update(['released_at' => now(), 'updated_at' => now()]);
 
             $hold->forceFill(['status' => 'converted', 'converted_at' => now()])->save();
+
+            // The presale code stays spent, and is now attached to the booking rather than to a
+            // hold that no longer exists. Releasing it here would leak the cap one seat at a time.
+            $this->access->settle($hold, $order->id);
 
             // Keep the plaintext tokens: they exist only in memory, and the storefront needs them
             // in this response to render the QR. Re-reading the order below would lose them.

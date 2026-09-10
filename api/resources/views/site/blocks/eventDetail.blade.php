@@ -97,6 +97,77 @@
             </script>
             <script src="{{ asset('site/js/widget.js') }}" defer></script>
         @endpush
+    @elseif (! empty($event['needs_code']))
+        {{-- On sale, but not to this visitor. The box is offered instead of the seats, and it is
+             what turns the seats on: unlocking reloads the page with the picker in place of this. --}}
+        <section class="shell section section--tight">
+            <div class="unlock">
+                <p class="notice">{{ $event['closed_message'] }}</p>
+
+                @if (! empty($event['opens_at']))
+                    <p class="notice notice--quiet">{{ __('site.access.opensOn', ['when' => $event['opens_at']]) }}</p>
+                @endif
+
+                <form class="unlock__form" id="unlock-form" data-event="{{ $event['public_id'] }}">
+                    <label class="unlock__label" for="access-code">{{ __('site.access.haveACode') }}</label>
+                    <div class="unlock__row">
+                        <input class="unlock__input" id="access-code" name="code" autocomplete="off"
+                               maxlength="40" spellcheck="false" required>
+                        <button class="button" type="submit">{{ __('site.access.unlock') }}</button>
+                    </div>
+                    <p class="unlock__said" id="unlock-said" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+        </section>
+
+        @push('scripts')
+            <script>
+                ( function () {
+                    var form = document.getElementById( 'unlock-form' );
+                    var said = document.getElementById( 'unlock-said' );
+
+                    if ( ! form ) {
+                        return;
+                    }
+
+                    form.addEventListener( 'submit', function ( event ) {
+                        event.preventDefault();
+                        said.textContent = '';
+
+                        fetch( '/_store/unlock', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                                // The same token the picker sends on a hold. Without it the
+                                // request is refused by the framework, not by the code check.
+                                'X-CSRF-TOKEN': @json(csrf_token()),
+                            },
+                            body: JSON.stringify( {
+                                event_public_id: form.dataset.event,
+                                code: form.querySelector( '#access-code' ).value,
+                            } ),
+                        } )
+                            .then( function ( response ) { return response.json(); } )
+                            .then( function ( body ) {
+                                if ( body.ok ) {
+                                    // The seats are behind a re-render, not behind this script:
+                                    // whether somebody may buy is the server's answer, always.
+                                    window.location.reload();
+
+                                    return;
+                                }
+
+                                said.textContent = body.message || '';
+                            } )
+                            .catch( function () {
+                                said.textContent = @json(__('site.access.tryAgain'));
+                            } );
+                    } );
+                }() );
+            </script>
+        @endpush
     @else
         <section class="shell section section--tight">
             <p class="notice">{{ $event['closed_message'] }}</p>

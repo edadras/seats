@@ -22,6 +22,7 @@ class Event extends Model
         'cancelled_at', 'cancellation_reason', 'rescheduled_from', 'rescheduled_at',
         'translations',
         'refunds', 'refund_window_hours', 'refund_keeps_fee',
+        'presale_starts_at', 'on_sale_at',
     ];
 
     protected $casts = [
@@ -42,6 +43,8 @@ class Event extends Model
         'tax_included' => 'boolean',
         'refund_window_hours' => 'integer',
         'refund_keeps_fee' => 'boolean',
+        'presale_starts_at' => 'datetime',
+        'on_sale_at' => 'datetime',
     ];
 
     public function getRouteKeyName(): string

@@ -52,6 +52,7 @@ tags:
   - name: Wallet
   - name: Orders
   - name: Discounts
+  - name: Access
   - name: Box office
   - name: Door
   - name: Waiting list
@@ -946,6 +947,163 @@ paths:
                   status: { type: string, enum: [declined] }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /access-codes:
+    get:
+      operationId: listAccessCodes
+      tags: [Access]
+      summary: Codes that open a sale early
+      description: |
+        Requires `discounts.manage` — the same permission that owns the other kind of code, because
+        both are "somebody may make a promise on this account's behalf" and splitting them would
+        give a venue two permissions to reason about for one job.
+
+        `used_count` is live uses, not presses. A basket somebody opened and abandoned gave its use
+        back, so a screen that counted presses would report a presale full when it was not.
+      parameters:
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, paused] }
+        - name: q
+          in: query
+          description: Part of the code, or of the note written against it.
+          schema: { type: string }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: The codes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AccessCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: createAccessCode
+      tags: [Access]
+      summary: Make a presale code
+      description: >-
+        Requires `discounts.manage`. The code is stored upper-cased and trimmed, so "members" and
+        " Members " are one code rather than three near-misses somebody has to explain later.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccessCodeInput" }
+      responses:
+        "201":
+          description: The code
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccessCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A code of that name already exists on this account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /access-codes/suggest:
+    get:
+      operationId: suggestAccessCode
+      tags: [Access]
+      summary: A code nobody has to invent
+      description: >-
+        Requires `discounts.manage`. Drawn from an alphabet with no O against 0 and no I against 1,
+        because this is printed on a flyer and typed by somebody who is not looking at the flyer
+        while they type. Not reserved — it is a suggestion the form may overwrite.
+      responses:
+        "200":
+          description: A code that is free on this account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string, example: KMPT4X9B }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /access-codes/{accessCode}:
+    parameters:
+      - name: accessCode
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getAccessCode
+      tags: [Access]
+      summary: One code, and who has used it
+      description: >-
+        Requires `discounts.manage`. The uses are the answer to "who used the code I gave the radio
+        station", which is the first thing an organiser asks about one.
+      responses:
+        "200":
+          description: The code
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/AccessCode"
+                  - type: object
+                    properties:
+                      uses:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            seats: { type: integer }
+                            at: { type: string, format: date-time }
+                            order_id: { type: [string, "null"] }
+                            order_status: { type: [string, "null"] }
+                            buyer: { type: [string, "null"] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+    patch:
+      operationId: updateAccessCode
+      tags: [Access]
+      summary: Change a code, except its name
+      description: >-
+        Requires `discounts.manage`. The code itself is not editable: it has been emailed to a
+        mailing list by now, and renaming it would break every copy of that email at once. Pausing
+        is how a code is stopped.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccessCodeInput" }
+      responses:
+        "200":
+          description: The code as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccessCode" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+    delete:
+      operationId: deleteAccessCode
+      tags: [Access]
+      summary: Delete a code that has never opened anything
+      description: >-
+        Requires `discounts.manage`. Refused once the code has let somebody in: the booking has to
+        keep pointing at why it was allowed, so pausing is the way to stop one that has been used.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: The code has been used, and is paused rather than deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /wallet:
     get:
@@ -5470,6 +5628,61 @@ components:
                 description: "The last few characters, so a person can tell two keys apart."
               last_used_at: { type: [string, "null"], format: date-time }
               expires_at: { type: [string, "null"], format: date-time }
+
+    AccessCode:
+      type: object
+      description: >-
+        A code that opens a sale, as against a discount code, which changes a price. The two are
+        deliberately separate: a leaked discount costs money an organiser can calculate, a leaked
+        presale code costs the presale its purpose.
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, description: "Stored upper-cased and trimmed." }
+        label: { type: [string, "null"], description: "The organiser's own note: \"the mailing list\"." }
+        event_id: { type: [string, "null"], format: uuid, description: "Null means every event." }
+        event_name: { type: [string, "null"] }
+        opens:
+          type: string
+          enum: [presale, always]
+          description: >-
+            `presale` buys between the presale opening and general sale. `always` buys at any time,
+            even before the presale opens — the code an organiser gives their own staff.
+        ticket_type_ids:
+          type: array
+          items: { type: string, format: uuid }
+        starts_at: { type: [string, "null"], format: date-time }
+        ends_at: { type: [string, "null"], format: date-time }
+        max_uses: { type: [integer, "null"] }
+        max_seats:
+          type: [integer, "null"]
+          description: "Seats one use may take. Null means whatever the event allows."
+        used_count:
+          type: integer
+          description: "Live uses — a hold still running, or a booking placed. Not presses."
+        status: { type: string, enum: [active, paused] }
+        live:
+          type: boolean
+          description: "Switched on, inside its dates, and not used up. The honest answer, not the stored one."
+        created_at: { type: string, format: date-time }
+
+    AccessCodeInput:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 40
+          description: "Required on create, ignored on update — a code that has been sent out cannot be renamed."
+        label: { type: [string, "null"], maxLength: 160 }
+        event_id: { type: [string, "null"], format: uuid }
+        opens: { type: string, enum: [presale, always] }
+        ticket_type_ids:
+          type: [array, "null"]
+          items: { type: string, format: uuid }
+        starts_at: { type: [string, "null"], format: date-time }
+        ends_at: { type: [string, "null"], format: date-time }
+        max_uses: { type: [integer, "null"], minimum: 1 }
+        max_seats: { type: [integer, "null"], minimum: 1, maximum: 999 }
+        status: { type: string, enum: [active, paused] }
 
     WalletSettings:
       type: object

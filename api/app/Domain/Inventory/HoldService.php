@@ -40,6 +40,7 @@ class HoldService
         private readonly TenantContext $tenantContext,
         private readonly \App\Domain\Events\EntrySlots $slots,
         private readonly \App\Domain\Availability\BestAvailable $bestAvailable,
+        private readonly \App\Domain\Access\AccessCodes $access,
     ) {}
 
     /**
@@ -62,6 +63,7 @@ class HoldService
         array $filters = [],
         array $seatTypes = [],
         ?string $entrySlotId = null,
+        ?string $accessCode = null,
     ): Hold {
         $lastFailure = null;
 
@@ -81,7 +83,8 @@ class HoldService
 
             try {
                 return $this->create(
-                    $event, $seatIds, $sessionId, $apiClientId, $ip, [], $types, [], $entrySlotId
+                    $event, $seatIds, $sessionId, $apiClientId, $ip, [], $types, [], $entrySlotId,
+                    $accessCode
                 );
             } catch (ApiException $e) {
                 if ('seat_unavailable' !== $e->errorCode()) {
@@ -109,6 +112,9 @@ class HoldService
      * @param  ?string  $entrySlotId  Which arrival window, on an event that sells timed entry.
      *                                Required there and refused everywhere else: a slot silently
      *                                dropped would print a ticket with no arrival time on it.
+     * @param  ?string  $accessCode  A presale code, where the sale is not open to everybody. Spent
+     *                               here rather than at the till, because a presale checked at the
+     *                               till is a race anybody may join and only lose at the end.
      */
     public function create(
         Event $event,
@@ -120,6 +126,7 @@ class HoldService
         array $seatTypes = [],
         array $areaTypes = [],
         ?string $entrySlotId = null,
+        ?string $accessCode = null,
     ): Hold {
         if (! $event->isSellable()) {
             throw ApiException::conflict('event_not_sellable', 'This event is not currently on sale.');
@@ -161,13 +168,17 @@ class HoldService
         // choosing is told about the window rather than watching a booking fail.
         $slot = $this->slots->resolve($event, $entrySlotId, $requested);
 
+        // And whether this buyer may be here at all. Before the seats, so somebody without a code
+        // is turned away at the door rather than after choosing where to sit.
+        $code = $this->access->admit($event, $accessCode, $requested);
+
         // Deterministic ordering, decided before the transaction opens.
         sort($seatIds);
 
         try {
             return DB::transaction(function () use (
                 $event, $seatIds, $capacity, $sessionId, $apiClientId, $ip, $areaTypes, $types,
-                $slot, $requested
+                $slot, $requested, $code
             ) {
                 /*
                  * The window, before the seats.
@@ -201,8 +212,14 @@ class HoldService
 
                 $hold = $this->insertHold(
                     $event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines, $types,
-                    $slot
+                    $slot, $code
                 );
+
+                // Last, and inside the same transaction: a code spent on a hold that then failed
+                // to be written would be a code spent on nothing.
+                if ($code) {
+                    $this->access->spend($code, $hold, $requested);
+                }
 
                 $event->bumpAvailabilityVersion();
 
@@ -366,6 +383,11 @@ class HoldService
                 'status' => $reason === 'expired' ? 'expired' : 'released',
                 'released_at' => now(),
             ])->save();
+
+            // A presale code is given back with the seats. Without this, a mailing list of a
+            // hundred is a mailing list of one after ninety-nine people opened a basket and
+            // wandered off.
+            $this->access->release($fresh);
 
             $fresh->event?->bumpAvailabilityVersion();
 
@@ -706,6 +728,7 @@ class HoldService
         array $capacityLines = [],
         array $types = [],
         ?\App\Models\EntrySlot $slot = null,
+        ?\App\Models\AccessCode $code = null,
     ): Hold {
         $total = 0;
         $seatAmounts = [];
@@ -739,6 +762,7 @@ class HoldService
             // On the hold rather than on each item: a booking is one arrival, and a family that
             // buys four places comes through the door together.
             'entry_slot_id' => $slot?->id,
+            'access_code_id' => $code?->id,
         ]);
 
         $now = now();

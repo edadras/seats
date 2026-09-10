@@ -296,4 +296,18 @@ return [
         'doors' => 'Beginn',
         'code' => 'Code',
     ],
+
+    'access' => [
+        'haveACode' => 'Sie haben einen Code?',
+        'unlock' => 'Freischalten',
+        'presaleOnly' => 'Das ist ein Vorverkauf. Zum Buchen wird ein Code gebraucht.',
+        'notOpenYet' => 'Die Buchung für diese Vorstellung ist noch nicht geöffnet.',
+        'opensOn' => 'Der allgemeine Verkauf beginnt :when.',
+        'unknown_code' => 'Dieser Code stimmt nicht.',
+        'code_not_live' => 'Dieser Code funktioniert im Moment nicht.',
+        'code_used_up' => 'Dieser Code ist so oft genutzt worden, wie er konnte.',
+        'presale_not_open' => 'Der Vorverkauf hat noch nicht begonnen.',
+        'event_not_sellable' => 'Diese Vorstellung ist nicht im Verkauf.',
+        'tryAgain' => 'Etwas ist schiefgegangen. Versuchen Sie es noch einmal.',
+    ],
 ];

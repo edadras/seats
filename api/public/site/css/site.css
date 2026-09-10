@@ -990,6 +990,68 @@ hr { border: none; }
 
 .waitlist__note { margin-block-start: 0.9rem; font-size: 0.85rem; color: var(--text-muted); }
 
+/*
+ * "I have a code" — the box that stands where the seat plan will be.
+ *
+ * Deliberately the same furniture as the waiting-list card below it: both are a thing offered in
+ * place of a booking, and a visitor who meets one and then the other should not feel they have
+ * arrived at a different website.
+ */
+.unlock {
+	padding: clamp(1.25rem, 4vw, 2rem);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+}
+
+.unlock .notice { margin-block: 0 0.4rem; }
+
+.unlock__form { margin-block-start: 1.25rem; }
+
+.unlock__label {
+	display: block;
+	margin-block-end: 0.4rem;
+	font-size: 0.85rem;
+	font-weight: 600;
+}
+
+.unlock__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	align-items: stretch;
+}
+
+.unlock__input {
+	flex: 1 1 12rem;
+	min-inline-size: 0;
+	min-block-size: 3rem;
+	padding-inline: 0.9rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	/* A code is read off a flyer and typed without looking; the letters may as well be even. */
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.unlock__input:focus {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.unlock__said:empty { display: none; }
+
+.unlock__said {
+	margin-block: 0.75rem 0;
+	font-size: 0.9rem;
+	color: #b3261e;
+}
+
 /* "I need an invoice", closed until somebody does. */
 .invoice-ask > summary {
 	cursor: pointer;
