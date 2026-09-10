@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\NotificationController;
 use App\Http\Controllers\Api\V1\Management\OrderController;
+use App\Http\Controllers\Api\V1\Management\RefundRequestController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
@@ -150,6 +151,11 @@ Route::prefix('v1')->group(function () {
         // Refunding was reachable only over the signed integration API, which is the right answer
         // for a shop that owns the money and no answer at all for an organiser selling from their
         // own site.
+        // The buyers waiting for an answer about their money, and the record of who asked.
+        Route::get('refund-requests', [RefundRequestController::class, 'index']);
+        Route::post('refund-requests/{refundRequest}/grant', [RefundRequestController::class, 'grant']);
+        Route::post('refund-requests/{refundRequest}/decline', [RefundRequestController::class, 'decline']);
+
         Route::get('orders', [OrderController::class, 'index']);
         Route::get('orders/{order}', [OrderController::class, 'show']);
         Route::post('orders/{order}/refund', [OrderController::class, 'refund']);

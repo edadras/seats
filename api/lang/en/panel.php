@@ -168,6 +168,14 @@ return [
         'inventory' => 'Inventory',
         'repeat' => 'Put it on again',
         'reschedule' => "Move",
+        'refunds' => "Refunds",
+        'refundHours' => "Hours before",
+        'refundKeepsFee' => "Keep the booking fee when refunding",
+        'refundKinds' => [
+            'never' => "Not offered",
+            'until' => "Up to a number of hours before",
+            'always' => "Right up to the start",
+        ],
         'translations' => "Languages",
         'translationsTitle' => ":name in other languages",
         'translationsHint' => "Your website already speaks six languages. This is the part somebody typed — the name and the description — so it can too.",
@@ -1196,5 +1204,16 @@ return [
             'open' => 'Open',
             'closed' => 'Closed',
         ],
+    ],
+
+    'refunds' => [
+        'waiting' => ":count waiting for an answer",
+        'grant' => "Refund it",
+        'decline' => "Say no",
+        'granted' => "Refunded.",
+        'declined' => "Declined. They have been given your reason.",
+        'why' => "Why not",
+        'whyHint' => 'The buyer is owed a reason. "Declined" on its own is what generates the telephone call.',
+        'needWhy' => "Say why. They will read it.",
     ],
 ];

@@ -158,6 +158,14 @@ return [
         'inventory' => 'Inventaire',
         'repeat' => 'Reprogrammer',
         'reschedule' => "Reporter",
+        'refunds' => "Remboursements",
+        'refundHours' => "Heures avant",
+        'refundKeepsFee' => "Conserver les frais de réservation lors du remboursement",
+        'refundKinds' => [
+            'never' => "Non proposé",
+            'until' => "Jusqu'à un nombre d'heures avant",
+            'always' => "Jusqu'au début",
+        ],
         'translations' => "Langues",
         'translationsTitle' => ":name dans d’autres langues",
         'translationsHint' => "Votre site parle déjà six langues. Voici la partie que quelqu'un a tapée — le nom et la description — pour qu'elle les parle aussi.",
@@ -1182,5 +1190,16 @@ return [
             'open' => 'Ouvert',
             'closed' => 'Fermé',
         ],
+    ],
+
+    'refunds' => [
+        'waiting' => ":count en attente de réponse",
+        'grant' => "Rembourser",
+        'decline' => "Refuser",
+        'granted' => "Remboursé.",
+        'declined' => "Refusé. Votre motif leur a été transmis.",
+        'why' => "Pourquoi pas",
+        'whyHint' => "L'acheteur a droit à un motif. « Refusé » tout seul, c'est ce qui déclenche le coup de téléphone.",
+        'needWhy' => "Dites pourquoi. Ils le liront.",
     ],
 ];

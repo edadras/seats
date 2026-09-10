@@ -32,6 +32,9 @@
 			.then( function ( response ) {
 				Orders.events = response.data || [];
 				Orders.paint();
+				// Once, on arrival, rather than on every keystroke of the search box: the queue
+				// does not change because somebody is typing a name.
+				Orders.loadRequests();
 				Orders.load();
 			} )
 			.catch( function ( error ) { App.error( error ); } );
@@ -69,6 +72,9 @@
 						} ).join( '' ) +
 					'</select>' +
 				'</div>' +
+				// Above the list, because somebody is waiting on it. Absent entirely when nobody
+				// is — a heading over an empty box is a screen that looks broken.
+				'<div id="order-requests"></div>' +
 				'<div id="order-results" class="spaced"></div>',
 		} );
 
@@ -85,6 +91,115 @@
 			document.getElementById( pair[ 0 ] ).addEventListener( 'change', function () {
 				Orders.filters[ pair[ 1 ] ] = this.value;
 				Orders.load();
+			} );
+		} );
+	};
+
+	/**
+	 * The buyers waiting for an answer about their money.
+	 *
+	 * Here rather than on a screen of its own: this is where the box office already works, and a
+	 * queue behind another navigation item is a queue nobody opens.
+	 */
+	Orders.loadRequests = function () {
+		var App = Orders.App;
+		var host = document.getElementById( 'order-requests' );
+
+		if ( ! host ) {
+			return;
+		}
+
+		App.request( 'GET', '/refund-requests?status=pending' )
+			.then( function ( response ) {
+				var waiting = response.data || [];
+
+				if ( ! waiting.length ) {
+					host.innerHTML = '';
+
+					return;
+				}
+
+				host.innerHTML = '<div class="card spaced">' +
+					'<h3 class="subhead">' + esc( App.t( 'panel.refunds.waiting', {
+						count: App.number( waiting.length ),
+					} ) ) + '</h3>' +
+					'<ul class="asked">' +
+						waiting.map( function ( row ) {
+							return '<li>' +
+								'<div><strong>' + esc( ( row.order || {} ).buyer || '—' ) + '</strong>' +
+									'<span class="muted on-own-line">' +
+									esc( ( row.event || {} ).name || '' ) + ' · ' +
+									esc( ( row.order || {} ).reference || '' ) + ' · ' +
+									esc( ( row.order || {} ).total || '' ) + '</span>' +
+									( row.reason
+										? '<span class="muted on-own-line" dir="auto">' +
+											esc( row.reason ) + '</span>'
+										: '' ) + '</div>' +
+								'<div class="asked__actions">' +
+									'<button class="btn btn--sm" data-decline="' + esc( row.id ) + '">' +
+										esc( App.t( 'panel.refunds.decline' ) ) + '</button>' +
+									'<button class="btn btn--sm btn--primary" data-grant="' +
+										esc( row.id ) + '">' +
+										esc( App.t( 'panel.refunds.grant' ) ) + '</button>' +
+								'</div>' +
+							'</li>';
+						} ).join( '' ) +
+					'</ul>' +
+				'</div>';
+
+				Orders.bindRequests();
+			} )
+			.catch( function () {
+				// A box office without `orders.refund` sees no queue rather than an error: the
+				// screen is still theirs, they simply have no say in this part of it.
+				host.innerHTML = '';
+			} );
+	};
+
+	Orders.bindRequests = function () {
+		var App = Orders.App;
+
+		each( '[data-grant]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				App.request( 'POST', '/refund-requests/' + button.dataset.grant + '/grant', {} )
+					.then( function () {
+						App.toast( App.t( 'panel.refunds.granted' ) );
+						Orders.loadRequests();
+						Orders.load();
+					} )
+					.catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
+
+		each( '[data-decline]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				App.modal( {
+					title: App.t( 'panel.refunds.decline' ),
+					submitLabel: App.t( 'panel.refunds.decline' ),
+					danger: true,
+					body: '<div class="field"><label class="field__label" for="decline-why">' +
+						esc( App.t( 'panel.refunds.why' ) ) + '</label>' +
+						'<input class="input" id="decline-why" maxlength="300" required>' +
+						'<span class="field__hint">' + esc( App.t( 'panel.refunds.whyHint' ) ) +
+						'</span></div>',
+					onSubmit: function () {
+						var why = document.getElementById( 'decline-why' ).value.trim();
+
+						if ( ! why ) {
+							App.toast( App.t( 'panel.refunds.needWhy' ), true );
+
+							return true;
+						}
+
+						return App.request(
+							'POST', '/refund-requests/' + button.dataset.decline + '/decline',
+							{ reason: why }
+						).then( function () {
+							App.toast( App.t( 'panel.refunds.declined' ) );
+							Orders.loadRequests();
+						} );
+					},
+				} );
 			} );
 		} );
 	};

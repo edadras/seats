@@ -8,6 +8,10 @@ return [
             'title' => 'طلب مُعاد',
             'body' => 'أُعيد مبلغ الطلب :reference لـ :event — :seats مقعداً.',
         ],
+        'refund_requested' => [
+            'title' => 'طلب استرداد',
+            'body' => 'الحجز :reference لـ:event — طلب المشتري استعادة مبلغه. :reason',
+        ],
         'event_sold_out' => [
             'title' => 'نفدت التذاكر',
             'body' => 'بيعت كل أماكن :event: :seats في المجموع.',

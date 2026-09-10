@@ -14,6 +14,10 @@ return [
             'title' => 'Order refunded',
             'body' => 'Booking :reference for :event was refunded — :seats seat(s).',
         ],
+        'refund_requested' => [
+            'title' => 'Refund asked for',
+            'body' => 'Booking :reference for :event — the buyer asked for their money back. :reason',
+        ],
         'event_sold_out' => [
             'title' => 'Sold out',
             'body' => ':event has sold every place: :seats in all.',

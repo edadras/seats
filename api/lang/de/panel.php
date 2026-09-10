@@ -158,6 +158,14 @@ return [
         'inventory' => 'Bestand',
         'repeat' => 'Erneut ansetzen',
         'reschedule' => "Verlegen",
+        'refunds' => "Erstattungen",
+        'refundHours' => "Stunden vorher",
+        'refundKeepsFee' => "Buchungsgebühr bei Erstattung einbehalten",
+        'refundKinds' => [
+            'never' => "Nicht angeboten",
+            'until' => "Bis zu einer Anzahl Stunden vorher",
+            'always' => "Bis zum Beginn",
+        ],
         'translations' => "Sprachen",
         'translationsTitle' => ":name in anderen Sprachen",
         'translationsHint' => "Ihre Website spricht bereits sechs Sprachen. Das hier ist der Teil, den jemand getippt hat — Name und Beschreibung — damit er es auch tut.",
@@ -1182,5 +1190,16 @@ return [
             'open' => 'Offen',
             'closed' => 'Geschlossen',
         ],
+    ],
+
+    'refunds' => [
+        'waiting' => ":count warten auf eine Antwort",
+        'grant' => "Erstatten",
+        'decline' => "Ablehnen",
+        'granted' => "Erstattet.",
+        'declined' => "Abgelehnt. Ihr Grund wurde weitergegeben.",
+        'why' => "Warum nicht",
+        'whyHint' => "Der Käufer hat einen Grund verdient. „Abgelehnt“ allein ist das, was den Anruf auslöst.",
+        'needWhy' => "Sagen Sie warum. Es wird gelesen.",
     ],
 ];

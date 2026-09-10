@@ -157,6 +157,14 @@ return [
         'inventory' => 'Disponibilità',
         'repeat' => 'Riprogramma',
         'reschedule' => "Sposta",
+        'refunds' => "Rimborsi",
+        'refundHours' => "Ore prima",
+        'refundKeepsFee' => "Trattenere i diritti di prevendita al rimborso",
+        'refundKinds' => [
+            'never' => "Non offerto",
+            'until' => "Fino a un certo numero di ore prima",
+            'always' => "Fino all'inizio",
+        ],
         'translations' => "Lingue",
         'translationsTitle' => ":name in altre lingue",
         'translationsHint' => "Il vostro sito parla già sei lingue. Questa è la parte che avete scritto voi — il nome e la descrizione — perché le parli anche lei.",
@@ -1181,5 +1189,16 @@ return [
             'open' => 'Aperta',
             'closed' => 'Chiusa',
         ],
+    ],
+
+    'refunds' => [
+        'waiting' => ":count in attesa di risposta",
+        'grant' => "Rimborsa",
+        'decline' => "Rifiuta",
+        'granted' => "Rimborsato.",
+        'declined' => "Rifiutato. Il vostro motivo è stato comunicato.",
+        'why' => "Perché no",
+        'whyHint' => "L'acquirente ha diritto a un motivo. «Rifiutato» da solo è ciò che fa arrivare la telefonata.",
+        'needWhy' => "Dite perché. Lo leggeranno.",
     ],
 ];

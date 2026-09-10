@@ -115,6 +115,35 @@
                             @endforeach
                         </ul>
 
+                        {{-- The terms, and the way to act on them.
+
+                             Said as a sentence rather than as a closed door: a buyer who cannot
+                             have their money back is owed the reason, and one who can should not
+                             have to telephone for it. --}}
+                        @if ($order['refund_terms'])
+                            <p class="field__hint">{{ $order['refund_terms'] }}</p>
+                        @endif
+
+                        @if ($order['refund_asked'])
+                            <p class="field__hint">{{ __('site.refunds.waiting') }}</p>
+                        @elseif ($order['refundable'])
+                            <details class="give">
+                                <summary>{{ __('site.refunds.ask') }}</summary>
+                                <form method="POST"
+                                      action="/account/orders/{{ $order['reference'] }}/refund">
+                                    @csrf
+                                    <div class="field">
+                                        <label for="why-{{ $order['reference'] }}">{{ __('site.refunds.why') }}</label>
+                                        <input id="why-{{ $order['reference'] }}" name="reason"
+                                               maxlength="500">
+                                    </div>
+                                    <button class="button button--secondary" type="submit">
+                                        {{ __('site.refunds.ask') }}
+                                    </button>
+                                </form>
+                            </details>
+                        @endif
+
                         @if ($order['reissuable'])
                             <form class="order__actions" method="POST"
                                   action="/account/orders/{{ $order['reference'] }}/tickets">

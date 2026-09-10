@@ -223,6 +223,17 @@ return [
     'holdGone' => 'Quei posti non sono più tenuti. Sceglietene altri.',
     'standing' => 'In piedi',
     'movedFrom' => 'spostato dal :was',
+    'refunds' => [
+        'never' => "Questo ordine non è rimborsabile.",
+        'always' => "Potete chiedere il rimborso fino all'inizio dell'evento.",
+        'until' => "Potete chiedere il rimborso fino a :hours ore prima dell'inizio.",
+        'feeKept' => "I diritti di prevendita non vengono restituiti.",
+        'ask' => "Chiedi il rimborso",
+        'why' => "Motivo (facoltativo)",
+        'done' => "Rimborsato. Il denaro torna indietro per la stessa via con cui avete pagato.",
+        'asked' => "Richiesta registrata. La biglietteria vi risponderà.",
+        'waiting' => "Avete chiesto il rimborso per questo ordine. La biglietteria vi risponderà.",
+    ],
     'entry' => [
         'between' => "Ingresso :from – :to",
         'title' => "Orario d'ingresso",

@@ -227,6 +227,17 @@ return [
     'holdGone' => 'Those seats are no longer held. Please choose again.',
     'standing' => 'Standing',
     'movedFrom' => 'moved from :was',
+    'refunds' => [
+        'never' => "This booking cannot be refunded.",
+        'always' => "You can ask for a refund up until the event starts.",
+        'until' => "You can ask for a refund up to :hours hours before the event starts.",
+        'feeKept' => "The booking fee is not returned.",
+        'ask' => "Ask for a refund",
+        'why' => "Why (optional)",
+        'done' => "Refunded. The money is on its way back by the route you paid.",
+        'asked' => "Asked. The box office will come back to you.",
+        'waiting' => "You have asked for a refund on this booking. The box office will come back to you.",
+    ],
     'entry' => [
         'between' => "Entry :from – :to",
         'title' => "Arrival time",

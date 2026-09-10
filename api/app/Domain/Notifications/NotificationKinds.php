@@ -21,6 +21,9 @@ class NotificationKinds
 {
     public const KINDS = [
         'order.refunded' => ['permission' => 'orders.view', 'level' => 'warn'],
+        // A buyer asking for their money back outside the terms. Somebody has to answer, and a
+        // request nobody sees is a customer who telephones instead.
+        'refund.requested' => ['permission' => 'orders.refund', 'level' => 'warn'],
         'event.sold_out' => ['permission' => 'events.view', 'level' => 'info'],
         'announcement.finished' => ['permission' => 'messages.send', 'level' => 'info'],
         'message.refused' => ['permission' => 'account.manage', 'level' => 'danger'],

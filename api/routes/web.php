@@ -83,6 +83,10 @@ Route::middleware('site')->group(function () {
         ->middleware('throttle:10,1');
     // Handing one ticket to somebody else. A POST, and signed in: it kills a working code and
     // mints another, which is not something a link a mail client can prefetch should be able to do.
+    // "Can I have my money back?" — granted at once inside the organiser's own terms, and put in
+    // front of the box office outside them.
+    Route::post('account/orders/{reference}/refund', [BuyerAccountController::class, 'refund'])
+        ->middleware('throttle:10,1');
     Route::post('account/orders/{reference}/transfer', [BuyerAccountController::class, 'transfer'])
         ->middleware('throttle:10,1');
 });

@@ -224,6 +224,17 @@ return [
     'holdGone' => 'Diese Plätze sind nicht mehr reserviert. Bitte wählen Sie erneut.',
     'standing' => 'Stehplatz',
     'movedFrom' => 'verlegt von :was',
+    'refunds' => [
+        'never' => "Diese Buchung kann nicht erstattet werden.",
+        'always' => "Sie können bis zum Beginn der Veranstaltung eine Erstattung beantragen.",
+        'until' => "Sie können bis :hours Stunden vor Beginn eine Erstattung beantragen.",
+        'feeKept' => "Die Buchungsgebühr wird nicht erstattet.",
+        'ask' => "Erstattung beantragen",
+        'why' => "Grund (optional)",
+        'done' => "Erstattet. Das Geld ist auf dem Weg zurück, auf dem Weg, auf dem Sie gezahlt haben.",
+        'asked' => "Beantragt. Die Kasse meldet sich bei Ihnen.",
+        'waiting' => "Sie haben für diese Buchung eine Erstattung beantragt. Die Kasse meldet sich.",
+    ],
     'entry' => [
         'between' => "Einlass :from – :to",
         'title' => "Einlasszeit",

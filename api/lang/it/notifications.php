@@ -8,6 +8,10 @@ return [
             'title' => 'Ordine rimborsato',
             'body' => 'La prenotazione :reference per :event è stata rimborsata — :seats posto/i.',
         ],
+        'refund_requested' => [
+            'title' => 'Rimborso richiesto',
+            'body' => 'Ordine :reference per :event — l’acquirente ha chiesto il rimborso. :reason',
+        ],
         'event_sold_out' => [
             'title' => 'Tutto esaurito',
             'body' => ':event ha venduto ogni posto: :seats in tutto.',

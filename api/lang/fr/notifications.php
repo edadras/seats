@@ -8,6 +8,10 @@ return [
             'title' => 'Commande remboursée',
             'body' => 'La réservation :reference pour :event a été remboursée — :seats place(s).',
         ],
+        'refund_requested' => [
+            'title' => 'Remboursement demandé',
+            'body' => 'Commande :reference pour :event — l’acheteur demande à être remboursé. :reason',
+        ],
         'event_sold_out' => [
             'title' => 'Complet',
             'body' => ':event a vendu toutes ses places : :seats en tout.',

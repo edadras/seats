@@ -8,6 +8,10 @@ return [
             'title' => 'سفارش بازپرداخت شد',
             'body' => 'سفارش :reference برای :event بازپرداخت شد — :seats جایگاه.',
         ],
+        'refund_requested' => [
+            'title' => 'درخواست استرداد',
+            'body' => 'سفارش :reference برای :event — خریدار درخواست استرداد کرده است. :reason',
+        ],
         'event_sold_out' => [
             'title' => 'فروش کامل',
             'body' => 'همهٔ جایگاه‌های :event فروخته شد: در مجموع :seats.',

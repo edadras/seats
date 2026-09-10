@@ -1497,6 +1497,30 @@
 			'placeholder="https://" value="' + esc( ( event && event.image_url ) || '' ) + '">' +
 			'<span class="field__hint">' + esc( App.t( 'panel.events.artworkHint' ) ) + '</span></div>' +
 
+			// The refund terms. Written here rather than in a settings screen because they belong
+			// to this night: a matinee for schools and a sold-out final are not the same promise.
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-refunds">' +
+			esc( App.t( 'panel.events.refunds' ) ) + '</label>' +
+			'<select class="select" id="e-refunds" name="refunds">' +
+			[ 'never', 'until', 'always' ].map( function ( kind ) {
+				return '<option value="' + kind + '"' +
+					( event && event.refunds === kind ? ' selected' : '' ) + '>' +
+					esc( App.t( 'panel.events.refundKinds.' + kind ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>' +
+			'<div class="field"><label class="field__label" for="e-refund-hours">' +
+			esc( App.t( 'panel.events.refundHours' ) ) + '</label>' +
+			'<input class="input tnum" id="e-refund-hours" name="refund_window_hours" type="number" ' +
+			'min="0" max="8760" value="' +
+			esc( event && null != event.refund_window_hours ? event.refund_window_hours : 48 ) + '">' +
+			'</div>' +
+			'</div>' +
+			'<label class="perms__row"><input type="checkbox" class="checkbox" ' +
+			'id="e-refund-fee" name="refund_keeps_fee"' +
+			( ! event || event.refund_keeps_fee ? ' checked' : '' ) + '>' +
+			'<span>' + esc( App.t( 'panel.events.refundKeepsFee' ) ) + '</span></label>' +
+
 			'<div class="field"><label class="field__label" for="e-about">' +
 			esc( App.t( 'panel.events.about' ) ) + '</label>' +
 			'<textarea class="input" id="e-about" name="description" rows="4" maxlength="5000">' +
@@ -1523,6 +1547,11 @@
 			status: data.get( 'status' ),
 			image_url: orNull( data.get( 'image_url' ) ),
 			description: orNull( data.get( 'description' ) ),
+			refunds: data.get( 'refunds' ),
+			refund_window_hours: Number( data.get( 'refund_window_hours' ) ) || 0,
+			// An unticked checkbox is absent from a form, which is not the same as false — and a
+			// fee quietly kept because a box was empty is a fee somebody complains about.
+			refund_keeps_fee: null !== data.get( 'refund_keeps_fee' ),
 		};
 	}
 

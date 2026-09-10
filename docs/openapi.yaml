@@ -842,6 +842,108 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /refund-requests:
+    get:
+      operationId: listRefundRequests
+      tags: [Orders]
+      summary: Buyers waiting for an answer about their money
+      description: |
+        Requires `orders.refund`. Saying yes hands money back and saying no is the other half of
+        the same decision, so somebody who may not do the first has no business doing the second.
+
+        A request the terms granted the moment it was made appears here too, already answered. This
+        is not only a queue of work; it is the record of who asked and what happened, which is the
+        answer to "why is this booking refunded" three months later.
+
+        Pending first, because the screen exists so that nobody is left waiting.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, declined] }
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: The requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/RefundRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /refund-requests/{refundRequest}/grant:
+    parameters:
+      - name: refundRequest
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: grantRefundRequest
+      tags: [Orders]
+      summary: Say yes
+      description: >-
+        Requires `orders.refund`. Refunds the seats the request named, or the whole booking where
+        it named none, and records who decided and why. Already-answered requests are returned
+        unchanged rather than refused, so a double-click cannot refund twice.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: [string, "null"], maxLength: 300 }
+      responses:
+        "200":
+          description: The outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [approved] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /refund-requests/{refundRequest}/decline:
+    parameters:
+      - name: refundRequest
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: declineRefundRequest
+      tags: [Orders]
+      summary: Say no, and why
+      description: >-
+        Requires `orders.refund`. The reason is required rather than optional: the buyer is owed
+        one, and "declined" with nothing after it is the sentence that generates the telephone
+        call.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        "200":
+          description: The outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [declined] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/translations:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -5025,6 +5127,36 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    RefundRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, approved, declined] }
+        reason:
+          type: [string, "null"]
+          description: "The buyer's own words, where they gave any."
+        outcome_reason:
+          type: [string, "null"]
+          description: "Why it was granted or refused. Required when refusing."
+        asked_at: { type: string, format: date-time }
+        decided_at: { type: [string, "null"], format: date-time }
+        seats:
+          type: [integer, "null"]
+          description: "How many seats the request names. Null means the whole booking."
+        event:
+          type: [object, "null"]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        order:
+          type: [object, "null"]
+          properties:
+            reference: { type: string }
+            buyer: { type: [string, "null"] }
+            email: { type: [string, "null"] }
+            status: { type: string }
+            total: { type: string, description: "Formatted in the reader's language." }
+
     EntrySlot:
       type: object
       description: >-
@@ -5924,7 +6056,25 @@ components:
         seat_map_version_id: { type: [string, "null"], format: uuid }
         hold_ttl_seconds: { type: integer }
         max_extends: { type: integer }
-        refund_policy: { type: string, enum: [release, hold_back] }
+        refund_policy:
+          type: string
+          enum: [release, hold_back]
+          description: "What the *seat* does on a refund: back on sale, or held out of it."
+        refunds:
+          type: string
+          enum: [never, until, always]
+          description: >-
+            Whether a buyer may ask for their money back at all. `never` is the default because it
+            is the answer an organiser has to opt out of.
+        refund_window_hours:
+          type: integer
+          description: "How many hours before the doors, when `refunds` is `until`."
+        refund_keeps_fee:
+          type: boolean
+          description: >-
+            Whether the booking fee stays with the organiser. An organiser who paid to take the
+            money does not get that back when they return it, and the buyer is told before they
+            click rather than afterwards.
 
     EventInput:
       type: object
@@ -5943,6 +6093,9 @@ components:
         hold_ttl_seconds: { type: integer, minimum: 60, maximum: 3600 }
         max_extends: { type: integer, minimum: 0, maximum: 10 }
         refund_policy: { type: string, enum: [release, hold_back] }
+        refunds: { type: string, enum: [never, until, always] }
+        refund_window_hours: { type: integer, minimum: 0, maximum: 8760 }
+        refund_keeps_fee: { type: boolean }
 
     CustomTheme:
       type: object

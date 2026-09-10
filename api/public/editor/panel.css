@@ -2359,6 +2359,22 @@
 .tile--accent { border-color: var(--accent); background: var(--accent-soft); }
 .tile--accent .tile__value { color: var(--text-accent); }
 
+/* Buyers waiting for an answer about their money, above the list the box office works from. */
+.asked { margin: 0; padding: 0; list-style: none; }
+
+.asked li {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--s-4);
+	padding-block: var(--s-3);
+	border-block-end: 1px solid var(--border-subtle);
+}
+
+.asked li:last-child { border-block-end: none; }
+
+.asked__actions { display: flex; gap: var(--s-2); flex: none; }
+
 .order-card {
 	padding: var(--s-4) var(--s-5);
 	border: 1px solid var(--border-subtle);

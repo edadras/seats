@@ -223,6 +223,17 @@ return [
     'holdGone' => 'Ces places ne sont plus retenues. Choisissez à nouveau.',
     'standing' => 'Debout',
     'movedFrom' => 'reporté du :was',
+    'refunds' => [
+        'never' => "Cette commande ne peut pas être remboursée.",
+        'always' => "Vous pouvez demander un remboursement jusqu'au début de l'événement.",
+        'until' => "Vous pouvez demander un remboursement jusqu'à :hours heures avant le début.",
+        'feeKept' => "Les frais de réservation ne sont pas remboursés.",
+        'ask' => "Demander un remboursement",
+        'why' => "Motif (facultatif)",
+        'done' => "Remboursé. La somme repart par le moyen que vous avez utilisé pour payer.",
+        'asked' => "Demande enregistrée. La billetterie reviendra vers vous.",
+        'waiting' => "Vous avez demandé un remboursement pour cette commande. La billetterie reviendra vers vous.",
+    ],
     'entry' => [
         'between' => "Entrée :from – :to",
         'title' => "Heure d'arrivée",

@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Orders\TicketIssuer;
+use App\Domain\Refunds\RefundPolicy;
+use App\Domain\Refunds\RefundRequests;
 use App\Domain\Orders\TicketTransfers;
 use App\Domain\Sites\Auth\GoogleIdentity;
 use App\Domain\Sites\Themes;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Site\Concerns\RendersSitePages;
 use App\Models\ExternalOrder;
+use App\Models\RefundRequest;
 use App\Models\Site;
 use App\Support\Locale\Money;
 use App\Support\Pdf\TicketPdf;
@@ -204,6 +207,46 @@ class BuyerAccountController extends Controller
         ]));
     }
 
+    /**
+     * "Can I have my money back?"
+     *
+     * Inside the organiser's own terms it is granted at once — they already said yes when they
+     * wrote them, and making a buyer wait for a human to repeat that answer is a queue for
+     * nothing. Outside them it becomes a request the box office sees, because "no" is not always
+     * the right answer: somebody in hospital is a conversation, not a policy.
+     */
+    public function refund(Request $request, string $reference)
+    {
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            throw new NotFoundHttpException('Not signed in.');
+        }
+
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+            'allocation_ids' => ['sometimes', 'array'],
+            'allocation_ids.*' => ['uuid'],
+        ]);
+
+        $order = $this->ownOrder($buyer['email'], $reference);
+
+        $asked = app(RefundRequests::class)->ask(
+            $order,
+            // Only seats that are actually on this booking: a buyer editing the form cannot ask
+            // for somebody else's chair back.
+            array_values(array_intersect(
+                $data['allocation_ids'] ?? [],
+                $order->allocations->pluck('id')->all(),
+            )),
+            $data['reason'] ?? '',
+        );
+
+        return redirect('/account')->with('seatmap_message', __(
+            'approved' === $asked->status ? 'site.refunds.done' : 'site.refunds.asked'
+        ));
+    }
+
     private function orders(Site $site, string $email): array
     {
         return ExternalOrder::query()
@@ -215,6 +258,16 @@ class BuyerAccountController extends Controller
             ->map(fn (ExternalOrder $order) => [
                 'reference' => $order->external_order_id,
                 'status' => $order->status,
+                // Whether they may ask, in the organiser's own terms — and whether they already
+                // have, because a second form under a booking already waiting on an answer is a
+                // form that gets filled in twice.
+                'refundable' => app(RefundPolicy::class)->check($order)['allowed'],
+                'refund_terms' => $order->event
+                    ? app(RefundPolicy::class)->sentence($order->event)
+                    : null,
+                'refund_asked' => RefundRequest::where('external_order_row_id', $order->id)
+                    ->where('status', 'pending')
+                    ->exists(),
                 'placed_at' => $order->created_at,
                 'total' => Money::format((int) $order->total_amount, (string) $order->currency),
                 'event' => $order->event,

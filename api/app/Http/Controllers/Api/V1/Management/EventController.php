@@ -437,6 +437,11 @@ class EventController extends Controller
             'max_extends' => ['sometimes', 'integer', 'min:0', 'max:10'],
             'max_seats_per_order' => ['sometimes', 'integer', 'min:1', 'max:50'],
             'refund_policy' => ['sometimes', 'in:release,hold_back'],
+            // What the *seat* does on a refund is `refund_policy`; these three are whether the
+            // buyer may ask for one at all, and are the terms shown on their own page.
+            'refunds' => ['sometimes', Rule::in(\App\Domain\Refunds\RefundPolicy::KINDS)],
+            'refund_window_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
+            'refund_keeps_fee' => ['sometimes', 'boolean'],
         ]);
     }
 
@@ -508,6 +513,9 @@ class EventController extends Controller
             'max_extends' => $event->max_extends,
             'max_seats_per_order' => $event->max_seats_per_order,
             'refund_policy' => $event->refund_policy,
+            'refunds' => $event->refunds,
+            'refund_window_hours' => (int) $event->refund_window_hours,
+            'refund_keeps_fee' => (bool) $event->refund_keeps_fee,
             'availability_version' => $event->availability_version,
 
             /*

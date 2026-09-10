@@ -8,6 +8,10 @@ return [
             'title' => 'Bestellung erstattet',
             'body' => 'Buchung :reference für :event wurde erstattet — :seats Platz/Plätze.',
         ],
+        'refund_requested' => [
+            'title' => 'Erstattung angefragt',
+            'body' => 'Buchung :reference für :event — der Käufer möchte sein Geld zurück. :reason',
+        ],
         'event_sold_out' => [
             'title' => 'Ausverkauft',
             'body' => ':event hat jeden Platz verkauft: insgesamt :seats.',

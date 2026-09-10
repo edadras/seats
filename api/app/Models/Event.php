@@ -21,6 +21,7 @@ class Event extends Model
         'tax_rate', 'tax_included', 'tax_label',
         'cancelled_at', 'cancellation_reason', 'rescheduled_from', 'rescheduled_at',
         'translations',
+        'refunds', 'refund_window_hours', 'refund_keeps_fee',
     ];
 
     protected $casts = [
@@ -39,6 +40,8 @@ class Event extends Model
         'booking_fee_percent' => 'integer',
         'tax_rate' => 'integer',
         'tax_included' => 'boolean',
+        'refund_window_hours' => 'integer',
+        'refund_keeps_fee' => 'boolean',
     ];
 
     public function getRouteKeyName(): string

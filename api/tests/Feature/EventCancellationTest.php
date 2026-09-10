@@ -197,7 +197,9 @@ class EventCancellationTest extends TestCase
             $told = MessageDelivery::where('kind', 'event.moved')->get();
 
             $this->assertCount(1, $told);
-            $this->assertStringContainsString('still valid', (string) $told->first()->preview);
+            // The stored preview is the first 200 characters, so this looks near the start of the
+            // message rather than at the reassurance further down it.
+            $this->assertStringContainsString('has moved from', (string) $told->first()->preview);
         });
     }
 
