@@ -28,6 +28,8 @@ return [
         'zoomIn' => 'Ingrandisci',
         'zoomOut' => 'Riduci',
         'resetView' => 'Reimposta la vista',
+        'fullScreen' => 'Schermo intero',
+        'exitFullScreen' => 'Esci da schermo intero',
         'held' => 'Posti tenuti fino alle %s',
         'expired' => 'La tua prenotazione è scaduta. Scegli di nuovo i posti.',
         'stage' => 'Palco',

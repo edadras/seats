@@ -29,6 +29,8 @@ return [
         'zoomIn' => 'Vergrößern',
         'zoomOut' => 'Verkleinern',
         'resetView' => 'Ansicht zurücksetzen',
+        'fullScreen' => 'Vollbild',
+        'exitFullScreen' => 'Vollbild verlassen',
         'held' => 'Plätze reserviert bis %s',
         'expired' => 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie Ihre Plätze erneut.',
         'stage' => 'Bühne',

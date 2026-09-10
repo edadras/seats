@@ -44,6 +44,12 @@ Rows (straight or curved), enterable polygon sections, general admission areas, 
 the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
 floors, on four selection layers, with categories, a focal point and a validation checklist.
 
+A buyer sees the same room as one continuous map. Far out it is blocks, each drawn in the shape its
+own seats make; going into one draws its chairs *and* its neighbours', so the seat at the end of the
+next block along can be compared with this one and bought without leaving the block you are in.
+Dragging moves across the room, the wheel zooms towards whatever is under the pointer, and one
+button gives the whole picker — plan, basket and all — the whole screen.
+
 A plan that already exists somewhere else does not have to be drawn again:
 
 ```bash
@@ -523,6 +529,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Rows fitted from a foreign export put every chair back where it was | `ChartImporterTest`, `ChartImportTest` |
 | An aisle in an imported row becomes empty places, not a shorter row | `ChartImporterTest` |
 | Scenery has a ceiling, and it is enforced rather than merely configured | `SeatMapValidatorTest` |
+| Inside one block, the blocks either side of it are drawn too, and can be bought from | `import_smoke` |
+| A block is the shape its own seats make, and its name fits inside it | `import_smoke` |
+| The plan fills the screen with the summary still on it | `picker_smoke` |
 
 ## Installing the plugin
 

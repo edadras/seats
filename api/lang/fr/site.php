@@ -28,6 +28,8 @@ return [
         'zoomIn' => 'Zoom avant',
         'zoomOut' => 'Zoom arrière',
         'resetView' => 'Réinitialiser la vue',
+        'fullScreen' => 'Plein écran',
+        'exitFullScreen' => 'Quitter le plein écran',
         'held' => 'Places retenues jusqu’à %s',
         'expired' => 'Votre réservation a expiré. Choisissez à nouveau vos places.',
         'stage' => 'Scène',

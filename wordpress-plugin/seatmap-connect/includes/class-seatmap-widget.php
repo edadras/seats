@@ -169,6 +169,8 @@ class Seatmap_Widget {
 							'zoomIn'         => __( 'Zoom in', 'seatmap-connect' ),
 							'zoomOut'        => __( 'Zoom out', 'seatmap-connect' ),
 							'resetView'      => __( 'Reset view', 'seatmap-connect' ),
+							'fullScreen'     => __( 'Full screen', 'seatmap-connect' ),
+							'exitFullScreen' => __( 'Leave full screen', 'seatmap-connect' ),
 							'held'           => __( 'Seats held until %s', 'seatmap-connect' ),
 							'expired'        => __( 'Your reservation expired. Please choose your seats again.', 'seatmap-connect' ),
 							'stage'          => __( 'Stage', 'seatmap-connect' ),

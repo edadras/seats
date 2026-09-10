@@ -16,6 +16,15 @@
 	var SEAT_RADIUS = SEAT_SIZE / 2;
 	// A single block in a large venue can be a small part of the plan, so the ceiling has to be
 	// high enough to fill the canvas with it.
+	/*
+	 * How many pixels across a chair has to be before it is drawn as a chair.
+	 *
+	 * Below this the plan is blocks: a three-pixel circle cannot be aimed at with a finger, cannot
+	 * carry a colour anybody can tell from its neighbour's, and cannot be told apart from the
+	 * hundred beside it. Four is where a row stops being a smudge.
+	 */
+	var SEAT_LEGIBLE_PX = 4;
+
 	var MAX_ZOOM = 14;
 	var MIN_ZOOM = 0.5;
 	var POLL_INTERVAL = 15000;
@@ -325,7 +334,16 @@
 		} );
 
 		blocks.forEach( function ( block ) {
+			var section = block.sectionKey ? named[ block.sectionKey ] : null;
+
 			block.box = boundsOf( block.seats );
+
+			// The outline the chart already carries, because the designer drew it and the two
+			// canvases must agree about the shape of a room. Only a block the chart gave no
+			// section — loose rows on a floor — has its outline worked out from its own chairs.
+			block.outline = section && section.polygon && section.polygon.length > 2
+				? section.polygon
+				: hullOf( block.seats.map( function ( seat ) { return [ seat.x, seat.y ]; } ), SEAT_SIZE * 1.4 );
 		} );
 
 		this.blocks = blocks;
@@ -425,6 +443,152 @@
 	};
 
 	/** A box round a set of seats, with enough air that the outermost chair is not on the line. */
+	/**
+	 * The shape a set of chairs makes, as a convex outline around them.
+	 *
+	 * Used when a chart gives a block no outline of its own. A bounding rectangle would put
+	 * corners where the room has none — a fan-shaped block leaning nine degrees is a trapezium,
+	 * and boxing it overlaps the block beside it and tells a buyer their seats are somewhere they
+	 * are not.
+	 */
+	function hullOf( points, padding ) {
+		if ( points.length < 3 ) {
+			return null;
+		}
+
+		var sorted = points.slice().sort( function ( a, b ) {
+			return a[ 0 ] === b[ 0 ] ? a[ 1 ] - b[ 1 ] : a[ 0 ] - b[ 0 ];
+		} );
+
+		var cross = function ( o, a, b ) {
+			return ( a[ 0 ] - o[ 0 ] ) * ( b[ 1 ] - o[ 1 ] ) - ( a[ 1 ] - o[ 1 ] ) * ( b[ 0 ] - o[ 0 ] );
+		};
+
+		var hull = [];
+
+		[ sorted.slice().reverse(), sorted ].forEach( function ( pass ) {
+			var floor = hull.length;
+
+			pass.forEach( function ( point ) {
+				while ( hull.length >= floor + 2 && cross( hull[ hull.length - 2 ], hull[ hull.length - 1 ], point ) <= 0 ) {
+					hull.pop();
+				}
+
+				hull.push( point );
+			} );
+
+			hull.pop();
+		} );
+
+		if ( hull.length < 3 ) {
+			return null;
+		}
+
+		var cx = 0, cy = 0;
+
+		hull.forEach( function ( point ) { cx += point[ 0 ]; cy += point[ 1 ]; } );
+		cx /= hull.length;
+		cy /= hull.length;
+
+		// Pushed outward from the middle so the outline clears the chairs rather than cutting them.
+		return hull.map( function ( point ) {
+			var length = Math.max( 0.001, Math.hypot( point[ 0 ] - cx, point[ 1 ] - cy ) );
+
+			return [
+				point[ 0 ] + ( point[ 0 ] - cx ) / length * padding,
+				point[ 1 ] + ( point[ 1 ] - cy ) / length * padding,
+			];
+		} );
+	}
+
+	/**
+	 * The middle of a shape, weighted by its area.
+	 *
+	 * Not the middle of its bounding box: a block leaning fifteen degrees has a box whose centre
+	 * is off the block entirely, which is where a dozen names of a dozen leaning blocks all pile
+	 * up on top of each other in the middle of the room.
+	 */
+	function centroidOf( outline, box ) {
+		var area = 0, cx = 0, cy = 0;
+
+		if ( outline && outline.length > 2 ) {
+			for ( var i = 0, j = outline.length - 1; i < outline.length; j = i++ ) {
+				var step = outline[ j ][ 0 ] * outline[ i ][ 1 ] - outline[ i ][ 0 ] * outline[ j ][ 1 ];
+
+				area += step;
+				cx += ( outline[ j ][ 0 ] + outline[ i ][ 0 ] ) * step;
+				cy += ( outline[ j ][ 1 ] + outline[ i ][ 1 ] ) * step;
+			}
+
+			if ( Math.abs( area ) > 0.0001 ) {
+				return { x: cx / ( 3 * area ), y: cy / ( 3 * area ) };
+			}
+		}
+
+		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	}
+
+	/**
+	 * How wide a shape is at one particular height.
+	 *
+	 * The width of the bounding box is the wrong answer for anything that leans: a block at
+	 * fifteen degrees has a box half again as wide as the block, and a name measured against the
+	 * box is a name written across the aisle and into the block next door.
+	 */
+	function widthAt( outline, box, y ) {
+		if ( ! outline || outline.length < 3 ) {
+			return box.width;
+		}
+
+		var crossings = [];
+
+		for ( var i = 0, j = outline.length - 1; i < outline.length; j = i++ ) {
+			var y1 = outline[ j ][ 1 ], y2 = outline[ i ][ 1 ];
+
+			if ( ( y1 > y ) === ( y2 > y ) ) {
+				continue;
+			}
+
+			crossings.push( outline[ j ][ 0 ] + ( ( y - y1 ) / ( y2 - y1 ) ) * ( outline[ i ][ 0 ] - outline[ j ][ 0 ] ) );
+		}
+
+		if ( crossings.length < 2 ) {
+			return 0;
+		}
+
+		return Math.max.apply( null, crossings ) - Math.min.apply( null, crossings );
+	}
+
+	/** "Block 06" shortened to "06": what a venue prints on the sign is the number, not the word. */
+	function shortNameOf( name ) {
+		var last = String( name || '' ).split( /\s+/ ).pop();
+
+		return last && last !== name ? last : null;
+	}
+
+	/** Is this point inside that outline? Ray casting, which handles any shape a section can be. */
+	function insideOutline( outline, point ) {
+		var inside = false;
+
+		for ( var i = 0, j = outline.length - 1; i < outline.length; j = i++ ) {
+			var xi = outline[ i ][ 0 ], yi = outline[ i ][ 1 ];
+			var xj = outline[ j ][ 0 ], yj = outline[ j ][ 1 ];
+
+			if ( ( yi > point.y ) !== ( yj > point.y ) &&
+				point.x < ( ( xj - xi ) * ( point.y - yi ) ) / ( yj - yi ) + xi ) {
+				inside = ! inside;
+			}
+		}
+
+		return inside;
+	}
+
+	function overlaps( a, b ) {
+		return !! a && !! b &&
+			a.x < b.x + b.width && a.x + a.width > b.x &&
+			a.y < b.y + b.height && a.y + a.height > b.y;
+	}
+
 	function boundsOf( seats ) {
 		if ( ! seats.length ) {
 			return null;
@@ -535,6 +699,8 @@
 		minus: '<path d="M5 12h14"/>',
 		reset: '<path d="M4 9a8 8 0 1 1 .6 6"/><path d="M3.5 4v5h5"/>',
 		close: '<path d="M6 6l12 12M18 6 6 18"/>',
+		expand: '<path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"/>',
+		shrink: '<path d="M4 9h5V4M20 9h-5V4M20 15h-5v5M4 15h5v5"/>',
 	};
 
 	function iconMarkup( name ) {
@@ -649,6 +815,33 @@
 			self.resize();
 		} );
 
+		/*
+		 * Full screen gives the plan whatever height the rest of the picker is not using, and that
+		 * changes underneath it: the block chooser is a dozen cards tall, and folds to one line the
+		 * moment a block is opened. Watching the stage catches that, and a theme resizing its own
+		 * column, without either having to remember to say so.
+		 */
+		if ( window.ResizeObserver ) {
+			new window.ResizeObserver( function () {
+				if ( self.isFullScreen() && self.stageEl &&
+					Math.abs( self.stageEl.clientHeight - self.canvas.clientHeight ) > 2 ) {
+					self.resize();
+				}
+			} ).observe( this.stageEl );
+		}
+
+		// Leaving full screen is not always our doing — Escape, the browser's own chrome, or a
+		// gesture — so the button and the canvas size follow the browser rather than the press.
+		document.addEventListener( 'fullscreenchange', function () { self.syncFullScreen(); } );
+
+		// Escape out of the pinned fallback, where there is no browser chrome to do it for us.
+		document.addEventListener( 'keydown', function ( event ) {
+			if ( 'Escape' === event.key && self.container &&
+				self.container.classList.contains( 'seatmap-widget--filling' ) ) {
+				self.setFilling( false );
+			}
+		} );
+
 		// The plan is drawn, not styled, so a change of system theme has to be repainted by hand.
 		var scheme = window.matchMedia && window.matchMedia( '(prefers-color-scheme: dark)' );
 
@@ -749,7 +942,95 @@
 		wrap.appendChild( iconButton( 'minus', this.i18n.zoomOut, function () { self.zoomBy( 0.8 ); } ) );
 		wrap.appendChild( iconButton( 'reset', this.i18n.resetView, function () { self.resetView(); } ) );
 
+		this.fullScreenEl = iconButton( 'expand', this.i18n.fullScreen, function () { self.toggleFullScreen(); } );
+		wrap.appendChild( this.fullScreenEl );
+
 		return wrap;
+	};
+
+	/**
+	 * The plan, filling the screen.
+	 *
+	 * A hall of four thousand seats inside a column a theme gave the picker is a plan read through
+	 * a letterbox. This is the one control that is worth more than any amount of zooming: the same
+	 * map, the whole window.
+	 *
+	 * Two ways of doing it, because one of them is not available everywhere. The Fullscreen API is
+	 * the right answer and is used where it works; an iPhone does not offer it for an element at
+	 * all, so the fallback pins the stage over the page with position: fixed — which looks the same
+	 * to the buyer and is the difference between the feature existing on a phone and not.
+	 */
+	SeatmapWidget.prototype.toggleFullScreen = function () {
+		var self = this;
+		var host = this.container;
+
+		if ( ! host ) {
+			return;
+		}
+
+		if ( this.isFullScreen() ) {
+			if ( document.fullscreenElement === host ) {
+				document.exitFullscreen();
+			} else {
+				this.setFilling( false );
+			}
+
+			return;
+		}
+
+		if ( host.requestFullscreen ) {
+			// A refusal is not a failure to report: some browsers refuse without a gesture they
+			// recognise, and the buyer gets the fallback rather than a button that does nothing.
+			host.requestFullscreen().catch( function () { self.setFilling( true ); } );
+
+			return;
+		}
+
+		this.setFilling( true );
+	};
+
+	/**
+	 * The whole picker, not only the plan.
+	 *
+	 * Taking just the canvas full screen is the obvious thing and the wrong one: the buyer can then
+	 * pan around a beautiful map and cannot see what they have chosen, what it costs, or the button
+	 * that reserves it. The legend, the list and the summary come too.
+	 */
+	SeatmapWidget.prototype.isFullScreen = function () {
+		return !! this.container && ( document.fullscreenElement === this.container ||
+			this.container.classList.contains( 'seatmap-widget--filling' ) );
+	};
+
+	/** The fallback: the picker pinned over the page, and the page held still behind it. */
+	SeatmapWidget.prototype.setFilling = function ( on ) {
+		this.container.classList.toggle( 'seatmap-widget--filling', on );
+		document.body.classList.toggle( 'seatmap-widget-filling', on );
+		this.syncFullScreen();
+	};
+
+	/** Whichever way it was done, the button has to say what it will do next. */
+	SeatmapWidget.prototype.syncFullScreen = function () {
+		if ( ! this.fullScreenEl ) {
+			return;
+		}
+
+		var open = this.isFullScreen();
+
+		this.fullScreenEl.innerHTML = iconMarkup( open ? 'shrink' : 'expand' );
+		this.fullScreenEl.setAttribute( 'aria-label', open ? this.i18n.exitFullScreen : this.i18n.fullScreen );
+		this.fullScreenEl.setAttribute( 'aria-pressed', open ? 'true' : 'false' );
+
+		/*
+		 * The canvas is sized in pixels, and it has just been given a different number of them.
+		 *
+		 * Twice, and the second one is not superstition: the canvas is the stage's content, the
+		 * stage's height is what the layout has left over, and the leftover is not known until the
+		 * canvas has been resized once. The first pass settles the layout; the second measures it.
+		 */
+		var self = this;
+
+		this.resize();
+		window.requestAnimationFrame( function () { self.resize(); } );
 	};
 
 	/**
@@ -1364,13 +1645,21 @@
 		// Measured from the plan's own box, not the whole picker: on a wide screen the summary
 		// sits alongside, and sizing to the container drew a canvas wider than the space for it.
 		var host = this.canvas.parentNode;
-		var width = ( host && host.clientWidth ) || this.container.clientWidth || 800;
+		// Full screen: the stage is stretched by the layout to whatever is left over, so its own
+		// measured box is the answer for both dimensions rather than the shape of the room.
+		var filling = this.isFullScreen() && this.stageEl;
+		var width = ( filling ? this.stageEl.clientWidth : ( host && host.clientWidth ) ) ||
+			this.container.clientWidth || 800;
 		var size = this.canvasSize();
 		var geometryWidth = size.width || 1000;
 		var geometryHeight = size.height || 800;
 		var ratio = geometryHeight / geometryWidth;
 
-		var height = Math.min( Math.max( width * ratio, 320 ), 720 );
+		// Full screen means the whole screen: the shape of the room no longer decides how tall the
+		// plan is allowed to be, because there is nothing else on the page to leave room for.
+		var height = filling
+			? this.stageEl.clientHeight
+			: Math.min( Math.max( width * ratio, 320 ), 720 );
 		var dpr = window.devicePixelRatio || 1;
 
 		this.canvas.width = width * dpr;
@@ -1387,6 +1676,7 @@
 		// somebody's section half off the edge after they rotate a phone.
 		if ( open && open.box && this.blocksOnFloor().length > 1 ) {
 			this.fitTo( open.box );
+			this.zoomToChairs( open.box );
 		} else {
 			this.paint();
 		}
@@ -1402,6 +1692,7 @@
 	var PALETTES = {
 		light: {
 			ink: '#1b2030',
+			paper: '#f4f5f8',
 			text: '#3d4457',
 			muted: '#6f7891',
 			seatEdge: 'rgba(27,32,48,0.2)',
@@ -1423,6 +1714,7 @@
 
 		dark: {
 			ink: '#e9ecf3',
+			paper: '#141821',
 			text: '#c3cad9',
 			muted: '#838ca3',
 			seatEdge: 'rgba(9,11,16,0.45)',
@@ -1474,6 +1766,23 @@
 		return query && query.matches ? PALETTES.dark : PALETTES.light;
 	};
 
+	/**
+	 * Whatever the canvas is sitting on, for writing a name legibly over anything.
+	 *
+	 * A block's name can land on the stage, on a traced wall, or on its own chairs; the ink of the
+	 * theme is only readable against the theme's paper, so a thin outline of the paper goes behind
+	 * every word the plan writes.
+	 */
+	SeatmapWidget.prototype.paper = function () {
+		var background = this.stageEl
+			? window.getComputedStyle( this.stageEl ).backgroundColor
+			: '';
+
+		return /^rgba?\(/.test( background ) && ! /,\s*0\s*\)$/.test( background )
+			? background
+			: this.colours().paper;
+	};
+
 	SeatmapWidget.prototype.paint = function () {
 		if ( ! this.canvas ) {
 			return;
@@ -1490,18 +1799,75 @@
 
 		this.paintDecorations( ctx );
 		this.paintAreas( ctx );
-
-		if ( 'plan' === this.mode ) {
-			// Blocks instead of chairs. Tables are left out too: a table is a chair-level thing,
-			// and drawing it under a block would be drawing two answers to the same question.
-			this.paintBlocks( ctx, scale );
-		} else {
-			this.paintNeighbours( ctx );
-			this.paintTables( ctx );
-			this.paintSeats( ctx, scale );
-		}
+		this.paintPlan( ctx, scale );
 
 		ctx.restore();
+	};
+
+	/**
+	 * The room, at whatever distance the buyer happens to be standing.
+	 *
+	 * There is no longer a moment where the plan stops being blocks and starts being chairs, and
+	 * no block whose chairs are hidden because a different one is open. Whether a chair is drawn
+	 * is a question about size: below a few pixels across it is a dot nobody can aim at, so the
+	 * block is the answer instead; above it every block in view draws its chairs, and the outlines
+	 * stay underneath so a buyer still knows which part of the building they are looking at.
+	 *
+	 * That is what makes the map one thing to move around in. Somebody comparing the end of row A
+	 * in one block with the start of row A in the next can see both at once and drag between them,
+	 * rather than leaving one block to look at the other.
+	 */
+	SeatmapWidget.prototype.paintPlan = function ( ctx, scale ) {
+		var self = this;
+		var chairs = this.chairsShown();
+		var view = this.viewBox();
+
+		this.blocksOnFloor().forEach( function ( block ) {
+			if ( ! chairs || overlaps( block.box, view ) ) {
+				self.paintBlock( ctx, block, scale, chairs );
+			}
+		} );
+
+		if ( chairs ) {
+			this.paintTables( ctx );
+			this.paintSeats( ctx, scale, view );
+		}
+	};
+
+	/**
+	 * Is a chair big enough on screen to be worth drawing and possible to aim at?
+	 *
+	 * Measured in real pixels rather than in zoom steps, because the same zoom means something
+	 * different in a 500-seat theatre and a 4,000-seat amphitheatre, and on a phone and a desk.
+	 */
+	SeatmapWidget.prototype.chairsLegible = function () {
+		return SEAT_SIZE * this.baseScale * this.view.scale >= SEAT_LEGIBLE_PX;
+	};
+
+	/**
+	 * Are there chairs on the plan at the moment?
+	 *
+	 * Two conditions, and both are the point. Somebody who has not yet said which part of the
+	 * building they want is choosing between blocks, and five hundred chairs is not that choice —
+	 * so the overview stays an overview. Once they are inside one, every block big enough draws
+	 * its chairs, theirs and their neighbours' alike, and zooming back out returns them to the
+	 * blocks by the same rule rather than by a different screen.
+	 */
+	SeatmapWidget.prototype.chairsShown = function () {
+		return 'section' === this.mode && this.chairsLegible();
+	};
+
+	/** What is on screen, in the chart's own coordinates, with a margin for what is half off it. */
+	SeatmapWidget.prototype.viewBox = function () {
+		var scale = this.baseScale * this.view.scale;
+		var pad = SEAT_SIZE * 3;
+
+		return {
+			x: -this.view.x / scale - pad,
+			y: -this.view.y / scale - pad,
+			width: ( this.canvas.clientWidth || 800 ) / scale + pad * 2,
+			height: ( this.canvas.clientHeight || 600 ) / scale + pad * 2,
+		};
 	};
 
 	SeatmapWidget.prototype.paintDecorations = function ( ctx ) {
@@ -1784,12 +2150,17 @@
 		return shapes[ kind ] || shapes.fallback;
 	};
 
-	SeatmapWidget.prototype.paintSeats = function ( ctx, scale ) {
+	SeatmapWidget.prototype.paintSeats = function ( ctx, scale, view ) {
 		var self = this;
 		var colours = this.colours();
 
 		this.seats.filter( function ( seat ) {
-			return seat.floorKey === self.floorKey && self.inOpenBlock( seat );
+			// Every block's chairs, not just the open one's — and only the ones on screen. A hall
+			// of four thousand redraws on every pixel of a drag, and the ones behind the edge of
+			// the canvas cost exactly as much to draw as the ones in front of it.
+			return seat.floorKey === self.floorKey &&
+				seat.x >= view.x && seat.x <= view.x + view.width &&
+				seat.y >= view.y && seat.y <= view.y + view.height;
 		} ).forEach( function ( seat ) {
 			ctx.beginPath();
 			ctx.fillStyle = self.seatColour( seat );
@@ -1802,85 +2173,171 @@
 		} );
 	};
 
-	SeatmapWidget.prototype.paintBlocks = function ( ctx, scale ) {
-		var self = this;
+	/**
+	 * A block: the shape its own chairs make, with its name on it.
+	 *
+	 * `quiet` is the same block seen from close up, where the chairs themselves are drawn and this
+	 * is only the wall around them — so it recedes to an outline and a name, and stops shouting a
+	 * price at somebody who is already reading the seats.
+	 */
+	SeatmapWidget.prototype.paintBlock = function ( ctx, block, scale, quiet ) {
+		var stats = this.blockStats( block );
+		var soldOut = 0 === stats.available;
 		var colours = this.colours();
+		var colour = block.colour || this.zoneColour( this.blockZone( block ) );
+		var box = block.box;
 
-		this.blocksOnFloor().forEach( function ( block ) {
-			var stats = self.blockStats( block );
-			var soldOut = 0 === stats.available;
-			var colour = block.colour || self.zoneColour( self.blockZone( block ) );
-			var box = block.box;
+		ctx.save();
+		this.traceBlock( ctx, block );
 
-			ctx.save();
-			ctx.beginPath();
+		ctx.fillStyle = soldOut && ! quiet
+			? colours.areaSoldOut
+			: withAlpha( colour, quiet ? 0.08 : ( stats.chosen ? 0.42 : 0.22 ) );
+		ctx.fill();
 
-			if ( ctx.roundRect ) {
-				ctx.roundRect( box.x, box.y, box.width, box.height, 12 );
-			} else {
-				ctx.rect( box.x, box.y, box.width, box.height );
-			}
+		// Everything written on a block is sized in screen pixels rather than in chart units: the
+		// same 18 units is a headline in a studio theatre and an unreadable speck in a hall six
+		// thousand units across, and the name of the block a buyer is looking for has to be
+		// readable in both.
+		ctx.lineWidth = ( quiet ? 1 : ( stats.chosen ? 3 : 1.5 ) ) / scale;
+		ctx.strokeStyle = quiet
+			? withAlpha( colour, 0.45 )
+			: ( stats.chosen ? colours.ink : soldOut ? colours.areaSoldOutEdge : colour );
+		ctx.stroke();
 
-			ctx.fillStyle = soldOut ? colours.areaSoldOut : withAlpha( colour, stats.chosen ? 0.42 : 0.22 );
-			ctx.fill();
-			ctx.lineWidth = ( stats.chosen ? 3 : 1.5 ) / scale * ( self.baseScale || 1 );
-			ctx.strokeStyle = stats.chosen ? colours.ink : soldOut ? colours.areaSoldOutEdge : colour;
-			ctx.stroke();
+		var middle = centroidOf( block.outline, box );
 
-			var cx = box.x + box.width / 2;
-			var cy = box.y + box.height / 2;
+		ctx.textAlign = 'center';
 
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'middle';
-			ctx.fillStyle = soldOut ? colours.muted : colours.ink;
-			ctx.font = '600 18px system-ui, sans-serif';
-			ctx.fillText( block.name, cx, cy - 11 );
+		if ( quiet ) {
+			/*
+			 * Above the block rather than on it.
+			 *
+			 * The chairs are drawn after the outlines — they are the thing being chosen, so they
+			 * win every overlap — and a name written across row A is a name with a row of dots
+			 * through it. Measured at the block's shoulders so that a leaning block's name leans
+			 * with it, then lifted clear.
+			 */
+			var shoulders = box.y + box.height * 0.06;
 
-			ctx.font = '13px system-ui, sans-serif';
-			ctx.fillStyle = soldOut ? colours.muted : colours.text;
-			ctx.fillText( self.blockSummary( block ), cx, cy + 11 );
-
+			ctx.textBaseline = 'bottom';
+			ctx.fillStyle = colours.muted;
+			this.fitText( ctx, block.name, this.middleAt( block, box, shoulders ), box.y - 3 / scale,
+				widthAt( block.outline, box, shoulders ) * scale - 8, 13, scale, '600 ', shortNameOf( block.name ) );
 			ctx.restore();
-		} );
+
+			return;
+		}
+
+		var room = widthAt( block.outline, box, middle.y ) * scale - 10;
+
+		ctx.textBaseline = 'middle';
+		ctx.fillStyle = soldOut ? colours.muted : colours.ink;
+
+		var wrote = this.fitText( ctx, block.name, middle.x, middle.y - 11 / scale, room, 18, scale,
+			'600 ', shortNameOf( block.name ) );
+
+		// The second line only where there is room for it. In a fan of a dozen narrow blocks there
+		// is not, and a price written across three of its neighbours helps nobody — the list
+		// beside the plan carries the same sentence for every block, legibly, always.
+		if ( wrote ) {
+			ctx.fillStyle = soldOut ? colours.muted : colours.text;
+			this.fitText( ctx, this.blockSummary( block ), middle.x, middle.y + 11 / scale, room, 13, scale, '' );
+		}
+
+		ctx.restore();
 	};
 
 	/**
-	 * The other blocks, while one is open.
+	 * Write a line at the largest size that fits the space, or not at all.
 	 *
-	 * Drawn as faint outlines so the chairs on screen keep their place in the building: a buyer
-	 * looking at forty seats needs to know which forty, and "somewhere in the venue" is not it.
+	 * Sizes are screen pixels, not chart units — the same 18 units is a headline in a studio
+	 * theatre and an invisible speck in a hall six thousand units across — and a line that will
+	 * not fit even at its smallest is left out rather than allowed to run across the room.
 	 */
-	SeatmapWidget.prototype.paintNeighbours = function ( ctx ) {
-		var self = this;
-		var colours = this.colours();
+	/** The middle of a block across one particular height, so a leaning block's name leans with it. */
+	SeatmapWidget.prototype.middleAt = function ( block, box, y ) {
+		var outline = block.outline;
 
-		this.blocksOnFloor().forEach( function ( block ) {
-			if ( block.id === self.blockId ) {
-				return;
+		if ( ! outline || outline.length < 3 ) {
+			return box.x + box.width / 2;
+		}
+
+		var crossings = [];
+
+		for ( var i = 0, j = outline.length - 1; i < outline.length; j = i++ ) {
+			var y1 = outline[ j ][ 1 ], y2 = outline[ i ][ 1 ];
+
+			if ( ( y1 > y ) === ( y2 > y ) ) {
+				continue;
 			}
 
-			ctx.save();
-			ctx.beginPath();
+			crossings.push( outline[ j ][ 0 ] + ( ( y - y1 ) / ( y2 - y1 ) ) * ( outline[ i ][ 0 ] - outline[ j ][ 0 ] ) );
+		}
 
-			if ( ctx.roundRect ) {
-				ctx.roundRect( block.box.x, block.box.y, block.box.width, block.box.height, 12 );
-			} else {
-				ctx.rect( block.box.x, block.box.y, block.box.width, block.box.height );
+		return crossings.length < 2
+			? box.x + box.width / 2
+			: ( Math.max.apply( null, crossings ) + Math.min.apply( null, crossings ) ) / 2;
+	};
+
+	SeatmapWidget.prototype.fitText = function ( ctx, text, x, y, room, size, scale, weight ) {
+		if ( ! text || room <= 0 ) {
+			return false;
+		}
+
+		// "Block 06" where it fits, "06" where only that does: the number is the half a buyer is
+		// looking for, and a nameless shape on a plan of a dozen of them is no help at all.
+		var forms = [ text ];
+		var last = String( text ).split( /\s+/ ).pop();
+
+		if ( last && last !== text ) {
+			forms.push( last );
+		}
+
+		for ( var i = 0; i < forms.length; i++ ) {
+			var trying = size;
+
+			while ( trying >= 9 ) {
+				ctx.font = weight + trying / scale + 'px system-ui, sans-serif';
+
+				if ( ctx.measureText( forms[ i ] ).width * scale <= room ) {
+					var ink = ctx.fillStyle;
+
+					ctx.lineWidth = 3 / scale;
+					ctx.strokeStyle = this.paper();
+					ctx.lineJoin = 'round';
+					ctx.strokeText( forms[ i ], x, y );
+					ctx.fillStyle = ink;
+					ctx.fillText( forms[ i ], x, y );
+
+					return i === 0;
+				}
+
+				trying -= 1;
 			}
+		}
 
-			ctx.fillStyle = colours.areaSoldOut;
-			ctx.fill();
-			ctx.strokeStyle = colours.areaSoldOutEdge;
-			ctx.lineWidth = 1;
-			ctx.stroke();
+		return false;
+	};
 
-			ctx.fillStyle = colours.muted;
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'middle';
-			ctx.font = '600 15px system-ui, sans-serif';
-			ctx.fillText( block.name, block.box.x + block.box.width / 2, block.box.y + block.box.height / 2 );
-			ctx.restore();
-		} );
+	/** The path of a block: its own outline where it has one, its box where it does not. */
+	SeatmapWidget.prototype.traceBlock = function ( ctx, block ) {
+		ctx.beginPath();
+
+		if ( block.outline && block.outline.length > 2 ) {
+			block.outline.forEach( function ( point, index ) {
+				index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+			} );
+			ctx.closePath();
+
+			return;
+		}
+
+		if ( ctx.roundRect ) {
+			ctx.roundRect( block.box.x, block.box.y, block.box.width, block.box.height, 12 );
+		} else {
+			ctx.rect( block.box.x, block.box.y, block.box.width, block.box.height );
+		}
 	};
 
 	/** The zone most of a block sits in — used only to colour it. */
@@ -1985,6 +2442,7 @@
 
 			self.view.x += dx;
 			self.view.y += dy;
+			self.clampView();
 			last = { x: event.clientX, y: event.clientY };
 			self.paint();
 		} );
@@ -2026,10 +2484,14 @@
 		var best = SEAT_RADIUS * 1.6;
 		var self = this;
 
+		if ( ! this.chairsShown() ) {
+			return null; // Nothing is drawn as a chair, so nothing can be aimed at as one.
+		}
+
 		this.seats.forEach( function ( seat ) {
-			// Only what is on screen can be hit: two floors may occupy the same coordinates, and a
-			// neighbouring block is drawn but not open.
-			if ( seat.floorKey !== self.floorKey || ! self.inOpenBlock( seat ) ) {
+			// Only what is on screen can be hit, and two floors may occupy the same coordinates.
+			// Which block a seat is in no longer comes into it: what is drawn can be chosen.
+			if ( seat.floorKey !== self.floorKey ) {
 				return;
 			}
 
@@ -2044,30 +2506,48 @@
 		return hit;
 	};
 
+	/**
+	 * The block under a point, tested against its real shape.
+	 *
+	 * Against the bounding box, the corner outside a leaning block belongs to it as far as a click
+	 * is concerned — and in a fan of blocks those corners overlap, so a buyer aiming at one block
+	 * opens another.
+	 */
 	SeatmapWidget.prototype.blockAt = function ( point ) {
 		return this.blocksOnFloor().filter( function ( block ) {
+			if ( block.outline && block.outline.length > 2 ) {
+				return insideOutline( block.outline, point );
+			}
+
 			return point.x >= block.box.x && point.x <= block.box.x + block.box.width &&
 				point.y >= block.box.y && point.y <= block.box.y + block.box.height;
 		} )[ 0 ] || null;
 	};
 
+	/**
+	 * A chair if one was aimed at, and otherwise the block that was.
+	 *
+	 * In that order rather than by which view is open, because the two are now the same view: at a
+	 * distance a click lands on a block and goes into it; up close it lands on a chair. Clicking
+	 * the empty floor of a block whose chairs are already drawn does nothing — refitting the view
+	 * under somebody who was reaching for a seat is not help.
+	 */
 	SeatmapWidget.prototype.handleCanvasClick = function ( event ) {
 		var point = this.pointOn( event );
+		var hit = this.seatAt( point );
 
-		if ( 'plan' === this.mode ) {
+		if ( hit ) {
+			this.toggleSeat( hit );
+
+			return;
+		}
+
+		if ( ! this.chairsShown() ) {
 			var block = this.blockAt( point );
 
 			if ( block ) {
 				this.enterBlock( block.id );
 			}
-
-			return;
-		}
-
-		var hit = this.seatAt( point );
-
-		if ( hit ) {
-			this.toggleSeat( hit );
 		}
 	};
 
@@ -2084,16 +2564,15 @@
 		}
 
 		var point = this.pointOn( event );
+		var seat = this.seatAt( point );
 		var text = '';
 
-		if ( 'plan' === this.mode ) {
+		if ( seat ) {
+			text = this.describeSeat( seat );
+		} else if ( ! this.chairsShown() ) {
 			var block = this.blockAt( point );
 
 			text = block ? block.name + ' — ' + this.blockSummary( block ) : '';
-		} else {
-			var seat = this.seatAt( point );
-
-			text = seat ? this.describeSeat( seat ) : '';
 		}
 
 		this.canvas.style.cursor = text ? 'pointer' : '';
@@ -2120,7 +2599,13 @@
 		this.tipEl.style.top = Math.max( 4, top - this.tipEl.offsetHeight - 12 ) + 'px';
 	};
 
-	/** Is this seat in the block currently open? In 'plan' mode nothing is. */
+	/**
+	 * Is this seat in the block currently open?
+	 *
+	 * A question about the list beside the plan, not about the plan: the canvas draws whatever is
+	 * legible and in view, but a keyboard list of four thousand chairs is not a list, so that one
+	 * stays with the block the buyer is working in.
+	 */
 	SeatmapWidget.prototype.inOpenBlock = function ( seat ) {
 		var block = this.currentBlock();
 
@@ -2137,6 +2622,7 @@
 		this.mode = 'section';
 		this.blockId = id;
 		this.fitTo( block.box );
+		this.zoomToChairs( block.box );
 		this.syncStageControls();
 		this.renderSeatList();
 		this.renderAreaList();
@@ -2197,9 +2683,84 @@
 		this.paint();
 	};
 
-	SeatmapWidget.prototype.zoomBy = function ( factor ) {
-		this.view.scale = Math.min( MAX_ZOOM, Math.max( MIN_ZOOM, this.view.scale * factor ) );
+	/**
+	 * Zoom towards what is being looked at.
+	 *
+	 * Scaling about the canvas origin walks whatever the buyer was reading off the screen, so a
+	 * wheel over a particular row keeps that row under the pointer, and the buttons keep the
+	 * middle of the view where it was.
+	 */
+	/**
+	 * Going into a block means seeing its chairs.
+	 *
+	 * Fitting the whole block to the canvas is the right framing for most rooms, but in a very
+	 * large hall a whole block still shrinks its chairs to specks — and a buyer who has just
+	 * chosen "Block 02" and been handed another outline has been given nothing. So the view is
+	 * pushed in until chairs are chairs, and a block too tall to fit is shown from its front,
+	 * because row A is what somebody who picked a block is looking for.
+	 */
+	SeatmapWidget.prototype.zoomToChairs = function ( box ) {
+		if ( ! box || this.chairsLegible() ) {
+			return;
+		}
+
+		this.view.scale = Math.min( MAX_ZOOM, SEAT_LEGIBLE_PX / ( SEAT_SIZE * this.baseScale ) );
+
+		var scale = this.baseScale * this.view.scale;
+		var width = this.canvas.clientWidth || 800;
+		var height = this.canvas.clientHeight || 600;
+
+		this.view.x = width / 2 - ( box.x + box.width / 2 ) * scale;
+		this.view.y = box.height * scale > height
+			? 24 - box.y * scale
+			: height / 2 - ( box.y + box.height / 2 ) * scale;
+
+		this.clampView();
 		this.paint();
+	};
+
+	SeatmapWidget.prototype.zoomBy = function ( factor, event ) {
+		var before = this.view.scale;
+		var next = Math.min( MAX_ZOOM, Math.max( MIN_ZOOM, before * factor ) );
+
+		if ( next === before ) {
+			return;
+		}
+
+		var rect = this.canvas.getBoundingClientRect();
+		var anchorX = event ? event.clientX - rect.left : rect.width / 2;
+		var anchorY = event ? event.clientY - rect.top : rect.height / 2;
+		var ratio = next / before;
+
+		this.view.x = anchorX - ( anchorX - this.view.x ) * ratio;
+		this.view.y = anchorY - ( anchorY - this.view.y ) * ratio;
+		this.view.scale = next;
+		this.clampView();
+		this.paint();
+	};
+
+	/**
+	 * Keep the plan on the screen.
+	 *
+	 * Panning with no limit is how somebody ends up looking at an empty rectangle with no way back
+	 * except a reset button they have not noticed. The plan may be dragged until a quarter of it
+	 * is left, and no further.
+	 */
+	SeatmapWidget.prototype.clampView = function () {
+		if ( ! this.canvas ) {
+			return;
+		}
+
+		var width = this.canvas.clientWidth || 800;
+		var height = this.canvas.clientHeight || 600;
+		var size = this.canvasSize();
+		var scale = this.baseScale * this.view.scale;
+		var planWidth = ( size.width || 1000 ) * scale;
+		var planHeight = ( size.height || 800 ) * scale;
+		var keep = 0.25;
+
+		this.view.x = Math.min( width - planWidth * keep, Math.max( planWidth * ( keep - 1 ), this.view.x ) );
+		this.view.y = Math.min( height - planHeight * keep, Math.max( planHeight * ( keep - 1 ), this.view.y ) );
 	};
 
 	SeatmapWidget.prototype.resetView = function () {
@@ -2237,9 +2798,33 @@
 			seat.state = 'selected';
 		}
 
+		// Only once the seat has really changed hands: a click refused for being sold or over the
+		// limit must not quietly move the list to another block.
+		this.followSeat( seat );
+
 		this.paint();
 		this.renderSeatList();
 		this.renderSelection();
+	};
+
+	/**
+	 * Let the list follow the buyer across the plan.
+	 *
+	 * Now that the chairs of every block are on screen at once, somebody can reach past the block
+	 * they arrived in and take a seat in the next one. The list beside the plan follows them —
+	 * *without* moving the view, because a map that jumps when a seat is taken is a map that
+	 * loses the seat next to it.
+	 */
+	SeatmapWidget.prototype.followSeat = function ( seat ) {
+		var id = seat.floorKey + '|' + ( seat.sectionKey || '' );
+
+		if ( id === this.blockId || ! this.blocks.some( function ( block ) { return block.id === id; } ) ) {
+			return;
+		}
+
+		this.mode = 'section';
+		this.blockId = id;
+		this.syncStageControls();
 	};
 
 	/**

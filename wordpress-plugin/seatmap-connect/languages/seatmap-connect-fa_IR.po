@@ -237,7 +237,7 @@ msgstr "هنوز صندلی‌ای انتخاب نشده است."
 msgid "Total"
 msgstr "مجموع"
 
-#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:202
+#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:204
 msgid "Reserve and add to cart"
 msgstr "رزرو و افزودن به سبد خرید"
 
@@ -278,140 +278,148 @@ msgid "Reset view"
 msgstr "بازگرداندن نما"
 
 #: includes/class-seatmap-widget.php:172
+msgid "Full screen"
+msgstr "تمام‌صفحه"
+
+#: includes/class-seatmap-widget.php:173
+msgid "Leave full screen"
+msgstr "خروج از تمام‌صفحه"
+
+#: includes/class-seatmap-widget.php:174
 msgid "Seats held until %s"
 msgstr "صندلی‌ها تا %s نگه داشته می‌شوند"
 
-#: includes/class-seatmap-widget.php:173
+#: includes/class-seatmap-widget.php:175
 msgid "Your reservation expired. Please choose your seats again."
 msgstr "مهلت رزرو شما تمام شد. لطفاً دوباره صندلی‌ها را انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:174
+#: includes/class-seatmap-widget.php:176
 msgid "Stage"
 msgstr "صحنه"
 
-#: includes/class-seatmap-widget.php:175
+#: includes/class-seatmap-widget.php:177
 msgid "Floor"
 msgstr "طبقه"
 
-#: includes/class-seatmap-widget.php:176
+#: includes/class-seatmap-widget.php:178
 msgid "Standing and tables"
 msgstr "ایستاده و میزها"
 
 #. translators: %d: number of places still available.
-#: includes/class-seatmap-widget.php:178
+#: includes/class-seatmap-widget.php:180
 msgid "%d left"
 msgstr "%d جای باقی‌مانده"
 
-#: includes/class-seatmap-widget.php:179 includes/class-seatmap-widget.php:192
+#: includes/class-seatmap-widget.php:181 includes/class-seatmap-widget.php:194
 msgid "Sold out"
 msgstr "تمام شد"
 
 #. translators: %s: name of the standing area.
-#: includes/class-seatmap-widget.php:181
+#: includes/class-seatmap-widget.php:183
 msgid "Add one place in %s"
 msgstr "یک جا در %s اضافه کن"
 
 #. translators: %s: name of the standing area.
-#: includes/class-seatmap-widget.php:183
+#: includes/class-seatmap-widget.php:185
 msgid "Remove one place in %s"
 msgstr "یک جا از %s کم کن"
 
-#: includes/class-seatmap-widget.php:184
+#: includes/class-seatmap-widget.php:186
 msgid "That area filled up while you were choosing. Please pick a different number of places."
 msgstr "این محدوده هنگام انتخاب شما پُر شد. لطفاً تعداد دیگری را انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:186
+#: includes/class-seatmap-widget.php:188
 msgid "Choose an area"
 msgstr "یک بخش را انتخاب کنید"
 
-#: includes/class-seatmap-widget.php:187
+#: includes/class-seatmap-widget.php:189
 msgid "Back to the whole venue"
 msgstr "بازگشت به نمای کل سالن"
 
 #. translators: %s: the price of the cheapest seat in the area.
-#: includes/class-seatmap-widget.php:189
+#: includes/class-seatmap-widget.php:191
 msgid "From %s"
 msgstr "از %s"
 
 #. translators: %d: number of seats still available in the area.
-#: includes/class-seatmap-widget.php:191
+#: includes/class-seatmap-widget.php:193
 msgid "%d seats left"
 msgstr "%d صندلی باقی‌مانده"
 
 #. translators: %s: name of the area.
-#: includes/class-seatmap-widget.php:194
+#: includes/class-seatmap-widget.php:196
 msgid "Show seats in %s"
 msgstr "نمایش صندلی‌های %s"
 
 #. translators: %s: name of the area.
-#: includes/class-seatmap-widget.php:196
+#: includes/class-seatmap-widget.php:198
 msgid "In %s"
 msgstr "در %s"
 
-#: includes/class-seatmap-widget.php:198
+#: includes/class-seatmap-widget.php:200
 msgid "Choose your tickets"
 msgstr "بلیت‌هایتان را انتخاب کنید"
 
-#: includes/class-seatmap-widget.php:199
+#: includes/class-seatmap-widget.php:201
 msgid "Tickets"
 msgstr "بلیت‌ها"
 
-#: includes/class-seatmap-widget.php:200
+#: includes/class-seatmap-widget.php:202
 msgid "Who is this ticket for?"
 msgstr "این بلیت برای چه کسی است؟"
 
-#: includes/class-seatmap-widget.php:201
+#: includes/class-seatmap-widget.php:203
 msgid "Nothing chosen yet."
 msgstr "هنوز چیزی انتخاب نشده است."
 
 #. translators: %d: the largest number of tickets one order may hold.
-#: includes/class-seatmap-widget.php:204
+#: includes/class-seatmap-widget.php:206
 msgid "You can take up to %d tickets."
 msgstr "تا %d بلیت می‌توانید بردارید."
 
 #. translators: %s: the seat or area being taken off the order.
-#: includes/class-seatmap-widget.php:206
+#: includes/class-seatmap-widget.php:208
 msgid "Remove %s"
 msgstr "حذف %s"
 
-#: includes/class-seatmap-widget.php:208
+#: includes/class-seatmap-widget.php:210
 msgid "Seat list"
 msgstr "فهرست صندلی‌ها"
 
-#: includes/class-seatmap-widget.php:210
+#: includes/class-seatmap-widget.php:212
 msgid "Seats together"
 msgstr "صندلی‌های کنار هم"
 
-#: includes/class-seatmap-widget.php:211
+#: includes/class-seatmap-widget.php:213
 msgid "Find seats"
 msgstr "پیدا کن"
 
 #. translators: %d: the largest number of adjacent seats left.
-#: includes/class-seatmap-widget.php:213
+#: includes/class-seatmap-widget.php:215
 msgid "The most seats side by side is %d. Try that many, or pick from the plan."
 msgstr "بیشترین تعداد صندلی کنار هم %d است. همین تعداد را امتحان کنید یا از روی نقشه انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:214
+#: includes/class-seatmap-widget.php:216
 msgid "There are no seats left."
 msgstr "صندلی خالی نمانده است."
 
-#: includes/class-seatmap-widget.php:217
+#: includes/class-seatmap-widget.php:219
 msgid "Arrival time"
 msgstr "زمان ورود"
 
-#: includes/class-seatmap-widget.php:218
+#: includes/class-seatmap-widget.php:220
 msgid "Choose when you will arrive"
 msgstr "زمان ورودتان را انتخاب کنید"
 
-#: includes/class-seatmap-widget.php:219
+#: includes/class-seatmap-widget.php:221
 msgid "That arrival time filled up while you were choosing. Please pick another."
 msgstr "ظرفیت این زمان ورود در همین فاصله پر شد. لطفاً زمان دیگری انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:220
+#: includes/class-seatmap-widget.php:222
 msgid "Choose an arrival time before reserving."
 msgstr "پیش از رزرو، زمان ورود را انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:231
+#: includes/class-seatmap-widget.php:233
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "انتخاب صندلی به جاوااسکریپت نیاز دارد. لطفاً فعالش کنید، یا با گیشه تماس بگیرید."
 

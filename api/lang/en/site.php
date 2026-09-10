@@ -30,6 +30,8 @@ return [
         'zoomIn' => 'Zoom in',
         'zoomOut' => 'Zoom out',
         'resetView' => 'Reset view',
+        'fullScreen' => 'Full screen',
+        'exitFullScreen' => 'Leave full screen',
         'held' => 'Seats held until %s',
         'expired' => 'Your reservation expired. Please choose your seats again.',
         'stage' => 'Stage',

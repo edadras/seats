@@ -130,6 +130,47 @@ check( 'the way back appeared', await page.locator( '.seatmap-widget__back' ).is
 check( 'and the standing offer stepped out of the way',
 	await page.locator( '.seatmap-widget__areas' ).isHidden() );
 
+/*
+ * The plan, filling the screen.
+ *
+ * A hall read through whatever column a theme gave the picker is the commonest complaint about
+ * any seat map, and the fix is one button. What is checked here is that it is the *picker* that
+ * fills the screen and not only the canvas: a buyer who can pan a beautiful map and cannot see
+ * what they have chosen or the button that reserves it has been given a worse picker, not a
+ * bigger one.
+ */
+console.log( 'Full screen' );
+const fullScreen = page.locator( '.seatmap-widget__zoom button' ).last();
+const beforeFull = await page.locator( '.seatmap-widget__canvas' ).boundingBox();
+
+check( 'the plan offers a way to fill the screen',
+	/full/i.test( await fullScreen.getAttribute( 'aria-label' ) || '' ),
+	await fullScreen.getAttribute( 'aria-label' ) );
+
+await fullScreen.click();
+await page.waitForTimeout( 900 );
+
+const afterFull = await page.locator( '.seatmap-widget__canvas' ).boundingBox();
+
+// Area, not width: on a wide screen the picker already has the width, and what full screen
+// really buys is the height a page's other furniture was taking.
+const grew = ( afterFull.width * afterFull.height ) / ( beforeFull.width * beforeFull.height );
+
+check( 'and pressing it makes the plan bigger', grew > 1.2,
+	`${ Math.round( beforeFull.width ) }×${ Math.round( beforeFull.height ) } → ` +
+	`${ Math.round( afterFull.width ) }×${ Math.round( afterFull.height ) }` );
+check( 'the summary comes with it, so a choice can still be finished',
+	await page.locator( '.seatmap-widget__summary' ).isVisible() );
+check( 'and the button now offers the way back', /leave|exit/i.test(
+	await fullScreen.getAttribute( 'aria-label' ) || '' ),
+	await fullScreen.getAttribute( 'aria-label' ) );
+
+await fullScreen.click();
+await page.waitForTimeout( 900 );
+
+check( 'pressing it again puts the plan back where it was',
+	Math.abs( ( await page.locator( '.seatmap-widget__canvas' ).boundingBox() ).width - beforeFull.width ) < 4 );
+
 check( 'the grid of chairs is folded away, not printed under the plan',
 	await page.locator( '.seatmap-widget__list' ).evaluate( ( el ) => ! el.open ) );
 check( 'and it opens for whoever wants to read it',

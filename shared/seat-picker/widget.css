@@ -179,6 +179,81 @@
 	background: var(--seatmap-surface-sunken);
 }
 
+/*
+ * The picker, filling the screen.
+ *
+ * Two selectors for one state because two mechanisms produce it: the Fullscreen API where the
+ * browser offers it for an element, and a pinned overlay where it does not — an iPhone being the
+ * one that does not. A buyer cannot tell them apart, which is the point.
+ *
+ * The whole picker goes, not only the plan, so that what has been chosen and the button that
+ * reserves it are still on the screen. The stage takes whatever height is left over; the canvas
+ * is then measured against it in script, because a canvas is sized in pixels rather than styled.
+ */
+.seatmap-widget:fullscreen,
+.seatmap-widget--filling {
+	background: var(--seatmap-surface);
+	padding: clamp(10px, 2vw, 22px);
+	display: flex;
+	flex-direction: column;
+	overflow: auto;
+}
+
+.seatmap-widget--filling {
+	position: fixed;
+	inset: 0;
+	/* Above a theme's sticky header and its cookie bar, which is the whole point of the control. */
+	z-index: 2147483000;
+}
+
+.seatmap-widget:fullscreen .seatmap-widget__layout,
+.seatmap-widget--filling .seatmap-widget__layout {
+	flex: 1;
+	min-block-size: 0;
+	/* Stacked at the top by default, so that a short seat list does not stretch; here the plan is
+	   the thing that should take the room, so both columns are given the full height. */
+	align-items: stretch;
+	flex-wrap: nowrap;
+}
+
+.seatmap-widget:fullscreen .seatmap-widget__side,
+.seatmap-widget--filling .seatmap-widget__side {
+	overflow: auto;
+}
+
+/*
+ * The lists under the plan keep their place but not their appetite.
+ *
+ * The block chooser is a dozen cards tall in a big venue, and full screen is a request for a
+ * bigger *plan* — so they scroll within a share of the height instead of taking a third of it.
+ */
+.seatmap-widget:fullscreen .seatmap-widget__seats,
+.seatmap-widget--filling .seatmap-widget__seats,
+.seatmap-widget:fullscreen .seatmap-widget__areas,
+.seatmap-widget--filling .seatmap-widget__areas {
+	flex: 0 0 auto;
+	max-block-size: 22vh;
+	overflow: auto;
+}
+
+.seatmap-widget:fullscreen .seatmap-widget__main,
+.seatmap-widget--filling .seatmap-widget__main {
+	display: flex;
+	flex-direction: column;
+	min-block-size: 0;
+}
+
+.seatmap-widget:fullscreen .seatmap-widget__stage,
+.seatmap-widget--filling .seatmap-widget__stage {
+	flex: 1;
+	min-block-size: 0;
+}
+
+/* The page behind it holds still, or the plan scrolls the article underneath as it is dragged. */
+body.seatmap-widget-filling {
+	overflow: hidden;
+}
+
 .seatmap-widget__canvas {
 	display: block;
 	inline-size: 100%;
