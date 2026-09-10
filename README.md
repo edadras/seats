@@ -85,6 +85,18 @@ A seat is the start of it, not the end. Around the map:
   has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
   carry a date that lifts it without anybody acting, and is checked where a booking is registered so
   the refusal arrives before the money — with a sentence, not a silent failure.
+- **The hall in three dimensions** — a seating plan is a drawing of the floor, and a floor is not
+  what anybody is buying. Four numbers turn one into a room: the height of the stage, the rake of
+  each block, the height each block starts at and how deep its platform is. The designer has a
+  2D/3D icon that lifts the same canvas into that room, with the numbers beside it and the room
+  redrawing as they are typed; the buyer's picker has the same icon, offered on exactly the charts
+  an organiser has said are rooms, and a chair clicked in it goes into the basket like any other.
+  Both draw from one shared projection, so the hall an organiser sets up is the hall a buyer is
+  shown, and the arithmetic is pinned to numbers written down by hand — a balcony two units too low
+  still looks like a balcony, and the seat somebody bought because the plan said they would see over
+  the row in front is the one that finds out. Because publishing a chart deliberately moves no event
+  onto it, an event whose chart has been republished says so and takes the new one up on request —
+  refused outright if it would leave a sold seat pointing at a chair that no longer exists.
 - **Productions: one show across many venues** — a run in one building was always a list of dates; a
   tour is a list of places. The production carries what an audience recognises — the name, the
   poster and the sentence that says what this is — and every night that says nothing of its own
@@ -617,6 +629,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The run adds up across its towns, and the takings are withheld from who may not see them | `ProductionTest` |
 | A production with dates is not deleted by accident | `ProductionTest` |
 | The other dates of a tour say which town they are in | `ProductionTest`, `productions_smoke` |
+| The rake, the stage height and the balcony's height are what the numbers say | `tools/hall3d-check.mjs` |
+| The room opens from behind the audience, whichever way the chart is drawn | `tools/hall3d-check.mjs` |
+| A chart with no room set up offers no 3D button and is not guessed at | `HallInThreeDimensionsTest`, `hall3d_smoke` |
+| The heights survive validation, publishing and the journey to a browser | `HallInThreeDimensionsTest` |
+| A night stays on its own chart until somebody says otherwise | `HallInThreeDimensionsTest`, `hall3d_smoke` |
+| A chart that has lost a sold seat is refused | `HallInThreeDimensionsTest` |
+| A chair clicked in the room lands in the basket | `hall3d_smoke` |
 
 ## Installing the plugin
 

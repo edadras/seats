@@ -32,6 +32,8 @@ return [
         'resetView' => 'Reset view',
         'fullScreen' => 'Full screen',
         'exitFullScreen' => 'Leave full screen',
+        'seeInThreeD' => 'See the hall in 3D',
+        'seeThePlan' => 'Back to the plan',
         'held' => 'Seats held until %s',
         'expired' => 'Your reservation expired. Please choose your seats again.',
         'stage' => 'Stage',

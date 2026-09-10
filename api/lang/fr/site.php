@@ -30,6 +30,8 @@ return [
         'resetView' => 'Réinitialiser la vue',
         'fullScreen' => 'Plein écran',
         'exitFullScreen' => 'Quitter le plein écran',
+        'seeInThreeD' => 'Voir la salle en 3D',
+        'seeThePlan' => 'Revenir au plan',
         'held' => 'Places retenues jusqu’à %s',
         'expired' => 'Votre réservation a expiré. Choisissez à nouveau vos places.',
         'stage' => 'Scène',

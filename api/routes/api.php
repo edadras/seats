@@ -129,6 +129,9 @@ Route::prefix('v1')->group(function () {
         Route::patch('events/{event}', [EventController::class, 'update']);
         // Put the same production on again on other nights. The copies are drafts.
         Route::post('events/{event}/repeat', [EventController::class, 'repeat']);
+        // Take up a chart that has been republished since this night was put on it. A decision,
+        // never automatic: a chart that moved under a sold seat is a ticket nobody can honour.
+        Route::post('events/{event}/chart-version', [EventController::class, 'useLatestChart']);
         // The night that is off, and the night that moved. One refunds everything and voids every
         // ticket; the other keeps them all and says so.
         // What the event is called, in each of the six languages the rest of the platform speaks.

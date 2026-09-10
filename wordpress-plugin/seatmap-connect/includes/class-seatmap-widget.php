@@ -33,10 +33,20 @@ class Seatmap_Widget {
 			SEATMAP_CONNECT_VERSION
 		);
 
+		// The 3D hall engine, registered as its own script and declared as a dependency, so a shop
+		// gets it in the right order without the widget having to fetch anything itself.
+		wp_register_script(
+			'seatmap-hall3d',
+			SEATMAP_CONNECT_URL . 'assets/js/hall3d.js',
+			array(),
+			SEATMAP_CONNECT_VERSION,
+			true
+		);
+
 		wp_register_script(
 			'seatmap-widget',
 			SEATMAP_CONNECT_URL . 'assets/js/widget.js',
-			array(),
+			array( 'seatmap-hall3d' ),
 			SEATMAP_CONNECT_VERSION,
 			true
 		);
@@ -171,6 +181,8 @@ class Seatmap_Widget {
 							'resetView'      => __( 'Reset view', 'seatmap-connect' ),
 							'fullScreen'     => __( 'Full screen', 'seatmap-connect' ),
 							'exitFullScreen' => __( 'Leave full screen', 'seatmap-connect' ),
+							'seeInThreeD'    => __( 'See the hall in 3D', 'seatmap-connect' ),
+							'seeThePlan'     => __( 'Back to the plan', 'seatmap-connect' ),
 							'held'           => __( 'Seats held until %s', 'seatmap-connect' ),
 							'expired'        => __( 'Your reservation expired. Please choose your seats again.', 'seatmap-connect' ),
 							'stage'          => __( 'Stage', 'seatmap-connect' ),

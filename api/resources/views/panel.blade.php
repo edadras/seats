@@ -12,7 +12,9 @@
     <div id="app" data-api="{{ url('/v1') }}"></div>
     <script src="{{ asset('editor/js/i18n.js') }}"></script>
     <script src="{{ asset('editor/js/icons.js') }}"></script>
+    <script src="{{ asset('editor/js/hall3d.js') }}"></script>
     <script src="{{ asset('editor/js/chart.js') }}"></script>
+    <script src="{{ asset('editor/js/hall.js') }}"></script>
     <script src="{{ asset('editor/js/chart-ops.js') }}"></script>
     <script src="{{ asset('editor/js/editor.js') }}"></script>
     <script src="{{ asset('editor/js/inspector.js') }}"></script>

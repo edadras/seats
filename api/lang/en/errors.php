@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'That listing is already finished with.',
     'resale_being_bought' => 'Somebody is buying that seat at this moment. It can be taken off sale again if they do not finish.',
     'buyer_blocked' => 'This account cannot book for this organiser. Please contact the box office.',
+    'chart_missing_sold_seats' => 'The new chart is missing seats this event has already sold.',
     'map_not_at_venue' => 'That chart belongs to a different building.',
     'production_has_dates' => 'This production still has dates. Move or delete them before deleting the run.',
     'production_has_no_dates' => 'Say which night to copy: a tour starts from a show you have already put on.',

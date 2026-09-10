@@ -1,4 +1,4 @@
-/* Generated from shared/seat-picker — edit that, then run tools/sync-seat-picker.sh. */
+/* Generated from shared/ — edit the original, then run tools/sync-seat-picker.sh. */
 /**
  * Seat selection widget.
  *
@@ -701,6 +701,10 @@
 		close: '<path d="M6 6l12 12M18 6 6 18"/>',
 		expand: '<path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"/>',
 		shrink: '<path d="M4 9h5V4M20 9h-5V4M20 15h-5v5M4 15h5v5"/>',
+		// A room seen in perspective, and the same room seen from above: the two things this
+		// button switches between, drawn rather than named.
+		cube: '<path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9Z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>',
+		plan: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 10h17M10 10v10.5"/>',
 	};
 
 	function iconMarkup( name ) {
@@ -942,10 +946,143 @@
 		wrap.appendChild( iconButton( 'minus', this.i18n.zoomOut, function () { self.zoomBy( 0.8 ); } ) );
 		wrap.appendChild( iconButton( 'reset', this.i18n.resetView, function () { self.resetView(); } ) );
 
+		/*
+		 * Two dimensions or three.
+		 *
+		 * Offered only where the organiser has said what the room is shaped like, because a hall
+		 * with no rake and no stage height is a flat plate and showing it as one would be a worse
+		 * answer than the plan. Where they have, this is the question every buyer of an unfamiliar
+		 * theatre is actually asking: what will I be able to see from there?
+		 */
+		if ( this.hallAvailable() ) {
+			this.dimensionEl = iconButton( 'cube', this.i18n.seeInThreeD, function () { self.toggleThreeD(); } );
+			wrap.appendChild( this.dimensionEl );
+		}
+
 		this.fullScreenEl = iconButton( 'expand', this.i18n.fullScreen, function () { self.toggleFullScreen(); } );
 		wrap.appendChild( this.fullScreenEl );
 
 		return wrap;
+	};
+
+	/* ------------------------------------------------------------------------ the room in 3D */
+
+	/** Can this chart be shown as a room, and is there an engine here to show it with? */
+	SeatmapWidget.prototype.hallAvailable = function () {
+		return !! ( window.SeatmapHall3D && this.seated &&
+			this.geometry && this.geometry.view3d && this.geometry.view3d.enabled );
+	};
+
+	SeatmapWidget.prototype.toggleThreeD = function () {
+		if ( ! this.hallAvailable() ) {
+			return;
+		}
+
+		this.threeD = ! this.threeD;
+
+		if ( this.threeD ) {
+			this.buildHall();
+		}
+
+		this.syncDimension();
+		this.paint();
+	};
+
+	/**
+	 * Lift the plan into a room.
+	 *
+	 * Built from the same flattened chairs and the same block outlines the plan is drawn from, so
+	 * the two views cannot disagree about which chair is where — and rebuilt whenever the settings
+	 * or the floor change rather than every frame, because the arithmetic is the same every time
+	 * the camera moves and there can be four thousand chairs in it.
+	 */
+	SeatmapWidget.prototype.buildHall = function () {
+		var self = this;
+		var here = this.blocksOnFloor();
+		var seats = this.seats.filter( function ( seat ) { return seat.floorKey === self.floorKey; } );
+
+		this.hall = window.SeatmapHall3D.build( {
+			settings: window.SeatmapHall3D.settings( this.geometry ),
+			focal: this.geometry.focalPoint || null,
+			bounds: boundsOf( seats ),
+			stageShape: this.stageShape(),
+			seats: seats.map( function ( seat ) {
+				return {
+					x: seat.x,
+					y: seat.y,
+					blockKey: seat.sectionKey || ( seat.floorKey + '|' ),
+					seat: seat,
+				};
+			} ).map( function ( entry ) {
+				// The record the engine hands back on a click has to be the picker's own seat,
+				// not a copy of its coordinates.
+				entry.record = entry.seat;
+
+				return entry;
+			} ),
+			blocks: here.map( function ( block ) {
+				return {
+					key: block.sectionKey || block.id,
+					name: block.name,
+					colour: block.colour,
+					outline: block.outline,
+				};
+			} ),
+		} );
+
+		this.camera = window.SeatmapHall3D.camera( this.hall, {} );
+	};
+
+	/**
+	 * The stage, where the chart drew one.
+	 *
+	 * A shape somebody labelled "stage" is the stage, whatever shape they gave it — a thrust, an
+	 * apron, an orchestra pit in front of it. Only when the chart says nothing does the engine put
+	 * a plain platform in front of the seats.
+	 */
+	SeatmapWidget.prototype.stageShape = function () {
+		var self = this;
+		var found = null;
+
+		this.decorations.forEach( function ( entry ) {
+			if ( found || entry.floorKey !== self.floorKey ) {
+				return;
+			}
+
+			var object = entry.object;
+			var label = String( object.label || object.text || '' ).toLowerCase();
+
+			// The chart has a kind for it. A traced plan often does not use it, and then the word
+			// somebody wrote on the shape is the only thing that knows which rectangle is the
+			// stage — in whichever language they wrote it in.
+			if ( 'stage' !== object.kind && ! /stage|scene|bühne|escenario|palco|صحنه|المسرح/.test( label ) ) {
+				return;
+			}
+
+			found = outlineOf( object );
+		} );
+
+		return found;
+	};
+
+	/** Whichever view is on, the button has to say what pressing it will do next. */
+	SeatmapWidget.prototype.syncDimension = function () {
+		if ( ! this.dimensionEl ) {
+			return;
+		}
+
+		this.dimensionEl.innerHTML = iconMarkup( this.threeD ? 'plan' : 'cube' );
+		this.dimensionEl.setAttribute(
+			'aria-label',
+			this.threeD ? this.i18n.seeThePlan : this.i18n.seeInThreeD
+		);
+		this.dimensionEl.setAttribute( 'aria-pressed', this.threeD ? 'true' : 'false' );
+
+		// The zoom buttons move a camera in 3D and a plan in 2D; the back control belongs to the
+		// plan alone, because a room is not entered a block at a time.
+		if ( this.backEl ) {
+			this.backEl.hidden = this.threeD || ! this.insideABlock();
+		}
 	};
 
 	/**
@@ -1085,6 +1222,12 @@
 
 		// A selection made on another floor stays in the basket — only the view moves.
 		this.settleMode();
+
+		// Another floor is another room: the balcony's own chairs, outlines and heights.
+		if ( this.threeD ) {
+			this.buildHall();
+		}
+
 		this.resetView();
 		this.syncStageControls();
 		this.renderAreaList();
@@ -1788,6 +1931,12 @@
 			return;
 		}
 
+		if ( this.threeD ) {
+			this.paintHall();
+
+			return;
+		}
+
 		var ctx = this.canvas.getContext( '2d' );
 		var scale = this.baseScale * this.view.scale;
 
@@ -1802,6 +1951,47 @@
 		this.paintPlan( ctx, scale );
 
 		ctx.restore();
+	};
+
+	/**
+	 * The room, from where somebody would be standing in it.
+	 *
+	 * The same chairs, the same states and the same colours as the plan: a seat that is grey here
+	 * is grey there, and one somebody has chosen is the ink of the theme in both. What the room
+	 * adds is the only thing a plan cannot say — how high up they will be, and what is between
+	 * them and the stage.
+	 */
+	SeatmapWidget.prototype.paintHall = function () {
+		var self = this;
+
+		if ( ! this.hall ) {
+			this.buildHall();
+		}
+
+		var ctx = this.canvas.getContext( '2d' );
+		var colours = this.colours();
+		var width = this.canvas.clientWidth || 800;
+		var height = this.canvas.clientHeight || 600;
+
+		ctx.setTransform( this.dpr, 0, 0, this.dpr, 0, 0 );
+
+		window.SeatmapHall3D.paint( ctx, this.hall, this.camera, {
+			width: width,
+			height: height,
+			palette: {
+				paper: this.paper(),
+				text: colours.ink,
+				floor: withAlpha( colours.ink, 0.08 ),
+				floorEdge: withAlpha( colours.ink, 0.22 ),
+				skirt: withAlpha( colours.ink, 0.16 ),
+				stage: colours.stage || withAlpha( colours.ink, 0.55 ),
+				stageSide: withAlpha( colours.ink, 0.7 ),
+				stageEdge: withAlpha( colours.paper, 0.4 ),
+			},
+			seatColour: function ( entry ) {
+				return self.seatColour( entry.record || entry.seat || entry );
+			},
+		} );
 	};
 
 	/**
@@ -1966,6 +2156,51 @@
 		}
 
 		return pairs;
+	}
+
+	/**
+	 * A shape's footprint on the floor, as a polygon in the chart's own coordinates.
+	 *
+	 * The canvas draws a rotated shape by turning the canvas; a room built out of coordinates has
+	 * no canvas to turn, so the rotation is applied to the points here instead. Rectangles become
+	 * their four corners, because a stage is a platform whether it was drawn as a path or dragged
+	 * out as a box.
+	 */
+	function outlineOf( object ) {
+		var width = object.width || 0;
+		var height = object.height || 0;
+		var points = shapePoints( object );
+
+		if ( ! points || points.length < 3 ) {
+			if ( width <= 0 || height <= 0 ) {
+				return null;
+			}
+
+			points = [
+				[ object.x, object.y ],
+				[ object.x + width, object.y ],
+				[ object.x + width, object.y + height ],
+				[ object.x, object.y + height ],
+			];
+		}
+
+		var angle = ( ( object.rotation || 0 ) * Math.PI ) / 180;
+
+		if ( ! angle ) {
+			return points.map( function ( point ) { return [ point[ 0 ], point[ 1 ] ]; } );
+		}
+
+		var cx = object.x + width / 2;
+		var cy = object.y + height / 2;
+		var cos = Math.cos( angle );
+		var sin = Math.sin( angle );
+
+		return points.map( function ( point ) {
+			var dx = point[ 0 ] - cx;
+			var dy = point[ 1 ] - cy;
+
+			return [ cx + dx * cos - dy * sin, cy + dx * sin + dy * cos ];
+		} );
 	}
 
 	/** Turn the canvas about a shape's own middle, so a rotated stage is drawn rotated. */
@@ -2439,11 +2674,33 @@
 			var dx = event.clientX - last.x;
 			var dy = event.clientY - last.y;
 			moved += Math.abs( dx ) + Math.abs( dy );
+			last = { x: event.clientX, y: event.clientY };
+
+			/*
+			 * In a room, dragging walks around it rather than sliding it.
+			 *
+			 * Which is the whole point of the view: the question "will the pillar be in the way"
+			 * is answered by moving to where the seat is and looking, and a room that could only
+			 * be slid about would answer it no better than the plan does. Holding shift slides
+			 * instead, for somebody who wants to look at the other end of a long hall.
+			 */
+			if ( self.threeD ) {
+				if ( event.shiftKey ) {
+					var reach = self.camera.distance / 600;
+
+					self.camera.pan( -dx * reach, dy * reach );
+				} else {
+					self.camera.orbit( dx * 0.008, -dy * 0.006 );
+				}
+
+				self.paint();
+
+				return;
+			}
 
 			self.view.x += dx;
 			self.view.y += dy;
 			self.clampView();
-			last = { x: event.clientX, y: event.clientY };
 			self.paint();
 		} );
 
@@ -2461,10 +2718,39 @@
 			'wheel',
 			function ( event ) {
 				event.preventDefault();
+
+				if ( self.threeD ) {
+					self.camera.zoom( event.deltaY < 0 ? 0.9 : 1.1 );
+					self.paint();
+
+					return;
+				}
+
 				self.zoomBy( event.deltaY < 0 ? 1.1 : 0.9, event );
 			},
 			{ passive: false }
 		);
+	};
+
+	/**
+	 * The chair under the pointer, in the room.
+	 *
+	 * Asked of the frame that was last drawn rather than by casting a ray back into the scene: the
+	 * frame already worked out where every chair ended up, and the nearest one to the pointer is
+	 * the one somebody is aiming at.
+	 */
+	SeatmapWidget.prototype.hallSeatAt = function ( event ) {
+		if ( ! this.hall ) {
+			return null;
+		}
+
+		var rect = this.canvas.getBoundingClientRect();
+		var entry = window.SeatmapHall3D.seatAt( this.hall, {
+			x: event.clientX - rect.left,
+			y: event.clientY - rect.top,
+		}, 14 );
+
+		return entry ? ( entry.record || entry.seat || null ) : null;
 	};
 
 	/** Where a pointer event landed, in the chart's own coordinates. */
@@ -2533,6 +2819,16 @@
 	 * under somebody who was reaching for a seat is not help.
 	 */
 	SeatmapWidget.prototype.handleCanvasClick = function ( event ) {
+		if ( this.threeD ) {
+			var chosen = this.hallSeatAt( event );
+
+			if ( chosen ) {
+				this.toggleSeat( chosen );
+			}
+
+			return;
+		}
+
 		var point = this.pointOn( event );
 		var hit = this.seatAt( point );
 
@@ -2564,12 +2860,12 @@
 		}
 
 		var point = this.pointOn( event );
-		var seat = this.seatAt( point );
+		var seat = this.threeD ? this.hallSeatAt( event ) : this.seatAt( point );
 		var text = '';
 
 		if ( seat ) {
 			text = this.describeSeat( seat );
-		} else if ( ! this.chairsShown() ) {
+		} else if ( ! this.threeD && ! this.chairsShown() ) {
 			var block = this.blockAt( point );
 
 			text = block ? block.name + ' — ' + this.blockSummary( block ) : '';
@@ -2720,6 +3016,15 @@
 	};
 
 	SeatmapWidget.prototype.zoomBy = function ( factor, event ) {
+		// The same two buttons, moving whichever thing is being looked at: a plan closer to the
+		// eye, or the eye closer to the room.
+		if ( this.threeD ) {
+			this.camera.zoom( factor > 1 ? 0.85 : 1.18 );
+			this.paint();
+
+			return;
+		}
+
 		var before = this.view.scale;
 		var next = Math.min( MAX_ZOOM, Math.max( MIN_ZOOM, before * factor ) );
 
@@ -2765,6 +3070,13 @@
 
 	SeatmapWidget.prototype.resetView = function () {
 		this.view = { scale: 1, x: 0, y: 0 };
+
+		// Back to the seat in the middle of the last row, which is where a room is worth looking
+		// at from and where the camera started.
+		if ( this.threeD && this.hall ) {
+			this.camera = window.SeatmapHall3D.camera( this.hall, {} );
+		}
+
 		this.paint();
 	};
 

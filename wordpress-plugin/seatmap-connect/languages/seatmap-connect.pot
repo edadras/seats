@@ -96,7 +96,7 @@ msgstr ""
 msgid "Choose at least one seat or place."
 msgstr ""
 
-#: includes/class-seatmap-rest.php:148 includes/class-seatmap-widget.php:108
+#: includes/class-seatmap-rest.php:148 includes/class-seatmap-widget.php:118
 msgid "Seat booking is not available right now."
 msgstr ""
 
@@ -188,237 +188,245 @@ msgstr ""
 msgid "Connected."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:54 blocks/editor.js:30 blocks/editor.js:35
+#: includes/class-seatmap-widget.php:64 blocks/editor.js:30 blocks/editor.js:35
 msgid "Seat map"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:57
+#: includes/class-seatmap-widget.php:67
 msgid "Let customers pick their seats for a Seatmap event."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:102
+#: includes/class-seatmap-widget.php:112
 msgid "No event was selected for this seat map."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:116
+#: includes/class-seatmap-widget.php:126
 msgid "This event could not be loaded."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:122
+#: includes/class-seatmap-widget.php:132
 msgid "The seating plan for this event is not published yet."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:155
+#: includes/class-seatmap-widget.php:165
 msgid "Select your seats"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:156
+#: includes/class-seatmap-widget.php:166
 msgid "Available"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:157
+#: includes/class-seatmap-widget.php:167
 msgid "Unavailable"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:158
+#: includes/class-seatmap-widget.php:168
 msgid "Selected"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:159
+#: includes/class-seatmap-widget.php:169
 msgid "Your selection"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:160
+#: includes/class-seatmap-widget.php:170
 msgid "No seats selected yet."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:161
+#: includes/class-seatmap-widget.php:171
 msgid "Total"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:162 includes/class-seatmap-widget.php:204
+#: includes/class-seatmap-widget.php:172 includes/class-seatmap-widget.php:216
 msgid "Reserve and add to cart"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:163
+#: includes/class-seatmap-widget.php:173
 msgid "Reserving…"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:164
+#: includes/class-seatmap-widget.php:174
 msgid "Sorry, one of those seats was just taken. It has been removed from your selection."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:165
+#: includes/class-seatmap-widget.php:175
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:166
+#: includes/class-seatmap-widget.php:176
 msgid "You can select up to %d seats."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:167
+#: includes/class-seatmap-widget.php:177
 msgid "%1$s, row %2$s, seat %3$s — %4$s"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:168
+#: includes/class-seatmap-widget.php:178
 msgid "%1$s, row %2$s, seat %3$s — unavailable"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:169
+#: includes/class-seatmap-widget.php:179
 msgid "Zoom in"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:170
+#: includes/class-seatmap-widget.php:180
 msgid "Zoom out"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:171
+#: includes/class-seatmap-widget.php:181
 msgid "Reset view"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:172
+#: includes/class-seatmap-widget.php:182
 msgid "Full screen"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:173
+#: includes/class-seatmap-widget.php:183
 msgid "Leave full screen"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:174
+#: includes/class-seatmap-widget.php:184
+msgid "See the hall in 3D"
+msgstr ""
+
+#: includes/class-seatmap-widget.php:185
+msgid "Back to the plan"
+msgstr ""
+
+#: includes/class-seatmap-widget.php:186
 msgid "Seats held until %s"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:175
+#: includes/class-seatmap-widget.php:187
 msgid "Your reservation expired. Please choose your seats again."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:176
+#: includes/class-seatmap-widget.php:188
 msgid "Stage"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:177
+#: includes/class-seatmap-widget.php:189
 msgid "Floor"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:178
+#: includes/class-seatmap-widget.php:190
 msgid "Standing and tables"
 msgstr ""
 
 #. translators: %d: number of places still available.
-#: includes/class-seatmap-widget.php:180
+#: includes/class-seatmap-widget.php:192
 msgid "%d left"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:181 includes/class-seatmap-widget.php:194
+#: includes/class-seatmap-widget.php:193 includes/class-seatmap-widget.php:206
 msgid "Sold out"
 msgstr ""
 
 #. translators: %s: name of the standing area.
-#: includes/class-seatmap-widget.php:183
+#: includes/class-seatmap-widget.php:195
 msgid "Add one place in %s"
 msgstr ""
 
 #. translators: %s: name of the standing area.
-#: includes/class-seatmap-widget.php:185
+#: includes/class-seatmap-widget.php:197
 msgid "Remove one place in %s"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:186
+#: includes/class-seatmap-widget.php:198
 msgid "That area filled up while you were choosing. Please pick a different number of places."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:188
+#: includes/class-seatmap-widget.php:200
 msgid "Choose an area"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:189
+#: includes/class-seatmap-widget.php:201
 msgid "Back to the whole venue"
 msgstr ""
 
 #. translators: %s: the price of the cheapest seat in the area.
-#: includes/class-seatmap-widget.php:191
+#: includes/class-seatmap-widget.php:203
 msgid "From %s"
 msgstr ""
 
 #. translators: %d: number of seats still available in the area.
-#: includes/class-seatmap-widget.php:193
+#: includes/class-seatmap-widget.php:205
 msgid "%d seats left"
 msgstr ""
 
 #. translators: %s: name of the area.
-#: includes/class-seatmap-widget.php:196
+#: includes/class-seatmap-widget.php:208
 msgid "Show seats in %s"
 msgstr ""
 
 #. translators: %s: name of the area.
-#: includes/class-seatmap-widget.php:198
+#: includes/class-seatmap-widget.php:210
 msgid "In %s"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:200
+#: includes/class-seatmap-widget.php:212
 msgid "Choose your tickets"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:201
+#: includes/class-seatmap-widget.php:213
 msgid "Tickets"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:202
+#: includes/class-seatmap-widget.php:214
 msgid "Who is this ticket for?"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:203
+#: includes/class-seatmap-widget.php:215
 msgid "Nothing chosen yet."
 msgstr ""
 
 #. translators: %d: the largest number of tickets one order may hold.
-#: includes/class-seatmap-widget.php:206
+#: includes/class-seatmap-widget.php:218
 msgid "You can take up to %d tickets."
 msgstr ""
 
 #. translators: %s: the seat or area being taken off the order.
-#: includes/class-seatmap-widget.php:208
+#: includes/class-seatmap-widget.php:220
 msgid "Remove %s"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:210
+#: includes/class-seatmap-widget.php:222
 msgid "Seat list"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:212
+#: includes/class-seatmap-widget.php:224
 msgid "Seats together"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:213
+#: includes/class-seatmap-widget.php:225
 msgid "Find seats"
 msgstr ""
 
 #. translators: %d: the largest number of adjacent seats left.
-#: includes/class-seatmap-widget.php:215
+#: includes/class-seatmap-widget.php:227
 msgid "The most seats side by side is %d. Try that many, or pick from the plan."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:216
+#: includes/class-seatmap-widget.php:228
 msgid "There are no seats left."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:219
+#: includes/class-seatmap-widget.php:231
 msgid "Arrival time"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:220
+#: includes/class-seatmap-widget.php:232
 msgid "Choose when you will arrive"
 msgstr ""
 
-#: includes/class-seatmap-widget.php:221
+#: includes/class-seatmap-widget.php:233
 msgid "That arrival time filled up while you were choosing. Please pick another."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:222
+#: includes/class-seatmap-widget.php:234
 msgid "Choose an arrival time before reserving."
 msgstr ""
 
-#: includes/class-seatmap-widget.php:233
+#: includes/class-seatmap-widget.php:245
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr ""
 

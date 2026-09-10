@@ -222,6 +222,9 @@
                 window.seatmapBoot = window.seatmapBoot || [];
                 window.seatmapBoot.push(@json($event['boot']));
             </script>
+            {{-- The room, before the picker that may draw it: a chart with 3D switched on renders
+                 the hall itself, and the engine has to be there when the widget boots. --}}
+            <script src="{{ asset('site/js/hall3d.js') }}" defer></script>
             <script src="{{ asset('site/js/widget.js') }}" defer></script>
         @endpush
     @elseif (! empty($event['needs_code']))

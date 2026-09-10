@@ -207,6 +207,8 @@ return [
         'publicIdCopied' => 'Public ID copied.',
         'inventory' => 'Inventory',
         'repeat' => 'Put it on again',
+        'useLatestChart' => 'Use the latest chart',
+        'chartUpdated' => 'This night is on the latest chart.',
         'reschedule' => "Move",
         'presaleFrom' => 'Presale opens',
         'presaleFromHint' => 'Only somebody with a code may book from here. Leave empty for no presale.',
@@ -370,6 +372,7 @@ return [
         'lock' => 'Lock the chart against edits',
         'unlock' => 'Unlock the chart',
         'preview' => 'Preview as a buyer sees it',
+        'seeInThreeD' => 'Two dimensions or three',
         'saveDraft' => 'Save draft',
         'publish' => 'Publish',
         'tools' => 'Drawing tools',
@@ -1080,6 +1083,33 @@ return [
         'needsWhenAndWhere' => 'Say when it is, and in which chart.',
         'noDates' => 'No dates yet.',
         'none' => 'No productions yet. Repeating an event, or adding a date here, starts one.',
+    ],
+
+    /*
+     | The plan, lifted into the room it describes.
+     |
+     | The words avoid metres and feet on purpose: a chart carries no scale, and a field labelled
+     | "centimetres" would be wrong in every venue that did not happen to draw at that scale. Rake
+     | is a percentage, which is how a theatre's own drawings express it and is right at any scale.
+     */
+    'hall3d' => [
+        'title' => 'The hall in three dimensions',
+        'lead' => 'What a plan cannot say: how high the stage is, how steeply the floor climbs, and how far above it the balcony sits.',
+        'showBuyers' => 'Let buyers see the hall in 3D',
+        'showBuyersHint' => 'Adds a 3D button to the seat picker. Leave it off while you are still setting the room up.',
+        'stageHeight' => 'Stage height',
+        'stageDepth' => 'Stage depth',
+        'stageWidth' => 'Stage width',
+        'stageWidthHint' => 'Nought fits the stage to the hall. Only used where the chart has no stage drawn on it.',
+        'hallRake' => 'Rake of the hall (%)',
+        'rakeHint' => 'How much the floor climbs over its own depth. 6% is a gentle stalls rake; a steep balcony is 25% or more.',
+        'unitsHint' => 'In the chart’s own units — a seat is 18 of them across.',
+        'blocks' => 'Each block',
+        'base' => 'Height',
+        'rake' => 'Rake (%)',
+        'depth' => 'Platform depth',
+        'noBlocks' => 'This floor has no sections yet, so the whole room shares the hall’s rake.',
+        'resetView' => 'Back to the opening view',
     ],
 
     'printing' => [

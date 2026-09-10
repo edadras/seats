@@ -251,12 +251,17 @@ jobs:
         with:
           node-version: '22'
 
-      - name: One seat picker, not two
+      - name: One seat picker and one room, not several
         run: |
-          # Both consumers ship a copy of shared/seat-picker. If either has been edited directly,
-          # syncing produces a diff — and the two would otherwise fork in silence.
+          # Every consumer ships a copy of shared/. If any has been edited directly, syncing
+          # produces a diff — and they would otherwise fork in silence. The 3D engine matters most
+          # of all: the room an organiser sets up in the designer has to be the room a buyer is
+          # shown, and two implementations of one projection agree only until they do not.
           tools/sync-seat-picker.sh
-          git diff --exit-code wordpress-plugin/seatmap-connect/assets api/public/site
+          git diff --exit-code wordpress-plugin/seatmap-connect/assets api/public/site api/public/editor/js/hall3d.js
+
+      - name: The hall's arithmetic is the arithmetic that was written down
+        run: node tools/hall3d-check.mjs
 
       - name: Every string the picker asks for is provided by every host
         run: node tools/picker-strings-check.mjs

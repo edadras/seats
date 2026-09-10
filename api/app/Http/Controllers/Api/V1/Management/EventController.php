@@ -104,6 +104,73 @@ class EventController extends Controller
     }
 
     /**
+     * Move a night onto the chart's latest published version.
+     *
+     * An event stays on the version it was created with, deliberately: a chart republished the
+     * afternoon before a show must not silently move the seats somebody has already bought. But
+     * that leaves no way at all to take up a change made afterwards — a corrected row, a blocked
+     * pillar seat, the heights that make the hall a room — so this is that way, as a decision
+     * somebody makes rather than something that happens to them.
+     *
+     * Refused where the new version does not contain a seat this event has already sold: a booking
+     * pointing at a chair that no longer exists is a ticket nobody can honour, and the organiser
+     * needs to fix the chart rather than find out at the door.
+     */
+    public function useLatestChart(Request $request, Event $event)
+    {
+        $this->authorize($request, 'events.manage');
+
+        $map = $event->seatMap;
+        $target = $map?->published_version_id;
+
+        if (! $target) {
+            throw ApiException::conflict(
+                'map_not_published',
+                'Publish the seat map before putting this event on sale.'
+            );
+        }
+
+        if ($target === $event->seat_map_version_id) {
+            return response()->json($this->present($event));
+        }
+
+        $sold = \App\Models\Allocation::where('event_id', $event->id)
+            ->where('status', 'active')
+            ->whereNotNull('seat_id')
+            ->pluck('seat_id')
+            ->unique();
+
+        if ($sold->isNotEmpty()) {
+            $present = \Illuminate\Support\Facades\DB::table('seat_placements')
+                ->where('seat_map_version_id', $target)
+                ->whereIn('seat_id', $sold->all())
+                ->pluck('seat_id')
+                ->unique();
+
+            $missing = $sold->diff($present);
+
+            if ($missing->isNotEmpty()) {
+                throw ApiException::conflict(
+                    'chart_missing_sold_seats',
+                    'The new chart is missing seats this event has already sold.',
+                    ['missing' => $missing->count()],
+                );
+            }
+        }
+
+        $event->forceFill(['seat_map_version_id' => $target])->save();
+
+        $this->audit->record('event.chart_updated', $event, [
+            'name' => $event->name,
+            'version' => $map->publishedVersion?->version,
+        ]);
+
+        $event->bumpAvailabilityVersion();
+
+        return response()->json($this->present($event->fresh()));
+    }
+
+    /**
      * Replace pricing wholesale.
      *
      * A PUT, not a PATCH: partial price edits across zones and overrides are where "half the map
@@ -512,7 +579,9 @@ class EventController extends Controller
     {
         // A no-op on the list, which eager-loads both; the safety net is for the single-model
         // routes, where the event arrives from route binding with nothing loaded.
-        $event->loadMissing(['priceZones', 'seatMapVersion']);
+        // `seatMap` as well: whether this night is behind its own chart is read below, and lazy
+        // loading is off — an unloaded relation would answer "no" for every event on the list.
+        $event->loadMissing(['priceZones', 'seatMapVersion', 'seatMap']);
 
         return [
             'id' => $event->id,
@@ -541,6 +610,11 @@ class EventController extends Controller
             'venue_id' => $event->venue_id,
             'seat_map_id' => $event->seat_map_id,
             'seat_map_version_id' => $event->seat_map_version_id,
+            // Whether the chart has been republished since this night was put on it. Worked out
+            // rather than stored: publishing a chart touches no event, by design.
+            'chart_outdated' => (bool) ($event->seat_map_version_id
+                && $event->seatMap?->published_version_id
+                && $event->seatMap->published_version_id !== $event->seat_map_version_id),
             'hold_ttl_seconds' => $event->hold_ttl_seconds,
             'max_extends' => $event->max_extends,
             'max_seats_per_order' => $event->max_seats_per_order,

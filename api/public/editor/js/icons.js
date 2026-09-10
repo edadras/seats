@@ -44,6 +44,8 @@
 		// A roll printer seen from the front: the paper going in at the top, the body, and the
 		// ticket coming out of the slot.
 		printer: '<path d="M7 8V4.8A.8.8 0 0 1 7.8 4h8.4a.8.8 0 0 1 .8.8V8"/><path d="M5 8h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2"/><rect x="7" y="13.5" width="10" height="6.5" rx=".8"/>',
+		// A room seen in perspective: the button that lifts the plan into one.
+		cube: '<path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9Z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>',
 		/* A little bar chart, for reports. */
 		chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
 		download: '<path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/>',

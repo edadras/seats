@@ -482,6 +482,37 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/chart-version:
+    parameters:
+      - { name: event, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: useLatestChart
+      tags: [Events]
+      summary: Take up the chart's latest published version
+      description: >
+        An event stays on the version it was created with, deliberately: a chart republished the
+        afternoon before a show must not silently move the seats somebody has already bought. This
+        is how the change is taken up — as a decision somebody makes rather than something that
+        happens to them, and the reason `chart_outdated` exists on the event.
+
+
+        Refused with `chart_missing_sold_seats` where the new version does not contain a seat this
+        event has already sold: a booking pointing at a chair that no longer exists is a ticket
+        nobody can honour, and the chart needs fixing rather than the discovery happening at a door.
+
+
+        A night already on the latest version is answered, not refused.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The event, on the latest chart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /productions:
     get:
       operationId: listProductions
@@ -9693,6 +9724,12 @@ components:
             somewhere nobody is looking.
         venue_id: { type: string, format: uuid }
         seat_map_version_id: { type: [string, "null"], format: uuid }
+        chart_outdated:
+          type: boolean
+          description: >
+            Whether the seat map has been republished since this night was put on it. Worked out on
+            every read — publishing a chart touches no event, by design — and the reason the
+            `chart-version` endpoint exists.
         waiting_room:
           type: boolean
           description: >-

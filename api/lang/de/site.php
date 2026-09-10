@@ -31,6 +31,8 @@ return [
         'resetView' => 'Ansicht zurücksetzen',
         'fullScreen' => 'Vollbild',
         'exitFullScreen' => 'Vollbild verlassen',
+        'seeInThreeD' => 'Den Saal in 3D ansehen',
+        'seeThePlan' => 'Zurück zum Saalplan',
         'held' => 'Plätze reserviert bis %s',
         'expired' => 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie Ihre Plätze erneut.',
         'stage' => 'Bühne',

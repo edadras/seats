@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'Cette mise en vente est déjà close.',
     'resale_being_bought' => 'Quelqu’un est en train d’acheter cette place. Elle pourra être retirée de la vente s’il ne va pas au bout.',
     'buyer_blocked' => 'Ce compte ne peut pas réserver auprès de cet organisateur. Merci de contacter la billetterie.',
+    'chart_missing_sold_seats' => 'Le nouveau plan ne contient pas des places déjà vendues pour cet événement.',
     'map_not_at_venue' => 'Ce plan de salle appartient à un autre lieu.',
     'production_has_dates' => 'Ce spectacle a encore des dates. Déplacez-les ou supprimez-les avant de le supprimer.',
     'production_has_no_dates' => 'Indiquez le soir à copier : une tournée part d’un spectacle que vous avez déjà donné.',

@@ -280,6 +280,8 @@
 				resetView: 'Reset view',
 				fullScreen: 'Full screen',
 				exitFullScreen: 'Leave full screen',
+				seeInThreeD: 'See the hall in 3D',
+				seeThePlan: 'Back to the plan',
 				held: 'Seats held until %s',
 				expired: 'Your reservation expired. Please choose your seats again.',
 				stage: 'Stage',
@@ -316,9 +318,15 @@
 			},
 		} );
 
+		var engine = document.createElement( 'script' );
+		engine.src = '../seatmap-connect/assets/js/hall3d.js';
+		document.body.appendChild( engine );
+
 		var script = document.createElement( 'script' );
 		script.src = '../seatmap-connect/assets/js/widget.js';
-		document.body.appendChild( script );
+		// After the engine: the widget asks whether there is one the moment it boots, and a hall
+		// that arrived a tick late would have had its 3D button decided against already.
+		engine.addEventListener( 'load', function () { document.body.appendChild( script ); } );
 	} );
 
 	function symbolFor( code ) {

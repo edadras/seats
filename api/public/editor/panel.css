@@ -571,6 +571,74 @@
 
 .designer.is-preview .designer__body { grid-template-columns: 1fr; }
 
+/* ======================================================== the hall in three dimensions */
+
+/*
+ * The room takes the canvas, and the tools that place things on a plan go with it: there is
+ * nothing to place at a point three metres above a floor, and a palette that stays behind is a
+ * palette somebody will click.
+ */
+/*
+ * Hidden, not removed.
+ *
+ * The body is a three-column grid whose children are placed automatically; taking the palette out
+ * of the flow with `display: none` shifts the canvas and the inspector each one column to the left,
+ * and the room ends up drawn in a 48-pixel rail. So the column is collapsed and the palette is
+ * merely made invisible, which leaves everything else where the layout put it.
+ */
+.designer.is-room .designer__body { grid-template-columns: 0 1fr var(--inspector-w); }
+.designer.is-room .tools { visibility: hidden; }
+.designer.is-room .layers { display: none; }
+
+.designer.is-room .stage__canvas { cursor: grab; }
+.designer.is-room .stage__canvas:active { cursor: grabbing; }
+
+/*
+ * The four numbers that make a plan a room.
+ *
+ * `min-width: 0` throughout, and on the fields as well as the panel: a grid item's default minimum
+ * is its content, so one long hint or a wide number input would push the inspector column past the
+ * width the layout gave it and squeeze the canvas — the thing the numbers are being typed at — down
+ * to a sliver.
+ */
+.inspector__panel {
+	padding: var(--s-4);
+	display: grid;
+	gap: var(--s-3);
+	min-inline-size: 0;
+}
+
+.inspector__panel .field,
+.inspector__panel .input,
+.inspector__panel .perms__row { min-inline-size: 0; max-inline-size: 100%; }
+.inspector__title { margin: 0; font-size: var(--text-base); }
+.inspector__subtitle { margin: var(--s-2) 0 0; font-size: var(--text-sm); color: var(--text-muted); }
+.inspector__hint { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+.room-block {
+	padding: var(--s-3);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-sm);
+	display: grid;
+	gap: var(--s-2);
+}
+
+.room-block__name { margin: 0; font-weight: 600; font-size: var(--text-sm); }
+
+/* Three numbers about one block, side by side: they are read together and typed together. */
+.room-block__fields {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--s-2);
+	min-inline-size: 0;
+}
+
+.room-block, .room-block__fields > * { min-inline-size: 0; }
+
+@media (max-width: 1200px) {
+	.room-block__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ======================================================================= inspector */
 
 .inspector {

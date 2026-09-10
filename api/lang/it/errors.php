@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'Questa inserzione è già conclusa.',
     'resale_being_bought' => 'In questo momento qualcuno sta comprando quel posto. Si potrà togliere dalla vendita se non conclude l’acquisto.',
     'buyer_blocked' => 'Questo account non può prenotare presso questo organizzatore. Contatta il botteghino.',
+    'chart_missing_sold_seats' => 'La nuova pianta non ha posti che questo evento ha già venduto.',
     'map_not_at_venue' => 'Quella pianta appartiene a un’altra sede.',
     'production_has_dates' => 'Questo spettacolo ha ancora delle date. Spostale o eliminale prima di eliminarlo.',
     'production_has_no_dates' => 'Indica quale serata copiare: una tournée parte da uno spettacolo che hai già fatto.',

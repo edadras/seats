@@ -1277,6 +1277,11 @@
 						( event.resale
 							? actionButton( 'resale', event.id, self.t( 'panel.resale.title' ), 'tag' )
 							: '' ) +
+						// Only on a night whose chart has been republished since. Everywhere else the
+						// button would say "use the latest chart" about the chart already in use.
+						( event.chart_outdated
+							? actionButton( 'rechart', event.id, self.t( 'panel.events.useLatestChart' ), 'map' )
+							: '' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
 						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
 						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
@@ -1336,6 +1341,17 @@
 				self.main().querySelectorAll( '[data-prices]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
 						window.SeatmapPricing.open( self, button.dataset.prices );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-rechart]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						self.request( 'POST', '/events/' + button.dataset.rechart + '/chart-version', {} )
+							.then( function () {
+								self.toast( self.t( 'panel.events.chartUpdated' ) );
+								self.renderEvents();
+							} )
+							.catch( function ( error ) { self.toast( error.message, true ); } );
 					} );
 				} );
 
@@ -2641,6 +2657,10 @@
 				'</div>' +
 				'<span class="designer__spacer"></span>' +
 				'<div class="toolbar-group">' +
+					// The plan, or the room the plan describes. Beside preview because both
+					// answer "what will somebody else see", one for a buyer's screen and one for
+					// somebody sitting in the hall.
+					toolbarButton( 'dz-3d', 'cube', t( 'panel.designer.seeInThreeD' ) ) +
 					toolbarButton( 'dz-lock', 'unlock', t( 'panel.designer.lock' ) ) +
 					toolbarButton( 'dz-preview', 'eye', t( 'panel.designer.preview' ) ) +
 					toolbarButton( 'dz-theme', 'moon', t( 'panel.shell.darkTheme' ) ) +
@@ -2737,6 +2757,8 @@
 		// Exposed for the browser smoke test, and genuinely useful in the console when diagnosing
 		// a chart a customer has sent in.
 		window.__editor = editor;
+		// And the panel itself, so a check can ask what the room it is showing looks like.
+		window.__panel = self;
 
 		this.bindDesigner();
 		this.renderTools();
@@ -2821,6 +2843,8 @@
 		on( 'dz-add-floor', function () { self.addFloor(); } );
 		on( 'dz-help', function () { self.showShortcuts(); } );
 
+		on( 'dz-3d', function () { self.toggleThreeD(); } );
+
 		on( 'dz-labels', function () {
 			editor.showLabels = ! editor.showLabels;
 			document.getElementById( 'dz-labels' ).classList.toggle( 'is-active', editor.showLabels );
@@ -2853,6 +2877,204 @@
 
 		this.paintDesignerTheme();
 		document.getElementById( 'dz-labels' ).classList.toggle( 'is-active', editor.showLabels );
+	};
+
+	/* ------------------------------------------------------------------- the room, in the panel */
+
+	/**
+	 * The plan, or the room it describes.
+	 *
+	 * The same canvas: switching is not opening a second window but looking at the same chart from
+	 * inside it. The editor's own drawing and pointer handling are put aside while the room is up,
+	 * because a click in a room is not a click on a plan — there is nothing to select at a point
+	 * that is three metres above the floor.
+	 */
+	App.toggleThreeD = function () {
+		var self = this;
+		var editor = this.editor;
+
+		if ( ! editor || ! window.SeatmapHall ) {
+			return;
+		}
+
+		if ( this.hall ) {
+			this.hall.unbind();
+			this.hall = null;
+			editor.draw = this.planDraw;
+			editor.suspended = false;
+			this.planDraw = null;
+			document.getElementById( 'dz-3d' ).classList.remove( 'is-active' );
+			document.querySelector( '.designer' ).classList.remove( 'is-room' );
+			editor.resize();
+			this.refreshInspector();
+
+			return;
+		}
+
+		this.hall = new window.SeatmapHall( editor ).build().bind();
+
+		// The editor keeps its own draw for the plan; while the room is up, every path that would
+		// have redrawn the plan draws the room instead, so an edit made from the inspector is seen
+		// in the room it changes.
+		this.planDraw = editor.draw;
+		editor.draw = function () {
+			self.hall.build();
+			self.hall.draw();
+			self.refreshZoom();
+		};
+
+		// Nothing on the plan can be selected or dragged from inside the room.
+		editor.suspended = true;
+		editor.clearSelection();
+
+		document.getElementById( 'dz-3d' ).classList.add( 'is-active' );
+		document.querySelector( '.designer' ).classList.add( 'is-room' );
+		document.getElementById( 'dz-inspector' ).innerHTML = '';
+		this.roomFloorKey = null;
+		this.hall.draw();
+		this.refreshInspector();
+	};
+
+	/**
+	 * The four numbers that make a plan a room.
+	 *
+	 * Shown in place of the object inspector while the room is up, because the room is what they
+	 * change and an organiser typing a rake wants to watch it happen. Every one of them is a
+	 * property of the chart rather than of a selection: a hall has one stage and each block has one
+	 * rake, whatever happens to be selected at the time.
+	 */
+	App.roomInspector = function () {
+		var self = this;
+		var chart = this.editor.chart;
+		var settings = window.SeatmapHall3D.settings( chart );
+		var t = this.t.bind( this );
+		var blocks = [];
+
+		window.SeatmapChart.eachObject( chart, function ( object, container, floor ) {
+			if ( 'section' === object.type && floor.key === self.editor.floorKey ) {
+				blocks.push( object );
+			}
+		} );
+
+		// A published chart with no draft is read-only, and so are its numbers: a field that looks
+		// editable and silently refuses is worse than one that says it is not.
+		var locked = this.readOnly ? ' disabled' : '';
+
+		var field = function ( id, label, value, hint, step ) {
+			return '<label class="field"><span class="field__label">' + esc( label ) + '</span>' +
+				'<input class="input" type="number" id="' + id + '" value="' + esc( value ) + '"' +
+				' step="' + ( step || 1 ) + '"' + locked + '>' +
+				( hint ? '<span class="field__hint">' + esc( hint ) + '</span>' : '' ) + '</label>';
+		};
+
+		var rows = blocks.map( function ( block ) {
+			var own = window.SeatmapHall3D.forSection( settings, block.key );
+			var name = ( block.labeling && ( block.labeling.displayedLabel || block.labeling.label ) ) ||
+				block.label || block.key;
+
+			return '<div class="room-block" data-block="' + esc( block.key ) + '">' +
+				'<p class="room-block__name">' + esc( name ) + '</p>' +
+				'<div class="room-block__fields">' +
+					field( 'room-base-' + block.key, t( 'panel.hall3d.base' ), own.base,
+						'', 5 ) +
+					field( 'room-rake-' + block.key, t( 'panel.hall3d.rake' ), own.rake, '', 0.5 ) +
+					field( 'room-depth-' + block.key, t( 'panel.hall3d.depth' ), own.depth, '', 10 ) +
+				'</div>' +
+			'</div>';
+		} ).join( '' );
+
+		return '<div class="inspector__panel">' +
+			'<h3 class="inspector__title">' + esc( t( 'panel.hall3d.title' ) ) + '</h3>' +
+			'<p class="inspector__hint">' + esc( t( 'panel.hall3d.lead' ) ) + '</p>' +
+			( this.readOnly
+				? '<p class="inspector__hint">' + esc( t( 'panel.hints.readOnly' ) ) + '</p>'
+				: '' ) +
+			'<label class="perms__row"><input type="checkbox" class="checkbox" id="room-enabled"' +
+				( settings.enabled ? ' checked' : '' ) + locked + '>' +
+				'<span>' + esc( t( 'panel.hall3d.showBuyers' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( t( 'panel.hall3d.showBuyersHint' ) ) + '</p>' +
+			field( 'room-stage-height', t( 'panel.hall3d.stageHeight' ), settings.stage.height,
+				t( 'panel.hall3d.unitsHint' ), 2 ) +
+			field( 'room-stage-depth', t( 'panel.hall3d.stageDepth' ), settings.stage.depth, '', 10 ) +
+			field( 'room-stage-width', t( 'panel.hall3d.stageWidth' ), settings.stage.width,
+				t( 'panel.hall3d.stageWidthHint' ), 10 ) +
+			field( 'room-rake', t( 'panel.hall3d.hallRake' ), settings.rake,
+				t( 'panel.hall3d.rakeHint' ), 0.5 ) +
+			( rows
+				? '<h4 class="inspector__subtitle">' + esc( t( 'panel.hall3d.blocks' ) ) + '</h4>' + rows
+				: '<p class="inspector__hint">' + esc( t( 'panel.hall3d.noBlocks' ) ) + '</p>' ) +
+			'<button class="btn btn--sm" id="room-reset-view">' +
+				esc( t( 'panel.hall3d.resetView' ) ) + '</button>' +
+		'</div>';
+	};
+
+	/** Every field writes straight into the chart, and the room redraws as it is typed. */
+	App.bindRoomInspector = function () {
+		var self = this;
+		var editor = this.editor;
+
+		var write = function ( change ) {
+			editor.mutate( function ( chart ) {
+				chart.view3d = chart.view3d || {};
+				chart.view3d.stage = chart.view3d.stage || {};
+				chart.view3d.sections = chart.view3d.sections || {};
+				change( chart.view3d );
+			} );
+		};
+
+		var number = function ( id, apply ) {
+			var input = document.getElementById( id );
+
+			if ( ! input ) {
+				return;
+			}
+
+			input.addEventListener( 'input', function () {
+				var value = parseFloat( input.value );
+
+				write( function ( view3d ) { apply( view3d, isFinite( value ) ? value : 0 ); } );
+			} );
+		};
+
+		var enabled = document.getElementById( 'room-enabled' );
+
+		if ( enabled ) {
+			enabled.addEventListener( 'change', function () {
+				write( function ( view3d ) { view3d.enabled = enabled.checked; } );
+			} );
+		}
+
+		number( 'room-stage-height', function ( view3d, value ) { view3d.stage.height = value; } );
+		number( 'room-stage-depth', function ( view3d, value ) { view3d.stage.depth = value; } );
+		number( 'room-stage-width', function ( view3d, value ) { view3d.stage.width = value; } );
+		number( 'room-rake', function ( view3d, value ) { view3d.rake = value; } );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-block]' ), function ( node ) {
+			var key = node.dataset.block;
+
+			[ [ 'base', 'room-base-' ], [ 'rake', 'room-rake-' ], [ 'depth', 'room-depth-' ] ]
+				.forEach( function ( pair ) {
+					number( pair[ 1 ] + key, function ( view3d, value ) {
+						view3d.sections[ key ] = view3d.sections[ key ] || {};
+						view3d.sections[ key ][ pair[ 0 ] ] = value;
+
+						// A block that stands above the floor gets a wall under it unless somebody
+						// says otherwise, because that is what a balcony is.
+						if ( 'base' === pair[ 0 ] ) {
+							view3d.sections[ key ].skirt = value > 0;
+						}
+					} );
+				} );
+		} );
+
+		var reset = document.getElementById( 'room-reset-view' );
+
+		if ( reset ) {
+			reset.addEventListener( 'click', function () {
+				self.hall.reset();
+				self.hall.draw();
+			} );
+		}
 	};
 
 	App.paintDesignerTheme = function () {
@@ -2909,6 +3131,28 @@
 	};
 
 	App.refreshInspector = function () {
+		/*
+		 * While the room is up the inspector is the room's own numbers: there is nothing on a plan
+		 * to inspect from inside it, and the fields that shape the room are what somebody switched
+		 * to it to change.
+		 *
+		 * Rendered once, and again only when the floor changes. Every keystroke in a rake field
+		 * redraws the room, and a panel rebuilt on each of them would take the cursor out of the
+		 * field somebody is still typing in.
+		 */
+		if ( this.hall ) {
+			var host = document.getElementById( 'dz-inspector' );
+			var stale = this.roomFloorKey !== this.editor.floorKey;
+
+			if ( host && ( stale || ! host.querySelector( '.inspector__panel' ) ) ) {
+				this.roomFloorKey = this.editor.floorKey;
+				host.innerHTML = this.roomInspector();
+				this.bindRoomInspector();
+			}
+
+			return;
+		}
+
 		if ( this.inspector ) {
 			this.inspector.render();
 		}

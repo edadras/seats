@@ -1071,20 +1071,44 @@
 	Editor.prototype.bindPointer = function () {
 		var self = this;
 
+		/*
+		 * Suspended while the canvas is showing the room rather than the plan.
+		 *
+		 * The 3D view takes the same canvas, and the same drag that walks around a room would
+		 * otherwise also be dragging a row across the floor of it. Left as a flag on the editor
+		 * rather than as unbound listeners, because the room is switched on and off all afternoon
+		 * and listeners that are removed and re-added drift out of step with the ones that are not.
+		 */
 		this.canvas.addEventListener( 'pointerdown', function ( event ) {
+			if ( self.suspended ) {
+				return;
+			}
+
 			self.canvas.setPointerCapture( event.pointerId );
 			self.onPointerDown( event, self.toWorld( event.clientX, event.clientY ) );
 		} );
 
 		this.canvas.addEventListener( 'pointermove', function ( event ) {
+			if ( self.suspended ) {
+				return;
+			}
+
 			self.onPointerMove( event, self.toWorld( event.clientX, event.clientY ) );
 		} );
 
 		this.canvas.addEventListener( 'pointerup', function ( event ) {
+			if ( self.suspended ) {
+				return;
+			}
+
 			self.onPointerUp( event, self.toWorld( event.clientX, event.clientY ) );
 		} );
 
 		this.canvas.addEventListener( 'dblclick', function ( event ) {
+			if ( self.suspended ) {
+				return;
+			}
+
 			var point = self.toWorld( event.clientX, event.clientY );
 			var object = self.objectAt( point );
 
@@ -1099,6 +1123,10 @@
 		this.canvas.addEventListener(
 			'wheel',
 			function ( event ) {
+				if ( self.suspended ) {
+					return;
+				}
+
 				event.preventDefault();
 
 				var before = self.toWorld( event.clientX, event.clientY );

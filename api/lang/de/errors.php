@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'Dieses Angebot ist bereits erledigt.',
     'resale_being_bought' => 'Gerade kauft jemand diesen Platz. Er lässt sich wieder vom Verkauf nehmen, wenn der Kauf nicht zustande kommt.',
     'buyer_blocked' => 'Dieses Konto kann bei diesem Veranstalter nicht buchen. Bitte wenden Sie sich an die Kasse.',
+    'chart_missing_sold_seats' => 'Im neuen Saalplan fehlen Plätze, die diese Veranstaltung bereits verkauft hat.',
     'map_not_at_venue' => 'Dieser Saalplan gehört zu einem anderen Haus.',
     'production_has_dates' => 'Diese Produktion hat noch Termine. Verschieben oder löschen Sie sie, bevor Sie die Produktion löschen.',
     'production_has_no_dates' => 'Sagen Sie, welchen Abend Sie kopieren: Eine Tournee beginnt mit einer Vorstellung, die es schon gibt.',
