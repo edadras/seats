@@ -31,7 +31,6 @@ return [
     'verified' => 'Email verified. Thank you.',
     'resend' => 'Send it again',
     'resent' => 'Sent. It can take a minute to arrive.',
-    'unverifiedNotice' => 'Verify your email address to put a website on the internet.',
     'free' => 'Free',
     'perMonth' => 'a month',
     'perYear' => 'a year',

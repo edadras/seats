@@ -31,7 +31,6 @@ return [
     'verified' => 'E-Mail bestätigt. Danke.',
     'resend' => 'Nochmal senden',
     'resent' => 'Gesendet. Es kann eine Minute dauern.',
-    'unverifiedNotice' => 'Bestätigen Sie Ihre E-Mail-Adresse, um eine Website online zu stellen.',
     'free' => 'Kostenlos',
     'perMonth' => 'im Monat',
     'perYear' => 'im Jahr',

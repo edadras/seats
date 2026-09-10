@@ -3,8 +3,9 @@
  *
  * The seeder sells to six people at each of two events, so "everybody who bought" is a real
  * audience. What is checked is that the reach is counted before anything is sent, that sending it
- * produces deliveries in the log, and that the notice the platform raises about it reaches the
- * bell — the three things that make this more than a form.
+ * takes a second press with the count on it, that it produces deliveries in the log, and that the
+ * notice the platform raises about it reaches the bell — the four things that make this more than
+ * a form.
  *
  *   php artisan migrate:fresh --seed --force
  *   php artisan serve --port=8123 &
@@ -47,6 +48,17 @@ check( 'the reach is counted before anything is sent', /[0-9۰-۹]/.test( reach 
 await page.fill( '#a-subject', 'The side door tonight' );
 await page.fill( '#a-body', 'Hello {buyer}, use the side door for {event}.' );
 await page.click( '.modal button[type=submit]' );
+
+// There is no unsending an SMS, so the panel asks once more with the number on it.
+await page.waitForSelector( '.modal .btn--danger' );
+await page.waitForTimeout( 300 );
+
+const asked = await page.locator( '.modal' ).last().innerText();
+
+check( 'it asks once more, with the count on it', /[0-9۰-۹]/.test( asked ),
+	asked.split( '\n' ).join( ' | ' ) );
+
+await page.locator( '.modal .btn--danger' ).click();
 await page.waitForTimeout( 2500 );
 
 const table = await page.locator( '.page-body' ).innerText();

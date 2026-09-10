@@ -31,7 +31,6 @@ return [
     'verified' => 'E-mail verificata. Grazie.',
     'resend' => 'Invia di nuovo',
     'resent' => 'Inviato. Può metterci un minuto.',
-    'unverifiedNotice' => 'Verifica l’indirizzo e-mail per pubblicare un sito su internet.',
     'free' => 'Gratis',
     'perMonth' => 'al mese',
     'perYear' => 'all’anno',

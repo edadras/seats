@@ -120,7 +120,6 @@ return [
     'announceAudience' => 'إلى مَن',
     'audienceEveryone' => 'كل من اشترى منك',
     'audienceEvent' => 'مشترو فعالية واحدة',
-    'announceEvent' => 'الفعالية',
     'announceChannels' => 'الإرسال عبر',
     'announceSubject' => 'الموضوع',
     'announceSubjectHint' => 'للبريد فقط. الرسالة القصيرة بلا موضوع.',

@@ -31,7 +31,6 @@ return [
     'verified' => 'E-mail validé. Merci.',
     'resend' => 'Renvoyer',
     'resent' => 'Envoyé. Cela peut prendre une minute.',
-    'unverifiedNotice' => 'Validez votre adresse e-mail pour mettre un site en ligne.',
     'free' => 'Gratuit',
     'perMonth' => 'par mois',
     'perYear' => 'par an',

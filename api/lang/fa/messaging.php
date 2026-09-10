@@ -120,7 +120,6 @@ return [
     'announceAudience' => 'برای چه کسانی',
     'audienceEveryone' => 'همهٔ کسانی که از شما خرید کرده‌اند',
     'audienceEvent' => 'خریداران یک رویداد',
-    'announceEvent' => 'رویداد',
     'announceChannels' => 'فرستادن از راه',
     'announceSubject' => 'موضوع',
     'announceSubjectHint' => 'فقط برای ایمیل. پیامک موضوع ندارد.',

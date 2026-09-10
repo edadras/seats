@@ -120,7 +120,6 @@ return [
     'announceAudience' => 'An wen',
     'audienceEveryone' => 'Alle, die bei Ihnen gekauft haben',
     'audienceEvent' => 'Käufer einer Veranstaltung',
-    'announceEvent' => 'Veranstaltung',
     'announceChannels' => 'Verschicken über',
     'announceSubject' => 'Betreff',
     'announceSubjectHint' => 'Nur für E-Mail. Eine SMS hat keinen Betreff.',

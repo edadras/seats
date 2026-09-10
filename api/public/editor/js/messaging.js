@@ -23,6 +23,8 @@
 		filter: '',
 		announcements: [],
 		events: [],
+		// The last "who this reaches" answer, so the confirmation can say how many.
+		reach: 0,
 		mayAnnounce: false,
 
 		// What the editor is looking at.
@@ -299,19 +301,54 @@
 					return Promise.reject( new Error( App.t( 'messaging.announceChannels' ) ) );
 				}
 
-				return App.request( 'POST', '/messaging/announcements', {
-					event_id: data.get( 'event_id' ) || null,
-					channels: channels,
-					subject: data.get( 'subject' ) || null,
-					body: data.get( 'body' ),
-				} ).then( function () {
-					App.toast( App.t( 'messaging.announceSent' ) );
-					Messaging.render( App );
-				} );
+				return Messaging.confirmThenSend( data, channels );
 			},
 		} );
 
 		Messaging.bindReach();
+	};
+
+	/**
+	 * Ask once more, with the number on it.
+	 *
+	 * This is the one action on the panel that reaches thousands of strangers and cannot be taken
+	 * back — there is no unsending an SMS. The count is the part that matters: "send this?" is
+	 * easy to click through, "this goes to 4,312 messages and cannot be unsent" is not.
+	 *
+	 * Backing out resolves truthy, which is how App.modal is told to leave the draft on screen
+	 * rather than throwing away what somebody just wrote.
+	 */
+	Messaging.confirmThenSend = function ( data, channels ) {
+		var App = Messaging.App;
+
+		return new Promise( function ( resolve, reject ) {
+			App.modal( {
+				title: App.t( 'messaging.announceConfirm' ),
+				body: '<p>' + esc( App.t( 'messaging.announceConfirmBody', {
+					messages: App.number( Messaging.reach || 0 ),
+				} ) ) + '</p>',
+				submitLabel: App.t( 'messaging.announceSend' ),
+				danger: true,
+				onSubmit: function () {
+					return App.request( 'POST', '/messaging/announcements', {
+						event_id: data.get( 'event_id' ) || null,
+						channels: channels,
+						subject: data.get( 'subject' ) || null,
+						body: data.get( 'body' ),
+					} ).then( function () {
+						App.toast( App.t( 'messaging.announceSent' ) );
+						Messaging.render( App );
+						resolve( false );
+					} ).catch( function ( error ) {
+						reject( error );
+
+						throw error;
+					} );
+				},
+				// Fires on a cancel and on a successful send alike; the first resolve wins.
+				onClose: function () { resolve( true ); },
+			} );
+		} );
 	};
 
 	Messaging.chosenChannels = function () {
@@ -334,6 +371,7 @@
 			var channels = Messaging.chosenChannels();
 
 			if ( ! host || ! channels.length ) {
+				Messaging.reach = 0;
 				host && ( host.textContent = App.t( 'messaging.announceReachNobody' ) );
 
 				return;
@@ -345,6 +383,7 @@
 
 			App.request( 'GET', '/messaging/announcements/audience?' + query )
 				.then( function ( reach ) {
+					Messaging.reach = reach.messages || 0;
 					host.textContent = reach.messages
 						? App.t( 'messaging.announceReach', {
 							people: App.number( reach.people ),

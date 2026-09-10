@@ -120,7 +120,6 @@ return [
     'announceAudience' => 'Who it goes to',
     'audienceEveryone' => 'Everybody who has bought from you',
     'audienceEvent' => 'People who bought for one event',
-    'announceEvent' => 'Event',
     'announceChannels' => 'Send it on',
     'announceSubject' => 'Subject',
     'announceSubjectHint' => 'Email only. An SMS has no subject line.',
