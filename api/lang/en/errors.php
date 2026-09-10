@@ -202,4 +202,8 @@ return [
     'addon_sold' => 'Something that has been bought cannot be removed. Hide it instead.',
     'donation_negative' => 'A donation cannot be less than nothing.',
     'donation_too_large' => 'That is more than this checkout will take. Please talk to the organiser.',
+    'voucher_spent' => 'That voucher has just been used up.',
+    'voucher_code_taken' => 'You already have a voucher with that code.',
+    'no_address_for_credit' => 'This booking has no email address, so there is nobody to give credit to.',
+    'credit_needs_whole_booking' => 'Credit is issued for a whole booking. Refund the seats, then issue a voucher for what you owe.',
 ];

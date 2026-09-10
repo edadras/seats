@@ -40,6 +40,7 @@
 			{ key: 'entryslots', icon: 'clock' },
 			{ key: 'discounts', icon: 'tag' },
 			{ key: 'access', icon: 'lock' },
+			{ key: 'vouchers', icon: 'wallet' },
 		] },
 		{ group: 'venue', items: [
 			{ key: 'maps', icon: 'map' },
@@ -618,6 +619,7 @@
 			case 'entryslots': return window.SeatmapEntrySlots.render( this );
 			case 'security': return window.SeatmapSecurity.render( this );
 			case 'access': return window.SeatmapAccess.render( this );
+			case 'vouchers': return window.SeatmapVouchers.render( this );
 			case 'wallet': return window.SeatmapWallet.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );

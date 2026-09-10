@@ -45,6 +45,16 @@ final class Permissions
         // separate jobs: a volunteer on the door can be trusted to hand out comps for tonight
         // without also being able to move money back onto somebody's card.
         'orders.sell' => 'boxoffice',
+        /*
+         * Issuing a voucher, and writing one off.
+         *
+         * Beside refunding rather than beside discounts, because it is the same act with the same
+         * weight: moving the organiser's money to a buyer. A voucher issued against no payment is
+         * money given away, so every issue is audited — but the person who takes a refund request
+         * over the telephone is the person who should be able to settle it as credit, and making
+         * them ask a manager would push the whole thing back onto a spreadsheet.
+         */
+        'vouchers.manage' => 'boxoffice',
 
         // --- The door ------------------------------------------------------------------
         'checkins.view' => 'door',
@@ -96,6 +106,7 @@ final class Permissions
             'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
+            'vouchers.manage',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish', 'domains.manage',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
@@ -107,6 +118,7 @@ final class Permissions
             'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
+            'vouchers.manage',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
@@ -116,6 +128,7 @@ final class Permissions
         'box_office' => [
             'events.view', 'venues.view', 'maps.view',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
+            'vouchers.manage',
             'checkins.view',
             'reports.attendance.view', 'reports.orders.view',
         ],

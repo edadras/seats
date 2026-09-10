@@ -8,6 +8,8 @@ use App\Domain\Orders\OrderService;
 use App\Domain\Orders\OrderTotals;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Vouchers\VoucherOffer;
+use App\Domain\Vouchers\Vouchers;
 use App\Exceptions\ApiException;
 use App\Models\ApiClient;
 use App\Models\ExternalOrder;
@@ -37,6 +39,7 @@ class StorefrontCheckout
         private readonly TenantContext $tenantContext,
         private readonly Discounts $discounts,
         private readonly \App\Domain\Addons\Addons $addons,
+        private readonly Vouchers $vouchers,
     ) {}
 
     /** The client a site sells through, created on first use so an older site does not need a backfill. */
@@ -79,6 +82,7 @@ class StorefrontCheckout
         array $billing = [],
         array $addons = [],
         int $donation = 0,
+        ?VoucherOffer $voucher = null,
     ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
@@ -86,7 +90,26 @@ class StorefrontCheckout
             ));
         }
 
-        $gateway = $this->gateways->get($gatewayKey);
+        $lines = $this->addons->price($hold->event, $addons, self::placesIn($hold));
+        $discount = $offer?->isAllowed() ? $offer->amount : 0;
+
+        /*
+         * What this will come to, worked out before anything is written.
+         *
+         * It is needed this early for one reason: a voucher that covers the whole booking leaves
+         * nothing to charge, and a gateway asked to take zero either refuses or — worse — takes a
+         * zero-amount payment and calls it settled. So whether a gateway is involved at all is
+         * decided here, from the same arithmetic that will be written onto the order.
+         */
+        $expected = self::totalsFor(
+            $hold,
+            $discount,
+            $this->addons->total($lines),
+            $donation,
+            $voucher?->isAllowed() ? $voucher->amount : 0,
+        );
+
+        $gateway = $expected->payable > 0 ? $this->gateways->get($gatewayKey) : null;
         $client = $this->clientFor($site);
 
         [$order, $registered] = $this->orders->register(
@@ -94,7 +117,9 @@ class StorefrontCheckout
             self::referenceFor($hold),
             $hold->token,
             $buyer,
-            ['source' => 'hosted_site', 'site_id' => $site->id, 'gateway' => $gateway->key()]
+            // A booking settled entirely out of a voucher was not paid through a gateway, and
+            // saying it was would put a name on the settlement report that never saw the money.
+            ['source' => 'hosted_site', 'site_id' => $site->id, 'gateway' => $gateway?->key() ?? 'voucher']
                 + ($billing === [] ? [] : ['billing' => $billing]),
         );
 
@@ -134,12 +159,23 @@ class StorefrontCheckout
              * their seats are still theirs. Priced from the organiser's own rows, never from the
              * request: a price the browser could name is a price the browser could argue with.
              */
-            $lines = $this->addons->price($hold->event, $addons, self::placesIn($hold));
+            $taken = 0;
 
-            DB::transaction(function () use ($order, $lines, $donation) {
+            DB::transaction(function () use ($order, $lines, $donation, $voucher, $expected, &$taken) {
                 $this->addons->attach($order, $lines);
 
-                $order->forceFill(['donation' => $donation])->save();
+                /*
+                 * The voucher is spent here, in the same transaction as the programmes and before
+                 * the gateway is told an amount, under the advisory lock that keeps its balance
+                 * honest. What comes back is what was actually taken, which is not always what was
+                 * offered: somebody else may have spent the last of a shared gift card while this
+                 * buyer was filling in their name.
+                 */
+                if ($voucher?->isAllowed()) {
+                    $taken = $this->vouchers->spend($voucher->voucher, $order, $expected->voucher);
+                }
+
+                $order->forceFill(['donation' => $donation, 'voucher_amount' => $taken])->save();
             });
 
             $totals = self::totalsFor(
@@ -147,6 +183,7 @@ class StorefrontCheckout
                 (int) (($order->metadata['discount']['amount'] ?? 0)),
                 $this->addons->total($lines),
                 $donation,
+                $taken,
             );
 
             $order->forceFill([
@@ -155,10 +192,34 @@ class StorefrontCheckout
             ])->save();
         }
 
+        /*
+         * What is actually left to charge.
+         *
+         * Read back off the order rather than off `$expected`, because a replayed submit never
+         * reached the block above and the order is the only thing that knows what the first
+         * attempt settled.
+         */
+        $payable = max(0, (int) $order->total_amount - (int) $order->voucher_amount);
+
+        if ($payable < 1) {
+            // Nothing to charge. The booking is complete the moment it is placed — which is the
+            // whole point of a gift voucher, and the one checkout path with no gateway in it.
+            return [$this->orders->confirm($order, $buyer, now()), PaymentIntent::paid('voucher')];
+        }
+
+        if (! $gateway) {
+            /*
+             * The voucher was expected to cover everything and did not — it emptied between this
+             * buyer reading their total and pressing pay. Nothing has been charged and the seats
+             * are still held, so this is a refusal they can act on.
+             */
+            throw ApiException::conflict('voucher_spent', 'That voucher has just been used up.');
+        }
+
         $intent = $gateway->begin($order, [
-            // The order's total, not the hold's: a discount has already been taken off one and not
-            // the other, and the buyer must be charged what the confirmation will say they paid.
-            'amount' => (int) $order->total_amount,
+            // What is left after the voucher, not the order's total: the buyer must be charged
+            // what the confirmation will say they paid, and part of it is already settled.
+            'amount' => $payable,
             'currency' => (string) $order->currency,
             // Where the buyer ends up, and where the *gateway* should send them on the way: the
             // second is built here rather than in each module, so five modules cannot have five
@@ -226,6 +287,7 @@ class StorefrontCheckout
         int $discount = 0,
         int $addons = 0,
         int $donation = 0,
+        int $voucher = 0,
     ): OrderTotals {
         return OrderTotals::for(
             $hold->event ?? $hold->loadMissing('event')->event,
@@ -234,6 +296,7 @@ class StorefrontCheckout
             self::placesIn($hold),
             $addons,
             $donation,
+            $voucher,
         );
     }
 

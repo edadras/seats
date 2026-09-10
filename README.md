@@ -72,6 +72,16 @@ A seat is the start of it, not the end. Around the map:
   telling every buyer the date has changed, with the arrival windows shifted to match.
 - **Wallet passes** in Apple Wallet and Google Wallet, signed with the organiser's own credentials,
   because a pass this platform signed would say this platform sold the ticket.
+- **Presale codes**, which are not discount codes: one changes what somebody pays, the other
+  whether they may buy at all, and a sale that has not opened yet opens for whoever holds one.
+- **Add-ons and donations** at the checkout — a programme, a glass of wine, a parking space, and a
+  box to give something. Add-ons are a sale and sit inside the fee and the VAT; a donation is a
+  gift and sits outside both, because a booking fee on somebody's charity is a complaint.
+- **Gift vouchers and account credit**, which are not discount codes either: a discount changes
+  what a booking cost and so changes the tax on it, while a voucher changes how an unchanged cost
+  was settled. Applied last, to the amount payable, and a booking a voucher covers outright
+  finishes with no gateway involved at all. The balance is the sum of the movements, never a
+  column — and a refund can be taken as credit rather than back to a card.
 - **Settlement** — what was taken, what was handed back, what the platform's commission was, per
   period or per event, as a statement somebody can send to an accountant.
 - **Reports** built by dragging fields, with no SQL box — [ADR-0006](docs/adr/0006-report-engine.md)
@@ -249,7 +259,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 509 unit, feature and module tests
+./vendor/bin/phpunit                        # 566 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -275,15 +285,21 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all twenty-four, in order
+./smoke.sh                    # all twenty-seven, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
 ```
 
 `smoke.sh` re-seeds and empties the rate limiter between checks, which is not decoration: a dozen
-of them signing in as the same owner trips `throttle:20,1` on `/v1/auth/login`, and everything
-after that fails with a timeout that says nothing about why. Each check names what it drives at
+of them signing in as the same owner trips `throttle:20,1,login` on `/v1/auth/login`, and everything
+after that fails with a timeout that says nothing about why.
+
+That third argument on every `throttle:` in `routes/` is load-bearing. Laravel keys an unnamed
+throttle on the signed-in user, or for a guest on the route's domain and IP — never on the route —
+so without it every rationed route shares one counter and the smallest limit anywhere becomes the
+limit everywhere. The prefix gives each rationed thing the counter its limit was written believing
+it had. Each check names what it drives at
 the top of its own file — the designer, the picker, a discount code spent at a checkout, tonight's
 door list, a wallet pass signed with a real certificate — and prints a line per assertion.
 
@@ -346,6 +362,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Settlement adds up: taken, returned, commission, per currency | `SettlementTest` |
 | A buyer's data can be handed over and erased without breaking the books | `PersonalDataTest` |
 | Two-step sign-in cannot be turned off from a borrowed tab | `TwoFactorTest` |
+| A presale code opens a sale that has not opened, and gives its use back when a basket dies | `AccessCodeTest` |
+| A programme is taxed and a donation is not | `AddonTest` |
+| The last programme cannot be sold twice | `AddonTest` |
+| A voucher moves what is payable and leaves the VAT exactly where it was | `VoucherTest` |
+| A voucher that covers a booking finishes it with no gateway, and gives the change back | `VoucherTest` |
+| A settlement says which part of its takings never reached a bank | `VoucherTest`, `SettlementTest` |
 
 ## Installing the plugin
 

@@ -10,6 +10,17 @@
  * still renders, and a new one still only has to name colours.
  */
 
+/*
+ * A class that sets `display` beats the user-agent rule for `[hidden]`, so make it explicit.
+ *
+ * This sheet is full of `display: flex` on things the checkout hides and shows — the voucher lines,
+ * the payment step — and without this the attribute is silently ignored and the buyer reads a
+ * "paid by voucher: 0.00" line on a booking no voucher touched.
+ */
+[hidden] {
+	display: none !important;
+}
+
 :root {
 	--shell: 68rem;
 	--shell-narrow: 44rem;
@@ -1209,6 +1220,57 @@ hr { border: none; }
 }
 
 .promo__held { margin: 0; display: flex; gap: 0.4rem; align-items: baseline; }
+
+/*
+ * Credit, which is not typed and cannot be removed: it belongs to the address the buyer signed in
+ * with. The same box as an applied code, without the button, because it is the same fact.
+ */
+.promo--credit {
+	display: flex;
+	gap: 0.4rem;
+	align-items: baseline;
+	flex-wrap: wrap;
+	padding: 0.6rem 0.8rem;
+	border: 1px dashed var(--border);
+	border-radius: calc(var(--radius) * 0.8);
+}
+
+/*
+ * A voucher, under the total rather than among the lines above it — because it did not change what
+ * the booking cost, only how much of it is still owed. "Left to pay" is the number the buyer is
+ * about to be charged, so it is the heavier of the two.
+ */
+.summary-paid {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	margin: 0;
+	padding-block-start: 0.5rem;
+	color: var(--ok, var(--accent));
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Reads like the total above it without being one. */
+.summary-due {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	margin: 0;
+	padding-block-start: 0.35rem;
+	font-weight: 700;
+	font-size: 1.1rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* What stands where the payment methods were, once there is nothing left to pay for. */
+.checkout__settled {
+	margin: 0;
+	padding: 0.7rem 0.9rem;
+	border-radius: calc(var(--radius) * 0.8);
+	background: color-mix(in srgb, var(--ok, var(--accent)) 12%, transparent);
+	color: var(--text);
+}
 
 /* ============================================================================= tickets */
 

@@ -31,6 +31,7 @@ class OrderController extends Controller
         private readonly TicketIssuer $tickets,
         private readonly TicketMailer $mail,
         private readonly AuditLogger $audit,
+        private readonly \App\Domain\Vouchers\Vouchers $vouchers,
     ) {}
 
     public function index(Request $request)
@@ -153,6 +154,10 @@ class OrderController extends Controller
             'seat_ids' => ['sometimes', 'array'],
             'seat_ids.*' => ['uuid'],
             'reason' => ['nullable', 'string', 'max:200'],
+            // Give the money back as credit to spend here rather than to the card it came off.
+            // The buyer has to have agreed to this: it is not the organiser's choice to make on
+            // their own, and the panel asks before it sends it.
+            'as_credit' => ['sometimes', 'boolean'],
         ]);
 
         if (! in_array($order->status, ['confirmed', 'partially_refunded'], true)) {
@@ -162,11 +167,60 @@ class OrderController extends Controller
             );
         }
 
+        /*
+         * What was actually charged, read before the seats are released and the arithmetic on the
+         * order stops describing anything. The voucher part of it was never the organiser's money
+         * — it goes back to the voucher on its own — so handing it back again as credit would give
+         * the same money away twice.
+         */
+        $paid = max(0, (int) $order->total_amount - (int) $order->voucher_amount);
+        $whole = empty($data['seat_ids']);
+        $asCredit = (bool) ($data['as_credit'] ?? false);
+        $email = (string) ($order->buyer['email'] ?? '');
+
+        /*
+         * Everything credit needs is settled here, before a single seat moves.
+         *
+         * A refusal after the refund would leave the booking cancelled and the buyer with neither
+         * their money nor their credit, which is the worst of the three outcomes available.
+         */
+        if ($asCredit) {
+            // Issuing credit is issuing money, and that is not the same authority as putting a
+            // card payment back: a role with one must not reach the other through it.
+            $this->authorize($request, 'vouchers.manage');
+
+            if (! $whole) {
+                throw ApiException::unprocessable(
+                    'credit_needs_whole_booking',
+                    'Credit is issued for a whole booking. Refund the seats, then issue a voucher for what you owe.'
+                );
+            }
+
+            if ('' === $email) {
+                throw ApiException::unprocessable(
+                    'no_address_for_credit',
+                    'This booking has no email address, so there is nobody to give credit to.'
+                );
+            }
+        }
+
         $refunded = $this->orders->refund(
             $order,
             $data['seat_ids'] ?? null,
             ($data['reason'] ?? null) ?: 'refunded_in_panel',
         );
+
+        if ($asCredit && $paid > 0) {
+            $this->vouchers->credit(
+                (string) $order->tenant_id,
+                $email,
+                $paid,
+                (string) $order->currency,
+                __('panel.vouchers.creditFromOrder', ['reference' => $order->external_order_id]),
+                $order,
+                $request->user()?->id,
+            );
+        }
 
         return response()->json($this->row($refunded->fresh(['event', 'allocations.ticket'])));
     }

@@ -19,6 +19,10 @@ import { openASection, seatedEvent, seatPoint } from './smoke-support.mjs';
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SHOTS = process.env.SEATMAP_SHOTS || '/tmp/discount-shots';
 
+// The checkout carries two code boxes — a discount and a gift voucher — so nothing here may say
+// just ".promo" and hope. Both are `.promo`; only the action tells them apart.
+const DISCOUNT = 'form[action="/checkout/discount"]';
+
 let failures = 0;
 const check = ( label, ok, detail = '' ) => {
 	console.log( `  ${ ok ? 'ok  ' : 'FAIL' } ${ label }${ detail ? ' — ' + detail : '' }` );
@@ -100,23 +104,23 @@ await shop.locator( '.seatmap-widget__submit' ).click();
 await shop.waitForURL( /\/checkout/, { timeout: 15000 } );
 await shop.waitForSelector( '#discount-code' );
 
-const before = await shop.locator( '.summary-total' ).innerText();
+const before = await shop.locator( '#summary-total' ).innerText();
 
 console.log( 'A code that is not one' );
 await shop.fill( '#discount-code', 'NOPE' );
-await shop.locator( '.promo button[type=submit]' ).click();
-await shop.waitForSelector( '.promo .field__error' );
+await shop.locator( DISCOUNT + ' button[type=submit]' ).click();
+await shop.waitForSelector( DISCOUNT + ' .field__error' );
 check( 'an unknown code is refused in words',
-	( await shop.locator( '.promo .field__error' ).innerText() ).length > 5,
-	await shop.locator( '.promo .field__error' ).innerText() );
-check( 'and the total did not move', before === await shop.locator( '.summary-total' ).innerText() );
+	( await shop.locator( DISCOUNT + ' .field__error' ).innerText() ).length > 5,
+	await shop.locator( DISCOUNT + ' .field__error' ).innerText() );
+check( 'and the total did not move', before === await shop.locator( '#summary-total' ).innerText() );
 
 console.log( 'The real one' );
 await shop.fill( '#discount-code', 'earlybird' );
-await shop.locator( '.promo button[type=submit]' ).click();
+await shop.locator( DISCOUNT + ' button[type=submit]' ).click();
 await shop.waitForSelector( '.promo--applied' );
 
-const after = await shop.locator( '.summary-total' ).innerText();
+const after = await shop.locator( '#summary-total' ).innerText();
 check( 'the code is shown as applied, however it was typed',
 	( await shop.locator( '.promo--applied' ).innerText() ).includes( 'EARLYBIRD' ) );
 check( 'a discount line appeared', 1 === await shop.locator( '.summary-lines__off' ).count(),

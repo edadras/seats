@@ -11,6 +11,8 @@ use App\Domain\Questions\CheckoutQuestions;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\StorefrontCheckout;
 use App\Domain\Sites\Themes;
+use App\Domain\Vouchers\VoucherOffer;
+use App\Domain\Vouchers\Vouchers;
 use App\Exceptions\ApiException;
 use App\Domain\Sites\TicketMailer;
 use App\Http\Controllers\Controller;
@@ -42,6 +44,7 @@ class CheckoutController extends Controller
         private readonly TicketMailer $mail,
         private readonly QrRenderer $qr,
         private readonly Discounts $discounts,
+        private readonly Vouchers $vouchers,
     ) {}
 
     public function show(Request $request)
@@ -73,6 +76,20 @@ class CheckoutController extends Controller
         // up differently from the charge is the one bug a checkout must not have.
         $totals = StorefrontCheckout::totalsFor($hold, $off);
 
+        // Priced against what is left to pay *after* all of that, because that is what a voucher
+        // settles. Re-asked on every render for the same reason the discount is: a gift card
+        // somebody else emptied since this buyer typed it must stop paying before they press pay.
+        $voucher = $this->voucherFor($request, $hold, $totals->total);
+        $voucherError = $this->voucherError($request);
+
+        if ($voucher && ! $voucher->isAllowed()) {
+            $request->session()->forget('seatmap_voucher');
+            $voucherError = $voucherError ?: __('site.voucher.refused.'.$voucher->reason);
+            $voucher = null;
+        }
+
+        $totals = StorefrontCheckout::totalsFor($hold, $off, 0, 0, $voucher ? $voucher->amount : 0);
+
         return $this->view($site, 'site.checkout', [
             'title' => 'Checkout · '.$site->name,
             'hold' => $hold,
@@ -88,6 +105,16 @@ class CheckoutController extends Controller
             'discountError' => $error,
             'extras' => $totals->extraLines(),
             'total' => $totals->total,
+            // Money already taken, being spent. Shown under the total rather than among the lines
+            // above it: nothing in the arithmetic was computed from it.
+            'voucher' => $voucher ? [
+                'label' => $voucher->voucher->label(),
+                'kind' => $voucher->voucher->kind,
+                'amount' => $totals->voucher,
+                'remaining' => max(0, $voucher->balance - $totals->voucher),
+            ] : null,
+            'voucherError' => $voucherError,
+            'payable' => $totals->payable,
             // What else is for sale, and what is left of it. Offered before the money moves, so a
             // buyer chooses a programme in the same breath as their seats.
             'addons' => app(Addons::class)->offer($hold->event, count($this->places($hold))),
@@ -280,6 +307,18 @@ class CheckoutController extends Controller
             app(Donations::class)->amount($hold->event, $data['donation'] ?? 0),
         );
 
+        // The voucher is priced against the total these extras produced, not the one the page was
+        // rendered with: adding a programme to a booking a gift card already covered means the card
+        // covers more of it, and a summary that did not move would promise the wrong charge.
+        $voucher = $this->voucherFor($request, $hold, $totals->total);
+        $totals = StorefrontCheckout::totalsFor(
+            $hold,
+            $offer?->isAllowed() ? $offer->amount : 0,
+            app(Addons::class)->total($lines),
+            app(Donations::class)->amount($hold->event, $data['donation'] ?? 0),
+            $voucher?->isAllowed() ? $voucher->amount : 0,
+        );
+
         $money = fn (int $minor) => Money::format($minor, (string) $hold->currency, app()->getLocale());
 
         return response()->json([
@@ -287,6 +326,10 @@ class CheckoutController extends Controller
                 $totals->extraLines()),
             'total' => $totals->total,
             'total_formatted' => $money($totals->total),
+            'voucher' => $totals->voucher,
+            'voucher_formatted' => $money($totals->voucher),
+            'payable' => $totals->payable,
+            'payable_formatted' => $money($totals->payable),
         ]);
     }
 
@@ -303,7 +346,9 @@ class CheckoutController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'gateway' => ['required', 'string', 'max:40'],
+            // Not required: a booking a voucher pays for outright has nothing for a gateway to do,
+            // and the choice is not offered on that page. Checked against the site's own list below.
+            'gateway' => ['nullable', 'string', 'max:40'],
             // Asked for only when the buyer says they need an invoice, and kept only then.
             'invoice' => ['sometimes', 'boolean'],
             'company' => ['nullable', 'string', 'max:160'],
@@ -316,19 +361,39 @@ class CheckoutController extends Controller
             'donation' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ]);
 
+        // Priced a moment before the money moves, like the discount, and against the total these
+        // extras actually come to rather than the one the page was rendered with.
+        $donation = app(Donations::class)->amount($hold->event, $data['donation'] ?? 0);
+        $offer = $this->offerFor($request, $hold);
+
+        try {
+            $lines = app(Addons::class)->price($hold->event, $data['addons'] ?? [], count($this->places($hold)));
+        } catch (ApiException $e) {
+            // A quantity the organiser does not allow, caught before anything is registered.
+            return redirect('/checkout')->with('seatmap_addon_error', $e->localisedMessage());
+        }
+
+        $before = StorefrontCheckout::totalsFor(
+            $hold,
+            $offer?->isAllowed() ? $offer->amount : 0,
+            app(Addons::class)->total($lines),
+            $donation,
+        );
+        $voucher = $this->voucherFor($request, $hold, $before->total);
+        $voucher = $voucher?->isAllowed() ? $voucher : null;
+
+        // A booking a voucher pays for outright never reaches a gateway, so it must not be made to
+        // choose one. Everything else must: an unpaid booking with no way to pay is not a booking.
+        $freeOfCharge = $voucher && $voucher->amount >= $before->total;
         $allowed = array_map(fn ($g) => $g->key(), $this->gateways->enabledFor($site));
 
-        if (! in_array($data['gateway'], $allowed, true)) {
-            return back()->withInput()->withErrors(['gateway' => 'Choose a way to pay.']);
+        if (! $freeOfCharge && ! in_array($data['gateway'] ?? '', $allowed, true)) {
+            return back()->withInput()->withErrors(['gateway' => __('site.chooseAWayToPay')]);
         }
 
         // The gateway may need somewhere to send the buyer back to, and it needs it before the
         // order exists — so the reference is derived from the hold, the same way the order id is.
         $reference = $this->reference($hold);
-
-        // Priced again, here, a moment before the money moves. Everything between the buyer
-        // typing the code and pressing pay is time in which it could have run out.
-        $offer = $this->offerFor($request, $hold);
 
         /*
          * The organiser's own questions, checked before the money moves.
@@ -346,21 +411,18 @@ class CheckoutController extends Controller
             'address' => $data['billing_address'] ?? null,
         ]) : [];
 
-        // A donation that is not offered is zero, whatever arrived in the request: an event that
-        // does not ask for one must not be able to be given one by a hand-written form.
-        $donation = app(Donations::class)->amount($hold->event, $data['donation'] ?? 0);
-
         try {
             [$order, $intent] = $this->checkout->place(
                 $site,
                 $hold,
                 ['name' => $data['name'], 'email' => $data['email'], 'phone' => $data['phone'] ?? null],
-                $data['gateway'],
+                (string) ($data['gateway'] ?? ''),
                 $site->url('/order/'.$reference),
                 $offer?->isAllowed() ? $offer : null,
                 $billing,
                 $data['addons'] ?? [],
                 $donation,
+                $voucher,
             );
         } catch (ApiException $e) {
             if (in_array($e->errorCode(), ['addon_sold_out', 'addon_too_many', 'unknown_addon'], true)) {
@@ -368,6 +430,14 @@ class CheckoutController extends Controller
                 // and their seats are still theirs, so they are sent back to choose again rather
                 // than losing a booking over a five-euro extra.
                 return redirect('/checkout')->with('seatmap_addon_error', $e->localisedMessage());
+            }
+
+            if ('voucher_spent' === $e->errorCode()) {
+                // Somebody else emptied the gift card between this buyer reading their total and
+                // pressing pay. Nothing has been charged and the seats are still held.
+                $request->session()->forget('seatmap_voucher');
+
+                return redirect('/checkout')->with('seatmap_voucher_error', 'empty');
             }
 
             if ('discount_used_up' !== $e->errorCode()) {
@@ -383,6 +453,7 @@ class CheckoutController extends Controller
         }
 
         $request->session()->forget('seatmap_discount');
+        $request->session()->forget('seatmap_voucher');
 
         // Written once the allocations exist: an answer about a seat, with no seat to point at, is
         // an answer nobody can find again.
@@ -629,6 +700,89 @@ class CheckoutController extends Controller
         $reason = $request->session()->get('seatmap_discount_error');
 
         return $reason ? __('site.discount.refused.'.$reason) : null;
+    }
+
+    /**
+     * The money this buyer has to spend on this booking, if any.
+     *
+     * Two ways to have some, and one is used at a time. A gift code they typed wins, because they
+     * typed it on purpose and quietly spending their own credit instead would be answering a
+     * different question. Otherwise, if they are signed in, their account credit is offered without
+     * anybody having to be told a code — being them is the proof, and that is what credit means.
+     *
+     * @param  int  $payable  what is left to pay after the discount, the fee and the tax
+     */
+    private function voucherFor(Request $request, Hold $hold, int $payable): ?VoucherOffer
+    {
+        $typed = (string) $request->session()->get('seatmap_voucher', '');
+        $currency = (string) $hold->currency;
+
+        if ('' !== $typed) {
+            return $this->vouchers->offer($typed, $currency, $payable);
+        }
+
+        $email = $request->session()->get('seatmap_buyer')['email'] ?? null;
+
+        if (! $email) {
+            return null;
+        }
+
+        $offer = $this->vouchers->creditFor($email, $currency, $payable);
+
+        // Silence rather than a refusal: a signed-in buyer with no credit has not asked for any,
+        // and telling them their nonexistent credit was refused is a message about nothing.
+        return $offer->isAllowed() ? $offer : null;
+    }
+
+    /** Why the last voucher attempt was refused, said once. */
+    private function voucherError(Request $request): ?string
+    {
+        $reason = $request->session()->get('seatmap_voucher_error');
+
+        return $reason ? __('site.voucher.refused.'.$reason) : null;
+    }
+
+    /**
+     * Try a voucher code the buyer typed.
+     *
+     * Nothing is written and nothing is reserved. A voucher is only spent when there is a booking
+     * to spend it on — so two people holding the same gift card can both reach this page, and the
+     * one who pays first gets the money.
+     */
+    public function applyVoucher(Request $request)
+    {
+        $hold = $this->heldSeats($request);
+
+        if (! $hold) {
+            return redirect('/')->with('seatmap_message', __('site.holdGone'));
+        }
+
+        $offer = $this->offerFor($request, $hold);
+        $totals = StorefrontCheckout::totalsFor($hold, $offer?->isAllowed() ? $offer->amount : 0);
+        $voucher = $this->vouchers->offer(
+            (string) $request->input('code', ''),
+            (string) $hold->currency,
+            $totals->total,
+        );
+
+        if (! $voucher->isAllowed()) {
+            $request->session()->forget('seatmap_voucher');
+
+            return redirect('/checkout')->with('seatmap_voucher_error', $voucher->reason);
+        }
+
+        // The spelling, in this buyer's own session. Not the id and not the balance: a voucher is
+        // priced again on every render, and a number kept here would be a number to go stale.
+        $request->session()->put('seatmap_voucher', $voucher->voucher->code);
+
+        return redirect('/checkout');
+    }
+
+    public function removeVoucher(Request $request)
+    {
+        $request->session()->forget('seatmap_voucher');
+
+        return redirect('/checkout');
     }
 
     /**

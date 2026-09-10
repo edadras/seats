@@ -120,6 +120,17 @@
                     </ul>
                 </div>
             @endif
+
+            {{-- How it was paid for, where part of it was not paid for here. A buyer who settled a
+                 booking out of a gift voucher wants to see that they did — and if the change is
+                 still theirs, they want to see that too, on the page they will screenshot. --}}
+            @if ($order->voucher_amount)
+                <p class="notice">{{ __('site.voucher.settledWith', [
+                    'amount' => \App\Support\Locale\Money::format(
+                        (int) $order->voucher_amount, $order->currency, app()->getLocale()
+                    ),
+                ]) }}</p>
+            @endif
         @else
             <h1 class="section__title">{{ __('site.bookedHeading') }}</h1>
 

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Management\BoxOfficeController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\AccessCodeController;
+use App\Http\Controllers\Api\V1\Management\VoucherController;
 use App\Http\Controllers\Api\V1\Management\AddonController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\DoorListController;
@@ -47,30 +48,43 @@ use Illuminate\Support\Facades\Route;
 | the embed group, which is public by design and exposes nothing that needs protecting.
 */
 
+/*
+ * A note about every `throttle:` below, and its third argument.
+ *
+ * Laravel keys an unnamed throttle on the signed-in user, or — for a guest — on the route's domain
+ * and the caller's IP. Never on the route. Without a third argument every rationed route therefore
+ * shares one counter, and the smallest limit anywhere becomes the limit everywhere: a panel group
+ * allowing 240 a minute and one route inside it allowing 10 gave the whole panel 10, and a group
+ * throttle and a route throttle both incremented that same counter, so the real ceiling was lower
+ * still.
+ *
+ * The third argument is a prefix on the key. Giving each rationed thing its own word gives it its
+ * own counter, which is what every one of these limits was written believing it had.
+ */
 Route::prefix('v1')->group(function () {
 
     // ---- Languages ----------------------------------------------------------------------
     // Public: the sign-in screen has words on it, so the catalogue has to be readable before
     // anyone has signed in. Nothing here is secret.
-    Route::get('i18n', [LocaleController::class, 'index'])->middleware('throttle:120,1');
-    Route::get('i18n/{locale}', [LocaleController::class, 'show'])->middleware('throttle:120,1');
+    Route::get('i18n', [LocaleController::class, 'index'])->middleware('throttle:120,1,i18n');
+    Route::get('i18n/{locale}', [LocaleController::class, 'show'])->middleware('throttle:120,1,i18n');
 
     // ---- Signing yourself up ------------------------------------------------------------
     // Public by necessity, and throttled per address and per IP inside the controller as well as
     // here: this is the one endpoint that creates accounts and sends email to strangers.
-    Route::get('plans', [SignupController::class, 'plans'])->middleware('throttle:60,1');
-    Route::post('signup', [SignupController::class, 'register'])->middleware('throttle:10,1');
-    Route::post('signup/verify', [SignupController::class, 'verify'])->middleware('throttle:20,1');
-    Route::post('signup/resend', [SignupController::class, 'resend'])->middleware('throttle:10,1');
+    Route::get('plans', [SignupController::class, 'plans'])->middleware('throttle:60,1,plans');
+    Route::post('signup', [SignupController::class, 'register'])->middleware('throttle:10,1,signup');
+    Route::post('signup/verify', [SignupController::class, 'verify'])->middleware('throttle:20,1,signup-verify');
+    Route::post('signup/resend', [SignupController::class, 'resend'])->middleware('throttle:10,1,signup-resend');
 
     // ---- Panel / management -------------------------------------------------------------
-    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
+    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1,login');
     // The second half of a sign-in. Its own route because the first half returns no token: what it
     // hands back is a challenge that is worth nothing on its own.
     Route::post('auth/login/two-factor', [AuthController::class, 'twoFactor'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:20,1,login-2fa');
 
-    Route::middleware(['auth:sanctum', 'tenant', 'throttle:240,1'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant', 'throttle:240,1,panel'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
 
         Route::middleware('idempotency')->group(function () {
@@ -150,9 +164,9 @@ Route::prefix('v1')->group(function () {
          * tell a tax authority what last March came to.
          */
         Route::get('customers/{customer}/personal-data', [CustomerController::class, 'personalData'])
-            ->middleware('throttle:20,1');
+            ->middleware('throttle:20,1,personal-data');
         Route::post('customers/{customer}/erase', [CustomerController::class, 'erase'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,erase');
 
         // ---- The box office ---------------------------------------------------------------
         // Refunding was reachable only over the signed integration API, which is the right answer
@@ -168,7 +182,7 @@ Route::prefix('v1')->group(function () {
         Route::post('orders/{order}/refund', [OrderController::class, 'refund']);
         Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
         Route::post('orders/{order}/resend', [OrderController::class, 'resend'])
-            ->middleware('throttle:20,1');
+            ->middleware('throttle:20,1,resend');
 
         // ---- Discount codes ---------------------------------------------------------------
         // `suggest` before `{discount}`, or the word "suggest" is a code id that matches nothing.
@@ -178,6 +192,16 @@ Route::prefix('v1')->group(function () {
         Route::get('discounts/{discount}', [DiscountController::class, 'show']);
         Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
         Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
+
+        // ---- Vouchers ----------------------------------------------------------------------
+        // Money the organiser owes somebody, as against a code that changes a price. Behind its
+        // own permission: issuing one is issuing money, which is not the same authority as
+        // running a promotion.
+        Route::get('vouchers', [VoucherController::class, 'index']);
+        Route::get('vouchers/suggest', [VoucherController::class, 'suggest']);
+        Route::post('vouchers', [VoucherController::class, 'store']);
+        Route::get('vouchers/{voucher}', [VoucherController::class, 'show']);
+        Route::post('vouchers/{voucher}/void', [VoucherController::class, 'void']);
 
         // The other kind of code: not what a buyer pays, but whether they may buy at all.
         Route::get('access-codes', [AccessCodeController::class, 'index']);
@@ -191,7 +215,7 @@ Route::prefix('v1')->group(function () {
         // Selling to the person in front of you: cash, an invoice to a school, or a comp.
         Route::get('events/{event}/counter', [BoxOfficeController::class, 'counter']);
         Route::post('events/{event}/sell', [BoxOfficeController::class, 'sell'])
-            ->middleware('throttle:60,1');
+            ->middleware('throttle:60,1,sell');
 
         // ---- The door ------------------------------------------------------------------------
         // Who is expected tonight. `export` before nothing, because it is a verb and not an id.
@@ -201,7 +225,7 @@ Route::prefix('v1')->group(function () {
         // ---- The waiting list -----------------------------------------------------------------
         Route::get('events/{event}/waiting-list', [ManagementWaitingList::class, 'index']);
         Route::post('events/{event}/waiting-list/notify', [ManagementWaitingList::class, 'notify'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,waiting-notify');
 
         // ---- A second step at the door --------------------------------------------------------
         // Always the signed-in person's own account: there is no way to set up, inspect or remove
@@ -209,13 +233,13 @@ Route::prefix('v1')->group(function () {
         // in as them.
         Route::get('auth/two-factor', [TwoFactorController::class, 'show']);
         Route::post('auth/two-factor', [TwoFactorController::class, 'begin'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,2fa');
         Route::post('auth/two-factor/confirm', [TwoFactorController::class, 'confirm'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,2fa-confirm');
         Route::post('auth/two-factor/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,2fa-codes');
         Route::delete('auth/two-factor', [TwoFactorController::class, 'disable'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,2fa-off');
         Route::post('account/two-factor-requirement', [TwoFactorController::class, 'require']);
 
         Route::get('tickets', [TicketController::class, 'index']);
@@ -287,9 +311,9 @@ Route::prefix('v1')->group(function () {
         Route::get('messaging/announcements', [MessagingController::class, 'announcements']);
         Route::get('messaging/announcements/audience', [MessagingController::class, 'audience']);
         Route::post('messaging/announcements', [MessagingController::class, 'announce'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:10,1,announce');
         Route::get('messaging/log', [MessagingController::class, 'log']);
-        Route::post('messaging/test', [MessagingController::class, 'test'])->middleware('throttle:20,1');
+        Route::post('messaging/test', [MessagingController::class, 'test'])->middleware('throttle:20,1,messaging-test');
         Route::put('messaging/{kind}/channels/{channel}', [MessagingController::class, 'setChannel']);
         Route::get('messaging/{kind}/{channel}/{locale}', [MessagingController::class, 'template']);
         Route::put('messaging/{kind}/{channel}/{locale}', [MessagingController::class, 'saveTemplate']);
@@ -339,9 +363,9 @@ Route::prefix('v1')->group(function () {
     // other, and the blast radius would be everybody.
     // An operator belongs to no organiser, so the panel's login cannot serve them: it answers
     // "which account is this person a member of", and the answer here is none.
-    Route::post('admin/login', [ConsoleAuthController::class, 'login'])->middleware('throttle:20,1');
+    Route::post('admin/login', [ConsoleAuthController::class, 'login'])->middleware('throttle:20,1,console-login');
 
-    Route::middleware(['auth:sanctum', 'platform', 'throttle:120,1'])->prefix('admin')->group(function () {
+    Route::middleware(['auth:sanctum', 'platform', 'throttle:120,1,console'])->prefix('admin')->group(function () {
         Route::get('overview', [ConsoleController::class, 'overview']);
         Route::get('tenants', [ConsoleController::class, 'tenants']);
         Route::get('tenants/{tenant}', [ConsoleController::class, 'tenant']);
@@ -360,17 +384,17 @@ Route::prefix('v1')->group(function () {
     // No authentication: the browser has no secret to hold. Rate limits are per IP, and hold
     // creation is limited harder than reads because it consumes inventory (threat T8).
     Route::prefix('embed')->group(function () {
-        Route::middleware('throttle:120,1')->group(function () {
+        Route::middleware('throttle:120,1,embed-read')->group(function () {
             Route::get('events/{public_id}', [EmbedController::class, 'show']);
             Route::get('events/{public_id}/seat-map', [EmbedController::class, 'seatMap']);
             Route::get('events/{public_id}/availability', [EmbedController::class, 'availability']);
         });
 
-        Route::middleware(['throttle:30,1', 'idempotency'])->group(function () {
+        Route::middleware(['throttle:30,1,embed-hold', 'idempotency'])->group(function () {
             Route::post('events/{public_id}/holds', [EmbedController::class, 'hold']);
         });
 
-        Route::middleware('throttle:60,1')->group(function () {
+        Route::middleware('throttle:60,1,embed-holds')->group(function () {
             Route::patch('holds/{token}/extend', [EmbedController::class, 'extendHold']);
             Route::delete('holds/{token}', [EmbedController::class, 'releaseHold']);
             Route::post('holds/{token}/validate', [EmbedController::class, 'validateHold']);
@@ -379,7 +403,7 @@ Route::prefix('v1')->group(function () {
 
     // ---- Storefront, server to server ---------------------------------------------------
     Route::prefix('integrations/woocommerce')
-        ->middleware(['api.client', 'idempotency', 'throttle:300,1'])
+        ->middleware(['api.client', 'idempotency', 'throttle:300,1,woocommerce'])
         ->group(function () {
             Route::post('orders', [WooCommerceController::class, 'store']);
             Route::get('orders/{external_order_id}', [WooCommerceController::class, 'show']);
@@ -390,9 +414,9 @@ Route::prefix('v1')->group(function () {
 
     // ---- Check-in devices ---------------------------------------------------------------
     Route::prefix('checkin')->group(function () {
-        Route::post('auth/token', [CheckinController::class, 'token'])->middleware('throttle:10,1');
+        Route::post('auth/token', [CheckinController::class, 'token'])->middleware('throttle:10,1,device-pair');
 
-        Route::middleware(['auth:sanctum', 'device', 'throttle:600,1'])->group(function () {
+        Route::middleware(['auth:sanctum', 'device', 'throttle:600,1,door'])->group(function () {
             Route::get('events', [CheckinController::class, 'events']);
             Route::post('scan', [CheckinController::class, 'scan']);
             Route::post('sync', [CheckinController::class, 'sync']);

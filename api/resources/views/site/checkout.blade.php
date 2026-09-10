@@ -187,7 +187,11 @@
                     </div>
                 @endif
 
-                <div class="checkout__step">
+                {{-- Rendered whatever the total is, and hidden while a voucher covers the whole
+                     booking. Hidden rather than omitted, because a buyer who then adds a fifty-euro
+                     programme has something to pay again, and a form with no way to pay in it would
+                     be a dead end they could only escape by starting over. --}}
+                <div class="checkout__step" id="pay-step" @if ($payable < 1) hidden @endif>
                     <h2>{{ __('site.howToPay') }}</h2>
 
                     @foreach ($gateways as $gateway)
@@ -202,6 +206,12 @@
                     @endforeach
                     @error('gateway') <p class="field__error">{{ $message }}</p> @enderror
                 </div>
+
+                {{-- The other half of the same switch: what a buyer sees instead of the payment
+                     methods when their voucher has already settled the lot. --}}
+                <p class="checkout__settled" id="settled-note" @if ($payable > 0) hidden @endif>
+                    {{ __('site.voucher.settled') }}
+                </p>
 
                 <button class="button button--block checkout__submit" type="submit">{{ __('site.confirmBooking') }}</button>
             </form>
@@ -255,6 +265,21 @@
 
                 <p class="summary-total"><span>{{ __('site.total') }}</span><span id="summary-total">{{ $money($total) }}</span></p>
 
+                {{-- Under the total, never among the lines above it. A voucher did not change what
+                     this booking cost — it changed how much of that cost is still owed — and putting
+                     it in with the discount would be the one place a VAT return could go wrong. --}}
+                <p class="summary-paid" id="summary-paid" @if (! $voucher) hidden @endif>
+                    <span>{{ __('site.voucher.line') }}</span>
+                    <span id="summary-voucher">−{{ $money($voucher['amount'] ?? 0) }}</span>
+                </p>
+                {{-- Its own class rather than another `.summary-total`: the page must have exactly
+                     one element that means "the total", or anything reading the page — a browser
+                     check, a screen reader's summary — finds two and cannot say which. --}}
+                <p class="summary-due" id="summary-due" @if (! $voucher) hidden @endif>
+                    <span>{{ __('site.voucher.due') }}</span>
+                    <span id="summary-payable">{{ $money($payable) }}</span>
+                </p>
+
                 {{-- Its own form, outside the one that pays: pressing enter in a discount box must
                      try the code, never buy the tickets. --}}
                 @if ($discount)
@@ -277,6 +302,43 @@
                         </div>
                         @if ($discountError)
                             <p class="field__error">{{ $discountError }}</p>
+                        @endif
+                    </form>
+                @endif
+
+                {{-- Its own form again, and for the same reason: pressing enter in a voucher box
+                     must try the voucher, never buy the tickets. --}}
+                @if ($voucher && 'gift' === $voucher['kind'])
+                    <form class="promo promo--applied" method="POST" action="/checkout/voucher/remove">
+                        @csrf
+                        <p class="promo__held">
+                            <strong>{{ $voucher['label'] }}</strong>
+                            <span class="muted">{{ __('site.voucher.remaining', [
+                                'amount' => $money($voucher['remaining']),
+                            ]) }}</span>
+                        </p>
+                        <button class="button button--quiet" type="submit">{{ __('site.voucher.remove') }}</button>
+                    </form>
+                @elseif ($voucher)
+                    {{-- Account credit. There is nothing to type and nothing to remove: it belongs
+                         to the address they signed in with, and it is spent because it is theirs. --}}
+                    <p class="promo promo--credit">
+                        <strong>{{ __('site.voucher.credit') }}</strong>
+                        <span class="muted">{{ __('site.voucher.remaining', [
+                            'amount' => $money($voucher['remaining']),
+                        ]) }}</span>
+                    </p>
+                @else
+                    <form class="promo" method="POST" action="/checkout/voucher">
+                        @csrf
+                        <label class="promo__label" for="voucher-code">{{ __('site.voucher.label') }}</label>
+                        <div class="promo__row">
+                            <input id="voucher-code" name="code" maxlength="40" autocomplete="off"
+                                   spellcheck="false" placeholder="{{ __('site.voucher.placeholder') }}">
+                            <button class="button button--quiet" type="submit">{{ __('site.voucher.apply') }}</button>
+                        </div>
+                        @if ($voucherError)
+                            <p class="field__error">{{ $voucherError }}</p>
                         @endif
                     </form>
                 @endif
@@ -310,6 +372,12 @@
                     var form = document.querySelector( '.checkout__form' );
                     var list = document.getElementById( 'summary-lines' );
                     var totalEl = document.getElementById( 'summary-total' );
+                    var paidEl = document.getElementById( 'summary-paid' );
+                    var dueEl = document.getElementById( 'summary-due' );
+                    var voucherEl = document.getElementById( 'summary-voucher' );
+                    var payableEl = document.getElementById( 'summary-payable' );
+                    var payStep = document.getElementById( 'pay-step' );
+                    var settledEl = document.getElementById( 'settled-note' );
 
                     if ( ! form || ! list || ! totalEl ) {
                         return;
@@ -371,6 +439,29 @@
                                 } );
 
                                 totalEl.textContent = quote.total_formatted;
+
+                                /*
+                                 * A voucher covers what it covers, and adding a programme changes
+                                 * that. The server said how much and what is left; the page prints
+                                 * both, and shows or hides the payment step to match — a booking
+                                 * that now costs something has to have a way to pay for it.
+                                 */
+                                if ( paidEl && dueEl ) {
+                                    var covered = ( quote.voucher || 0 ) > 0;
+
+                                    paidEl.hidden = ! covered;
+                                    dueEl.hidden = ! covered;
+                                    voucherEl.textContent = '−' + quote.voucher_formatted;
+                                    payableEl.textContent = quote.payable_formatted;
+                                }
+
+                                if ( payStep ) {
+                                    payStep.hidden = ( quote.payable || 0 ) < 1;
+                                }
+
+                                if ( settledEl ) {
+                                    settledEl.hidden = ( quote.payable || 0 ) > 0;
+                                }
                             } )
                             .catch( function () {} );
                     }

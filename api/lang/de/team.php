@@ -61,6 +61,7 @@ return [
         'orders.view' => 'Bestellungen und ihre Beträge sehen',
         'orders.refund' => 'Eine Bestellung erstatten',
         'orders.sell' => 'Am Schalter verkaufen und Freikarten geben',
+        'vouchers.manage' => 'Gutscheine ausstellen und stornieren',
         'checkins.view' => 'Sehen, wer hereingekommen ist',
         'devices.manage' => 'Einlassgeräte koppeln und sperren',
         'sites.view' => 'Websites sehen',

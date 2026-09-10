@@ -116,6 +116,20 @@
 		<td>{{ __('site.invoice.total') }}</td>
 		<td class="num">{{ $money($totals['total']) }}</td>
 	</tr>
+	{{-- Below the grand total and never inside it: a voucher did not change what was sold or the
+	     tax on it, only how much of the invoice was still owed when it was issued. The document
+	     has to show both, or an accountant reconciling it against a bank statement finds a gap
+	     with nothing explaining it. --}}
+	@if (! empty($totals['voucher']))
+		<tr>
+			<td>{{ __('site.voucher.line') }}</td>
+			<td class="num">−{{ $money($totals['voucher']) }}</td>
+		</tr>
+		<tr>
+			<td>{{ __('site.voucher.due') }}</td>
+			<td class="num">{{ $money($totals['payable'] ?? 0) }}</td>
+		</tr>
+	@endif
 </table>
 
 @if (! empty($invoice->issuer['footer']))

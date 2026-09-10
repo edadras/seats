@@ -28,7 +28,7 @@ class ExternalOrder extends Model
 
     protected $fillable = [
         'tenant_id', 'event_id', 'api_client_id', 'hold_id', 'external_order_id', 'status',
-        'currency', 'total_amount', 'donation', 'buyer', 'metadata',
+        'currency', 'total_amount', 'donation', 'voucher_amount', 'buyer', 'metadata',
         'confirmed_at', 'cancelled_at', 'refunded_at',
     ];
 
@@ -37,6 +37,7 @@ class ExternalOrder extends Model
         'metadata' => 'array',
         'total_amount' => 'integer',
         'donation' => 'integer',
+        'voucher_amount' => 'integer',
         'confirmed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'refunded_at' => 'datetime',

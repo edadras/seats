@@ -432,7 +432,21 @@
 							esc( App.money( line.amount, order.currency ) ) + '</span>' +
 					'</label>';
 				} ).join( '' ) + '</div>' +
-				'<p class="field__hint">' + esc( App.t( 'panel.orders.refundMoneyHint' ) ) + '</p>',
+				'<p class="field__hint">' + esc( App.t( 'panel.orders.refundMoneyHint' ) ) + '</p>' +
+				/*
+				 * The other way to give the money back.
+				 *
+				 * Offered on the whole booking only, because credit is issued against what was
+				 * charged and a part refund leaves the rest of the booking to be paid for out of
+				 * exactly that money. The buyer has to have agreed to it — this is a box the
+				 * person on the telephone ticks after asking, not a default.
+				 */
+				'<label class="perms__row" id="order-credit-row">' +
+					'<input type="checkbox" class="checkbox" id="order-credit">' +
+					'<span>' + esc( App.t( 'panel.orders.refundAsCredit' ) ) +
+						'<span class="muted on-own-line">' +
+						esc( App.t( 'panel.orders.refundAsCreditHint' ) ) + '</span></span>' +
+				'</label>',
 			onSubmit: function () {
 				var chosen = [];
 				var all = true;
@@ -447,15 +461,46 @@
 					}
 				} );
 
+				var credit = document.getElementById( 'order-credit' );
+				var payload = all ? {} : { seat_ids: chosen };
+
+				if ( all && credit && credit.checked ) {
+					payload.as_credit = true;
+				}
+
 				// No `seat_ids` at all means the whole order, which is also the only way to refund
 				// a standing place — those have no seat id to name.
-				return App.request( 'POST', '/orders/' + order.id + '/refund',
-					all ? {} : { seat_ids: chosen } )
+				return App.request( 'POST', '/orders/' + order.id + '/refund', payload )
 					.then( function () {
 						App.toast( App.t( 'panel.orders.refunded' ) );
 						Orders.open( order.id );
 					} );
 			},
+		} );
+
+		// Kept in step with the tick boxes above it: credit is for the whole booking, so the offer
+		// disappears the moment somebody unticks a seat rather than failing silently at the server.
+		each( '[data-refund]', function ( box ) {
+			box.addEventListener( 'change', function () {
+				var all = true;
+
+				each( '[data-refund]', function ( other ) {
+					if ( ! other.checked ) {
+						all = false;
+					}
+				} );
+
+				var row = document.getElementById( 'order-credit-row' );
+				var credit = document.getElementById( 'order-credit' );
+
+				if ( row ) {
+					row.hidden = ! all;
+				}
+
+				if ( credit && ! all ) {
+					credit.checked = false;
+				}
+			} );
 		} );
 	};
 

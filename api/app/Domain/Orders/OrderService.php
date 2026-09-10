@@ -35,6 +35,7 @@ class OrderService
         private readonly \App\Domain\Messaging\OrderMessages $messages,
         private readonly \App\Domain\Notifications\Notifier $notifier,
         private readonly \App\Domain\Access\AccessCodes $access,
+        private readonly \App\Domain\Vouchers\Vouchers $vouchers,
     ) {}
 
     /** Register an order against a hold — called as soon as WooCommerce creates the order. */
@@ -308,6 +309,10 @@ class OrderService
             $order->forceFill(['status' => 'cancelled', 'cancelled_at' => now()])->save();
             $order->event?->bumpAvailabilityVersion();
 
+            // Voucher money never belonged to the organiser. A cancelled booking gives it back to
+            // the card it came off — which is the voucher — rather than keeping it.
+            $this->vouchers->release($order);
+
             $this->audit->record('order.cancelled', $order, [
                 'external_order_id' => $order->external_order_id,
                 'reason' => $reason,
@@ -389,6 +394,17 @@ class OrderService
             ])->save();
 
             $order->event?->bumpAvailabilityVersion();
+
+            /*
+             * Voucher money goes back to the voucher, and only on a full refund.
+             *
+             * On a partial one it stays spent, deliberately: the seats that were kept still have to
+             * be paid for, and the money already settled is what pays for them. Giving the voucher
+             * back while the buyer keeps half the booking would hand them the same money twice.
+             */
+            if (0 === $remaining) {
+                $this->vouchers->release($order);
+            }
 
             $this->audit->record('order.refunded', $order, [
                 'external_order_id' => $order->external_order_id,

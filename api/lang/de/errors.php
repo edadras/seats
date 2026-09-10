@@ -202,4 +202,8 @@ return [
     'addon_sold' => 'Was verkauft wurde, lässt sich nicht entfernen. Blenden Sie es stattdessen aus.',
     'donation_negative' => 'Eine Spende kann nicht weniger als nichts sein.',
     'donation_too_large' => 'Das ist mehr, als diese Kasse annimmt. Bitte sprechen Sie mit dem Veranstalter.',
+    'voucher_spent' => 'Dieser Gutschein wurde soeben aufgebraucht.',
+    'voucher_code_taken' => 'Sie haben bereits einen Gutschein mit diesem Code.',
+    'no_address_for_credit' => 'Zu dieser Buchung gibt es keine E-Mail-Adresse, also niemanden, dem Guthaben gutgeschrieben werden könnte.',
+    'credit_needs_whole_booking' => 'Guthaben wird für eine ganze Buchung ausgestellt. Erstatten Sie die Plätze und stellen Sie dann einen Gutschein über den Betrag aus.',
 ];

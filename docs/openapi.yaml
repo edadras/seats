@@ -53,6 +53,7 @@ tags:
   - name: Orders
   - name: Discounts
   - name: Access
+  - name: Vouchers
   - name: Box office
   - name: Door
   - name: Waiting list
@@ -1189,6 +1190,158 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  /vouchers:
+    get:
+      operationId: listVouchers
+      tags: [Vouchers]
+      summary: Gift vouchers and account credit
+      description: |
+        Requires `vouchers.manage` — not `discounts.manage`. The two are different powers: inventing
+        a half-price code costs a margin, issuing a voucher hands somebody money.
+
+        `balance` is derived on every read, as the sum of the movements. There is no balance column
+        to read it off, because a stored balance is a read-modify-write and two tabs spending the
+        same gift card in the same second would both succeed against it.
+      parameters:
+        - name: kind
+          in: query
+          schema: { type: string, enum: [gift, credit] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, void] }
+        - name: q
+          in: query
+          description: Part of the code, the address, the recipient, or the note.
+          schema: { type: string }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: The vouchers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Voucher" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: createVoucher
+      tags: [Vouchers]
+      summary: Issue a voucher
+      description: |
+        Requires `vouchers.manage`. Issuing writes the voucher and its `issue` movement in one
+        transaction — a voucher with no issue row is worth nothing, and a movement with no voucher
+        is money from nowhere — and is audited without exception, because a voucher issued against
+        no payment is an organiser giving money away.
+
+        Exactly one identifying field is kept. A `gift` carries a code and is bearer; a `credit`
+        carries an email address and is not. Sending both stores only the one its kind allows.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VoucherInput" }
+      responses:
+        "201":
+          description: The voucher
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Voucher" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A gift voucher with that code already exists on this account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /vouchers/suggest:
+    get:
+      operationId: suggestVoucherCode
+      tags: [Vouchers]
+      summary: A code nobody has to invent
+      description: >-
+        Requires `vouchers.manage`. Sixteen characters in four groups, from an alphabet with no O
+        against 0 and no I against 1 — longer than a presale code because this one is worth money,
+        and a short bearer code is a code worth guessing. Not reserved: it is a suggestion.
+      responses:
+        "200":
+          description: A code that is free on this account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string, example: KMPT-4X9B-RJH2-WNDF }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /vouchers/{voucher}:
+    parameters:
+      - name: voucher
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getVoucher
+      tags: [Vouchers]
+      summary: One voucher, and every movement of its money
+      description: >-
+        Requires `vouchers.manage`. The movements are the working behind the balance: "why does this
+        say forty euros" is what an organiser is asked at the counter, and a number with nothing
+        under it cannot answer.
+      responses:
+        "200":
+          description: The voucher
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Voucher"
+                  - type: object
+                    properties:
+                      movements:
+                        type: array
+                        items: { $ref: "#/components/schemas/VoucherMovement" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /vouchers/{voucher}/void:
+    parameters:
+      - name: voucher
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: voidVoucher
+      tags: [Vouchers]
+      summary: Stop a voucher and write off what is left
+      description: |
+        Requires `vouchers.manage`. A POST rather than a DELETE, because nothing is deleted: the row
+        stays, the ledger stays, and one more movement takes the remaining balance to zero.
+
+        There is no update and no delete anywhere on this resource, and that is the design. A
+        voucher's amount is its `issue` movement; editing it afterwards would leave a balance that
+        disagrees with the ledger under it, and deleting one that has paid for a booking would leave
+        that booking claiming it was settled out of nothing.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: The voucher as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Voucher" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /wallet:
     get:
@@ -3501,6 +3654,15 @@ paths:
 
         Omitting `seat_ids` refunds everything, which is also the only way to refund a standing
         place — those have no seat id to name.
+
+        `as_credit` is the one thing here that *does* move money, and it moves it inwards: instead
+        of the card, the buyer is given credit to spend on this account, issued for what was
+        actually charged — the total less anything a voucher already settled. It needs
+        `vouchers.manage` as well, applies only to a whole booking, and the buyer has to have agreed
+        to it: credit is not the same as a refund, and it is not the organiser's choice alone.
+
+        Voucher money on a fully refunded booking goes back to the voucher regardless, because it
+        was never the organiser's to keep.
       requestBody:
         content:
           application/json:
@@ -3511,6 +3673,11 @@ paths:
                   type: array
                   items: { type: string, format: uuid }
                 reason: { type: string, maxLength: 200 }
+                as_credit:
+                  type: boolean
+                  description: >-
+                    Give the money back as account credit rather than to the card. Whole bookings
+                    only; requires `vouchers.manage`.
       responses:
         "200":
           description: Refunded
@@ -3519,6 +3686,11 @@ paths:
               schema: { $ref: "#/components/schemas/PanelOrder" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "422":
+          description: Credit was asked for on a booking with no email address to give it to
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /orders/{order}/cancel:
     parameters:
@@ -5773,6 +5945,86 @@ components:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
 
+    Voucher:
+      type: object
+      description: >-
+        Money the organiser owes somebody. Not a discount: a discount changes what a booking costs
+        and so changes the fee and the tax computed from it, while a voucher changes how an
+        unchanged cost was settled. It is applied last, to the amount payable, after the arithmetic.
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [gift, credit]
+          description: >-
+            `gift` is bearer — it has a code, and whoever holds the code spends it. `credit` is
+            named: it belongs to an email address, usually because a buyer took a refund as credit.
+        code:
+          type: [string, "null"]
+          description: "Set on a gift and never on a credit. Stored upper-cased and trimmed."
+        email:
+          type: [string, "null"]
+          format: email
+          description: "Set on a credit and never on a gift. Stored lower-cased."
+        amount: { type: integer, description: "What it was worth when issued, in minor units." }
+        balance:
+          type: integer
+          description: "What is left. The sum of the movements, computed on every read."
+        spent: { type: integer, description: "`amount` less `balance`." }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        note: { type: [string, "null"] }
+        recipient:
+          type: [string, "null"]
+          description: >-
+            Who a gift was made out to. Never used to decide whether it may be spent — a gift
+            voucher is bearer, and a name on it is a name.
+        expires_at: { type: [string, "null"], format: date-time }
+        status: { type: string, enum: [active, void] }
+        live:
+          type: boolean
+          description: "Active, in date, and with something left. The honest answer, not the stored one."
+        created_at: { type: string, format: date-time }
+
+    VoucherMovement:
+      type: object
+      description: >-
+        One signed movement of a voucher's money. These rows are the balance; nothing here is ever
+        edited or deleted, because a ledger that can be rewritten is not a ledger.
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [issue, spend, refund, void]
+        amount:
+          type: integer
+          description: "Signed, in minor units. Negative is money leaving."
+        at: { type: string, format: date-time }
+        order_id: { type: [string, "null"], description: "The booking it was spent on, where there was one." }
+        order_status: { type: [string, "null"] }
+
+    VoucherInput:
+      type: object
+      required: [kind, amount, currency]
+      properties:
+        kind: { type: string, enum: [gift, credit] }
+        code:
+          type: [string, "null"]
+          maxLength: 40
+          description: "Required for a gift, ignored for a credit. Letters, numbers, dots and dashes."
+        email:
+          type: [string, "null"]
+          format: email
+          description: "Required for a credit, ignored for a gift."
+        amount: { type: integer, minimum: 1, description: "In minor units." }
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: "It only pays for bookings in this currency. Nothing converts."
+        note: { type: [string, "null"], maxLength: 200 }
+        recipient: { type: [string, "null"], maxLength: 160 }
+        expires_at: { type: [string, "null"], format: date-time }
+
     AccessCode:
       type: object
       description: >-
@@ -5981,6 +6233,13 @@ components:
         fee: { type: integer, description: "Booking fees the organiser charged." }
         tax: { type: integer, description: "Tax charged, before any refund." }
         charged: { type: integer, description: "What the buyers actually paid." }
+        voucher:
+          type: integer
+          description: >-
+            The part of `charged` settled out of a gift voucher or account credit rather than
+            through a gateway. Inside `charged`, never beside it: that money was taken when the
+            voucher was bought, so it is the organiser's — but it reached no bank statement in this
+            period, and a settlement that could not say so is one nobody can reconcile.
         refunded: { type: integer }
         kept: { type: integer, description: "`charged` less `refunded`." }
         tax_kept:

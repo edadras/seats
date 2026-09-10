@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\DB;
  * discount, how much went back out as refunds, how much of it is tax that belongs to somebody
  * else, what the platform charged, and what is left.
  *
+ * One figure here is not money that moved in this period: `voucher` is the part of `charged` that
+ * was settled out of a gift voucher or an account credit. That money was taken when the voucher was
+ * bought, so it belongs in what the organiser is owed — but it will not appear on a bank statement
+ * for these dates, and a settlement that could not say which part was which is one nobody can
+ * reconcile. It is inside `charged` and must never be added to it.
+ *
  * Nothing here is recomputed from a live event. The arithmetic of a booking was frozen onto the
  * order by {@see \App\Domain\Orders\OrderTotals} at the moment it was paid, and this reads that
  * back: an organiser who raises their booking fee in March must not find that February settled
@@ -103,7 +109,7 @@ class Settlement
             'starts_at' => $event->starts_at,
             'currency' => $event->currency,
             'orders' => 0, 'tickets' => 0,
-            'discount' => 0, 'fee' => 0, 'tax' => 0, 'charged' => 0,
+            'discount' => 0, 'fee' => 0, 'tax' => 0, 'charged' => 0, 'voucher' => 0,
         ], 0, null, $this->rate());
     }
 
@@ -156,6 +162,8 @@ class Settlement
             'fee' => (int) $event->fee,
             'tax' => $tax,
             'charged' => $charged,
+            // Inside `charged`, not beside it: the two must never be added together.
+            'voucher' => (int) ($event->voucher ?? 0),
             'refunded' => $refunded,
             'kept' => $kept,
             'tax_kept' => $taxKept,
@@ -168,7 +176,7 @@ class Settlement
     private function perCurrency(array $rows): array
     {
         $fields = ['orders', 'seats', 'seats_refunded', 'tickets', 'discount', 'fee', 'tax',
-            'charged', 'refunded', 'kept', 'tax_kept', 'commission', 'payable'];
+            'charged', 'voucher', 'refunded', 'kept', 'tax_kept', 'commission', 'payable'];
 
         $totals = [];
 
@@ -208,6 +216,11 @@ class Settlement
                 DB::raw("sum(coalesce((o.metadata->'totals'->>'fee')::bigint, 0)) as fee"),
                 DB::raw("sum(coalesce((o.metadata->'totals'->>'tax')::bigint, 0)) as tax"),
                 DB::raw('sum(o.total_amount) as charged'),
+                // Of that, the part settled out of vouchers rather than through a gateway. It is
+                // money the organiser took when the voucher was bought, so it is theirs and it is
+                // inside `charged` — but it never reached a bank statement in this period, and a
+                // settlement that could not say so is a settlement nobody can reconcile.
+                DB::raw('sum(coalesce(o.voucher_amount, 0)) as voucher'),
             ])
             ->groupBy('e.id', 'e.name', 'e.starts_at', 'e.currency');
 

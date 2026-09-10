@@ -22,6 +22,11 @@ use App\Models\Event;
  * the privilege of giving you money, and whether a gift is taxable is a question for the
  * organiser's accountant, not for a checkout. So it is added last, after the tax has been worked
  * out from everything else.
+ *
+ * A **voucher is on neither side**, because it is not part of what the booking cost at all. It is a
+ * way of settling the amount that came out of all of the above: the sale stays a full-price sale,
+ * the tax stays the tax on a full-price sale, and what changes is only how much of the total the
+ * gateway is asked for. Treating it as a discount would understate the VAT on every redemption.
  */
 final class OrderTotals
 {
@@ -33,6 +38,8 @@ final class OrderTotals
         public readonly int $tax,
         public readonly int $donation,
         public readonly int $total,
+        public readonly int $voucher,
+        public readonly int $payable,
         public readonly int $taxRate,
         public readonly bool $taxIncluded,
         public readonly ?string $feeLabel,
@@ -45,6 +52,7 @@ final class OrderTotals
      * @param  int  $places    how many tickets, for a per-ticket fee
      * @param  int  $addons    programmes, drinks, parking — inside the fee and the tax
      * @param  int  $donation  given, and outside both
+     * @param  int  $voucher   settled out of money already taken, and outside the arithmetic
      */
     public static function for(
         Event $event,
@@ -53,6 +61,7 @@ final class OrderTotals
         int $places = 0,
         int $addons = 0,
         int $donation = 0,
+        int $voucher = 0,
     ): self {
         $tickets = max(0, $tickets);
         $discount = max(0, min($tickets, $discount));
@@ -80,6 +89,11 @@ final class OrderTotals
             ? intdiv($taxable * $rate + intdiv(10000 + $rate, 2), 10000 + $rate)
             : intdiv($taxable * $rate + 5000, 10000));
 
+        $total = ($included ? $taxable : $taxable + $tax) + $donation;
+        // Never more than the booking: the rest of a voucher stays a voucher, and a booking that
+        // hands back change in cash is a gift card laundered into money.
+        $voucher = max(0, min($total, $voucher));
+
         return new self(
             tickets: $tickets,
             discount: $discount,
@@ -88,7 +102,11 @@ final class OrderTotals
             tax: $tax,
             donation: $donation,
             // The gift goes on last, after the tax has been worked out from everything else.
-            total: ($included ? $taxable : $taxable + $tax) + $donation,
+            total: $total,
+            voucher: $voucher,
+            // What the gateway is actually asked for. Zero is a real answer, and the checkout has
+            // to be able to complete without a payment when it is.
+            payable: $total - $voucher,
             taxRate: $rate,
             taxIncluded: $included,
             feeLabel: $event->booking_fee_label ?: null,
@@ -125,6 +143,8 @@ final class OrderTotals
             'tax' => $this->tax,
             'donation' => $this->donation,
             'total' => $this->total,
+            'voucher' => $this->voucher,
+            'payable' => $this->payable,
             'tax_rate' => $this->taxRate,
             'tax_included' => $this->taxIncluded,
             'fee_label' => $this->feeLabel,

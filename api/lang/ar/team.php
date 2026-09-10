@@ -61,6 +61,7 @@ return [
         'orders.view' => 'رؤية الطلبات وقيمتها',
         'orders.refund' => 'ردّ قيمة طلب',
         'orders.sell' => 'البيع عند الشباك ومنح تذاكر مجانية',
+        'vouchers.manage' => 'إصدار القسائم وإلغاؤها',
         'checkins.view' => 'رؤية من دخل',
         'devices.manage' => 'اقتران أجهزة الباب وإلغاؤها',
         'sites.view' => 'رؤية المواقع',

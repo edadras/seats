@@ -20,50 +20,69 @@ use Illuminate\Support\Facades\Route;
 | that class explains why it cannot be made by the router.
 */
 
+/*
+ * A note about every `throttle:` below, and its third argument.
+ *
+ * Laravel keys an unnamed throttle on the *route's domain and the caller's IP* — not on the route.
+ * Without a third argument every rationed route on a site therefore shares one counter, and the
+ * smallest limit on any of them becomes the limit on all of them: a buyer who has browsed a seat
+ * map (120 a minute) arrives at the voucher box (8 a minute) already locked out of it, having done
+ * nothing wrong. Worse, a group throttle and a route throttle both increment that one counter, so
+ * the effective limit is not even the smallest of the two.
+ *
+ * The third argument is a prefix on that key. Giving each rationed thing its own word gives it its
+ * own counter, which is what every one of these limits was written believing it had.
+ */
 Route::middleware('site')->group(function () {
     // What the seat picker talks to. Same shapes as the WordPress plugin's store routes, because it
     // is one shared picker that must not know which kind of shop it sits in.
     Route::prefix('_store')->group(function () {
         Route::get('availability/{event}', [StoreController::class, 'availability'])
-            ->middleware('throttle:120,1');
-        Route::post('hold', [StoreController::class, 'hold'])->middleware('throttle:30,1');
-        Route::post('release', [StoreController::class, 'release'])->middleware('throttle:60,1');
+            ->middleware('throttle:120,1,availability');
+        Route::post('hold', [StoreController::class, 'hold'])->middleware('throttle:30,1,hold');
+        Route::post('release', [StoreController::class, 'release'])->middleware('throttle:60,1,release');
         // Throttled hard, like the discount box and for a sharper reason: a presale code is worth
         // guessing, and guessing is cheap unless it is rationed.
-        Route::post('unlock', [StoreController::class, 'unlock'])->middleware('throttle:8,1');
+        Route::post('unlock', [StoreController::class, 'unlock'])->middleware('throttle:8,1,unlock');
     });
 
     // Where a picker embedded on somebody else's website sends the buyer to pay. It carries a
     // hold token this application issued and nothing else.
-    Route::get('checkout/resume', [CheckoutController::class, 'resume'])->middleware('throttle:30,1');
+    Route::get('checkout/resume', [CheckoutController::class, 'resume'])->middleware('throttle:30,1,resume');
     Route::get('checkout', [CheckoutController::class, 'show']);
-    Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1');
+    Route::post('checkout', [CheckoutController::class, 'place'])->middleware('throttle:20,1,pay');
     // Throttled harder than the rest of checkout: a discount box is a place to guess codes, and
     // guessing is cheap unless it is rationed.
     Route::post('checkout/discount', [CheckoutController::class, 'applyDiscount'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:10,1,discount');
     Route::post('checkout/discount/remove', [CheckoutController::class, 'removeDiscount'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:20,1,discount-off');
+    // The other box, throttled hardest of the three: a gift voucher code is money, and a box that
+    // says whether a guess was money is a box worth guessing at industrial speed.
+    Route::post('checkout/voucher', [CheckoutController::class, 'applyVoucher'])
+        ->middleware('throttle:8,1,voucher');
+    Route::post('checkout/voucher/remove', [CheckoutController::class, 'removeVoucher'])
+        ->middleware('throttle:20,1,voucher-off');
     // What the booking would come to with these extras. A keystroke, so it is throttled loosely
     // and it writes nothing.
-    Route::post('checkout/quote', [CheckoutController::class, 'quote'])->middleware('throttle:60,1');
+    Route::post('checkout/quote', [CheckoutController::class, 'quote'])->middleware('throttle:60,1,quote');
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
     // The same tickets, laid out for paper and for the browser's own "Save as PDF".
     Route::get('order/{reference}/tickets', [CheckoutController::class, 'tickets']);
     // Straight into a phone, while the codes still exist in this session.
     Route::get('order/{reference}/wallet/{platform}', [CheckoutController::class, 'wallet'])
         ->whereIn('platform', ['apple', 'google'])
-        ->middleware('throttle:30,1');
+        ->middleware('throttle:30,1,wallet');
     // The document the buyer's accounts department will want. Numbered on the first ask, and only
     // for a booking that was actually paid for.
     Route::get('order/{reference}/invoice', [CheckoutController::class, 'invoice'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:20,1,invoice');
 
     // Where a redirect gateway sends the buyer back to. Both verbs, because gateways disagree
     // about which one a return is, and the handler settles by asking the gateway rather than by
     // believing anything in the request.
     Route::match(['get', 'post'], 'pay/{gateway}/return/{reference}', [CheckoutController::class, 'paymentReturn'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:60,1,gateway-return')
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
     Route::get('events/{event}', [SitePageController::class, 'event']);
@@ -73,9 +92,9 @@ Route::middleware('site')->group(function () {
     // The queue for a sold-out night, and the way out of it. Leaving is a GET because that is what
     // a mail client will follow, and repeating it changes nothing.
     Route::post('events/{event}/waiting-list', [WaitingListController::class, 'join'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:10,1,waiting-join');
     Route::get('waiting-list/{token}/leave', [WaitingListController::class, 'leave'])
-        ->middleware('throttle:30,1');
+        ->middleware('throttle:30,1,waiting-leave');
 
     /*
      * A buyer's own page. `/account` renders for anybody — signed in it lists their orders,
@@ -83,14 +102,14 @@ Route::middleware('site')->group(function () {
      * signing in at all.
      */
     Route::get('account', [BuyerAccountController::class, 'show']);
-    Route::get('account/google', [BuyerAccountController::class, 'start'])->middleware('throttle:20,1');
+    Route::get('account/google', [BuyerAccountController::class, 'start'])->middleware('throttle:20,1,signin');
     Route::get('account/google/finish', [BuyerAccountController::class, 'finish'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:20,1,signin-finish');
     Route::post('account/sign-out', [BuyerAccountController::class, 'signOut']);
     // A POST because it mints new codes and kills the old ones: a link a browser can prefetch
     // must never be able to invalidate somebody's ticket.
     Route::post('account/orders/{reference}/tickets', [BuyerAccountController::class, 'tickets'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:10,1,reissue');
     // Handing one ticket to somebody else. A POST, and signed in: it kills a working code and
     // mints another, which is not something a link a mail client can prefetch should be able to do.
     // "Can I have my money back?" — granted at once inside the organiser's own terms, and put in
@@ -98,11 +117,11 @@ Route::middleware('site')->group(function () {
     // A reissue, like the PDF beside it: the old codes stop working, and the button says so.
     Route::post('account/orders/{reference}/wallet/{platform}', [BuyerAccountController::class, 'wallet'])
         ->whereIn('platform', ['apple', 'google'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:20,1,account-wallet');
     Route::post('account/orders/{reference}/refund', [BuyerAccountController::class, 'refund'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:10,1,refund-request');
     Route::post('account/orders/{reference}/transfer', [BuyerAccountController::class, 'transfer'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:10,1,transfer');
 });
 
 /*
@@ -110,7 +129,7 @@ Route::middleware('site')->group(function () {
  * door because it belongs to the platform on every host, and outside the site group because there
  * is no site in its Host — the site it belongs to is named by the state it carries.
  */
-Route::get('auth/google/callback', GoogleSignInController::class)->middleware('throttle:60,1');
+Route::get('auth/google/callback', GoogleSignInController::class)->middleware('throttle:60,1,google-callback');
 
 /*
  * The two files written for machines. Outside the site group and ahead of the front door, because

@@ -181,6 +181,17 @@
 								esc( App.t( 'panel.settlement.lessDiscount', {
 									amount: App.money( row.discount, row.currency ),
 								} ) ) + '</span>'
+							: '' ) +
+						/*
+						 * Said under the total rather than beside it, because it is part of that
+						 * total and not another one. What it answers is the question somebody asks
+						 * with a bank statement in front of them: why is less here than there.
+						 */
+						( row.voucher
+							? '<span class="muted on-own-line">' +
+								esc( App.t( 'panel.settlement.byVoucher', {
+									amount: App.money( row.voucher, row.currency ),
+								} ) ) + '</span>'
 							: '' ) + '</td>' +
 					'<td class="tnum">' + ( row.refunded
 						? esc( App.money( row.refunded, row.currency ) )

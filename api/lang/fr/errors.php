@@ -202,4 +202,8 @@ return [
     'addon_sold' => 'Ce qui a été vendu ne peut pas être retiré. Masquez-le plutôt.',
     'donation_negative' => 'Un don ne peut pas être moins que rien.',
     'donation_too_large' => "C'est plus que ce que ce paiement accepte. Parlez-en à l'organisateur.",
+    'voucher_spent' => 'Ce bon vient d’être épuisé.',
+    'voucher_code_taken' => 'Vous avez déjà un bon portant ce code.',
+    'no_address_for_credit' => 'Cette réservation n’a pas d’adresse e-mail : il n’y a personne à qui créditer l’avoir.',
+    'credit_needs_whole_booking' => 'Un avoir est émis pour une réservation entière. Remboursez les places, puis émettez un bon du montant dû.',
 ];

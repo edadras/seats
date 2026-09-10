@@ -61,6 +61,7 @@ return [
         'orders.view' => 'Vedere gli ordini e i loro importi',
         'orders.refund' => 'Rimborsare un ordine',
         'orders.sell' => 'Vendere al botteghino e omaggiare',
+        'vouchers.manage' => 'Emettere e annullare buoni',
         'checkins.view' => 'Vedere chi è entrato',
         'devices.manage' => 'Abbinare e revocare gli scanner',
         'sites.view' => 'Vedere i siti',
