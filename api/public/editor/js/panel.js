@@ -1722,6 +1722,11 @@
 	 * event was typed in — an organiser who has done Persian and German has not thereby broken
 	 * their French page.
 	 */
+	/** Every language this platform speaks, each under its own name for itself. */
+	App.locales = function () {
+		return i18n.locales || [];
+	};
+
 	/** A language's own name for itself, which is what somebody choosing one looks for. */
 	App.languageName = function ( code ) {
 		var found = ( i18n.locales || [] ).filter( function ( entry ) {

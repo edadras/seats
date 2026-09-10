@@ -10,7 +10,14 @@
      setting and not from a list of language codes copied into a template. A Persian buyer reading
      a German venue's site gets Persian text and a right-to-left page (ADR-0005 §3). --}}
 @php($locale = app()->getLocale())
-@php($languages = \App\Support\Locale\Locales::menu())
+{{-- Only the languages this site is actually published in.
+
+     The switcher used to offer all six the platform speaks, whatever the organiser had written —
+     so a visitor could choose Italian and be handed a Persian page with English furniture. --}}
+@php($languages = collect(\App\Support\Locale\Locales::menu())
+    ->whereIn('code', $site->publishedLocales())
+    ->values()
+    ->all())
 <html lang="{{ $locale }}" dir="{{ \App\Support\Locale\Locales::direction($locale) }}">
 <head>
     <meta charset="utf-8">
@@ -90,6 +97,9 @@
             </a>
         @endif
 
+        {{-- A site published in one language has nothing to switch between, and a control that
+             offers one choice is furniture that asks a question with one answer. --}}
+        @if (count($languages) > 1)
         <details class="langs">
             <summary class="langs__button" aria-label="{{ __('site.language') }}">
                 <svg class="langs__globe" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -113,6 +123,7 @@
                 @endforeach
             </div>
         </details>
+        @endif
     </div>
 </header>
 

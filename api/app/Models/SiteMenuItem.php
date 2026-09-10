@@ -18,11 +18,25 @@ class SiteMenuItem extends Model
     use BelongsToTenant, HasFactory, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'site_menu_id', 'parent_id', 'label', 'target_type',
+        'tenant_id', 'site_menu_id', 'parent_id', 'label', 'translations', 'target_type',
         'site_page_id', 'event_id', 'url', 'new_tab', 'position',
     ];
 
-    protected $casts = ['new_tab' => 'boolean'];
+    protected $casts = ['new_tab' => 'boolean', 'translations' => 'array'];
+
+    /**
+     * The label in the reader's language, or the one it was written in.
+     *
+     * The words in a header are the first thing a visitor reads and were the last thing on a
+     * hosted site that could not be said in their language.
+     */
+    public function labelFor(?string $locale = null): string
+    {
+        $locale = \App\Support\Locale\Locales::normalise($locale ?: app()->getLocale());
+        $value = $this->translations[$locale] ?? null;
+
+        return is_string($value) && '' !== trim($value) ? $value : (string) $this->label;
+    }
 
     public function menu()
     {

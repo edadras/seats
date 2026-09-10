@@ -233,4 +233,5 @@ return [
     'not_your_till' => 'That is somebody else’s till.',
     'buyer_limit_reached' => 'This event is limited to :limit tickets per person; you may take :count more.',
     'buyer_limit_used' => 'This event is limited to :limit per person, and you already have that many.',
+    'unknown_locale' => 'This platform does not speak that language.',
 ];

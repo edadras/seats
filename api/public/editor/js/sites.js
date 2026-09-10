@@ -238,6 +238,7 @@
 
 		[
 			[ 'design', 'palette', 'design' ],
+			[ 'languages', 'globe', 'languagesNav' ],
 			[ 'menus', 'list', 'menus' ],
 			[ 'domains', 'globe', 'addressNav' ],
 			[ 'signin', 'user', 'signinNav' ],
@@ -266,6 +267,7 @@
 	Sites.paintMain = function ( App ) {
 		switch ( Sites.state.tab ) {
 			case 'design': return Sites.paintDesign( App );
+			case 'languages': return Sites.paintLanguages( App );
 			case 'menus': return Sites.paintMenus( App );
 			case 'domains': return Sites.paintDomains( App );
 			case 'signin': return Sites.paintSignIn( App );
@@ -274,6 +276,63 @@
 		}
 	};
 
+
+	/**
+	 * Which languages this site is published in.
+	 *
+	 * The switcher in the site's footer used to offer all six the platform speaks, whatever the
+	 * organiser had written — so a visitor could choose Italian and be handed a Persian page with
+	 * English furniture. This is where that list is decided, and it is the only one offered.
+	 *
+	 * The site's own language is shown ticked and cannot be unticked: it is what every
+	 * untranslated word on the site is written in.
+	 */
+	Sites.paintLanguages = function ( App ) {
+		var site = Sites.state.site;
+		var chosen = site.locales || [];
+		var host = document.getElementById( 'site-main' );
+
+		host.innerHTML =
+			'<div class="site-pane">' +
+				'<div class="page-head page-head--inline"><div class="page-head__text">' +
+					'<h1>' + esc( App.t( 'panel.sites.languagesNav' ) ) + '</h1>' +
+					'<p class="page-head__desc">' + esc( App.t( 'panel.sites.languagesHint' ) ) + '</p>' +
+				'</div></div>' +
+				'<div class="perms" id="site-locales">' +
+					( App.locales() || [] ).map( function ( entry ) {
+						var own = entry.code === site.locale;
+
+						return '<label class="perms__row">' +
+							'<input type="checkbox" class="checkbox" data-locale="' + esc( entry.code ) + '"' +
+							( own || chosen.indexOf( entry.code ) > -1 ? ' checked' : '' ) +
+							( own ? ' disabled' : '' ) + '>' +
+							'<span>' + esc( entry.native ) +
+							( own ? ' · ' + esc( App.t( 'panel.sites.siteOwnLanguage' ) ) : '' ) +
+							'</span></label>';
+					} ).join( '' ) +
+				'</div>' +
+				'<div class="row"><button class="btn btn--primary" id="locales-save">' +
+					esc( App.t( 'panel.common.save' ) ) + '</button></div>' +
+			'</div>';
+
+		document.getElementById( 'locales-save' ).addEventListener( 'click', function () {
+			var wanted = [];
+
+			document.querySelectorAll( '[data-locale]' ).forEach( function ( box ) {
+				if ( box.checked ) {
+					wanted.push( box.dataset.locale );
+				}
+			} );
+
+			App.request( 'PATCH', '/sites/' + site.id, { locales: wanted } )
+				.then( function ( saved ) {
+					Sites.state.site.locales = saved.locales;
+					App.toast( App.t( 'panel.sites.languagesSaved' ) );
+					Sites.paintLanguages( App );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+	};
 
 	/* --------------------------------------------------------------------------- the page */
 
@@ -310,6 +369,18 @@
 					'<div class="page-head__actions">' +
 						'<button class="btn" id="page-settings">' + icon( 'settings', { size: 15 } ) +
 							esc( App.t( 'panel.common.settings' ) ) + '</button>' +
+						/*
+						 * The page in another language.
+						 *
+						 * Offered on every site, not only on multilingual ones: a venue that has
+						 * never written a second language is exactly the one that does not know it
+						 * could, and the modal is where they find out what it would involve.
+						 */
+						'<button class="btn" id="page-words">' + icon( 'globe', { size: 15 } ) +
+							esc( App.t( 'panel.sites.pageWords' ) ) +
+							( ( page.written_in || [] ).length
+								? ' · ' + esc( App.number( page.written_in.length ) )
+								: '' ) + '</button>' +
 						( 'home' === page.kind || 'event' === page.kind ? ''
 							: '<button class="btn btn--danger" id="page-delete">' + icon( 'trash', { size: 15 } ) + '</button>' ) +
 						'<button class="btn btn--primary" id="page-publish">' +
@@ -327,6 +398,10 @@
 
 		document.getElementById( 'page-settings' ).addEventListener( 'click', function () {
 			Sites.pageSettings( App );
+		} );
+
+		document.getElementById( 'page-words' ).addEventListener( 'click', function () {
+			Sites.translatePage( App );
 		} );
 
 		var remove = document.getElementById( 'page-delete' );
@@ -765,6 +840,166 @@
 				} );
 			},
 		} );
+	};
+
+	/**
+	 * A page's words in another language.
+	 *
+	 * One language on screen at a time, like the event translations screen, and for the same
+	 * reason: an organiser writes these a language at a time, usually with somebody else's help,
+	 * and a wall of boxes is a wall nobody finishes.
+	 *
+	 * The fields come from the block map the server sanitises with, so the screen cannot offer to
+	 * translate something the page does not have — and a field left blank falls back to the words
+	 * the page was written in rather than leaving a hole in it.
+	 */
+	Sites.translatePage = function ( App ) {
+		var page = Sites.currentPage();
+		var site = Sites.state.site;
+		var words = JSON.parse( JSON.stringify( page.translations || {} ) );
+
+		// The site's own language is what everything already is; the rest is what there is to do.
+		var others = ( site.locales || [] ).filter( function ( code ) { return code !== site.locale; } );
+
+		if ( ! others.length ) {
+			App.modal( {
+				title: App.t( 'panel.sites.pageWords' ),
+				cancelLabel: null,
+				doneLabel: App.t( 'panel.common.close' ),
+				body: '<p>' + esc( App.t( 'panel.sites.noOtherLanguages' ) ) + '</p>',
+			} );
+
+			return;
+		}
+
+		var showing = others[ 0 ];
+
+		/** Which fields of this page can carry another language, in the order they are read. */
+		var fields = function () {
+			var out = [
+				{ key: 'title', label: App.t( 'panel.common.title' ), original: page.title, rows: 0 },
+				{ key: 'seo_title', label: App.t( 'panel.sites.seoTitle' ), original: page.seo_title, rows: 0 },
+				{ key: 'seo_description', label: App.t( 'panel.sites.seoDescription' ),
+					original: page.seo_description, rows: 2 },
+			];
+
+			( page.blocks || [] ).forEach( function ( block ) {
+				var kind = ( Sites.state.meta.blocks || [] ).filter( function ( b ) {
+					return b.type === block.type;
+				} )[ 0 ];
+
+				( ( kind && kind.words ) || [] ).forEach( function ( field ) {
+					if ( ! String( block[ field ] || '' ).trim() ) {
+						return;
+					}
+
+					out.push( {
+						key: 'blocks.' + block.id + '.' + field,
+						label: ( kind.name || block.type ) + ' · ' + field,
+						original: block[ field ],
+						rows: String( block[ field ] ).length > 120 ? 4 : 0,
+					} );
+				} );
+			} );
+
+			return out;
+		};
+
+		var valueOf = function ( key ) {
+			var here = words[ showing ] || {};
+
+			if ( 0 !== key.indexOf( 'blocks.' ) ) {
+				return here[ key ] || '';
+			}
+
+			var parts = key.split( '.' );
+
+			return ( ( here.blocks || {} )[ parts[ 1 ] ] || {} )[ parts[ 2 ] ] || '';
+		};
+
+		var read = function () {
+			var here = { blocks: {} };
+
+			fields().forEach( function ( field ) {
+				var box = document.getElementById( 'pw-' + field.key.replace( /\./g, '-' ) );
+
+				if ( ! box || ! box.value.trim() ) {
+					return;
+				}
+
+				if ( 0 !== field.key.indexOf( 'blocks.' ) ) {
+					here[ field.key ] = box.value.trim();
+
+					return;
+				}
+
+				var parts = field.key.split( '.' );
+
+				here.blocks[ parts[ 1 ] ] = here.blocks[ parts[ 1 ] ] || {};
+				here.blocks[ parts[ 1 ] ][ parts[ 2 ] ] = box.value.trim();
+			} );
+
+			words[ showing ] = here;
+		};
+
+		var paint = function () {
+			document.getElementById( 'pw-fields' ).innerHTML = fields().map( function ( field ) {
+				var id = 'pw-' + field.key.replace( /\./g, '-' );
+
+				return '<div class="field">' +
+					'<label class="field__label" for="' + id + '">' + esc( field.label ) + '</label>' +
+					( field.rows
+						? '<textarea class="input" id="' + id + '" rows="' + field.rows + '">' +
+							esc( valueOf( field.key ) ) + '</textarea>'
+						: '<input class="input" id="' + id + '" value="' + esc( valueOf( field.key ) ) + '">' ) +
+					// The words it falls back to, shown beside the box rather than in it: a
+					// pre-filled original is a translation somebody saves without reading.
+					'<span class="field__hint">' + esc( field.original || '' ) + '</span>' +
+				'</div>';
+			} ).join( '' );
+		};
+
+		App.modal( {
+			title: App.t( 'panel.sites.pageWordsTitle', { name: page.title } ),
+			submitLabel: App.t( 'panel.common.save' ),
+			body:
+				'<div class="stack">' +
+					'<p class="hint">' + esc( App.t( 'panel.sites.pageWordsHint' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="pw-locale">' +
+						esc( App.t( 'panel.events.language' ) ) + '</label>' +
+						'<select class="select" id="pw-locale">' +
+							others.map( function ( code ) {
+								return '<option value="' + esc( code ) + '">' +
+									esc( App.languageName( code ) ) +
+									( words[ code ] ? ' ✓' : '' ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+					'<div id="pw-fields"></div>' +
+				'</div>',
+			onSubmit: function () {
+				read();
+
+				// Sent one language at a time, which is how it is written and how it is read back.
+				return App.request(
+					'PUT',
+					'/sites/' + site.id + '/pages/' + page.id + '/translations',
+					Object.assign( { locale: showing }, words[ showing ] )
+				).then( function ( saved ) {
+					page.translations = saved.translations;
+					page.written_in = saved.written_in;
+					App.toast( App.t( 'panel.sites.pageWordsSaved' ) );
+					Sites.paint( App );
+				} );
+			},
+		} );
+
+		document.getElementById( 'pw-locale' ).addEventListener( 'change', function () {
+			read();
+			showing = this.value;
+			paint();
+		} );
+
+		paint();
 	};
 
 	Sites.pageSettings = function ( App ) {

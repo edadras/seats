@@ -421,6 +421,8 @@ Route::prefix('v1')->group(function () {
 
         Route::post('sites/{site}/pages', [SiteController::class, 'storePage']);
         Route::patch('sites/{site}/pages/{page}', [SiteController::class, 'updatePage']);
+        // A page's words in another language: an overlay on the page, never a second copy of it.
+        Route::put('sites/{site}/pages/{page}/translations', [SiteController::class, 'translatePage']);
         Route::post('sites/{site}/pages/{page}/publish', [SiteController::class, 'publishPage']);
         Route::delete('sites/{site}/pages/{page}', [SiteController::class, 'destroyPage']);
 

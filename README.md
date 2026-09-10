@@ -105,6 +105,16 @@ A seat is the start of it, not the end. Around the map:
   looked → basket → checkout → bought. Everything but the looking is derived from rows that already
   exist; the looking is counted per event, per day, per source, and never per visitor, so there is
   no cookie, no identifier and nothing to erase under a subject access request.
+- **A site written in more than one language** — the events on a hosted site have been translatable
+  for a while and the platform's own chrome speaks six languages; what stayed in one language was
+  everything the organiser wrote themselves, which on a Persian venue's site is the half a visitor
+  actually reads. A translation is an *overlay* on the page rather than a second copy of it — a
+  title, the SEO lines, and the prose of individual blocks keyed by block id — because a copied
+  block tree drifts the moment somebody adds a section to one language and not the other. A field
+  nobody translated falls back to the original, field by field, so a half-translated page has some
+  of the original language on it rather than holes. And the switcher offers the languages the site
+  is actually published in: it used to list all six whatever had been written, so a visitor could
+  choose Italian and be handed a Persian page with English furniture.
 - **Purchase limits, and a bot defence that costs a buyer nothing** — a cap per basket stops
   nothing, because four at a time six times over is twenty-four. The limit that means anything is
   counted across everything one address already holds for that night, refunded tickets excluded, and
@@ -312,7 +322,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 677 unit, feature and module tests
+./vendor/bin/phpunit                        # 685 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -338,7 +348,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-five, in order
+./smoke.sh                    # all thirty-six, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -450,6 +460,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A per-person limit counts across baskets, and forgets refunded tickets | `PurchaseLimitTest` |
 | The limit is applied before the money and never after it | `PurchaseLimitTest` |
 | A field only a script fills, and a form sent faster than a person fills one | `PurchaseLimitTest` |
+| A page is read in the visitor's language, field by field | `SitePageTranslationTest` |
+| A translation cannot invent a block, a field, or a second page shape | `SitePageTranslationTest` |
+| The switcher offers what the site is written in, and the site's own language always | `SitePageTranslationTest` |
 
 ## Installing the plugin
 

@@ -23,6 +23,27 @@ class Blocks
         'faq', 'venueMap', 'divider', 'html',
     ];
 
+    /**
+     * Which fields of each block are prose, and therefore worth another language.
+     *
+     * The map is here rather than in the panel because the panel would then hold a second opinion
+     * about the shape of a block, and the two would disagree the first time one changed.
+     *
+     * `buttons` and the `faq` items are deliberately absent: they are lists, and an overlay keyed
+     * by field cannot address a list item without inventing a shape for it. A venue that needs its
+     * FAQ in two languages needs two FAQ blocks, which is honest about what is happening.
+     */
+    public const WORDS = [
+        'hero' => ['title', 'subtitle'],
+        'heading' => ['text'],
+        'richText' => ['text'],
+        'image' => ['alt', 'caption'],
+        'eventList' => ['title'],
+        'faq' => ['title'],
+        'venueMap' => ['title', 'address', 'directions'],
+        'html' => ['html'],
+    ];
+
     /** Tags the `html` block keeps. Everything else, including every attribute, is stripped. */
     private const ALLOWED_TAGS = '<p><br><strong><em><b><i><u><ul><ol><li><h2><h3><h4><blockquote><a><table><thead><tbody><tr><th><td>';
 
@@ -48,6 +69,9 @@ class Blocks
                 'type' => $type,
                 'name' => __('site.blocks.'.$type),
                 'icon' => $icons[$type],
+                // The fields worth writing in another language, so the translation screen builds
+                // itself from the same map the sanitiser uses rather than from a copy of it.
+                'words' => self::WORDS[$type] ?? [],
             ],
             self::TYPES
         );

@@ -45,9 +45,9 @@ class SitePageController extends Controller
             throw new NotFoundHttpException('No such page.');
         }
 
-        return $this->render($site, $page, $page->liveBlocks(), [
-            'title' => $page->seo_title ?: ($page->title.' · '.$site->name),
-            'description' => $page->seo_description,
+        return $this->render($site, $page, $page->blocksFor(), [
+            'title' => $page->seoTitleFor() ?: ($page->titleFor().' · '.$site->name),
+            'description' => $page->seoDescriptionFor(),
             'canonical' => $site->url($page->path()),
         ]);
     }
@@ -80,7 +80,7 @@ class SitePageController extends Controller
         $page = SitePage::where('site_id', $site->id)->where('kind', 'event')->first();
 
         $blocks = $page && $page->isPublished()
-            ? $page->liveBlocks()
+            ? $page->blocksFor()
             : [['id' => 'auto', 'type' => 'eventDetail', 'event_public_id' => '']];
 
         return $this->render($site, $page, $blocks, [

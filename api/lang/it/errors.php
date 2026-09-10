@@ -233,4 +233,5 @@ return [
     'not_your_till' => 'Quella è la cassa di qualcun altro.',
     'buyer_limit_reached' => 'Questo evento è limitato a :limit biglietti a persona; puoi prenderne altri :count.',
     'buyer_limit_used' => 'Questo evento è limitato a :limit a persona, e ne hai già altrettanti.',
+    'unknown_locale' => 'Questa piattaforma non parla quella lingua.',
 ];

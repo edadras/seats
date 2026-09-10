@@ -6230,6 +6230,59 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /sites/{site}/pages/{page}/translations:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/PageId"
+    put:
+      operationId: translateSitePage
+      tags: [Sites]
+      summary: A page's words in another language
+      description: |
+        Requires `sites.manage`. One locale per call, sent whole: a patch per field across a set of
+        translations is where "the Persian page still says last season" comes from.
+
+        A translation is an **overlay**, never a second copy of the page. Only prose fields the
+        block actually has are kept — the map lives with the sanitiser, so a translation cannot set
+        a colour, a height or an event id in one language and not another, and a page cannot end up
+        with two different shapes in two languages. Nested lists (a `buttons` block, the items of an
+        `faq`) are deliberately not translatable: an overlay keyed by field cannot address a list
+        item without inventing a shape for it, and a venue that needs its FAQ in two languages needs
+        two FAQ blocks.
+
+        A field left blank falls back to the original, field by field rather than page by page: a
+        half-translated page is a page with some of the original language on it, which is what a
+        reader would rather have than a page with holes in it. A locale whose fields are all blank
+        is removed rather than stored as a row of nothing, so "is this page written in Persian" stays
+        answerable by looking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locale]
+              properties:
+                locale: { type: string, maxLength: 12 }
+                title: { type: [string, "null"], maxLength: 160 }
+                seo_title: { type: [string, "null"], maxLength: 160 }
+                seo_description: { type: [string, "null"], maxLength: 320 }
+                blocks:
+                  type: object
+                  description: Block id → field → the words, for prose fields that block has.
+                  additionalProperties:
+                    type: object
+                    additionalProperties: { type: [string, "null"] }
+      responses:
+        "200":
+          description: The page, with what is now written in which languages
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SitePage" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /sites/{site}/pages/{page}/publish:
     parameters:
       - $ref: "#/components/parameters/SiteId"
@@ -6280,6 +6333,13 @@ paths:
                     required: [label, target_type]
                     properties:
                       label: { type: string, maxLength: 60 }
+                      translations:
+                        type: object
+                        description: >-
+                          The same label in the site's other languages, keyed by locale. The words
+                          in a header are the first thing a visitor reads, and were the last thing
+                          on a hosted site that could not be said in their language.
+                        additionalProperties: { type: [string, "null"] }
                       target_type: { type: string, enum: [page, event, url] }
                       site_page_id: { type: [string, "null"], format: uuid }
                       event_id: { type: [string, "null"], format: uuid }
@@ -8886,7 +8946,18 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         theme_key: { type: string }
-        locale: { type: string }
+        locale:
+          type: string
+          description: The language the site itself is written in — what every untranslated word on it is.
+        locales:
+          type: array
+          description: >-
+            The languages this site is published in, its own always among them. Only these are
+            offered in the switcher: it used to list all six the platform speaks whatever the
+            organiser had written, so a visitor could choose Italian and be handed a Persian page
+            with English furniture. A language the platform does not speak is dropped rather than
+            stored — the page would have translated words and untranslated buttons.
+          items: { type: string }
         timezone: { type: string }
         currency: { type: string }
         brand: { $ref: "#/components/schemas/SiteBrand" }
@@ -8927,6 +8998,18 @@ components:
           items: { $ref: "#/components/schemas/Block" }
         seo_title: { type: [string, "null"] }
         seo_description: { type: [string, "null"] }
+        translations:
+          type: object
+          description: >-
+            This page's words in other languages, keyed by locale. An overlay on the page rather
+            than a second copy of it — a title, the two SEO lines, and the text of individual
+            blocks keyed by block id. A copied block tree drifts the moment somebody adds a section
+            to one language and not the other, and nothing in an editor can tell them so.
+          additionalProperties: true
+        written_in:
+          type: array
+          description: Which languages this page has actually been written in.
+          items: { type: string }
         position: { type: integer }
         published_at: { type: [string, "null"], format: date-time }
         has_unpublished_changes: { type: boolean }

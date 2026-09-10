@@ -82,6 +82,10 @@ class SiteController extends Controller
             // own themes, so another account's theme cannot be worn by guessing an id.
             'site_theme_id' => ['sometimes', 'nullable', 'uuid'],
             'locale' => ['sometimes', 'string', 'max:12'],
+            // Which languages this site is published in. The site's own is added back whatever
+            // arrives — it is what every untranslated word on the site is written in.
+            'locales' => ['sometimes', 'array', 'max:12'],
+            'locales.*' => ['string', 'max:12'],
             'timezone' => ['sometimes', 'string', 'timezone'],
             'currency' => ['sometimes', 'string', 'size:3'],
             'status' => ['sometimes', 'in:draft,live'],
@@ -137,6 +141,23 @@ class SiteController extends Controller
                 'no_verified_domain',
                 'Add and verify a domain before putting the site live — otherwise there is no address to visit.'
             );
+        }
+
+        if (array_key_exists('locales', $data)) {
+            /*
+             * Only languages this platform actually speaks, and the site's own always among them.
+             *
+             * A site published in a language whose chrome does not exist would be a page with
+             * translated words and English buttons; and one that dropped its own language from the
+             * list would hide the version every untranslated word is written in.
+             */
+            $own = \App\Support\Locale\Locales::normalise($data['locale'] ?? $site->locale)
+                ?? \App\Support\Locale\Locales::FALLBACK;
+
+            $data['locales'] = array_values(array_unique(array_merge([$own], array_filter(array_map(
+                fn ($code) => \App\Support\Locale\Locales::normalise($code),
+                $data['locales'],
+            )))));
         }
 
         $site->fill($data);
@@ -216,6 +237,108 @@ class SiteController extends Controller
         return response()->json($this->presentPage($page->fresh()));
     }
 
+    /**
+     * A page's words in another language.
+     *
+     * An overlay, never a second copy of the page: a title, the two SEO lines, and the text of
+     * individual blocks keyed by block id. A copied block tree drifts the moment somebody adds a
+     * section to one language and not the other, and nothing in an editor can tell them so.
+     *
+     * Sent whole per locale, like the prices and the channel quotas: a patch per field across a
+     * set of translations is where "the Persian page still says last season" comes from.
+     */
+    public function translatePage(Request $request, Site $site, SitePage $page)
+    {
+        $this->authorize($request, 'sites.manage');
+        $this->assertBelongs($site, $page->site_id);
+
+        $data = $request->validate([
+            'locale' => ['required', 'string', 'max:12'],
+            'title' => ['sometimes', 'nullable', 'string', 'max:160'],
+            'seo_title' => ['sometimes', 'nullable', 'string', 'max:160'],
+            'seo_description' => ['sometimes', 'nullable', 'string', 'max:320'],
+            'blocks' => ['sometimes', 'array', 'max:200'],
+            'blocks.*' => ['array', 'max:40'],
+            'blocks.*.*' => ['nullable', 'string', 'max:20000'],
+        ]);
+
+        $locale = \App\Support\Locale\Locales::normalise($data['locale']);
+
+        if (! $locale) {
+            throw ApiException::unprocessable('unknown_locale', 'This platform does not speak that language.');
+        }
+
+        $translations = $page->translations ?? [];
+
+        $written = array_filter([
+            'title' => trim((string) ($data['title'] ?? '')) ?: null,
+            'seo_title' => trim((string) ($data['seo_title'] ?? '')) ?: null,
+            'seo_description' => trim((string) ($data['seo_description'] ?? '')) ?: null,
+            // Empty strings are dropped rather than stored: a blank translation is not a
+            // translation, and storing it would blank the original on the way out.
+            'blocks' => $this->translatedBlocks($page, $data['blocks'] ?? []),
+        ], fn ($value) => null !== $value && [] !== $value);
+
+        if ([] === $written) {
+            unset($translations[$locale]);
+        } else {
+            $translations[$locale] = $written;
+        }
+
+        $page->forceFill(['translations' => $translations])->save();
+
+        $this->audit->record('site.page_translated', $page, [
+            'locale' => $locale,
+            'written' => [] !== $written,
+        ]);
+
+        return response()->json($this->presentPage($page->fresh()));
+    }
+
+    /**
+     * Keep only text that overlays a field the live page actually has.
+     *
+     * A translation cannot invent a block or a field: that is what makes it an overlay rather than
+     * a second editor, and it is why a page cannot end up with two different shapes.
+     *
+     * @param  array<string, array<string, string|null>>  $sent
+     * @return array<string, array<string, string>>
+     */
+    private function translatedBlocks(SitePage $page, array $sent): array
+    {
+        $shape = [];
+
+        foreach ($page->draft_blocks ?? [] as $block) {
+            $shape[$block['id'] ?? ''] = $block;
+        }
+
+        $kept = [];
+
+        foreach ($sent as $id => $fields) {
+            $block = $shape[$id] ?? null;
+
+            if (! is_array($block) || ! is_array($fields)) {
+                continue;
+            }
+
+            $prose = \App\Domain\Sites\Blocks::WORDS[$block['type'] ?? ''] ?? [];
+
+            foreach ($fields as $field => $value) {
+                // Prose only, and only prose this kind of block has. A translation is not a way to
+                // set a colour, a height or an event id in one language and not another.
+                if (! in_array($field, $prose, true) || ! array_key_exists($field, $block)) {
+                    continue;
+                }
+
+                if (is_string($value) && '' !== trim($value)) {
+                    $kept[$id][$field] = $value;
+                }
+            }
+        }
+
+        return $kept;
+    }
+
     /** Publishing copies the draft over the live copy — the same discipline the seat maps have. */
     public function publishPage(Request $request, Site $site, SitePage $page)
     {
@@ -260,6 +383,11 @@ class SiteController extends Controller
         $data = $request->validate([
             'items' => ['present', 'array', 'max:'.config('seatmap.sites.limits.max_menu_items', 60)],
             'items.*.label' => ['required', 'string', 'max:60'],
+            // The same label in the site's other languages, keyed by locale. The words in a
+            // header are the first thing a visitor reads, and were the last thing on a hosted
+            // site that could not be said in their own language.
+            'items.*.translations' => ['sometimes', 'array', 'max:12'],
+            'items.*.translations.*' => ['nullable', 'string', 'max:60'],
             'items.*.target_type' => ['required', 'in:page,event,url'],
             'items.*.site_page_id' => ['nullable', 'uuid'],
             'items.*.event_id' => ['nullable', 'uuid'],
@@ -282,6 +410,7 @@ class SiteController extends Controller
                 SiteMenuItem::create([
                     'site_menu_id' => $menu->id,
                     'label' => $item['label'],
+                    'translations' => $this->menuWords($item['translations'] ?? []),
                     'target_type' => $item['target_type'],
                     'new_tab' => (bool) ($item['new_tab'] ?? false),
                     'position' => $position,
@@ -290,6 +419,27 @@ class SiteController extends Controller
         });
 
         return response()->json($this->presentMenu($menu->fresh('items')));
+    }
+
+    /**
+     * Menu labels in other languages: only ones this platform speaks, and only ones with words in.
+     *
+     * @param  array<string, string|null>  $sent
+     * @return array<string, string>
+     */
+    private function menuWords(array $sent): array
+    {
+        $kept = [];
+
+        foreach ($sent as $locale => $label) {
+            $code = \App\Support\Locale\Locales::normalise((string) $locale);
+
+            if ($code && is_string($label) && '' !== trim($label)) {
+                $kept[$code] = trim($label);
+            }
+        }
+
+        return $kept;
     }
 
     /* ---------------------------------------------------------------------------- domains */
@@ -489,6 +639,9 @@ class SiteController extends Controller
             'theme_key' => $site->theme_key,
             'site_theme_id' => $site->site_theme_id,
             'locale' => $site->locale,
+            // The languages this site is published in, its own always among them. Only these are
+            // offered in the switcher: a menu of six that means one is a menu that misleads.
+            'locales' => $site->publishedLocales(),
             'timezone' => $site->timezone,
             'currency' => $site->currency,
             'invoices_enabled' => (bool) $site->invoices_enabled,
@@ -526,6 +679,10 @@ class SiteController extends Controller
             'seo_title' => $page->seo_title,
             'seo_description' => $page->seo_description,
             'position' => $page->position,
+            // What has been written in another language, and which ones. The overlay itself comes
+            // back so the editor can show it beside the original rather than guessing.
+            'translations' => $page->translations ?? [],
+            'written_in' => $page->writtenIn(),
             'published_at' => $page->published_at?->toIso8601String(),
             'has_unpublished_changes' => $page->hasUnpublishedChanges(),
         ];
@@ -539,6 +696,7 @@ class SiteController extends Controller
             'items' => $menu->items->map(fn (SiteMenuItem $item) => [
                 'id' => $item->id,
                 'label' => $item->label,
+                'translations' => $item->translations ?? [],
                 'target_type' => $item->target_type,
                 'site_page_id' => $item->site_page_id,
                 'event_id' => $item->event_id,

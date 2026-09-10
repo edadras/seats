@@ -19,7 +19,7 @@ class Site extends Model
     use BelongsToTenant, HasFactory, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'timezone',
+        'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'locales', 'timezone',
         'currency', 'brand', 'status', 'google_signin', 'published_at',
         'invoices_enabled', 'legal_name', 'tax_number', 'billing_address',
         'invoice_footer', 'invoice_prefix',
@@ -27,10 +27,33 @@ class Site extends Model
 
     protected $casts = [
         'brand' => 'array',
+        'locales' => 'array',
         'google_signin' => 'boolean',
         'published_at' => 'datetime',
-            'invoices_enabled' => 'boolean',
+        'invoices_enabled' => 'boolean',
     ];
+
+    /**
+     * The languages this site is published in, its own always among them.
+     *
+     * The switcher in the footer used to offer all six the platform speaks, whatever the organiser
+     * had actually written — so a visitor could choose Italian and be handed a Persian page with
+     * English furniture. This is the honest list, and the only one offered.
+     *
+     * @return list<string>
+     */
+    public function publishedLocales(): array
+    {
+        $own = \App\Support\Locale\Locales::normalise($this->locale) ?? \App\Support\Locale\Locales::FALLBACK;
+
+        $offered = array_values(array_filter(array_map(
+            fn ($code) => \App\Support\Locale\Locales::normalise($code),
+            (array) ($this->locales ?? []),
+        )));
+
+        // The site's own language is not optional: it is what every untranslated word is in.
+        return array_values(array_unique(array_merge([$own], $offered)));
+    }
 
     /**
      * The theme this organiser wrote, when the site wears one.
@@ -145,7 +168,9 @@ class Site extends Model
                     default => $item->url,
                 };
 
-                return $href ? ['label' => $item->label, 'href' => $href, 'new_tab' => $item->new_tab] : null;
+                return $href
+                    ? ['label' => $item->labelFor(), 'href' => $href, 'new_tab' => $item->new_tab]
+                    : null;
             })
             ->filter()
             ->values()
