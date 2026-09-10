@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\V1\Management\ShiftController;
 use App\Http\Controllers\Api\V1\Management\RefundRequestController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
+use App\Http\Controllers\Api\V1\Management\ResaleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
@@ -286,6 +287,17 @@ Route::prefix('v1')->group(function () {
         // Who is expected tonight. `export` before nothing, because it is a verb and not an id.
         Route::get('events/{event}/door-list', [DoorListController::class, 'index']);
         Route::get('events/{event}/door-list/export', [DoorListController::class, 'export']);
+
+        /*
+         * Seats buyers have offered back to the public.
+         *
+         * A read and one write, and the write only ever takes a listing *down*. Nothing here puts
+         * a seat up for resale: that is the ticket holder's decision about their own ticket, and
+         * an endpoint that let staff list somebody else's seat would be one for selling a
+         * customer's property without asking them.
+         */
+        Route::get('events/{event}/resale', [ResaleController::class, 'index']);
+        Route::delete('events/{event}/resale/{listing}', [ResaleController::class, 'withdraw']);
 
         // ---- The waiting list -----------------------------------------------------------------
         Route::get('events/{event}/waiting-list', [ManagementWaitingList::class, 'index']);

@@ -442,6 +442,14 @@ class EventController extends Controller
             // How long a checkout form must have been on screen before it may be sent. A person
             // takes fifteen seconds to type their name and card; a script takes none.
             'checkout_min_seconds' => ['sometimes', 'integer', 'min:0', 'max:120'],
+            // The two other things a buyer may do with a ticket they cannot use. Both off by
+            // default: a venue that has never thought about either should not discover it has
+            // been offering them.
+            'exchanges' => ['sometimes', 'in:never,until,always'],
+            'exchange_window_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
+            'exchange_fee_amount' => ['sometimes', 'integer', 'min:0'],
+            'resale' => ['sometimes', 'boolean'],
+            'resale_pays' => ['sometimes', 'in:credit,refund'],
             'refund_policy' => ['sometimes', 'in:release,hold_back'],
             // What the *seat* does on a refund is `refund_policy`; these three are whether the
             // buyer may ask for one at all, and are the terms shown on their own page.
@@ -532,6 +540,11 @@ class EventController extends Controller
             'max_seats_per_order' => $event->max_seats_per_order,
             'max_per_buyer' => $event->max_per_buyer,
             'checkout_min_seconds' => (int) $event->checkout_min_seconds,
+            'exchanges' => $event->exchanges,
+            'exchange_window_hours' => (int) $event->exchange_window_hours,
+            'exchange_fee_amount' => (int) $event->exchange_fee_amount,
+            'resale' => (bool) $event->resale,
+            'resale_pays' => $event->resale_pays,
             'refund_policy' => $event->refund_policy,
             'refunds' => $event->refunds,
             'refund_window_hours' => (int) $event->refund_window_hours,

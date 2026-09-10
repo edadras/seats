@@ -3976,6 +3976,75 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/resale:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getEventResaleListings
+      tags: [Events]
+      summary: Seats buyers have offered back to the public
+      description: |
+        Requires `orders.view`. A listing is a buyer saying "somebody else may have my seat, at what
+        I paid for it" — and while it is open the seat is *offered* without being taken away: the
+        allocation stays exactly where it is, and the swap happens in one transaction at the moment
+        another buyer pays.
+
+        There is no endpoint that creates a listing on somebody's behalf, and there will not be one:
+        listing a ticket is the ticket holder's decision about their own property. Nor is there a
+        price on it. A seller who could name their own price would make this a touting platform with
+        better paperwork.
+      responses:
+        "200":
+          description: Every listing for this night, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  open: { type: integer, description: "How many are on offer right now." }
+                  sold: { type: integer, description: "How many have changed hands." }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ResaleListing" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /events/{event}/resale/{listing}:
+    parameters:
+      - { $ref: "#/components/parameters/EventId" }
+      - name: listing
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: The listing to take off sale.
+    delete:
+      operationId: withdrawResaleListing
+      tags: [Events]
+      summary: Take a listing back off sale
+      description: |
+        Requires `orders.refund`, which is where undoing something a buyer did to their own booking
+        belongs — usually because they have rung up to say they can come after all.
+
+        Nothing is given back and nothing is taken away: the seat was the seller's the whole time it
+        sat there, so this only stops it being offered. A listing that has already sold cannot be
+        withdrawn, because the seat now belongs to somebody else — and neither can one somebody has
+        in a live basket, because taking it back mid-checkout would leave that buyer paying for a
+        seat the database will refuse them. Baskets last minutes; the answer is to wait for it.
+      responses:
+        "200":
+          description: The listing, now withdrawn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      state: { type: string, enum: [withdrawn] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /events/{event}/queue:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -6895,6 +6964,34 @@ components:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
 
+    ResaleListing:
+      type: object
+      description: >-
+        One seat offered back to the public at what it cost. Face value always: there is no field
+        for a price here, and a listing moves no inventory — the seat is merely offered until
+        somebody else pays for it.
+      properties:
+        id: { type: string, format: uuid }
+        state:
+          type: string
+          enum: [open, sold, withdrawn]
+          description: "`open` is on offer, `sold` has changed hands, `withdrawn` was taken down."
+        seat:
+          type: string
+          description: "Where it is, as a person would say it — section, row and seat."
+        seller:
+          type: string
+          description: "The seller's name where they gave one, and their address where they did not."
+        amount:
+          type: integer
+          description: "What they paid, in minor units. What the next buyer pays, to the penny."
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        listed_at: { type: string, format: date-time }
+        settled_at:
+          type: [string, "null"]
+          format: date-time
+          description: "When it sold or was taken down. Null while it is still on offer."
+
     ChannelQuota:
       type: object
       description: >-
@@ -8380,6 +8477,35 @@ components:
             Whether the booking fee stays with the organiser. An organiser who paid to take the
             money does not get that back when they return it, and the buyer is told before they
             click rather than afterwards.
+        exchanges:
+          type: string
+          enum: [never, until, always]
+          description: >-
+            Whether a buyer may move this booking to another night, in the same three words the
+            refunds use. `never` is the default. An exchange is a refund taken as credit and spent
+            in the same breath: the new seats are held first, and the old ones are only given back
+            at the checkout.
+        exchange_window_hours:
+          type: integer
+          description: "How many hours before the doors, when `exchanges` is `until`."
+        exchange_fee_amount:
+          type: integer
+          description: >-
+            Kept for the work of it, in minor units, and taken out of what the old seats are worth
+            rather than charged separately — so moving from a €30 seat to a €30 seat with a €3 fee
+            costs €3, not an invoice for €30 and a refund for €27.
+        resale:
+          type: boolean
+          description: >-
+            Whether a buyer may offer a seat they cannot use back to the public, at face value.
+            While a listing is open the seat is offered without being taken away: the seller keeps
+            it until somebody else actually pays.
+        resale_pays:
+          type: string
+          enum: [credit, refund]
+          description: >-
+            How a seller is paid when their seat sells. `credit` by default, because a refund to a
+            card charged eleven months ago fails often enough that promising it is dishonest.
 
     EventInput:
       type: object
@@ -8401,6 +8527,11 @@ components:
         refunds: { type: string, enum: [never, until, always] }
         refund_window_hours: { type: integer, minimum: 0, maximum: 8760 }
         refund_keeps_fee: { type: boolean }
+        exchanges: { type: string, enum: [never, until, always] }
+        exchange_window_hours: { type: integer, minimum: 0, maximum: 8760 }
+        exchange_fee_amount: { type: integer, minimum: 0 }
+        resale: { type: boolean }
+        resale_pays: { type: string, enum: [credit, refund] }
 
     CustomTheme:
       type: object

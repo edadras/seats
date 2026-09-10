@@ -394,4 +394,22 @@ return [
         'save' => 'Speichern',
         'saved' => 'Gespeichert. Vielen Dank.',
     ],
+    'resale' => [
+        'title' => 'Zurückgeben',
+        'listed' => '{1}Ein Platz ist wieder im Angebot. Er bleibt Ihrer, bis ihn jemand nimmt.|[2,*]:count Plätze sind wieder im Angebot. Sie bleiben Ihre, bis sie jemand nimmt.',
+        'refused' => 'Diese Plätze können nicht zurück in den Verkauf.',
+        'withdrawn' => 'Aus dem Verkauf genommen. Sie gehörten Ihnen die ganze Zeit.',
+        'onSale' => 'Wieder im Verkauf',
+        'sold' => 'Weiterverkauft. Ihr Guthaben liegt auf Ihrem Konto.',
+        'offer' => 'Diese Plätze zurückgeben',
+        'stop' => 'Aus dem Verkauf nehmen',
+        'hint' => 'Sie gehen zu dem Preis zurück, den Sie bezahlt haben. Bis jemand kauft, ändert sich nichts — bis dahin gehören die Plätze Ihnen.',
+    ],
+    'exchange' => [
+        'title' => 'Auf einen anderen Abend umbuchen',
+        'move' => 'Diese Plätze umbuchen',
+        'chooseSeats' => 'Wählen Sie die Plätze, die Sie stattdessen möchten. Was Sie bezahlt haben, wird von der neuen Buchung abgezogen.',
+        'closed' => 'Diese Buchung kann nicht mehr umgebucht werden.',
+        'sameName' => 'Eine Umbuchung muss von der Person bezahlt werden, die die Karte hat — nehmen Sie also dieselbe E-Mail-Adresse.',
+    ],
 ];

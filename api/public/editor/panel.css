@@ -1343,6 +1343,10 @@
 	flex: none;
 	font-size: var(--text-xs);
 	color: var(--text-secondary);
+	/* So the visually hidden input below stays *inside* this label rather than being positioned
+	   against whatever distant ancestor happens to be positioned — which, in a long scrolling
+	   dialog, put the real control somewhere the page had scrolled away from. */
+	position: relative;
 }
 
 .switch input {

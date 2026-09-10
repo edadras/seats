@@ -142,6 +142,21 @@ A seat is the start of it, not the end. Around the map:
   audit asks a year later is not what the answer is but how you know — and an erasure deletes it
   outright rather than redacting it, since keeping "this person once said no" would be keeping a
   record of somebody in order to honour their wish not to be on one.
+- **Exchange and resale** — the two answers to "I cannot come" that are better for everybody than
+  a refund. An exchange is a move to another night, and the order of it is the whole feature: the
+  new seats are held first, the old ones are given back only at the checkout, and what they were
+  worth arrives as credit that pays for the new booking in the same breath — so nobody is ever left
+  holding neither, which is exactly what "we will refund you, then buy again" costs a buyer. A fee
+  may be kept for the work of it, and it comes out of what the old seats were worth rather than
+  being charged separately. Resale is offering a seat back to the public at **face value**, and
+  there is no field for a price anywhere in it, because a seller who could name their own would
+  make this a touting platform with better paperwork. A listing moves no inventory: the seat is
+  merely offered while it stands, so a buyer who lists a ticket and then finds they can come after
+  all has lost nothing, and the swap — release, void, pay the seller, allocate — happens in one
+  transaction at the moment somebody else pays. The seller is paid in credit by default, because a
+  refund to a card charged eleven months ago fails often enough that promising it is dishonest. The
+  box office can take a listing down for somebody who rang up, and has no way at all to put one up:
+  listing a ticket is the ticket holder's decision about their own property.
 - **Saved audiences** — "everybody who came last season and has not booked this one", which is the
   audience an organiser actually wants and is two clauses rather than one. Named and saved, so it
   can be asked again next season: bought any of these nights and none of those, in these categories,
@@ -332,7 +347,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 695 unit, feature and module tests
+./vendor/bin/phpunit                        # 716 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -358,7 +373,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-seven, in order
+./smoke.sh                    # all thirty-eight, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -477,6 +492,14 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The stored answer is the log folded, and can be proved so | `MarketingConsentTest` |
 | A translation cannot invent a block, a field, or a second page shape | `SitePageTranslationTest` |
 | The switcher offers what the site is written in, and the site's own language always | `SitePageTranslationTest` |
+| A listed seat is offered to the public without leaving its owner | `ResaleTest` |
+| The seller is paid at face value the moment somebody else pays | `ResaleTest` |
+| Staff may take a listing down and have no way at all to put one up | `ResaleTest` |
+| A seat cannot be taken off sale while somebody is at the checkout with it | `ResaleTest` |
+| Walking in on a listed ticket takes the seat off the public map | `ResaleTest` |
+| The old seats are still theirs until the new ones are paid for | `ExchangeTest` |
+| An exchange fee comes out of what the old seats were worth | `ExchangeTest` |
+| Somebody else's reference is not a way to spend their exchange | `ExchangeTest` |
 
 ## Installing the plugin
 

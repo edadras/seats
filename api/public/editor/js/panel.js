@@ -1266,6 +1266,11 @@
 							: '' ) +
 						actionButton( 'pace', event.id, self.t( 'panel.pace.title' ), 'chart' ) +
 						actionButton( 'quotas', event.id, self.t( 'panel.quotas.title' ), 'plug' ) +
+						// Only where the organiser takes tickets back. Elsewhere the screen would
+						// read "nobody has offered anything", for ever.
+						( event.resale
+							? actionButton( 'resale', event.id, self.t( 'panel.resale.title' ), 'tag' )
+							: '' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
 						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
 						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
@@ -1376,6 +1381,13 @@
 				self.main().querySelectorAll( '[data-quotas]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
 						self.showQuotas( button.dataset.quotas,
+							button.closest( 'tr' ).querySelector( '.table__primary' ).textContent );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-resale]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						self.showResale( button.dataset.resale,
 							button.closest( 'tr' ).querySelector( '.table__primary' ).textContent );
 					} );
 				} );
@@ -1609,6 +1621,55 @@
 			'<span class="field__hint">' + esc( App.t( 'panel.events.checkoutSecondsHint' ) ) + '</span></div>' +
 			'</div>' +
 
+			/*
+			 * The two other things a buyer may do with a ticket they cannot use.
+			 *
+			 * Moving to another night is what most people actually want when they ask for their
+			 * money back, and offering the seat to somebody else is how a venue gets a full house
+			 * instead of an empty seat and a refund. Both off by default.
+			 */
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-exchanges">' +
+			esc( App.t( 'panel.events.exchanges' ) ) + '</label>' +
+			'<select class="select" id="e-exchanges" name="exchanges">' +
+			[ 'never', 'until', 'always' ].map( function ( kind ) {
+				return '<option value="' + kind + '"' +
+					( event && event.exchanges === kind ? ' selected' : '' ) + '>' +
+					esc( App.t( 'panel.events.refundKinds.' + kind ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>' +
+			'<div class="field"><label class="field__label" for="e-exchange-hours">' +
+			esc( App.t( 'panel.events.exchangeHours' ) ) + '</label>' +
+			'<input class="input tnum" id="e-exchange-hours" name="exchange_window_hours" ' +
+			'type="number" min="0" max="8760" value="' +
+			esc( ( event && event.exchange_window_hours ) || 48 ) + '"></div>' +
+			'</div>' +
+
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-exchange-fee">' +
+			esc( App.t( 'panel.events.exchangeFee' ) ) + '</label>' +
+			'<input class="input tnum" id="e-exchange-fee" name="exchange_fee_amount" ' +
+			'type="number" min="0" value="' +
+			esc( ( event && event.exchange_fee_amount ) || 0 ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.exchangeFeeHint' ) ) +
+			'</span></div>' +
+			'<div class="field"><label class="field__label" for="e-resale-pays">' +
+			esc( App.t( 'panel.events.resalePays' ) ) + '</label>' +
+			'<select class="select" id="e-resale-pays" name="resale_pays">' +
+			[ 'credit', 'refund' ].map( function ( kind ) {
+				return '<option value="' + kind + '"' +
+					( event && event.resale_pays === kind ? ' selected' : '' ) + '>' +
+					esc( App.t( 'panel.events.resalePayKinds.' + kind ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>' +
+			'</div>' +
+
+			'<label class="switch switch--row"><input type="checkbox" id="e-resale" name="resale"' +
+			( event && event.resale ? ' checked' : '' ) + '>' +
+			'<span class="switch__track"><span class="switch__thumb"></span></span>' +
+			'<span>' + esc( App.t( 'panel.events.resale' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( App.t( 'panel.events.resaleHint' ) ) + '</p>' +
+
 			// The refund terms. Written here rather than in a settings screen because they belong
 			// to this night: a matinee for schools and a sold-out final are not the same promise.
 			'<div class="field-duo">' +
@@ -1680,6 +1741,12 @@
 			waiting_room_minutes: Number( data.get( 'waiting_room_minutes' ) ) || 10,
 			// An empty box is "no limit", which is the ordinary case — not a limit of nought.
 			max_per_buyer: Number( data.get( 'max_per_buyer' ) ) || null,
+			exchanges: data.get( 'exchanges' ),
+			exchange_window_hours: Number( data.get( 'exchange_window_hours' ) ) || 0,
+			exchange_fee_amount: Number( data.get( 'exchange_fee_amount' ) ) || 0,
+			// An unticked checkbox is absent from a form, which is not the same as false.
+			resale: null !== data.get( 'resale' ),
+			resale_pays: data.get( 'resale_pays' ),
 			checkout_min_seconds: Number( data.get( 'checkout_min_seconds' ) ) || 0,
 		};
 	}
@@ -2114,6 +2181,78 @@
 		} );
 
 		ask();
+	};
+
+	/**
+	 * What is being offered back to the public tonight.
+	 *
+	 * The screen is mostly a list, and deliberately: there is nothing here that puts a seat up for
+	 * resale, because that is the ticket holder's decision about the ticket they paid for. The one
+	 * button takes a listing back down, for the caller who has rung the box office to say they can
+	 * come after all — and taking it down gives nothing back and takes nothing away, since the
+	 * seat was theirs the whole time it sat there.
+	 */
+	App.showResale = function ( eventId, name ) {
+		var self = this;
+
+		function draw() {
+			var host = document.getElementById( 'resale-list' );
+
+			if ( ! host ) {
+				return;
+			}
+
+			self.request( 'GET', '/events/' + eventId + '/resale' ).then( function ( response ) {
+				var into = document.getElementById( 'resale-list' );
+
+				if ( ! into ) {
+					return;
+				}
+
+				if ( ! response.data.length ) {
+					into.innerHTML = '<p class="hint">' + esc( self.t( 'panel.resale.none' ) ) + '</p>';
+
+					return;
+				}
+
+				into.innerHTML = response.data.map( function ( listing ) {
+					return '<div class="quota-row">' +
+						'<span><strong>' + esc( listing.seat || '—' ) + '</strong>' +
+							'<span class="muted on-own-line">' + esc( listing.seller ) + ' · ' +
+							esc( self.money( listing.amount, listing.currency ) ) + ' · ' +
+							esc( self.t( 'panel.resale.states.' + listing.state ) ) +
+							'</span></span>' +
+						( 'open' === listing.state
+							? '<button type="button" class="btn btn--sm" data-unlist="' +
+								esc( listing.id ) + '">' +
+								esc( self.t( 'panel.resale.withdraw' ) ) + '</button>'
+							: '' ) +
+					'</div>';
+				} ).join( '' );
+
+				into.querySelectorAll( '[data-unlist]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						self.request( 'DELETE', '/events/' + eventId + '/resale/' +
+							button.dataset.unlist )
+							.then( function () {
+								self.toast( self.t( 'panel.resale.withdrawn' ) );
+								draw();
+							} )
+							.catch( function ( error ) { self.toast( error.message, true ); } );
+					} );
+				} );
+			} ).catch( function ( error ) { self.toast( error.message, true ); } );
+		}
+
+		this.modal( {
+			title: name || this.t( 'panel.resale.title' ),
+			cancelLabel: null,
+			doneLabel: this.t( 'panel.common.close' ),
+			body: '<p class="hint">' + esc( this.t( 'panel.resale.description' ) ) + '</p>' +
+				'<div class="stack" id="resale-list"></div>',
+		} );
+
+		draw();
 	};
 
 	/**

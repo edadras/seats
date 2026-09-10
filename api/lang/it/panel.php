@@ -176,6 +176,17 @@ return [
         'refunds' => "Rimborsi",
         'refundHours' => "Ore prima",
         'refundKeepsFee' => "Trattenere i diritti di prevendita al rimborso",
+        'exchanges' => "Cambi",
+        'exchangeHours' => "Ore prima",
+        'exchangeFee' => "Diritti di cambio",
+        'exchangeFeeHint' => "Si aggiungono all’eventuale differenza di prezzo. Zero significa gratis.",
+        'resalePays' => "Il venditore riceve",
+        'resalePayKinds' => [
+            'credit' => "Credito sul conto",
+            'refund' => "Rimborso",
+        ],
+        'resale' => "Permettere a chi ha comprato di rimettere in vendita un posto che non può usare",
+        'resaleHint' => "Il posto torna in vendita al prezzo a cui è stato venduto. Il venditore viene pagato solo quando qualcun altro lo compra.",
         'perBuyer' => 'Massimo per persona',
         'perBuyerNone' => 'Nessun limite',
         'perBuyerHint' => 'Contato su tutto ciò che quell’indirizzo ha già per questa serata, non per singolo carrello. I biglietti rimborsati non contano.',
@@ -1449,6 +1460,8 @@ return [
         'noMatchTitle' => 'Nessun buono corrisponde',
         'noMatchBody' => 'Provate una parte del codice, l’indirizzo, o quello che ci avete scritto.',
         'creditFromOrder' => 'Rimborso della prenotazione :reference',
+        'creditFromExchange' => 'Prenotazione :reference spostata a un’altra serata',
+        'creditFromResale' => 'Posto :seat rivenduto',
     ],
 
     'seasons' => [
@@ -1585,6 +1598,18 @@ return [
         'hint' => 'La coda si muove perché la gente la guarda: chi controlla il proprio posto ripulisce anche gli ingressi scaduti e fa entrare i successivi.',
     ],
 
+    'resale' => [
+        'title' => "Rimessi in vendita",
+        'description' => "Posti che qualcuno ha rimesso in vendita al prezzo pagato. Il posto resta suo finché non lo compra qualcun altro, e solo allora viene pagato.",
+        'none' => "Per questa serata non c’è nulla in vendita.",
+        'withdraw' => "Togliere dalla vendita",
+        'withdrawn' => "Tolto dalla vendita.",
+        'states' => [
+            'open' => "In vendita",
+            'sold' => "Rivenduto",
+            'withdrawn' => "Ritirato",
+        ],
+    ],
     'quotas' => [
         'title' => 'Quote per canale',
         'description' => 'Quanto può vendere ogni canale di questa serata. Lasciate vuoto per nessun limite, che è il caso normale. Una prenotazione annullata restituisce i suoi posti.',

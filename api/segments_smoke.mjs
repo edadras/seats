@@ -163,8 +163,17 @@ await page.waitForTimeout( 900 );
 
 const reach = await page.locator( '#a-reach' ).innerText();
 
-check( 'and says what choosing one would reach, the same number the builder did',
-	reach.includes( String( left ) ), reach );
+/*
+ * Not the same number the builder gave, and it should not be. An audience is who matches the
+ * rules; a reach is who matches them *and* has agreed to hear from this organiser about something
+ * they have not bought. The two differ by exactly the people nobody has asked yet — which the line
+ * says out loud rather than quietly shrinking the count — so what is checked is that they add up.
+ */
+const counted = ( reach.match( /[0-9]+/g ) || [] ).map( Number );
+
+check( 'and says what choosing one would reach, with the unasked named rather than hidden',
+	counted.length >= 2 && counted[ 0 ] + counted[ counted.length - 1 ] === left,
+	`${ reach } (audience of ${ left })` );
 
 await page.fill( '#a-subject', 'We are back in March' );
 await page.fill( '#a-body', 'Hello {buyer}, the new season opens in March.' );

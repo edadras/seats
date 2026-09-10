@@ -393,4 +393,22 @@ return [
         'save' => 'Salva',
         'saved' => 'Salvato. Grazie.',
     ],
+    'resale' => [
+        'title' => 'Rimetterli in vendita',
+        'listed' => '{1}Un posto è di nuovo in vendita. Resta tuo finché qualcuno non lo prende.|[2,*]:count posti sono di nuovo in vendita. Restano tuoi finché qualcuno non li prende.',
+        'refused' => 'Questi posti non possono tornare in vendita.',
+        'withdrawn' => 'Tolti dalla vendita. Sono sempre stati tuoi.',
+        'onSale' => 'Di nuovo in vendita',
+        'sold' => 'Rivenduto. Il tuo credito è sul tuo account.',
+        'offer' => 'Rimetti in vendita questi posti',
+        'stop' => 'Toglili dalla vendita',
+        'hint' => 'Tornano in vendita al prezzo che hai pagato. Finché nessuno li compra non cambia nulla: fino ad allora i posti sono tuoi.',
+    ],
+    'exchange' => [
+        'title' => 'Passare a un’altra serata',
+        'move' => 'Sposta questi posti',
+        'chooseSeats' => 'Scegli i posti che preferisci. Quello che hai pagato viene scalato dalla nuova prenotazione.',
+        'closed' => 'Questa prenotazione non può più essere spostata.',
+        'sameName' => 'Uno scambio deve essere pagato da chi ha il biglietto: usa lo stesso indirizzo e-mail.',
+    ],
 ];

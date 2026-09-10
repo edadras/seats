@@ -234,4 +234,13 @@ return [
     'buyer_limit_reached' => 'This event is limited to :limit tickets per person; you may take :count more.',
     'buyer_limit_used' => 'This event is limited to :limit per person, and you already have that many.',
     'unknown_locale' => 'This platform does not speak that language.',
+    'resale_closed' => 'This event does not take tickets back for resale.',
+    'resale_not_yours' => 'That ticket is not on sale to give back.',
+    'resale_not_seated' => 'A standing ticket is not a particular seat, so it cannot be offered to one buyer.',
+    'resale_used' => 'That ticket has already been scanned at the door.',
+    'resale_over' => 'That night has already happened.',
+    'resale_settled' => 'That listing is already finished with.',
+    'resale_being_bought' => 'Somebody is buying that seat at this moment. It can be taken off sale again if they do not finish.',
+    'exchange_closed' => 'This booking can no longer be moved.',
+    'exchange_nothing' => 'Those seats are not yours to move.',
 ];

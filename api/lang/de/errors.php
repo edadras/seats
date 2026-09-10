@@ -234,4 +234,13 @@ return [
     'buyer_limit_reached' => 'Diese Veranstaltung ist auf :limit Karten pro Person begrenzt; Sie können noch :count nehmen.',
     'buyer_limit_used' => 'Diese Veranstaltung ist auf :limit pro Person begrenzt, und so viele haben Sie bereits.',
     'unknown_locale' => 'Diese Plattform spricht diese Sprache nicht.',
+    'resale_closed' => 'Diese Veranstaltung nimmt keine Karten zum Weiterverkauf zurück.',
+    'resale_not_yours' => 'Diese Karte steht nicht zur Rückgabe.',
+    'resale_not_seated' => 'Eine Stehplatzkarte ist kein bestimmter Platz und lässt sich daher nicht einem einzelnen Käufer anbieten.',
+    'resale_used' => 'Diese Karte wurde am Einlass bereits gescannt.',
+    'resale_over' => 'Dieser Abend ist bereits vorbei.',
+    'resale_settled' => 'Dieses Angebot ist bereits erledigt.',
+    'resale_being_bought' => 'Gerade kauft jemand diesen Platz. Er lässt sich wieder vom Verkauf nehmen, wenn der Kauf nicht zustande kommt.',
+    'exchange_closed' => 'Diese Buchung kann nicht mehr umgebucht werden.',
+    'exchange_nothing' => 'Diese Plätze sind nicht Ihre zum Umbuchen.',
 ];

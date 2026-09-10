@@ -234,4 +234,13 @@ return [
     'buyer_limit_reached' => 'Cet événement est limité à :limit billets par personne ; vous pouvez en prendre :count de plus.',
     'buyer_limit_used' => 'Cet événement est limité à :limit par personne, et vous en avez déjà autant.',
     'unknown_locale' => 'Cette plateforme ne parle pas cette langue.',
+    'resale_closed' => 'Cet événement ne reprend pas les billets pour les revendre.',
+    'resale_not_yours' => 'Ce billet n’est pas disponible pour être rendu.',
+    'resale_not_seated' => 'Un billet debout n’est pas une place précise : il ne peut donc pas être proposé à un acheteur en particulier.',
+    'resale_used' => 'Ce billet a déjà été scanné à l’entrée.',
+    'resale_over' => 'Cette soirée a déjà eu lieu.',
+    'resale_settled' => 'Cette mise en vente est déjà close.',
+    'resale_being_bought' => 'Quelqu’un est en train d’acheter cette place. Elle pourra être retirée de la vente s’il ne va pas au bout.',
+    'exchange_closed' => 'Cette réservation ne peut plus être changée.',
+    'exchange_nothing' => 'Ces places ne sont pas les vôtres à changer.',
 ];

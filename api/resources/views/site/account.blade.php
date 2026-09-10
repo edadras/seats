@@ -144,6 +144,63 @@
                             </details>
                         @endif
 
+                        {{-- The two other things to do with a ticket you cannot use.
+
+                             Offered only where the organiser said so: a button that leads to a
+                             refusal is a worse answer than no button at all. --}}
+                        @if ($order['resold'])
+                            <p class="field__hint">{{ __('site.resale.sold') }}</p>
+                        @endif
+
+                        @if ($order['listed'])
+                            <form class="order__actions" method="POST"
+                                  action="/account/orders/{{ $order['reference'] }}/unresell">
+                                @csrf
+                                <p class="field__hint">{{ __('site.resale.onSale') }}</p>
+                                <button class="button button--quiet" type="submit">
+                                    {{ __('site.resale.stop') }}
+                                </button>
+                            </form>
+                        @elseif ($order['resellable'])
+                            <details class="give">
+                                <summary>{{ __('site.resale.title') }}</summary>
+                                <form method="POST"
+                                      action="/account/orders/{{ $order['reference'] }}/resell">
+                                    @csrf
+                                    <p class="field__hint">{{ __('site.resale.hint') }}</p>
+                                    {{-- Only the named seats. A standing ticket is a right to come
+                                         in rather than a particular chair, and a box beside one
+                                         would be a box that leads to a refusal. --}}
+                                    @foreach ($order['lines'] as $line)
+                                        @if ($line['seated'])
+                                            <label class="consent">
+                                                <input type="checkbox" name="allocation_ids[]"
+                                                       value="{{ $line['id'] }}">
+                                                <span>{{ $line['seat'] }}</span>
+                                            </label>
+                                        @endif
+                                    @endforeach
+                                    <button class="button button--secondary" type="submit">
+                                        {{ __('site.resale.offer') }}
+                                    </button>
+                                </form>
+                            </details>
+                        @endif
+
+                        @if ($order['exchangeable'])
+                            <details class="give">
+                                <summary>{{ __('site.exchange.title') }}</summary>
+                                <form method="POST"
+                                      action="/account/orders/{{ $order['reference'] }}/exchange">
+                                    @csrf
+                                    <p class="field__hint">{{ __('site.exchange.chooseSeats') }}</p>
+                                    <button class="button button--secondary" type="submit">
+                                        {{ __('site.exchange.move') }}
+                                    </button>
+                                </form>
+                            </details>
+                        @endif
+
                         @if ($order['reissuable'])
                             <form class="order__actions" method="POST"
                                   action="/account/orders/{{ $order['reference'] }}/tickets">

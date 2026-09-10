@@ -433,6 +433,18 @@ class CheckoutController extends Controller
             return $refusal;
         }
 
+        /*
+         * An exchange, settled here and nowhere earlier.
+         *
+         * The old seats go back at this moment — after the new ones are held, before the money
+         * moves — and come back as credit, which the ordinary voucher machinery below then spends.
+         * Doing it any earlier would be the thing this feature exists to avoid: a buyer with no
+         * seats and no ticket, halfway through choosing.
+         */
+        if ($refusal = $this->settleExchange($request, $hold, (string) $data['email'])) {
+            return $refusal;
+        }
+
         // Priced a moment before the money moves, like the discount, and against the total these
         // extras actually come to rather than the one the page was rendered with.
         $donation = app(Donations::class)->amount($hold->event, $data['donation'] ?? 0);
@@ -835,6 +847,63 @@ class CheckoutController extends Controller
      *
      * @param  int  $payable  what is left to pay after the discount, the fee and the tax
      */
+    /**
+     * Give the old seats back, as credit, for a buyer who is part-way through an exchange.
+     *
+     * Refused rather than ignored when the address does not match the booking being moved: an
+     * exchange belongs to the person who holds the ticket, and letting somebody else spend it
+     * would be a way to take a stranger's seats using their reference.
+     *
+     * @return \Illuminate\Http\RedirectResponse|null the refusal, or null to carry on
+     */
+    private function settleExchange(Request $request, Hold $hold, string $email)
+    {
+        $intent = $request->session()->get('seatmap_exchange');
+
+        if (! is_array($intent) || empty($intent['reference'])) {
+            return null;
+        }
+
+        $order = ExternalOrder::where('external_order_id', $intent['reference'])->first();
+
+        if (! $order) {
+            $request->session()->forget('seatmap_exchange');
+
+            return null;
+        }
+
+        if (mb_strtolower(trim($email)) !== mb_strtolower(trim((string) ($order->buyer['email'] ?? '')))) {
+            return redirect('/checkout')->with('seatmap_checkout_error', __('site.exchange.sameName'));
+        }
+
+        try {
+            app(\App\Domain\Orders\Exchanges::class)->giveBack(
+                $order,
+                (array) ($intent['allocation_ids'] ?? []),
+                $email,
+            );
+        } catch (ApiException $e) {
+            $request->session()->forget('seatmap_exchange');
+
+            return redirect('/checkout')->with('seatmap_checkout_error', $e->localisedMessage());
+        }
+
+        $request->session()->forget('seatmap_exchange');
+
+        /*
+         * So the credit that was just issued is found a few lines later.
+         *
+         * `voucherFor` looks up credit by the signed-in buyer's address, and somebody exchanging
+         * may have arrived from an email link rather than through a sign-in.
+         */
+        $request->session()->put('seatmap_buyer', array_merge(
+            (array) $request->session()->get('seatmap_buyer', []),
+            ['email' => mb_strtolower(trim($email))],
+        ));
+
+        return null;
+    }
+
     private function voucherFor(Request $request, Hold $hold, int $payable): ?VoucherOffer
     {
         $typed = (string) $request->session()->get('seatmap_voucher', '');

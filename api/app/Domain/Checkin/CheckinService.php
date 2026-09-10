@@ -57,6 +57,15 @@ class CheckinService
         }
 
         if ($this->claim($ticket, $scannedAt)) {
+            /*
+             * Somebody walked in on it, so it is not for sale any more.
+             *
+             * A ticket may be offered back to the public and used before anybody takes it — people
+             * change their minds on the night. The seat stops being offered here, at the door,
+             * because the person sitting in it is the most conclusive fact about it there is.
+             */
+            $this->closeAnyResale($ticket);
+
             return $this->record($event, $ticket->refresh(), $device, 'valid', $scannedAt, $clientScanId, $offline);
         }
 
@@ -80,6 +89,18 @@ class CheckinService
                 'used_at' => $scannedAt,
                 'updated_at' => now(),
             ]) === 1;
+    }
+
+    /** Take the seat off the public map, where its owner had offered it back and then came. */
+    private function closeAnyResale(Ticket $ticket): void
+    {
+        if (! $ticket->allocation_id) {
+            return;
+        }
+
+        \App\Models\ResaleListing::where('allocation_id', $ticket->allocation_id)
+            ->where('state', 'open')
+            ->update(['state' => 'withdrawn', 'settled_at' => now(), 'updated_at' => now()]);
     }
 
     /** Who got in on this ticket, according to the first successful scan. */

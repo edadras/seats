@@ -665,8 +665,14 @@ class HoldService
                 -- Who a blocked seat is being kept for, where it is being kept for somebody. A
                 -- blocked seat with a label is a house seat, and the box office may sell it.
                 o.held_for,
+                -- A seat offered back to the public by the person holding it counts as free: the
+                -- allocation only moves at the moment somebody else buys it, in one transaction.
                 (SELECT 1 FROM allocations a
                   WHERE a.event_id = :event_id AND a.seat_id = sp.seat_id AND a.status = 'active'
+                    AND NOT EXISTS (
+                      SELECT 1 FROM resale_listings rl
+                      WHERE rl.allocation_id = a.id AND rl.state = 'open'
+                    )
                   LIMIT 1) AS allocated,
                 (SELECT 1 FROM hold_items hi
                   JOIN holds hd ON hd.id = hi.hold_id

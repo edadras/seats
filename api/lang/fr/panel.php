@@ -177,6 +177,17 @@ return [
         'refunds' => "Remboursements",
         'refundHours' => "Heures avant",
         'refundKeepsFee' => "Conserver les frais de réservation lors du remboursement",
+        'exchanges' => "Échanges",
+        'exchangeHours' => "Heures avant",
+        'exchangeFee' => "Frais d’échange",
+        'exchangeFeeHint' => "En plus de l’éventuelle différence de prix. Zéro pour la gratuité.",
+        'resalePays' => "Le vendeur est payé en",
+        'resalePayKinds' => [
+            'credit' => "Avoir sur le compte",
+            'refund' => "Remboursement",
+        ],
+        'resale' => "Permettre à un acheteur de remettre en vente une place qu’il ne peut pas utiliser",
+        'resaleHint' => "La place repart en vente au prix auquel elle a été vendue. Le vendeur n’est payé que lorsque quelqu’un d’autre l’achète.",
         'perBuyer' => 'Maximum par personne',
         'perBuyerNone' => 'Sans limite',
         'perBuyerHint' => 'Compté sur tout ce que cette adresse détient déjà pour cette soirée, et non par panier. Les billets remboursés ne comptent pas.',
@@ -1450,6 +1461,8 @@ return [
         'noMatchTitle' => 'Aucun bon ne correspond',
         'noMatchBody' => 'Essayez une partie du code, l’adresse, ou ce que vous avez écrit dessus.',
         'creditFromOrder' => 'Remboursement de la réservation :reference',
+        'creditFromExchange' => 'Réservation :reference déplacée à une autre soirée',
+        'creditFromResale' => 'Place :seat revendue',
     ],
 
     'seasons' => [
@@ -1586,6 +1599,18 @@ return [
         'hint' => 'La file avance parce que les gens la regardent : chaque visiteur qui vérifie sa place balaie aussi les entrées expirées et fait entrer les suivants.',
     ],
 
+    'resale' => [
+        'title' => "Remises en vente",
+        'description' => "Des places que quelqu’un a remises en vente au prix payé. La place reste la sienne jusqu’à ce qu’un autre l’achète, et le vendeur n’est payé qu’à ce moment-là.",
+        'none' => "Rien n’est proposé pour cette soirée.",
+        'withdraw' => "Retirer de la vente",
+        'withdrawn' => "Retiré de la vente.",
+        'states' => [
+            'open' => "En vente",
+            'sold' => "Revendue",
+            'withdrawn' => "Retirée",
+        ],
+    ],
     'quotas' => [
         'title' => 'Quotas par canal',
         'description' => 'Ce que chaque canal peut vendre de cette soirée. Laissez vide pour aucune limite, ce qui est le cas ordinaire. Une réservation annulée rend ses places.',

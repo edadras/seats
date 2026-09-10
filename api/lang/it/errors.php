@@ -234,4 +234,13 @@ return [
     'buyer_limit_reached' => 'Questo evento è limitato a :limit biglietti a persona; puoi prenderne altri :count.',
     'buyer_limit_used' => 'Questo evento è limitato a :limit a persona, e ne hai già altrettanti.',
     'unknown_locale' => 'Questa piattaforma non parla quella lingua.',
+    'resale_closed' => 'Questo evento non riprende i biglietti per rivenderli.',
+    'resale_not_yours' => 'Questo biglietto non è disponibile per essere restituito.',
+    'resale_not_seated' => 'Un biglietto in piedi non è un posto preciso, quindi non può essere offerto a un singolo acquirente.',
+    'resale_used' => 'Questo biglietto è già stato scansionato all’ingresso.',
+    'resale_over' => 'Quella serata è già passata.',
+    'resale_settled' => 'Questa inserzione è già conclusa.',
+    'resale_being_bought' => 'In questo momento qualcuno sta comprando quel posto. Si potrà togliere dalla vendita se non conclude l’acquisto.',
+    'exchange_closed' => 'Questa prenotazione non può più essere spostata.',
+    'exchange_nothing' => 'Questi posti non sono tuoi da spostare.',
 ];

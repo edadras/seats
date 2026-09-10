@@ -393,4 +393,22 @@ return [
         'save' => 'Enregistrer',
         'saved' => 'Enregistré. Merci.',
     ],
+    'resale' => [
+        'title' => 'Les remettre en vente',
+        'listed' => '{1}Une place est de nouveau en vente. Elle reste la vôtre jusqu’à ce que quelqu’un la prenne.|[2,*]:count places sont de nouveau en vente. Elles restent les vôtres jusqu’à ce que quelqu’un les prenne.',
+        'refused' => 'Ces places ne peuvent pas être remises en vente.',
+        'withdrawn' => 'Retirées de la vente. Elles étaient à vous tout du long.',
+        'onSale' => 'De nouveau en vente',
+        'sold' => 'Revendue. Votre avoir est sur votre compte.',
+        'offer' => 'Remettre ces places en vente',
+        'stop' => 'Les retirer de la vente',
+        'hint' => 'Elles repartent au prix que vous avez payé. Rien ne change tant que personne ne les achète : d’ici là, les places sont à vous.',
+    ],
+    'exchange' => [
+        'title' => 'Changer de soirée',
+        'move' => 'Changer ces places',
+        'chooseSeats' => 'Choisissez les places que vous préférez. Ce que vous avez payé est déduit de la nouvelle réservation.',
+        'closed' => 'Cette réservation ne peut plus être changée.',
+        'sameName' => 'Un échange doit être payé par la personne qui détient le billet : utilisez la même adresse e-mail.',
+    ],
 ];

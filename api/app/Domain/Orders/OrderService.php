@@ -189,6 +189,39 @@ class OrderService
                 throw ApiException::conflict('hold_empty', 'The hold has no seats left to allocate.');
             }
 
+            /*
+             * Seats somebody else offered back to the public, changing hands here.
+             *
+             * Before the new allocations are written, and inside this same transaction: the
+             * partial unique index on (event_id, seat_id) WHERE active would refuse the new row
+             * while the old one is still there, and a swap that half happened would leave a seat
+             * sold twice or belonging to nobody. See App\Domain\Resale\Resales::settleSeats.
+             */
+            $seatIds = $items->pluck('seat_id')->filter()->all();
+
+            app(\App\Domain\Resale\Resales::class)->settleSeats($event, $seatIds, $order);
+
+            /*
+             * After the swap, every seat in this basket must actually be free.
+             *
+             * A hold reserves a seat, so ordinarily this cannot fail — except for a seat that was
+             * on offer and stopped being so between the basket and the payment: its owner had
+             * their ticket scanned at the door, say, which closes the listing and leaves them in
+             * the chair. The database would refuse the row a moment later with a constraint error
+             * nobody could act on; this refuses it with the sentence that already exists for
+             * exactly this, before any money moves.
+             */
+            $taken = [] === $seatIds ? [] : Allocation::query()
+                ->where('event_id', $event->id)
+                ->where('status', 'active')
+                ->whereIn('seat_id', $seatIds)
+                ->pluck('seat_id')
+                ->all();
+
+            if ([] !== $taken) {
+                throw ApiException::seatsUnavailable($taken);
+            }
+
             $allocations = [];
 
             foreach ($items as $item) {

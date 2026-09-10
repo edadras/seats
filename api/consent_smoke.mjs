@@ -43,6 +43,16 @@ const browser = await chromium.launch( {
 } );
 const errors = [];
 
+/*
+ * How many people this organiser may already write to.
+ *
+ * Not nought: the seeded demo has buyers who ticked the box at their own checkout, because an
+ * organiser whose announcement screen says "nobody at all" has a demo that shows nothing. So every
+ * count below is measured against this rather than against an assumption.
+ */
+const baseline = ( await api( 'GET', '/v1/messaging/announcements/audience?channels[]=email' ) )
+	.body.people;
+
 console.log( 'A buyer is asked once, in a box that starts empty' );
 const buyer = await ( await browser.newContext( { viewport: { width: 1280, height: 1050 } } ) ).newPage();
 buyer.on( 'pageerror', ( e ) => errors.push( e.message ) );
@@ -115,7 +125,7 @@ check( 'and the count says how many have not been asked', /not been asked/i.test
 
 await page.screenshot( { path: `${ SHOTS }/02-composer.png` } );
 
-// The seeded demo has six buyers who were never asked, plus the one who just ticked the box.
+// The same composer, told to write to one night's buyers instead of to everybody.
 await page.selectOption( '#a-event', night.id );
 await page.waitForTimeout( 1200 );
 
@@ -136,12 +146,18 @@ await page.waitForTimeout( 2500 );
 
 const sent = ( await api( 'GET', '/v1/messaging/announcements' ) ).body.data[ 0 ];
 
-check( 'it reaches only the person who agreed', 1 === sent.total,
-	`${ sent.sent } of ${ sent.total }` );
+// One more than could be written to a moment ago, and that one is the buyer who ticked the box.
+// The buyer who left it alone is not in it, and neither is anybody who was never asked.
+check( 'it reaches the people who agreed and nobody else', baseline + 1 === sent.total,
+	`${ sent.total } reached, ${ baseline } before this buyer agreed` );
 
 console.log( 'And leaving is one press, with no password' );
 const log = ( await api( 'GET', '/v1/messaging/log' ) ).body.data || [];
-const delivery = log.filter( ( row ) => 'announcement' === row.kind )[ 0 ];
+// This buyer's own copy, found by the address in its unsubscribe link: every recipient gets a link
+// of their own, and following somebody else's would prove nothing about this one.
+const delivery = log.filter( ( row ) => 'announcement' === row.kind
+	&& ( row.preview || '' ).includes( encodeURIComponent( 'keen@example.test' ) ) )[ 0 ]
+	|| log.filter( ( row ) => 'announcement' === row.kind )[ 0 ];
 
 check( 'the message carries a way out of it', /preferences\//.test( delivery.preview || '' ),
 	( delivery.preview || '' ).slice( -80 ) );
@@ -170,8 +186,9 @@ await leaving.screenshot( { path: `${ SHOTS }/03-preferences.png` } );
 
 const after = await api( 'GET', '/v1/messaging/announcements/audience?channels[]=email' );
 
-check( 'after which nobody at all may be written to', 0 === after.body.people,
-	JSON.stringify( after.body ) );
+// Back to where it started: their yes is gone, and nobody else's answer was touched by it.
+check( 'after which they may not be written to again', baseline === after.body.people,
+	`${ after.body.people } left, ${ baseline } before they agreed` );
 
 console.log( 'A wrong signature says nothing' );
 const guess = await ( await browser.newContext() ).newPage();

@@ -397,4 +397,22 @@ return [
         'save' => 'Save',
         'saved' => 'Saved. Thank you.',
     ],
+    'resale' => [
+        'title' => 'Offer it back',
+        'listed' => '{1}One seat is on sale again. It is yours until somebody takes it.|[2,*]:count seats are on sale again. They are yours until somebody takes them.',
+        'refused' => 'Those seats cannot go back on sale.',
+        'withdrawn' => 'Taken off sale. They were yours the whole time.',
+        'onSale' => 'On sale again',
+        'sold' => 'Sold on. Your credit is on your account.',
+        'offer' => 'Offer these seats back',
+        'stop' => 'Take them off sale',
+        'hint' => 'They go back at what you paid. Nothing changes until somebody buys them — until then the seats are still yours.',
+    ],
+    'exchange' => [
+        'title' => 'Move to another night',
+        'move' => 'Move these seats',
+        'chooseSeats' => 'Choose the seats you would like instead. What you paid comes off the new booking.',
+        'closed' => 'This booking can no longer be moved.',
+        'sameName' => 'An exchange has to be paid for by the person who holds the ticket, so use the same email address.',
+    ],
 ];

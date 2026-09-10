@@ -10,6 +10,7 @@ use App\Models\CheckinDevice;
 use App\Domain\Checkin\CheckinService;
 use App\Domain\Inventory\HoldService;
 use App\Domain\Orders\OrderService;
+use App\Domain\Privacy\Consents;
 use App\Models\Event;
 use App\Models\ExternalOrder;
 use App\Models\Seat;
@@ -410,6 +411,16 @@ class DatabaseSeeder extends Seeder
             $confirmed = $orders->confirm($order, $buyer, $when);
 
             ExternalOrder::whereKey($order->id)->update(['created_at' => $when, 'updated_at' => $when]);
+
+            // What the tick box at the checkout said. Four of the six ticked it, one unticked it
+            // deliberately, and the last was never asked — which is the shape of a real list, and
+            // the only shape in which the announcement screen's three counts all have something in
+            // them. Nobody is opted in by having bought a ticket.
+            $answer = [0 => 'in', 1 => 'in', 2 => 'in', 3 => 'in', 4 => 'out'][$index] ?? null;
+
+            if ($answer) {
+                app(Consents::class)->record($buyer['email'], $answer, 'checkout', '127.0.0.1', null, null);
+            }
 
             // The first two parties turned up and were scanned in; the rest have not arrived yet.
             // The plaintext token exists only on the models this call just minted, which is the

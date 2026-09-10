@@ -179,6 +179,20 @@ Route::middleware('site')->group(function () {
     Route::post('account/orders/{reference}/wallet/{platform}', [BuyerAccountController::class, 'wallet'])
         ->whereIn('platform', ['apple', 'google'])
         ->middleware('throttle:20,1,account-wallet');
+    /*
+     * The two things to do with a ticket you cannot use, besides asking for the money back.
+     *
+     * Listing moves nothing: the seat is theirs until somebody else buys it. An exchange moves
+     * nothing either, yet — it puts the intention in the session and sends them to choose, and the
+     * old seats are only given back at the checkout, once the new ones are held.
+     */
+    Route::post('account/orders/{reference}/resell', [BuyerAccountController::class, 'resell'])
+        ->middleware('throttle:20,1,resell');
+    Route::post('account/orders/{reference}/unresell', [BuyerAccountController::class, 'unresell'])
+        ->middleware('throttle:20,1,unresell');
+    Route::post('account/orders/{reference}/exchange', [BuyerAccountController::class, 'exchange'])
+        ->middleware('throttle:20,1,exchange');
+
     Route::post('account/orders/{reference}/refund', [BuyerAccountController::class, 'refund'])
         ->middleware('throttle:10,1,refund-request');
     Route::post('account/orders/{reference}/transfer', [BuyerAccountController::class, 'transfer'])

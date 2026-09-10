@@ -24,6 +24,7 @@ class Event extends Model
         'cancelled_at', 'cancellation_reason', 'rescheduled_from', 'rescheduled_at',
         'translations',
         'refunds', 'refund_window_hours', 'refund_keeps_fee',
+        'exchanges', 'exchange_window_hours', 'exchange_fee_amount', 'resale', 'resale_pays',
         'presale_starts_at', 'on_sale_at',
     ];
 
@@ -47,6 +48,9 @@ class Event extends Model
         'tax_included' => 'boolean',
         'refund_window_hours' => 'integer',
         'refund_keeps_fee' => 'boolean',
+        'exchange_window_hours' => 'integer',
+        'exchange_fee_amount' => 'integer',
+        'resale' => 'boolean',
         'presale_starts_at' => 'datetime',
         'on_sale_at' => 'datetime',
         'waiting_room' => 'boolean',

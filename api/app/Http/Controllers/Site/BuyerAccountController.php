@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Orders\TicketIssuer;
+use App\Exceptions\ApiException;
 use App\Domain\Refunds\RefundPolicy;
 use App\Domain\Refunds\RefundRequests;
 use App\Domain\Orders\TicketTransfers;
@@ -276,6 +277,138 @@ class BuyerAccountController extends Controller
     }
 
     /**
+     * Offer a seat back to the public at what it cost.
+     *
+     * Nothing moves when they press this: the seat stays theirs until somebody else actually buys
+     * it, and they may take it off sale again at any time up to that moment. A listing that took
+     * the ticket away while it sat unsold would be a worse deal than a refund.
+     */
+    public function resell(Request $request, string $reference)
+    {
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            throw new NotFoundHttpException('Not signed in.');
+        }
+
+        $data = $request->validate([
+            'allocation_ids' => ['required', 'array', 'min:1'],
+            'allocation_ids.*' => ['uuid'],
+        ]);
+
+        $order = $this->ownOrder($buyer['email'], $reference);
+        $resales = app(\App\Domain\Resale\Resales::class);
+        $listed = 0;
+
+        foreach ($order->allocations as $allocation) {
+            if (! in_array($allocation->id, $data['allocation_ids'], true)) {
+                continue;
+            }
+
+            try {
+                $resales->list($allocation, $buyer['email'], $buyer['name'] ?? null);
+                $listed++;
+            } catch (ApiException $e) {
+                // One seat that cannot go back — already scanned, say — must not stop the others.
+                // The count below is what the buyer is told, and it is the truth about what moved.
+                continue;
+            }
+        }
+
+        $order->event?->bumpAvailabilityVersion();
+
+        return redirect('/account')->with('seatmap_message', $listed
+            ? trans_choice('site.resale.listed', $listed, ['count' => $listed])
+            : __('site.resale.refused'));
+    }
+
+    /** Take it off sale again. Theirs the whole time, and theirs still. */
+    public function unresell(Request $request, string $reference)
+    {
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            throw new NotFoundHttpException('Not signed in.');
+        }
+
+        $order = $this->ownOrder($buyer['email'], $reference);
+        $resales = app(\App\Domain\Resale\Resales::class);
+        $refusal = null;
+        $taken = 0;
+
+        foreach (\App\Models\ResaleListing::where('state', 'open')
+            ->whereIn('allocation_id', $order->allocations->pluck('id'))->get() as $listing) {
+            try {
+                $resales->withdraw($listing);
+                $taken++;
+            } catch (ApiException $e) {
+                // Somebody is at the checkout with that seat. The others still come down, and the
+                // reason for the one that did not is what the page says.
+                $refusal = $e->localisedMessage();
+            }
+        }
+
+        return redirect('/account')->with(
+            'seatmap_message',
+            $refusal && ! $taken ? $refusal : __('site.resale.withdrawn'),
+        );
+    }
+
+    /**
+     * Move this booking to another night.
+     *
+     * The old seats are not given back here. They are given back at the checkout, when the new
+     * ones are already held and about to be paid for — which is the whole reason this exists
+     * rather than "refund, then buy again". What this does is put the intention in the session and
+     * send the buyer to choose.
+     */
+    public function exchange(Request $request, string $reference)
+    {
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            throw new NotFoundHttpException('Not signed in.');
+        }
+
+        $data = $request->validate([
+            'allocation_ids' => ['sometimes', 'array'],
+            'allocation_ids.*' => ['uuid'],
+        ]);
+
+        $order = $this->ownOrder($buyer['email'], $reference);
+        $terms = app(\App\Domain\Orders\Exchanges::class)->check($order);
+
+        if (! $terms['allowed']) {
+            return redirect('/account')->with('seatmap_message', __('site.exchange.closed'));
+        }
+
+        $ids = array_values(array_intersect(
+            $data['allocation_ids'] ?? $order->allocations->pluck('id')->all(),
+            $order->allocations->where('status', 'active')->pluck('id')->all(),
+        ));
+
+        if ([] === $ids) {
+            return redirect('/account')->with('seatmap_message', __('site.exchange.closed'));
+        }
+
+        /*
+         * Held in the session, not written down.
+         *
+         * An exchange that was recorded the moment somebody clicked "move this" would be a booking
+         * in a half-state for however long they browsed — and a buyer who closed the tab would
+         * come back to a ticket that was neither given back nor still theirs.
+         */
+        $request->session()->put('seatmap_exchange', [
+            'reference' => $order->external_order_id,
+            'allocation_ids' => $ids,
+            'event_id' => $order->event_id,
+        ]);
+
+        return redirect('/events/'.($order->event?->public_id ?? ''))
+            ->with('seatmap_message', __('site.exchange.chooseSeats'));
+    }
+
+    /**
      * New codes for every ticket on a booking.
      *
      * Shared by the PDF and the wallet passes, because they are the same act: the old codes stop
@@ -319,6 +452,28 @@ class BuyerAccountController extends Controller
                 'refund_asked' => RefundRequest::where('external_order_row_id', $order->id)
                     ->where('status', 'pending')
                     ->exists(),
+                // The two other things to do with a ticket you cannot use. Offered only where the
+                // organiser said so, because a button that leads to a refusal is a worse answer
+                // than no button.
+                'exchangeable' => app(\App\Domain\Orders\Exchanges::class)->check($order)['allowed'],
+                // Named seats only: a standing ticket is a right to come in rather than a
+                // particular chair, so there is nothing to hand to one buyer instead of another.
+                'resellable' => (bool) ($order->event?->resale)
+                    && in_array($order->status, ['confirmed', 'partially_refunded'], true)
+                    && $order->allocations->contains(
+                        fn ($allocation) => 'active' === $allocation->status && $allocation->seat_id
+                    ),
+                // Seats of this booking currently offered back to the public, so somebody can see
+                // what they have put up and take it down again.
+                'listed' => \App\Models\ResaleListing::where('state', 'open')
+                    ->whereIn('allocation_id', $order->allocations->pluck('id'))
+                    ->count(),
+                // Seats of this booking that have already changed hands. Said on the page, because
+                // otherwise a seller sees a refunded booking with a void ticket and no explanation
+                // of where their seat went.
+                'resold' => \App\Models\ResaleListing::where('state', 'sold')
+                    ->whereIn('allocation_id', $order->allocations->pluck('id'))
+                    ->count(),
                 'placed_at' => $order->created_at,
                 'total' => Money::format((int) $order->total_amount, (string) $order->currency),
                 'event' => $order->event,
@@ -329,6 +484,9 @@ class BuyerAccountController extends Controller
                         $allocation->seat_id ? $allocation->seat_label : null,
                     ]))),
                     'quantity' => $allocation->seat_id ? 1 : (int) ($allocation->quantity ?: 1),
+                    // Whether this line is a named chair or a right to come in. The difference
+                    // decides what may be done with it — a standing ticket cannot be resold.
+                    'seated' => (bool) $allocation->seat_id,
                     // When they were told to arrive, on a timed-entry booking.
                     'entry' => \App\Domain\Events\EntrySlots::window(
                         $allocation->entry_starts_at,

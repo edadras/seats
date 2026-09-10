@@ -248,8 +248,19 @@ class AvailabilityService
             JOIN seat_rows r ON r.id = s.seat_row_id
             LEFT JOIN event_seat_overrides o
                 ON o.event_id = :event_id AND o.seat_id = sp.seat_id
+            /*
+             * A seat somebody has offered back to the public is offered.
+             *
+             * The allocation stays where it is — its owner is still going if nobody takes it — so
+             * the seat is only *not* counted as sold while a listing on it is open. The swap
+             * happens at the moment of sale, in one transaction; see App\Domain\Resale\Resales.
+             */
             LEFT JOIN allocations a
                 ON a.event_id = :event_id AND a.seat_id = sp.seat_id AND a.status = 'active'
+                AND NOT EXISTS (
+                    SELECT 1 FROM resale_listings rl
+                    WHERE rl.allocation_id = a.id AND rl.state = 'open'
+                )
             LEFT JOIN (
                 SELECT hi.seat_id, hi.id
                 FROM hold_items hi

@@ -187,6 +187,17 @@ return [
         'refunds' => "Refunds",
         'refundHours' => "Hours before",
         'refundKeepsFee' => "Keep the booking fee when refunding",
+        'exchanges' => "Exchanges",
+        'exchangeHours' => "Hours before",
+        'exchangeFee' => "Exchange fee",
+        'exchangeFeeHint' => "Charged on top of any difference in price. Nought for free.",
+        'resalePays' => "A seller is paid in",
+        'resalePayKinds' => [
+            'credit' => "Account credit",
+            'refund' => "Money back",
+        ],
+        'resale' => "Let a buyer offer a seat they cannot use back to the public",
+        'resaleHint' => "The seat goes back on sale at the price it was sold for. The seller is paid when somebody else buys it — not before.",
         'perBuyer' => 'Most one person may buy',
         'perBuyerNone' => 'No limit',
         'perBuyerHint' => 'Counted across everything that address already holds for this night, not per basket. Refunded tickets do not count.',
@@ -1464,6 +1475,8 @@ return [
         'noMatchTitle' => 'No voucher matches that',
         'noMatchBody' => 'Try part of the code, the address, or what you wrote on it.',
         'creditFromOrder' => 'Refund of booking :reference',
+        'creditFromExchange' => 'Booking :reference moved to another night',
+        'creditFromResale' => 'Seat :seat sold on',
     ],
 
     'seasons' => [
@@ -1600,6 +1613,21 @@ return [
         'hint' => 'The queue moves as people look at it: every visitor who checks their place also sweeps the leases that have run out and lets the next people in.',
     ],
 
+    /*
+     * Seats a buyer has offered back to the public, and the one thing staff may do about them.
+     */
+    'resale' => [
+        'title' => "Offered back",
+        'description' => "Seats somebody has put back on sale at what they paid. The seat stays theirs until another buyer takes it, and the seller is paid then and not before.",
+        'none' => "Nothing is on offer for this night.",
+        'withdraw' => "Take off sale",
+        'withdrawn' => "Taken off sale.",
+        'states' => [
+            'open' => "On sale",
+            'sold' => "Sold on",
+            'withdrawn' => "Taken down",
+        ],
+    ],
     'quotas' => [
         'title' => 'Channel allocations',
         'description' => 'How much of this night each channel may sell. Leave a box empty for no limit, which is the ordinary case. A cancelled booking gives its places back.',

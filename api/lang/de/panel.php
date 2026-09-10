@@ -177,6 +177,17 @@ return [
         'refunds' => "Erstattungen",
         'refundHours' => "Stunden vorher",
         'refundKeepsFee' => "Buchungsgebühr bei Erstattung einbehalten",
+        'exchanges' => "Umtausch",
+        'exchangeHours' => "Stunden davor",
+        'exchangeFee' => "Umtauschgebühr",
+        'exchangeFeeHint' => "Zusätzlich zu einer etwaigen Preisdifferenz. Null heißt kostenlos.",
+        'resalePays' => "Verkäufer erhält",
+        'resalePayKinds' => [
+            'credit' => "Guthaben",
+            'refund' => "Geld zurück",
+        ],
+        'resale' => "Käufer dürfen einen Platz, den sie nicht nutzen können, wieder anbieten",
+        'resaleHint' => "Der Platz kommt zum verkauften Preis zurück in den Verkauf. Ausgezahlt wird erst, wenn ihn jemand anderes kauft.",
         'perBuyer' => 'Höchstens pro Person',
         'perBuyerNone' => 'Keine Grenze',
         'perBuyerHint' => 'Gezählt über alles, was diese Adresse für diesen Abend schon hat, nicht pro Warenkorb. Erstattete Karten zählen nicht.',
@@ -1450,6 +1461,8 @@ return [
         'noMatchTitle' => 'Kein Gutschein passt dazu',
         'noMatchBody' => 'Versuchen Sie einen Teil des Codes, die Adresse oder Ihre Notiz.',
         'creditFromOrder' => 'Erstattung der Buchung :reference',
+        'creditFromExchange' => 'Buchung :reference auf einen anderen Abend umgetauscht',
+        'creditFromResale' => 'Platz :seat weiterverkauft',
     ],
 
     'seasons' => [
@@ -1586,6 +1599,18 @@ return [
         'hint' => 'Die Schlange bewegt sich, weil Leute hinsehen: Wer seinen Platz prüft, räumt zugleich abgelaufene Einlässe weg und lässt die Nächsten herein.',
     ],
 
+    'resale' => [
+        'title' => "Zurückgegeben",
+        'description' => "Plätze, die jemand zum gezahlten Preis wieder angeboten hat. Der Platz bleibt bis zum Verkauf seiner, und ausgezahlt wird erst dann.",
+        'none' => "Für diesen Abend ist nichts im Angebot.",
+        'withdraw' => "Vom Verkauf nehmen",
+        'withdrawn' => "Vom Verkauf genommen.",
+        'states' => [
+            'open' => "Im Angebot",
+            'sold' => "Weiterverkauft",
+            'withdrawn' => "Zurückgezogen",
+        ],
+    ],
     'quotas' => [
         'title' => 'Kontingente je Kanal',
         'description' => 'Wie viel jeder Kanal von diesem Abend verkaufen darf. Feld leer lassen heißt kein Limit — das ist der Normalfall. Eine stornierte Buchung gibt ihre Plätze zurück.',
