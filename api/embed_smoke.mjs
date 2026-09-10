@@ -15,6 +15,7 @@
  *   node embed_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openASection, seatedEvent, seatPoint } from './smoke-support.mjs';
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,7 +44,6 @@ const events = await ( await fetch( `${ BASE }/v1/embed/events/` + process.env.S
 let eventId = process.env.SEATMAP_EVENT;
 
 if ( ! eventId || events.error ) {
-	const { seatedEvent } = await import( './smoke-support.mjs' );
 	eventId = ( await seatedEvent( BASE, 'embed-smoke' ) ).public_id;
 }
 
@@ -94,30 +94,13 @@ try {
 		( await tab.locator( '.seatmap-widget__seat' ).count() ) > 0 ||
 		( await tab.locator( '.seatmap-widget__block' ).count() ) > 0 );
 
-	// A hall is offered as blocks first; the chairs are inside one. Clicked on the plan, where a
-	// buyer clicks, which means asking the picker where it drew them.
-	if ( await tab.locator( '.seatmap-widget__block' ).count() ) {
-		const canvas = await tab.locator( '.seatmap-widget__canvas' ).boundingBox();
+	// A hall is offered as sections first; the chairs are inside one. Pressed by its own button,
+	// where a buyer presses it, rather than at a guessed point on the plan.
+	await openASection( tab );
 
-		await tab.mouse.click( canvas.x + canvas.width / 2, canvas.y + canvas.height / 2 );
-		await tab.waitForSelector( '.seatmap-widget__list' );
-	}
-
-	const seatPoint = ( index ) => tab.evaluate( ( i ) => {
-		const widget = document.querySelector( '.seatmap-widget' ).seatmapWidget;
-		const seats = widget.seats.filter( ( seat ) =>
-			seat.floorKey === widget.floorKey && widget.inOpenBlock( seat ) && 'available' === seat.state );
-		const rect = widget.canvas.getBoundingClientRect();
-		const scale = widget.baseScale * widget.view.scale;
-
-		return {
-			x: rect.left + seats[ i ].x * scale + widget.view.x,
-			y: rect.top + seats[ i ].y * scale + widget.view.y,
-		};
-	}, index );
 
 	for ( const index of [ 0, 0 ] ) {
-		const seat = await seatPoint( index );
+		const seat = await seatPoint( tab, index );
 
 		await tab.mouse.click( seat.x, seat.y );
 		await tab.waitForTimeout( 300 );

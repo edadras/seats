@@ -131,6 +131,13 @@ jobs:
         with:
           node-version: '22'
 
+      # The chart model produces words through the panel's catalogue, and the catalogue is PHP.
+      # The test reads the real one rather than a stub, so it can fail on a renamed key.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
       - run: node --test tests/js/chart.test.cjs
 
   contract:

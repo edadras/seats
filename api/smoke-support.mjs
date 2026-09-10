@@ -51,3 +51,58 @@ export async function seatedEvent(base, device = 'smoke') {
 
 	throw new Error('No seeded event has any seats. Re-seed before running the smokes.');
 }
+
+/**
+ * Open a section, the way a buyer opens one.
+ *
+ * A hall is offered as sections first and the chairs are inside one. Clicking the middle of the
+ * plan and hoping a section is under the pointer is how a check breaks the day somebody moves a
+ * block: the section list is a row of real buttons with real labels, so this presses one.
+ *
+ * Returns false where the room has no sections at all — a warehouse sold by the head — which is a
+ * legitimate shape, not a failure.
+ */
+export async function openASection(page) {
+	const sections = page.locator('.seatmap-widget__block:not([disabled])');
+
+	if (0 === await sections.count()) {
+		return false;
+	}
+
+	await sections.first().click();
+	await page.waitForSelector('.seatmap-widget__list');
+
+	return true;
+}
+
+/**
+ * Where the picker drew the nth seat that can still be bought.
+ *
+ * Asked of the widget rather than guessed from the DOM, because the seats are drawn on a canvas
+ * and there is nothing in the DOM to ask.
+ */
+export async function seatPoint(page, index) {
+	const point = await page.evaluate((i) => {
+		const widget = document.querySelector('.seatmap-widget').seatmapWidget;
+		const seats = widget.seats.filter((seat) =>
+			seat.floorKey === widget.floorKey && widget.inOpenBlock(seat) && 'available' === seat.state);
+
+		if (!seats[i]) {
+			return { error: `${seats.length} seats are open; asked for #${i}.` };
+		}
+
+		const rect = widget.canvas.getBoundingClientRect();
+		const scale = widget.baseScale * widget.view.scale;
+
+		return {
+			x: rect.left + seats[i].x * scale + widget.view.x,
+			y: rect.top + seats[i].y * scale + widget.view.y,
+		};
+	}, index);
+
+	if (point.error) {
+		throw new Error('No seat to click: ' + point.error);
+	}
+
+	return point;
+}

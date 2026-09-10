@@ -11,6 +11,7 @@
  *   node ticket_types_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openASection, seatPoint } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SITE = process.env.SEATMAP_SITE || 'http://northgate.localhost:8123';
@@ -96,25 +97,10 @@ console.log( 'Choosing one as a buyer' );
 await shop.goto( eventUrl, { waitUntil: 'networkidle' } );
 await shop.waitForSelector( '.seatmap-widget__stage', { timeout: 15000 } );
 
-if ( await shop.locator( '.seatmap-widget__block' ).count() ) {
-	const canvas = await shop.locator( '.seatmap-widget__canvas' ).boundingBox();
-
-	await shop.mouse.click( canvas.x + canvas.width / 2, canvas.y + canvas.height / 2 );
-	await shop.waitForSelector( '.seatmap-widget__list' );
-}
-
-const seatPoint = ( index ) => shop.evaluate( ( i ) => {
-	const widget = document.querySelector( '.seatmap-widget' ).seatmapWidget;
-	const seats = widget.seats.filter( ( seat ) =>
-		seat.floorKey === widget.floorKey && widget.inOpenBlock( seat ) && 'available' === seat.state );
-	const rect = widget.canvas.getBoundingClientRect();
-	const scale = widget.baseScale * widget.view.scale;
-
-	return { x: rect.left + seats[ i ].x * scale + widget.view.x, y: rect.top + seats[ i ].y * scale + widget.view.y };
-}, index );
+await openASection( shop );
 
 for ( const index of [ 0, 0 ] ) {
-	const seat = await seatPoint( index );
+	const seat = await seatPoint( shop, index );
 
 	await shop.mouse.click( seat.x, seat.y );
 	await shop.waitForTimeout( 300 );

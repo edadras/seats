@@ -8,8 +8,9 @@ const test = require( 'node:test' );
 const assert = require( 'node:assert' );
 const fs = require( 'node:fs' );
 const path = require( 'node:path' );
+const { execFileSync } = require( 'node:child_process' );
 
-const sandbox = { SeatmapChart: null, SeatmapChartOps: null };
+const sandbox = { SeatmapChart: null, SeatmapChartOps: null, SeatmapI18n: null };
 
 function load( file ) {
 	const source = fs.readFileSync( path.join( __dirname, '../../public/editor/js', file ), 'utf8' );
@@ -19,6 +20,40 @@ function load( file ) {
 
 	return holder.module.exports;
 }
+
+/*
+ * The real catalogue, not a stub.
+ *
+ * The chart model produces words — the publish checklist, the layer names, every refusal in
+ * validate() — through the same `t()` the panel uses, so a test that stubbed it would assert
+ * against strings this platform does not actually say. The English catalogue is read by PHP,
+ * because these files are PHP and a second half-parser here would disagree with the real one on
+ * exactly the day it mattered. It is the same trick tools/i18n-check.mjs uses, for the same reason.
+ */
+function englishCatalogue() {
+	const dir = path.join( __dirname, '../../lang/en' );
+	const messages = {};
+
+	for ( const file of fs.readdirSync( dir ) ) {
+		if ( ! file.endsWith( '.php' ) ) {
+			continue;
+		}
+
+		messages[ file.replace( /\.php$/, '' ) ] = JSON.parse( execFileSync(
+			'php',
+			[ '-r', 'echo json_encode(require $argv[1], JSON_UNESCAPED_UNICODE);', path.join( dir, file ) ],
+			{ encoding: 'utf8' }
+		) );
+	}
+
+	return messages;
+}
+
+// i18n.js publishes itself on the window rather than through module.exports, so loading it is
+// what puts it in the sandbox.
+load( 'i18n.js' );
+sandbox.SeatmapI18n.messages = englishCatalogue();
+sandbox.SeatmapI18n.loaded = true;
 
 const Chart = load( 'chart.js' );
 sandbox.SeatmapChart = Chart;

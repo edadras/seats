@@ -39,15 +39,56 @@ await page.fill( 'input[name=password]', 'password' );
 await page.click( '#login button[type=submit]' );
 await page.waitForSelector( '.sidebar', { timeout: 10000 } );
 check( 'signed in', await page.locator( '.sidebar' ).isVisible() );
-// By name, not by count: a screen that quietly stops being reachable is the failure worth
-// catching, and a count passes just as happily when one is replaced by another.
-check(
-	'sidebar lists every section',
-	JSON.stringify( await page.locator( '.nav-item' ).allInnerTexts() ) ===
-		JSON.stringify( [ 'Overview', 'Events', 'Tickets', 'Seat maps', 'Venues', 'Customers',
-			'Websites', 'Themes', 'Messages', 'Reports', 'Connections', 'Modules', 'Team',
-			'Activity' ] )
+/*
+ * Every entry in the sidebar, opened.
+ *
+ * A frozen list of names used to live here and it rotted: the panel grew a dozen screens and the
+ * check went on asserting the fourteen it was born with. What is worth catching is not the roll
+ * call — it is a screen that has quietly stopped opening — so this walks whatever the sidebar
+ * currently offers, presses each one, and insists it draws a titled page and says nothing to the
+ * console on the way.
+ */
+const views = await page.locator( 'nav button[data-view]' ).evaluateAll(
+	( buttons ) => buttons.map( ( button ) => ( {
+		view: button.dataset.view,
+		label: button.textContent.trim(),
+	} ) )
 );
+
+check( 'the sidebar offers every screen', views.length >= 20, `${ views.length } screens` );
+check( 'each one is named in the reader\'s language',
+	views.every( ( entry ) => entry.label && entry.label !== entry.view ),
+	views.filter( ( entry ) => ! entry.label || entry.label === entry.view )
+		.map( ( entry ) => entry.view ).join( ', ' ) || 'all named' );
+
+const broken = [];
+
+for ( const entry of views ) {
+	const before = errors.length;
+
+	await page.click( `nav button[data-view=${ entry.view }]` );
+
+	try {
+		await page.waitForFunction( () => {
+			const heading = document.querySelector( '.page-head h1' );
+
+			return heading && heading.textContent.trim().length > 0;
+		}, null, { timeout: 8000 } );
+	} catch ( e ) {
+		broken.push( `${ entry.view }: nothing drew` );
+		continue;
+	}
+
+	// A screen that loads its own data draws a title first and fills in after, so give the
+	// request a moment before deciding it was quiet.
+	await page.waitForTimeout( 700 );
+
+	if ( errors.length > before ) {
+		broken.push( `${ entry.view }: ${ errors.slice( before ).join( ' / ' ) }` );
+	}
+}
+
+check( 'and every one of them opens', 0 === broken.length, broken.join( ' | ' ) );
 
 console.log( 'Designer: open the chart' );
 await page.click( 'nav button[data-view=maps]' );

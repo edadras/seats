@@ -14,6 +14,7 @@
  *   node discount_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openASection, seatedEvent, seatPoint } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SHOTS = process.env.SEATMAP_SHOTS || '/tmp/discount-shots';
@@ -79,29 +80,17 @@ const shop = await context.newPage();
 shop.on( 'pageerror', ( e ) => errors.push( e.message ) );
 shop.on( 'console', ( m ) => { if ( 'error' === m.type() && ! m.text().includes( '404' ) ) errors.push( m.text() ); } );
 
-await shop.goto( `${ SITE }/`, { waitUntil: 'networkidle' } );
-await shop.locator( '.event-card a, .card a, a[href^="/events/"]' ).first().click();
+// The night with chairs in it, asked of the API rather than taken from the top of the list: the
+// demo also contains a warehouse sold by the head, and a discount on standing room proves nothing
+// about a seat price.
+const night = await seatedEvent( BASE, 'discount-smoke' );
+
+await shop.goto( `${ SITE }/events/${ night.public_id }`, { waitUntil: 'networkidle' } );
 await shop.waitForSelector( '.seatmap-widget__stage', { timeout: 15000 } );
-
-if ( await shop.locator( '.seatmap-widget__block' ).count() ) {
-	const canvas = await shop.locator( '.seatmap-widget__canvas' ).boundingBox();
-
-	await shop.mouse.click( canvas.x + canvas.width / 2, canvas.y + canvas.height / 2 );
-	await shop.waitForSelector( '.seatmap-widget__list' );
-}
-
-const seatPoint = ( index ) => shop.evaluate( ( i ) => {
-	const widget = document.querySelector( '.seatmap-widget' ).seatmapWidget;
-	const seats = widget.seats.filter( ( seat ) =>
-		seat.floorKey === widget.floorKey && widget.inOpenBlock( seat ) && 'available' === seat.state );
-	const rect = widget.canvas.getBoundingClientRect();
-	const scale = widget.baseScale * widget.view.scale;
-
-	return { x: rect.left + seats[ i ].x * scale + widget.view.x, y: rect.top + seats[ i ].y * scale + widget.view.y };
-}, index );
+await openASection( shop );
 
 for ( const index of [ 0, 0 ] ) {
-	const seat = await seatPoint( index );
+	const seat = await seatPoint( shop, index );
 
 	await shop.mouse.click( seat.x, seat.y );
 	await shop.waitForTimeout( 300 );

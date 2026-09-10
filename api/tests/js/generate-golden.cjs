@@ -4,11 +4,18 @@ const path = require( 'node:path' );
 
 const sandbox = {};
 function load( file ) {
-	const src = fs.readFileSync( path.join( '/home/user/seats/api/public/editor/js', file ), 'utf8' );
+	// Relative to this file, not to whoever ran it: CI checks the repository out somewhere else.
+	const src = fs.readFileSync( path.join( __dirname, '../../public/editor/js', file ), 'utf8' );
 	const holder = { module: { exports: {} } };
 	new Function( 'module', 'window', 'globalThis', src )( holder.module, sandbox, sandbox );
 	return holder.module.exports;
 }
+
+// The chart model names the things it creates, and it does that through the panel's catalogue.
+// Nothing here reads a word — this file writes numbers — so the untranslated fallback is fine, but
+// `t()` still has to exist or building an empty chart throws.
+load( 'i18n.js' );
+
 const Chart = load( 'chart.js' );
 
 const cases = [
