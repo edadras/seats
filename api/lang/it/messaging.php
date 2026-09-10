@@ -42,6 +42,10 @@ return [
             'name' => 'Si è liberato un posto',
             'description' => 'Inviato ai successivi in lista d’attesa quando tornano dei posti. È esattamente ciò che hanno chiesto, quindi non si può disattivare.',
         ],
+        'season_renewal' => [
+            'name' => 'Rinnovo abbonamento',
+            'description' => 'Va agli abbonati della stagione passata quando i loro posti sono tenuti per loro. Non si può spegnere: qualcuno rischia di perdere i posti su cui siede da anni.',
+        ],
     ],
     'channels' => [
         'email' => 'E-mail',
@@ -78,6 +82,10 @@ return [
         'waitlist_available' => [
             'subject' => 'Si è liberato un posto per {event}',
             'body' => "{buyer}, è tornato un posto per {event}.\n\n{venue}\n{starts}\n\nNe volevi {quantity}. La vendita è aperta per le prossime {hours} ore, chi prima arriva:\n{link}\n\nPer uscire da questa lista: {leave}",
+        ],
+        'season_renewal' => [
+            'subject' => 'I tuoi posti per {run}',
+            'body' => "{buyer}, i tuoi posti per {run} sono tenuti per te: {seats}.\n\nSono tuoi fino al {deadline}, poi passano alla vendita libera. Per tenerli, o per dirci che quest’anno non puoi venire:\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

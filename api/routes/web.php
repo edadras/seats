@@ -7,6 +7,7 @@ use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\BasketController;
 use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\PreferencesController;
+use App\Http\Controllers\Site\RenewalController;
 use App\Http\Controllers\Site\QueueController;
 use App\Http\Controllers\Site\SeasonController;
 use App\Http\Controllers\Site\SiteFilesController;
@@ -157,6 +158,21 @@ Route::middleware('site')->group(function () {
      * it. The link is signed over the account and the address; a wrong signature is a 404, since
      * "wrong token" would confirm that the address is known to this organiser.
      */
+    /*
+     * A subscriber's first refusal on their own chairs.
+     *
+     * Signed rather than signed in, like the preferences page above and for the same reason: the
+     * person being asked bought tickets, they did not make an account, and a renewal that needs a
+     * password they never had is a renewal that lapses. Accepting holds the seats and hands them
+     * to the season checkout; it buys nothing here.
+     */
+    Route::get('renewals/{offer}/{token}', [RenewalController::class, 'show'])
+        ->middleware('throttle:30,1,renewal');
+    Route::post('renewals/{offer}/{token}/accept', [RenewalController::class, 'accept'])
+        ->middleware('throttle:20,1,renewal-answer');
+    Route::post('renewals/{offer}/{token}/decline', [RenewalController::class, 'decline'])
+        ->middleware('throttle:20,1,renewal-answer');
+
     Route::get('preferences/{email}/{token}', [PreferencesController::class, 'show'])
         ->middleware('throttle:30,1,preferences');
     Route::post('preferences/{email}/{token}', [PreferencesController::class, 'update'])

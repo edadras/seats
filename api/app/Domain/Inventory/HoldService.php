@@ -678,7 +678,17 @@ class HoldService
                   JOIN holds hd ON hd.id = hi.hold_id
                   WHERE hi.event_id = :event_id AND hi.seat_id = sp.seat_id
                     AND hi.released_at IS NULL AND hd.status = 'active' AND hd.expires_at > NOW()
-                  LIMIT 1) AS held
+                  LIMIT 1) AS held,
+                -- A chair last season's subscriber has first refusal on, which is held in the
+                -- plainest sense: not for sale to anybody else at the moment, and for sale again
+                -- the moment the deadline passes. See App\Domain\Renewals\Renewals.
+                (SELECT 1 FROM renewal_offer_seats ros
+                  JOIN renewal_offers ro ON ro.id = ros.offer_id AND ro.state = 'offered'
+                  JOIN renewal_rounds rr ON rr.id = ros.round_id
+                  WHERE ros.seat_id = sp.seat_id
+                    AND rr.state = 'open' AND rr.deadline > NOW()
+                    AND rr.to_series_id::text = :series_id
+                  LIMIT 1) AS renewing
             FROM seat_placements sp
             LEFT JOIN event_seat_overrides o ON o.event_id = :event_id AND o.seat_id = sp.seat_id
             LEFT JOIN event_price_zones zone_override
@@ -691,6 +701,8 @@ class HoldService
             'event_id' => $event->id,
             'version_id' => $event->seat_map_version_id,
             'seat_ids' => '{'.implode(',', $seatIds).'}',
+            // Empty for a night in no run: such a night has no subscribers to keep chairs for.
+            'series_id' => (string) ($event->series_id ?? ''),
         ]);
 
         $prices = [];
@@ -702,7 +714,9 @@ class HoldService
                 'blocked' => (bool) $row->blocked,
                 'held_for' => $row->held_for,
                 'allocated' => (bool) $row->allocated,
-                'held' => (bool) $row->held,
+                // One word to everything downstream: a seat kept for a subscriber and a seat in
+                // somebody's basket are both "somebody has it at the moment".
+                'held' => (bool) $row->held || (bool) $row->renewing,
             ];
         }
 

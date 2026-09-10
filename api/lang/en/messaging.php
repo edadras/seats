@@ -42,6 +42,10 @@ return [
             'name' => 'A seat came free',
             'description' => 'Sent to the next people on a waiting list when places come back. They asked for exactly this, so it cannot be switched off.',
         ],
+        'season_renewal' => [
+            'name' => 'Season renewal',
+            'description' => "Sent to last season's subscribers when their seats are being kept for them. It cannot be switched off — somebody stands to lose the chairs they have sat in for years.",
+        ],
     ],
     'channels' => [
         'email' => 'Email',
@@ -78,6 +82,10 @@ return [
         'waitlist_available' => [
             'subject' => 'A seat has come free for {event}',
             'body' => "{buyer}, a place has come back for {event}.\n\n{venue}\n{starts}\n\nYou asked for {quantity}. Seats are on sale again for the next {hours} hours, first come first served:\n{link}\n\nTo come off this list: {leave}",
+        ],
+        'season_renewal' => [
+            'subject' => 'Your seats for {run}',
+            'body' => "{buyer}, your seats for {run} are being kept for you: {seats}.\n\nThey are yours until {deadline}, after which they go on general sale. To keep them, or to let us know you cannot come this year:\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

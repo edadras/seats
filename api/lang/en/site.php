@@ -415,4 +415,17 @@ return [
         'closed' => 'This booking can no longer be moved.',
         'sameName' => 'An exchange has to be paid for by the person who holds the ticket, so use the same email address.',
     ],
+    'renewal' => [
+        'title' => 'Your seats for next season',
+        'about' => 'You had these seats for :run. They are yours again if you want them.',
+        'until' => 'Held for you until :date. After that they go on general sale.',
+        'yourSeats' => 'Your seats',
+        'nights' => 'The nights',
+        'priceLater' => 'What it comes to is shown before you pay, on the next page.',
+        'take' => 'Keep my seats',
+        'giveUp' => 'Not this year',
+        'taken' => 'Taken. Your seats are being kept while you pay.',
+        'declined' => 'Thank you for letting us know. Your seats have gone back on sale.',
+        'over' => 'This offer has closed and the seats are on general sale.',
+    ],
 ];

@@ -80,6 +80,20 @@ class MessageKinds
             'optional' => true,
         ],
         /*
+         * A subscriber being told their own chairs are being kept for them, and until when.
+         *
+         * Not optional, and not gated on marketing consent, and the distinction is worth being
+         * precise about: this is not a message about next season's programme, it is a message
+         * about seats this person holds and stands to lose. Somebody who asked never to hear from
+         * this theatre about anything new is still entitled to be told that. Using their privacy
+         * choice as the reason their seats were sold to somebody else would be the wrong way round
+         * of the promise consent exists to keep.
+         */
+        'season.renewal' => [
+            'placeholders' => ['buyer', 'run', 'seats', 'deadline', 'site', 'link'],
+            'optional' => false,
+        ],
+        /*
          * An announcement carries the organiser's own words rather than a template's, so there is
          * nothing here to write wording for — but it is a kind, because everything it sends is a
          * delivery, and a delivery has to say what it was. Its channels are chosen per

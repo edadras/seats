@@ -61,6 +61,10 @@ class AvailabilityService
             // Bound as 0/1 rather than a PHP boolean: PDO sends a bool to PostgreSQL as an empty
             // string for false, and an empty string is not something `= 0` can be asked about.
             'counter' => $counter ? 1 : 0,
+            // The run this night belongs to, for the renewal join below. Compared as text and
+            // empty for a night in no run at all: a night outside a series has no subscribers to
+            // keep chairs for, and `= NULL` is not a comparison anything is ever true of.
+            'series_id' => (string) ($event->series_id ?? ''),
         ]);
 
         return array_map(fn ($row) => [
@@ -261,6 +265,15 @@ class AvailabilityService
                     SELECT 1 FROM resale_listings rl
                     WHERE rl.allocation_id = a.id AND rl.state = 'open'
                 )
+            /*
+             * Somebody's basket, or somebody's subscription seat.
+             *
+             * A chair a last-season subscriber has first refusal on is held, in the plainest sense
+             * of the word: it is not for sale to anybody else at the moment, and it will be again.
+             * Reading the deadline here rather than sweeping it is what makes the promise exact —
+             * the seats come back on general sale on the stroke of it, whether or not anybody
+             * remembered to close the round. See App\Domain\Renewals\Renewals.
+             */
             LEFT JOIN (
                 SELECT hi.seat_id, hi.id
                 FROM hold_items hi
@@ -269,6 +282,16 @@ class AvailabilityService
                   AND hi.released_at IS NULL
                   AND hd.status = 'active'
                   AND hd.expires_at > NOW()
+
+                UNION ALL
+
+                SELECT ros.seat_id, ros.id
+                FROM renewal_offer_seats ros
+                JOIN renewal_offers ro ON ro.id = ros.offer_id AND ro.state = 'offered'
+                JOIN renewal_rounds rr ON rr.id = ros.round_id
+                WHERE rr.state = 'open'
+                  AND rr.deadline > NOW()
+                  AND rr.to_series_id::text = :series_id
             ) h ON h.seat_id = sp.seat_id
             LEFT JOIN event_price_zones zone_override
                 ON zone_override.event_id = :event_id AND zone_override.key = o.zone_key

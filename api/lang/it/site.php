@@ -411,4 +411,17 @@ return [
         'closed' => 'Questa prenotazione non può più essere spostata.',
         'sameName' => 'Uno scambio deve essere pagato da chi ha il biglietto: usa lo stesso indirizzo e-mail.',
     ],
+    'renewal' => [
+        'title' => 'I tuoi posti per la prossima stagione',
+        'about' => 'Avevi questi posti per :run. Sono di nuovo tuoi, se li vuoi.',
+        'until' => 'Tenuti per te fino al :date. Poi passano alla vendita libera.',
+        'yourSeats' => 'I tuoi posti',
+        'nights' => 'Le serate',
+        'priceLater' => 'Quanto viene lo vedi prima di pagare, nella pagina successiva.',
+        'take' => 'Tengo i miei posti',
+        'giveUp' => 'Non quest’anno',
+        'taken' => 'Fatto. I tuoi posti restano tenuti mentre paghi.',
+        'declined' => 'Grazie per averlo detto. I tuoi posti sono tornati in vendita.',
+        'over' => 'Questa offerta è chiusa e i posti sono in vendita libera.',
+    ],
 ];

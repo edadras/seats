@@ -44,7 +44,14 @@
 			title: App.t( 'panel.seasons.title' ),
 			description: esc( App.t( 'panel.seasons.description' ) ),
 			actions: Seasons.series.length
-				? '<button class="btn btn--primary" id="s-new">' +
+				? /*
+				   * Renewals hang off a *run*, not off a pass: what is being offered is next
+				   * season's chairs, and which pass prices them is a choice made when the round is
+				   * opened. So the button is here, beside the run filter that says which run.
+				   */
+				  '<button class="btn" id="s-renewals">' +
+					icon( 'users', { size: 15 } ) + esc( App.t( 'panel.renewals.title' ) ) + '</button>' +
+				  '<button class="btn btn--primary" id="s-new">' +
 					icon( 'plus', { size: 15 } ) + esc( App.t( 'panel.seasons.create' ) ) + '</button>'
 				: '',
 			body:
@@ -93,6 +100,191 @@
 		} );
 
 		bind( 's-new', function () { Seasons.form( null ); } );
+		bind( 's-renewals', function () { Seasons.renewals(); } );
+	};
+
+	/* ------------------------------------------------------------------- renewals */
+
+	/**
+	 * Next season, offered to last season's subscribers before anybody else.
+	 *
+	 * One run at a time, because that is what a round is. The run comes from the filter above: an
+	 * organiser looking at "every run" is not looking at a renewal, they are looking at a list.
+	 */
+	Seasons.renewals = function () {
+		var App = Seasons.App;
+		var seriesId = Seasons.filters.series_id;
+
+		if ( ! seriesId ) {
+			App.toast( App.t( 'panel.renewals.chooseRun' ), true );
+
+			return;
+		}
+
+		App.request( 'GET', '/series/' + seriesId + '/renewals' )
+			.then( function ( response ) {
+				var rounds = response.data || [];
+
+				if ( ! rounds.length ) {
+					Seasons.openRound( seriesId );
+
+					return;
+				}
+
+				Seasons.showRound( rounds[ 0 ] );
+			} )
+			.catch( function ( error ) { App.toast( error.message, true ); } );
+	};
+
+	/** Open one: which run they came from, how it is priced, and the date it closes. */
+	Seasons.openRound = function ( seriesId ) {
+		var App = Seasons.App;
+
+		App.request( 'GET', '/season-passes?series_id=' + encodeURIComponent( seriesId ) )
+			.then( function ( response ) {
+				var passes = response.data || [];
+
+				if ( ! passes.length ) {
+					App.toast( App.t( 'panel.renewals.needsPass' ), true );
+
+					return;
+				}
+
+				App.modal( {
+					title: App.t( 'panel.renewals.open' ),
+					submitLabel: App.t( 'panel.renewals.openIt' ),
+					body:
+						'<p class="hint">' + esc( App.t( 'panel.renewals.description' ) ) + '</p>' +
+						'<div class="field"><label class="field__label" for="r-name">' +
+						esc( App.t( 'panel.renewals.name' ) ) + '</label>' +
+						'<input class="input" id="r-name" value="' +
+						esc( App.t( 'panel.renewals.defaultName' ) ) + '"></div>' +
+						'<div class="field"><label class="field__label" for="r-from">' +
+						esc( App.t( 'panel.renewals.lastRun' ) ) + '</label>' +
+						'<select class="select" id="r-from">' +
+						Seasons.series.filter( function ( run ) { return run.id !== seriesId; } )
+							.map( function ( run ) {
+								return '<option value="' + esc( run.id ) + '">' +
+									esc( run.name ) + '</option>';
+							} ).join( '' ) +
+						'</select>' +
+						'<span class="field__hint">' +
+						esc( App.t( 'panel.renewals.lastRunHint' ) ) + '</span></div>' +
+						'<div class="field"><label class="field__label" for="r-pass">' +
+						esc( App.t( 'panel.renewals.pass' ) ) + '</label>' +
+						'<select class="select" id="r-pass">' +
+						passes.map( function ( pass ) {
+							return '<option value="' + esc( pass.id ) + '">' +
+								esc( pass.name ) + '</option>';
+						} ).join( '' ) +
+						'</select></div>' +
+						'<div class="field"><label class="field__label" for="r-deadline">' +
+						esc( App.t( 'panel.renewals.deadline' ) ) + '</label>' +
+						'<input class="input" id="r-deadline" type="datetime-local">' +
+						'<span class="field__hint">' +
+						esc( App.t( 'panel.renewals.deadlineHint' ) ) + '</span></div>',
+					onSubmit: function () {
+						var deadline = document.getElementById( 'r-deadline' ).value;
+
+						if ( ! deadline ) {
+							return Promise.reject( new Error( App.t( 'panel.renewals.needsDeadline' ) ) );
+						}
+
+						return App.request( 'POST', '/series/' + seriesId + '/renewals', {
+							from_series_id: document.getElementById( 'r-from' ).value,
+							season_pass_id: document.getElementById( 'r-pass' ).value,
+							name: document.getElementById( 'r-name' ).value,
+							deadline: new Date( deadline ).toISOString(),
+						} ).then( function ( made ) {
+							App.toast( App.t( 'panel.renewals.opened', {
+								count: App.number( made.offered ),
+							} ) );
+							Seasons.showRound( made.data );
+						} );
+					},
+				} );
+			} )
+			.catch( function ( error ) { App.toast( error.message, true ); } );
+	};
+
+	/** Who was offered what, and whether they have answered. */
+	Seasons.showRound = function ( round ) {
+		var App = Seasons.App;
+
+		function draw() {
+			var host = document.getElementById( 'r-list' );
+
+			if ( ! host ) {
+				return;
+			}
+
+			host.innerHTML = round.data.length
+				? App.table(
+					[
+						App.t( 'panel.renewals.subscriber' ),
+						App.t( 'panel.renewals.seats' ),
+						App.t( 'panel.common.status' ),
+					],
+					round.data.map( function ( offer ) {
+						return '<tr>' +
+							'<td class="table__primary">' + esc( offer.name || offer.email ) +
+								'<span class="muted on-own-line">' + esc( offer.email ) + '</span></td>' +
+							'<td>' + esc( offer.seats.join( ' · ' ) ) + '</td>' +
+							'<td>' + esc( App.t( 'panel.renewals.states.' + offer.state ) ) + '</td>' +
+						'</tr>';
+					} ).join( '' )
+				)
+				: '<p class="hint">' + esc( App.t( 'panel.renewals.nobody' ) ) + '</p>';
+		}
+
+		App.modal( {
+			title: round.name,
+			cancelLabel: null,
+			doneLabel: App.t( 'panel.common.close' ),
+			body:
+				'<div class="stat-strip">' +
+					tile( App.t( 'panel.renewals.states.offered' ), App.number( round.counts.offered ) ) +
+					tile( App.t( 'panel.renewals.states.accepted' ), App.number( round.counts.accepted ) ) +
+					tile( App.t( 'panel.renewals.states.declined' ), App.number( round.counts.declined ) ) +
+					tile( App.t( 'panel.renewals.states.lapsed' ), App.number( round.counts.lapsed ) ) +
+				'</div>' +
+				'<p class="hint">' + esc( App.t( round.live
+					? 'panel.renewals.until'
+					: 'panel.renewals.finished', {
+					date: App.date( round.deadline, { dateStyle: 'long', timeStyle: 'short' } ),
+				} ) ) + '</p>' +
+				'<div class="filters">' +
+					'<button type="button" class="btn" id="r-invite">' +
+						esc( App.t( 'panel.renewals.invite' ) ) + '</button>' +
+					( 'open' === round.state
+						? '<button type="button" class="btn btn--danger" id="r-close">' +
+							esc( App.t( 'panel.renewals.close' ) ) + '</button>'
+						: '' ) +
+				'</div>' +
+				'<div id="r-list" class="spaced"></div>',
+		} );
+
+		draw();
+
+		bind( 'r-invite', function () {
+			App.request( 'POST', '/renewals/' + round.id + '/invite' )
+				.then( function ( response ) {
+					App.toast( App.t( 'panel.renewals.invited', {
+						count: App.number( response.sent ),
+					} ) );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+
+		bind( 'r-close', function () {
+			App.request( 'POST', '/renewals/' + round.id + '/close' )
+				.then( function ( response ) {
+					App.toast( App.t( 'panel.renewals.closed' ) );
+					round = response.data;
+					draw();
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
 	};
 
 	Seasons.load = function () {

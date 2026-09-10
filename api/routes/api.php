@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\V1\Management\ShiftController;
 use App\Http\Controllers\Api\V1\Management\RefundRequestController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
+use App\Http\Controllers\Api\V1\Management\RenewalController as ManagementRenewals;
 use App\Http\Controllers\Api\V1\Management\ResaleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
@@ -298,6 +299,23 @@ Route::prefix('v1')->group(function () {
          */
         Route::get('events/{event}/resale', [ResaleController::class, 'index']);
         Route::delete('events/{event}/resale/{listing}', [ResaleController::class, 'withdraw']);
+
+        /*
+         * Next season, offered to last season's subscribers before anybody else.
+         *
+         * Reading a round is `events.view`, because the box office is asked "has she renewed?" all
+         * day and should not need the permission that sets prices to answer it. Opening and
+         * closing one is `pricing.manage`, beside the channel quotas: both decide who may buy what.
+         * Writing to several hundred subscribers is `messages.send`, which is its own question.
+         */
+        Route::get('series/{series}/renewals', [ManagementRenewals::class, 'index']);
+        Route::post('series/{series}/renewals', [ManagementRenewals::class, 'open'])
+            ->middleware('throttle:10,1,renewal-open');
+        Route::get('renewals/{round}', [ManagementRenewals::class, 'show']);
+        Route::post('renewals/{round}/invite', [ManagementRenewals::class, 'invite'])
+            ->middleware('throttle:6,1,renewal-invite');
+        Route::post('renewals/{round}/close', [ManagementRenewals::class, 'close'])
+            ->middleware('throttle:20,1,renewal-close');
 
         // ---- The waiting list -----------------------------------------------------------------
         Route::get('events/{event}/waiting-list', [ManagementWaitingList::class, 'index']);

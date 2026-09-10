@@ -42,6 +42,10 @@ return [
             'name' => 'Ein Platz ist frei geworden',
             'description' => 'Geht an die Nächsten auf einer Warteliste, wenn Plätze zurückkommen. Genau darum haben sie gebeten, also lässt es sich nicht abschalten.',
         ],
+        'season_renewal' => [
+            'name' => 'Abo-Verlängerung',
+            'description' => 'Geht an die Abonnenten der letzten Spielzeit, wenn ihre Plätze für sie reserviert sind. Nicht abschaltbar — jemand kann die Plätze verlieren, auf denen er seit Jahren sitzt.',
+        ],
     ],
     'channels' => [
         'email' => 'E-Mail',
@@ -78,6 +82,10 @@ return [
         'waitlist_available' => [
             'subject' => 'Für {event} ist ein Platz frei geworden',
             'body' => "{buyer}, für {event} ist ein Platz zurückgekommen.\n\n{venue}\n{starts}\n\nSie wollten {quantity}. Der Verkauf ist die nächsten {hours} Stunden offen, wer zuerst kommt:\n{link}\n\nVon dieser Liste abmelden: {leave}",
+        ],
+        'season_renewal' => [
+            'subject' => 'Ihre Plätze für {run}',
+            'body' => "{buyer}, Ihre Plätze für {run} sind für Sie reserviert: {seats}.\n\nSie gehören Ihnen bis zum {deadline}, danach gehen sie in den freien Verkauf. Um sie zu behalten oder uns zu sagen, dass Sie dieses Jahr nicht können:\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

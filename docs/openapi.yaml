@@ -1264,6 +1264,185 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /series/{series}/renewals:
+    parameters:
+      - name: series
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: The run being offered — next season, not last.
+    get:
+      operationId: listRenewalRounds
+      tags: [Seasons]
+      summary: Renewals opened on this run
+      description: |
+        Requires `events.view`. The box office is asked "has Mrs Dehghani renewed?" all day and
+        should not need the permission that sets prices in order to answer it.
+      responses:
+        "200":
+          description: Every round on this run, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/RenewalRound" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: openRenewalRound
+      tags: [Seasons]
+      summary: Offer next season to last season's subscribers
+      description: |
+        Requires `pricing.manage`, beside the channel quotas: both decide who may buy what.
+
+        Everybody who held seats on the nights of `from_series_id` is offered the same chairs in
+        this run, and nobody else can buy them until `deadline`. Nothing is charged and no
+        allocation is made: they are offers. The chairs stop being kept **on the stroke of the
+        deadline**, read live rather than swept, so a round nobody closed still releases its seats
+        on time.
+
+        The answer counts what could not be carried over as well as what could — a chair that is
+        not in the new run's plan, or one two bookings somehow both claim. An organiser told "412
+        offered" and not told about the 38 that vanished will hear about them from the subscribers
+        who used to sit there.
+
+        One open round per run: a second would offer the same chair to two people.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from_series_id, season_pass_id, deadline, name]
+              properties:
+                from_series_id:
+                  type: string
+                  format: uuid
+                  description: Last season — whoever held seats on its nights is offered them again.
+                season_pass_id:
+                  type: string
+                  format: uuid
+                  description: >-
+                    How the new run is priced for them. A renewal is a season ticket, so it is sold
+                    on a season pass like any other; there is no second kind of subscription.
+                deadline: { type: string, format: date-time }
+                name: { type: string, maxLength: 160 }
+      responses:
+        "201":
+          description: The round, and what came of building it
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RenewalRound" }
+                  offered: { type: integer, description: "How many subscribers were offered seats." }
+                  seats: { type: integer, description: "How many chairs are being kept in total." }
+                  skipped:
+                    type: object
+                    description: What could not be carried over, by reason.
+                    properties:
+                      no_such_seat:
+                        type: integer
+                        description: "The chair is not in the new run's plan."
+                      already_claimed:
+                        type: integer
+                        description: "Two bookings claimed it; the earlier one won."
+                      no_email:
+                        type: integer
+                        description: "A booking with no address on it."
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /renewals/{round}:
+    parameters:
+      - name: round
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getRenewalRound
+      tags: [Seasons]
+      summary: One renewal, and everybody in it
+      description: Requires `events.view`.
+      responses:
+        "200":
+          description: The round, its counts and its offers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RenewalRound" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /renewals/{round}/invite:
+    parameters:
+      - name: round
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: inviteRenewalRound
+      tags: [Seasons]
+      summary: Write to everybody who has not been told yet
+      description: |
+        Requires `messages.send`: writing to several hundred subscribers is its own question,
+        answered separately from who may set prices.
+
+        Sent as a message about seats they hold rather than as an announcement, and therefore not
+        gated on marketing consent. A subscriber who asked never to hear about next season's
+        programme is still entitled to be told that their own chairs are being kept for them and
+        that they will lose them if they do not answer; withholding that would be using somebody's
+        privacy choice to take their seats away.
+
+        Idempotent: only offers never written to are sent, so pressing it twice writes to nobody
+        twice.
+      responses:
+        "200":
+          description: How many were written to
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /renewals/{round}/close:
+    parameters:
+      - name: round
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: closeRenewalRound
+      tags: [Seasons]
+      summary: Close a renewal and record who never answered
+      description: |
+        Requires `pricing.manage`. The chairs were back on general sale at the deadline whether or
+        not anybody pressed this — availability reads the date live. What this writes down is the
+        difference between "said no" and "never replied", which is a question the box office is
+        asked in October.
+      responses:
+        "200":
+          description: The round, now closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RenewalRound" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /season-passes:
     get:
       operationId: listSeasonPasses
@@ -6963,6 +7142,55 @@ components:
         suggested:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
+
+    RenewalRound:
+      type: object
+      description: >-
+        One season offered to last season's subscribers, with a date on it. Until the date the
+        chairs belong to the people who sat in them; after it they belong to whoever buys them
+        first, with nothing swept in between.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        state:
+          type: string
+          enum: [open, closed]
+        deadline: { type: string, format: date-time }
+        live:
+          type: boolean
+          description: "Open *and* not past its deadline — which is what actually keeps the seats."
+        counts:
+          type: object
+          properties:
+            offered: { type: integer }
+            accepted: { type: integer }
+            declined: { type: integer }
+            lapsed: { type: integer }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/RenewalOffer" }
+
+    RenewalOffer:
+      type: object
+      description: >-
+        One subscriber's first refusal on their own chairs. An offer, never a booking: nothing is
+        charged and no seat is allocated until they accept and pay like anybody else.
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        name: { type: [string, "null"] }
+        state:
+          type: string
+          enum: [offered, accepted, declined, lapsed]
+          description: >-
+            `lapsed` is written when a round closes. The seats stopped being kept at the deadline
+            whether or not anybody wrote it down.
+        invited_at: { type: [string, "null"], format: date-time }
+        responded_at: { type: [string, "null"], format: date-time }
+        seats:
+          type: array
+          description: The chairs, as a person would say them — section, row and seat.
+          items: { type: string }
 
     ResaleListing:
       type: object

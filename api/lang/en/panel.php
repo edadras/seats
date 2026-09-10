@@ -1616,6 +1616,41 @@ return [
     /*
      * Seats a buyer has offered back to the public, and the one thing staff may do about them.
      */
+    /*
+     * Next season, offered to last season's subscribers before anybody else.
+     */
+    'renewals' => [
+        'title' => 'Renewals',
+        'description' => "Everybody who had seats last season is offered the same chairs for the new run, and nobody else can buy them until the date you set. Nothing is charged: they are offers, and the seats go on general sale the moment the date passes.",
+        'chooseRun' => 'Choose which run first, in the filter above.',
+        'needsPass' => 'This run needs a season ticket before it can be renewed into.',
+        'open' => 'Open a renewal',
+        'openIt' => 'Open it',
+        'opened' => 'Open. :count subscribers have first refusal on their seats.',
+        'name' => 'What to call it',
+        'defaultName' => 'Renewals',
+        'lastRun' => 'Last season',
+        'lastRunHint' => 'Whoever held seats on these nights is offered the same chairs in the new run.',
+        'pass' => 'Sold on',
+        'deadline' => 'Held until',
+        'deadlineHint' => 'On the stroke of this the seats go on general sale, whether or not anybody has answered.',
+        'needsDeadline' => 'Say when the offer closes.',
+        'until' => 'Held until :date.',
+        'finished' => 'Closed on :date.',
+        'invite' => 'Write to everybody',
+        'invited' => 'Written to :count.',
+        'close' => 'Close it',
+        'closed' => 'Closed. Everybody who did not answer has lapsed.',
+        'subscriber' => 'Subscriber',
+        'seats' => 'Their seats',
+        'nobody' => 'Nobody from last season could be carried over.',
+        'states' => [
+            'offered' => 'Waiting',
+            'accepted' => 'Renewed',
+            'declined' => 'Said no',
+            'lapsed' => 'No reply',
+        ],
+    ],
     'resale' => [
         'title' => "Offered back",
         'description' => "Seats somebody has put back on sale at what they paid. The seat stays theirs until another buyer takes it, and the seller is paid then and not before.",

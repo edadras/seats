@@ -42,6 +42,10 @@ return [
             'name' => 'Une place s’est libérée',
             'description' => 'Envoyé aux suivants sur une liste d’attente quand des places reviennent. C’est exactement ce qu’ils ont demandé : impossible de le désactiver.',
         ],
+        'season_renewal' => [
+            'name' => 'Renouvellement d’abonnement',
+            'description' => 'Envoyé aux abonnés de la saison passée quand leurs places leur sont réservées. Impossible à désactiver : quelqu’un risque de perdre les places qu’il occupe depuis des années.',
+        ],
     ],
     'channels' => [
         'email' => 'E-mail',
@@ -78,6 +82,10 @@ return [
         'waitlist_available' => [
             'subject' => 'Une place s’est libérée pour {event}',
             'body' => "{buyer}, une place est revenue pour {event}.\n\n{venue}\n{starts}\n\nVous en vouliez {quantity}. La vente est ouverte pendant {hours} heures, premier arrivé premier servi :\n{link}\n\nPour quitter cette liste : {leave}",
+        ],
+        'season_renewal' => [
+            'subject' => 'Vos places pour {run}',
+            'body' => "{buyer}, vos places pour {run} vous sont réservées : {seats}.\n\nElles sont à vous jusqu’au {deadline}, ensuite elles partent en vente libre. Pour les garder, ou pour nous dire que vous ne pourrez pas venir cette année :\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

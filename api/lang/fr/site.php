@@ -411,4 +411,17 @@ return [
         'closed' => 'Cette réservation ne peut plus être changée.',
         'sameName' => 'Un échange doit être payé par la personne qui détient le billet : utilisez la même adresse e-mail.',
     ],
+    'renewal' => [
+        'title' => 'Vos places pour la saison prochaine',
+        'about' => 'Vous aviez ces places pour :run. Elles sont de nouveau à vous si vous le souhaitez.',
+        'until' => 'Réservées pour vous jusqu’au :date. Ensuite elles partent en vente libre.',
+        'yourSeats' => 'Vos places',
+        'nights' => 'Les soirées',
+        'priceLater' => 'Le montant s’affiche avant le paiement, à la page suivante.',
+        'take' => 'Je garde mes places',
+        'giveUp' => 'Pas cette année',
+        'taken' => 'C’est noté. Vos places restent réservées le temps du paiement.',
+        'declined' => 'Merci de nous avoir prévenus. Vos places sont reparties en vente.',
+        'over' => 'Cette offre est close et les places sont en vente libre.',
+    ],
 ];

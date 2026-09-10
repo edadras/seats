@@ -412,4 +412,17 @@ return [
         'closed' => 'Diese Buchung kann nicht mehr umgebucht werden.',
         'sameName' => 'Eine Umbuchung muss von der Person bezahlt werden, die die Karte hat — nehmen Sie also dieselbe E-Mail-Adresse.',
     ],
+    'renewal' => [
+        'title' => 'Ihre Plätze für die nächste Spielzeit',
+        'about' => 'Diese Plätze hatten Sie in :run. Sie gehören wieder Ihnen, wenn Sie möchten.',
+        'until' => 'Bis zum :date für Sie reserviert. Danach gehen sie in den freien Verkauf.',
+        'yourSeats' => 'Ihre Plätze',
+        'nights' => 'Die Abende',
+        'priceLater' => 'Was es kostet, sehen Sie vor dem Bezahlen auf der nächsten Seite.',
+        'take' => 'Plätze behalten',
+        'giveUp' => 'Dieses Jahr nicht',
+        'taken' => 'Übernommen. Ihre Plätze bleiben reserviert, solange Sie bezahlen.',
+        'declined' => 'Danke für die Nachricht. Ihre Plätze sind wieder im Verkauf.',
+        'over' => 'Dieses Angebot ist beendet, die Plätze sind im freien Verkauf.',
+    ],
 ];
