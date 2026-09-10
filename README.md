@@ -260,6 +260,7 @@ node tools/i18n-check.mjs                   # every locale complete
 node tools/panel-strings-check.mjs          # the panel and its catalogue agree, both ways
 node tools/picker-strings-check.mjs         # every host provides what the picker asks for
 php tools/error-strings-check.php           # every refusal has a sentence, and vice versa
+node tools/route-contract-check.mjs         # every /v1 route is in the contract, and vice versa
 ```
 
 The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concurrency tests spawn

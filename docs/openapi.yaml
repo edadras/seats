@@ -60,6 +60,8 @@ tags:
   - name: Notifications
   - name: Sites
   - name: Modules
+  - name: Connections
+  - name: Localisation
   - name: Team
   - name: Audit
   - name: Check-in
@@ -2967,7 +2969,7 @@ paths:
               schema: { $ref: "#/components/schemas/SeatUnavailableError" }
         "429": { $ref: "#/components/responses/RateLimited" }
 
-  /embed/holds/{hold_token}:
+  /embed/holds/{token}:
     parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
     delete:
       operationId: releaseHold
@@ -2978,7 +2980,7 @@ paths:
         "204": { description: Released }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /embed/holds/{hold_token}/extend:
+  /embed/holds/{token}/extend:
     parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
     patch:
       operationId: extendHold
@@ -2994,7 +2996,7 @@ paths:
               schema: { $ref: "#/components/schemas/Hold" }
         "409": { $ref: "#/components/responses/Conflict" }
 
-  /embed/holds/{hold_token}/validate:
+  /embed/holds/{token}/validate:
     parameters: [ { $ref: "#/components/parameters/HoldToken" } ]
     post:
       operationId: validateHold
@@ -4404,6 +4406,197 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Overview" }
 
+  /api-clients:
+    get:
+      operationId: listApiClients
+      tags: [Connections]
+      summary: The storefronts connected to this account
+      description: |
+        Requires `connections.manage`. One client per shop: a WooCommerce store, a bespoke
+        integration, whatever signs requests as this organiser.
+
+        Only keys that have not been revoked are listed, and each is shown as an id, a label and a
+        hint — never a secret. There is deliberately no endpoint that reads a secret back.
+      responses:
+        "200":
+          description: The connected clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ApiClient" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: createApiClient
+      tags: [Connections]
+      summary: Connect a storefront, and issue its first key
+      description: |
+        Requires `connections.manage`. Creating a client issues one key with it, because a client
+        with no credential cannot do anything and would only be a second step to forget.
+
+        **The secret is in this response and in no other.** It is stored hashed; losing it means
+        rotating, not recovering (threat T5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                site_url: { type: [string, "null"], format: uri, maxLength: 255 }
+                allowed_origins:
+                  type: array
+                  description: >-
+                    Origins the browser widget may be embedded on. Empty means the public embed
+                    endpoints are open, which is their normal state — they hold seats and read what
+                    a venue already shows publicly.
+                  items: { type: string, maxLength: 255 }
+      responses:
+        "201":
+          description: The client, with the only copy of its secret
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiClient"
+                  - type: object
+                    properties:
+                      credentials:
+                        type: object
+                        properties:
+                          key_id: { type: string }
+                          secret:
+                            type: string
+                            description: "Shown once. Never retrievable again."
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api-clients/{client}/keys:
+    parameters:
+      - name: client
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: rotateApiKey
+      tags: [Connections]
+      summary: Issue another key without withdrawing the last one
+      description: >-
+        Requires `connections.manage`. The old key stays valid until it is revoked, so a shop can be
+        updated and its signing verified before the credential it was using disappears. A rotation
+        that cut the old key off at the same moment would be an outage with extra steps.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: { type: string, maxLength: 120, default: rotated }
+      responses:
+        "201":
+          description: The new credential
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key_id: { type: string }
+                  secret: { type: string, description: "Shown once." }
+                  note: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api-clients/{client}/keys/{keyId}:
+    parameters:
+      - name: client
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: keyId
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      operationId: revokeApiKey
+      tags: [Connections]
+      summary: Withdraw a key
+      description: >-
+        Requires `connections.manage`. Immediate, and not reversible. Anything still signing with
+        this key stops working on the next request, which is the point.
+      responses:
+        "204": { description: Revoked }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /i18n:
+    get:
+      operationId: listLocales
+      tags: [Localisation]
+      summary: The languages this platform speaks, and which one you are getting
+      description: >-
+        Public, and the first thing a browser surface asks for. `current` is the language the
+        request resolved to — from an explicit header, the signed-in user, the site, or
+        Accept-Language, in that order (ADR-0005) — so a client can fetch the right catalogue
+        without duplicating that decision.
+      responses:
+        "200":
+          description: The menu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locales:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string, example: fa }
+                        name: { type: string, description: "The language's name in itself." }
+                        dir: { type: string, enum: [ltr, rtl] }
+                  current: { type: string }
+                  fallback: { type: string }
+
+  /i18n/{locale}:
+    parameters:
+      - name: locale
+        in: path
+        required: true
+        schema: { type: string, example: fa }
+    get:
+      operationId: getCatalogue
+      tags: [Localisation]
+      summary: One language's catalogue, for a browser to render from
+      description: |
+        Public. The same PHP catalogues the server renders sites and emails from, as JSON — there is
+        no second copy in a `.js` file, because two copies of a translation is two translations and
+        the wrong one is always the one nobody is looking at.
+
+        Only the namespaces a browser surface needs are included; `mail` and the rest never leave
+        the server. Cached for a day and revalidated: catalogues change on deploy, and a stale one
+        shows somebody yesterday's wording, which is survivable.
+      responses:
+        "200":
+          description: The catalogue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locale: { type: string }
+                  dir: { type: string, enum: [ltr, rtl] }
+                  icu: { type: string, description: "The ICU locale for formatting numbers and dates." }
+                  messages:
+                    type: object
+                    additionalProperties: true
+                    description: "Namespace to nested keys."
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /audit:
     get:
       operationId: listAudit
@@ -5155,7 +5348,7 @@ components:
       required: true
       schema: { type: string }
     HoldToken:
-      name: hold_token
+      name: token
       in: path
       required: true
       schema: { type: string }
@@ -5250,6 +5443,33 @@ components:
             email: { type: [string, "null"] }
             status: { type: string }
             total: { type: string, description: "Formatted in the reader's language." }
+
+    ApiClient:
+      type: object
+      description: >-
+        A connected storefront. Keys are listed as identity and provenance — an id, a label, a hint,
+        when it was last used — and never as a secret: there is no endpoint that reads one back.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        site_url: { type: [string, "null"], format: uri }
+        allowed_origins:
+          type: [array, "null"]
+          items: { type: string }
+        status: { type: string, enum: [active, disabled] }
+        last_seen_at: { type: [string, "null"], format: date-time }
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              key_id: { type: string }
+              label: { type: [string, "null"] }
+              secret_hint:
+                type: [string, "null"]
+                description: "The last few characters, so a person can tell two keys apart."
+              last_used_at: { type: [string, "null"], format: date-time }
+              expires_at: { type: [string, "null"], format: date-time }
 
     WalletSettings:
       type: object

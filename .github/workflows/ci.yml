@@ -116,6 +116,21 @@ jobs:
           REDIS_HOST: 127.0.0.1
         run: ./vendor/bin/phpunit
 
+      - name: The contract describes the API
+        if: matrix.php == '8.4'
+        working-directory: .
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: seatmap_test
+          DB_USERNAME: seatmap
+          DB_PASSWORD: seatmap
+        run: |
+          # Redocly, in the contract job, checks the document is well formed. It cannot tell that
+          # six endpoints have quietly left it — a specification that is merely incomplete still
+          # validates. This needs a booted application, so it runs here rather than there.
+          node tools/route-contract-check.mjs
+
   editor:
     name: Chart model
     runs-on: ubuntu-latest
