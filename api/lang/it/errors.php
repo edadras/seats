@@ -227,4 +227,8 @@ return [
     'channel_quota_gone' => 'Questo canale di vendita ha venduto tutta la sua quota per questo evento.',
     'unknown_segment' => 'Non esiste un pubblico salvato con quel nome.',
     'spend_needs_currency' => 'Indica in quale valuta è quell’importo — un account che vende in due valute ha due risposte.',
+    'till_already_open' => 'Hai già una cassa aperta. Chiudila prima di aprirne un’altra.',
+    'till_closed' => 'Quella cassa è chiusa.',
+    'movement_needs_amount' => 'Indica quanto è stato spostato.',
+    'not_your_till' => 'Quella è la cassa di qualcun altro.',
 ];

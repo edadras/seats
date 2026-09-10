@@ -33,6 +33,7 @@
 		{ group: 'programme', items: [
 			{ key: 'events', icon: 'calendar' },
 			{ key: 'counter', icon: 'ticket' },
+			{ key: 'tills', icon: 'wallet' },
 			{ key: 'orders', icon: 'file' },
 			{ key: 'tickets', icon: 'ticket' },
 			{ key: 'doorlist', icon: 'check' },
@@ -617,6 +618,7 @@
 			case 'tickets': return window.SeatmapTickets.render( this );
 			case 'customers': return window.SeatmapCustomers.render( this );
 			case 'counter': return window.SeatmapCounter.render( this );
+			case 'tills': return window.SeatmapTills.render( this );
 			case 'doorlist': return window.SeatmapDoorList.render( this );
 			case 'questions': return window.SeatmapQuestions.render( this );
 			case 'entryslots': return window.SeatmapEntrySlots.render( this );

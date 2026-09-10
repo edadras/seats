@@ -227,4 +227,8 @@ return [
     'channel_quota_gone' => 'Ce canal de vente a vendu tout son quota pour cet événement.',
     'unknown_segment' => 'Ce public enregistré n’existe pas.',
     'spend_needs_currency' => 'Précisez la devise de ce montant — un compte qui vend dans deux devises a deux réponses.',
+    'till_already_open' => 'Vous avez déjà une caisse ouverte. Fermez-la avant d’en ouvrir une autre.',
+    'till_closed' => 'Cette caisse est fermée.',
+    'movement_needs_amount' => 'Indiquez le montant déplacé.',
+    'not_your_till' => 'C’est la caisse de quelqu’un d’autre.',
 ];

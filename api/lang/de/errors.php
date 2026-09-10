@@ -227,4 +227,8 @@ return [
     'channel_quota_gone' => 'Dieser Verkaufskanal hat sein gesamtes Kontingent für diese Veranstaltung verkauft.',
     'unknown_segment' => 'Ein solches gespeichertes Publikum gibt es nicht.',
     'spend_needs_currency' => 'Sagen Sie, in welcher Währung dieser Betrag ist — ein Konto, das in zwei verkauft, hat zwei Antworten.',
+    'till_already_open' => 'Sie haben bereits eine Kasse offen. Schließen Sie sie, bevor Sie eine weitere öffnen.',
+    'till_closed' => 'Diese Kasse ist geschlossen.',
+    'movement_needs_amount' => 'Sagen Sie, wie viel bewegt wurde.',
+    'not_your_till' => 'Das ist die Kasse einer anderen Person.',
 ];

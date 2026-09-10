@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\Management\NotificationController;
 use App\Http\Controllers\Api\V1\Management\OrderController;
 use App\Http\Controllers\Api\V1\Management\PaceController;
 use App\Http\Controllers\Api\V1\Management\SegmentController;
+use App\Http\Controllers\Api\V1\Management\ShiftController;
 use App\Http\Controllers\Api\V1\Management\RefundRequestController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
@@ -261,6 +262,22 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}/counter', [BoxOfficeController::class, 'counter']);
         Route::post('events/{event}/sell', [BoxOfficeController::class, 'sell'])
             ->middleware('throttle:60,1,sell');
+
+        /*
+         * The till.
+         *
+         * Opening and closing your own drawer is part of working a window, so it sits behind
+         * `orders.sell` like the selling does. Seeing everybody else's is `reports.orders.view`,
+         * applied inside the controller: a list of every clerk's discrepancies is a management
+         * report about people rather than a working tool.
+         */
+        Route::get('shifts', [ShiftController::class, 'index']);
+        Route::get('shifts/current', [ShiftController::class, 'current']);
+        Route::post('shifts', [ShiftController::class, 'open']);
+        Route::get('shifts/{shift}', [ShiftController::class, 'show']);
+        Route::post('shifts/{shift}/movements', [ShiftController::class, 'move'])
+            ->middleware('throttle:60,1,till-move');
+        Route::post('shifts/{shift}/close', [ShiftController::class, 'close']);
 
         // ---- The door ------------------------------------------------------------------------
         // Who is expected tonight. `export` before nothing, because it is a verb and not an id.

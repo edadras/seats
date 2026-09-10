@@ -25,6 +25,7 @@ return [
         'sections' => 'Sections',
         'events' => 'Events',
         'counter' => 'The counter',
+        'tills' => 'The till',
         'orders' => 'Orders',
         'tickets' => 'Tickets',
         'doorlist' => 'Door list',
@@ -584,6 +585,13 @@ return [
         'freeSeats' => ':count free',
         // A chair the website is not allowed to sell. The name is what tells a clerk why.
         'heldFor' => 'Kept for :name — this window only',
+        // Only cash reaches the drawer, which is why the counter has to ask.
+        'method' => 'How it was paid',
+        'methods' => [
+            'cash' => 'Cash',
+            'card' => 'Card',
+            'transfer' => 'Bank transfer',
+        ],
         'sectionFull' => 'Full',
         'standing' => 'Standing room',
         'placesLeft' => ':count places left',
@@ -1607,5 +1615,50 @@ return [
             'bought' => 'Bought',
         ],
         'took' => 'Taken in this window: :amount',
+    ],
+    /*
+     * The drawer, and whether it balances.
+     *
+     * The difference is the finding, not a mistake to be corrected — a till four over is as
+     * interesting as one four short — so these words never dress it up.
+     */
+    'tills' => [
+        'title' => 'The till',
+        'description' => 'What is in the drawer, what should be, and the difference between them.',
+        'open' => 'Open the till',
+        'openTitle' => 'Open the till',
+        'openHint' => 'Count what is in the drawer before anybody has sold anything. Everything after this is added to it.',
+        'floatLabel' => 'In the drawer to start with',
+        'currencyLabel' => 'Currency',
+        'opened' => 'The till is open.',
+        'noneOpen' => 'No till open',
+        'noneOpenHint' => 'Open one at the start of a shift and every cash sale you make is added to it.',
+        'expected' => 'Should be in the drawer',
+        'counted' => 'Counted',
+        'difference' => 'Difference',
+        'float' => 'started with :amount',
+        'cash' => 'Cash taken',
+        'refunded' => ':amount handed back',
+        'card' => 'On cards',
+        'owed' => ':amount to be invoiced',
+        'movements' => 'In and out',
+        'since' => 'since :when',
+        'moveIn' => 'Money in',
+        'moveOut' => 'Money out',
+        'amountLabel' => 'How much',
+        'reasonLabel' => 'What for',
+        'reasonHint' => 'Written down as typed. "Somebody took 40" is not an answer anybody can give a month later.',
+        'moved' => 'Written down.',
+        'close' => 'Count and close',
+        'closeTitle' => 'Count the drawer',
+        'closeHint' => 'It should hold :amount. Count it, and put in what you actually find — the difference is the point of doing this.',
+        'countedLabel' => 'What is actually in the drawer',
+        'noteLabel' => 'Anything worth saying',
+        'closedOut' => 'Closed, out by :amount.',
+        'balanced' => 'It balanced',
+        'history' => 'Shifts',
+        'who' => 'Who',
+        'when' => 'Opened and closed',
+        'stillOpen' => 'still open',
     ],
 ];

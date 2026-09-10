@@ -166,6 +166,10 @@ class BoxOfficeController extends Controller
             // paid: the money was taken elsewhere. owed: they will pay on the night.
             // comp: it is a gift and the order is worth nothing.
             'payment' => ['required', Rule::in(['paid', 'owed', 'comp'])],
+            // How it was paid for, which is a different question from whether it was. Only cash
+            // touches the drawer, and a till that could not tell a card from a note would report
+            // every honest evening several hundred short.
+            'method' => ['sometimes', 'nullable', Rule::in(\App\Domain\BoxOffice\Tills::METHODS)],
             'note' => ['nullable', 'string', 'max:200'],
             'send_tickets' => ['sometimes', 'boolean'],
             // The counter sells timed entry too: somebody walking up at ten past ten still has to
@@ -215,12 +219,32 @@ class BoxOfficeController extends Controller
 
         $reference = 'bo-'.Str::lower(Str::random(12));
 
+        /*
+         * The till this was rung into, where the person selling has one open.
+         *
+         * Attached rather than required: a venue that never counts a drawer should not be stopped
+         * from selling, and one that does gets its evening added up without anybody remembering to
+         * say which shift each sale belonged to.
+         */
+        $shift = $request->user()
+            ? app(\App\Domain\BoxOffice\Tills::class)->current($request->user())
+            : null;
+
+        // Cash unless the clerk says otherwise, because at a window it usually is — and a comp or
+        // an invoice is not paid at all, so it has no method.
+        $method = 'paid' === $data['payment'] ? ($data['method'] ?? 'cash') : null;
+
         [$order] = $this->orders->register($client, $reference, $hold->token, $data['buyer'], [
             'source' => 'box_office',
             'payment' => $data['payment'],
+            'method' => $method,
             'sold_by' => $request->user()?->id,
             'note' => $data['note'] ?? null,
         ]);
+
+        if ($shift) {
+            $order->forceFill(['shift_id' => $shift->id])->save();
+        }
 
         // A comp is worth nothing and must say so before the ticket exists: a report that counted
         // free seats as revenue would overstate the evening by exactly the generosity of the house.
@@ -240,6 +264,7 @@ class BoxOfficeController extends Controller
 
         $this->audit->record('order.sold_at_counter', $order, [
             'payment' => $data['payment'],
+            'method' => $method,
             'seats' => $order->allocations->count(),
             'amount' => $totals->total,
         ]);
@@ -262,6 +287,10 @@ class BoxOfficeController extends Controller
             'total_amount' => (int) $order->total_amount,
             'currency' => $order->currency,
             'payment' => $data['payment'],
+            'method' => $method,
+            // Which till it was rung into, so the screen can show the running total without
+            // asking a second question.
+            'shift_id' => $shift?->id,
             'seats' => $order->allocations->count(),
             'tickets_sent' => $sent,
         ], 201);

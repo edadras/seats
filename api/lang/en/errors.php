@@ -227,4 +227,8 @@ return [
     'channel_quota_gone' => 'This sales channel has sold its whole allocation for this event.',
     'unknown_segment' => 'There is no such saved audience.',
     'spend_needs_currency' => 'Say which currency that amount is in — an account that sells in two of them has two answers.',
+    'till_already_open' => 'You already have a till open. Close it before starting another.',
+    'till_closed' => 'That till is closed.',
+    'movement_needs_amount' => 'Say how much moved.',
+    'not_your_till' => 'That is somebody else’s till.',
 ];

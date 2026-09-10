@@ -105,6 +105,14 @@ A seat is the start of it, not the end. Around the map:
   looked → basket → checkout → bought. Everything but the looking is derived from rows that already
   exist; the looking is counted per event, per day, per source, and never per visitor, so there is
   no cookie, no identifier and nothing to erase under a subject access request.
+- **The till** — a shift is a person and a drawer between two times, and at eleven o'clock it
+  answers the question every venue asks: is the money in the drawer the money that should be in the
+  drawer? Only cash counts, because a card is money that never touched it; a taxi paid for out of
+  the till is written down with its reason, because nothing else knows about it; and the difference
+  at the close is the finding rather than a mistake to be corrected — a till four over is as
+  interesting as one four short, and neither can be edited afterwards. What the drawer should hold
+  is counted on every read while the shift is open, and photographed once at the close, so a refund
+  granted the next morning cannot rewrite last night's discrepancy into agreement.
 - **Saved audiences** — "everybody who came last season and has not booked this one", which is the
   audience an organiser actually wants and is two clauses rather than one. Named and saved, so it
   can be asked again next season: bought any of these nights and none of those, in these categories,
@@ -295,7 +303,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 658 unit, feature and module tests
+./vendor/bin/phpunit                        # 669 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -321,7 +329,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-three, in order
+./smoke.sh                    # all thirty-four, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -426,6 +434,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A clause this version cannot read is dropped rather than obeyed | `SegmentTest` |
 | An unknown audience is refused rather than widened to everybody | `SegmentTest` |
 | Deleting a list does not delete what was already said to it | `SegmentTest` |
+| Only cash reaches the drawer; a card never touched it | `TillTest` |
+| One open till per person, in the database as well as the application | `TillTest` |
+| A count is a photograph: tomorrow's refund cannot rewrite tonight's discrepancy | `TillTest` |
+| A closed till cannot be reopened, recounted or reached into by a manager | `TillTest` |
 
 ## Installing the plugin
 

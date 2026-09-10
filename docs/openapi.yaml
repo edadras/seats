@@ -2520,6 +2520,190 @@ paths:
                 properties:
                   sent: { type: boolean }
 
+  /shifts:
+    get:
+      operationId: listShifts
+      tags: [Box office]
+      summary: Tills, newest first
+      description: |
+        Requires `orders.sell`. Somebody who works a window sees their own shifts; a holder of
+        `reports.orders.view` sees everybody's. The narrowing is applied to the query rather than
+        to the answer, because a filter applied afterwards is a filter somebody eventually forgets.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Shift" }
+                  methods:
+                    type: array
+                    items: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: openShift
+      tags: [Box office]
+      summary: Open a till
+      description: >
+        Requires `orders.sell`. One open till per person, enforced by a partial unique index as
+        well as here: opening a second one is what a double-clicked button does, and two open
+        shifts would divide one evening's takings between them at random.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currency]
+              properties:
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                opening_float:
+                  type: integer
+                  minimum: 0
+                  description: What is in the drawer before anybody has sold anything, in minor units.
+                event_id:
+                  type: [string, "null"]
+                  format: uuid
+                  description: The night this desk is selling for, where the venue works that way.
+      responses:
+        "201":
+          description: Open
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shift" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: This person already has a till open (`till_already_open`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /shifts/current:
+    get:
+      operationId: currentShift
+      tags: [Box office]
+      summary: This person's own open till, or null
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/Shift"
+                      - type: "null"
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /shifts/{shift}:
+    parameters:
+      - name: shift
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getShift
+      tags: [Box office]
+      summary: One till, with what it took and what it should hold
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shift" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /shifts/{shift}/movements:
+    parameters:
+      - name: shift
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: moveTillCash
+      tags: [Box office]
+      summary: Cash in or out of the drawer for a reason that is not a sale
+      description: >
+        A taxi paid for out of the drawer, twenty put in to make change. These are the only cash
+        movements written down: what was sold and what was handed back are already orders, and a
+        second copy of them here would be a second number to disagree with the first. The reason is
+        required — a movement without one is the thing an audit asks about first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, amount, reason]
+              properties:
+                kind: { type: string, enum: [in, out] }
+                amount: { type: integer, minimum: 1 }
+                reason: { type: string, maxLength: 200 }
+      responses:
+        "201":
+          description: The till as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shift" }
+        "403":
+          description: Somebody else's till (`not_your_till`), which the reports permission does not open.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: That till is closed (`till_closed`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /shifts/{shift}/close:
+    parameters:
+      - name: shift
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: closeShift
+      tags: [Box office]
+      summary: Count the drawer and close
+      description: |
+        The difference is not an error to be corrected: it is the finding. A till four over is as
+        interesting as one four short, and neither is fixed by changing a number afterwards — which
+        is why nothing here reopens or recounts a closed shift.
+
+        Both what was counted and what was expected are written down at this moment. A refund
+        granted the next morning changes what the till *would* now be expected to have held, and it
+        must not silently rewrite last night's discrepancy into agreement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [counted_cash]
+              properties:
+                counted_cash: { type: integer, minimum: 0 }
+                note: { type: [string, "null"], maxLength: 300 }
+      responses:
+        "200":
+          description: Closed, with the difference
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shift" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: That till is closed already (`till_closed`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /segments:
     get:
       operationId: listSegments
@@ -4714,6 +4898,15 @@ paths:
                     email: { type: [string, "null"], format: email }
                     phone: { type: [string, "null"] }
                 payment: { type: string, enum: [paid, owed, comp] }
+                method:
+                  type: [string, "null"]
+                  enum: [cash, card, transfer, null]
+                  description: >-
+                    How it was paid for, which is a different question from whether it was. Only
+                    `cash` reaches the drawer, and a till that could not tell a card from a note
+                    would report every honest evening several hundred short. Defaults to `cash` on
+                    a `paid` sale, because at a window it usually is; ignored on a comp or an
+                    invoice, neither of which is paid now.
                 note: { type: [string, "null"], maxLength: 200 }
                 send_tickets:
                   type: boolean
@@ -4732,6 +4925,11 @@ paths:
                   total_amount: { type: integer }
                   currency: { type: string }
                   payment: { type: string, enum: [paid, owed, comp] }
+                  method: { type: [string, "null"], enum: [cash, card, transfer, null] }
+                  shift_id:
+                    type: [string, "null"]
+                    format: uuid
+                    description: Which till it was rung into, where the seller had one open.
                   seats: { type: integer }
                   tickets_sent: { type: boolean }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -7468,6 +7666,58 @@ components:
         attended:
           type: boolean
           description: Actually turned up and was scanned in, which is not the same as having bought.
+
+    Shift:
+      type: object
+      description: >-
+        One person, one drawer, between two times. What the till should hold is counted on every
+        read while it is open — there is no column to take it off — and written down once at the
+        close, beside the physical count it was compared against.
+      properties:
+        id: { type: string, format: uuid }
+        user: { type: [string, "null"] }
+        event: { type: [string, "null"] }
+        currency: { type: string }
+        opening_float: { type: integer }
+        opened_at: { type: string, format: date-time }
+        closed_at: { type: [string, "null"], format: date-time }
+        open: { type: boolean }
+        takings:
+          type: object
+          description: >-
+            Split by how each sale was paid for. A sale later refunded still counts as cash taken,
+            with the refund counted beside it: the money went into the drawer and then came out
+            again, and nought against both would hide an evening of handing money back.
+          properties:
+            orders: { type: integer }
+            cash: { type: integer }
+            card: { type: integer }
+            transfer: { type: integer }
+            owed:
+              type: integer
+              description: Invoiced, and not in the drawer tonight.
+            comp:
+              type: integer
+              description: Given away — a count of orders, not an amount.
+            cash_refunded: { type: integer }
+        movements:
+          type: object
+          properties:
+            in: { type: integer }
+            out: { type: integer }
+        expected_cash:
+          type: integer
+          description: Float + cash taken − cash handed back + movements in − movements out.
+        counted_cash:
+          type: [integer, "null"]
+          description: Null while the till is open — a drawer nobody has counted has no count.
+        difference:
+          type: [integer, "null"]
+          description: >-
+            Counted minus expected, so a positive number is an over and a negative one a short, the
+            way a person says it. Null while the till is open: a zero there would read as
+            "it balanced".
+        note: { type: [string, "null"] }
 
     MessageChannel:
       type: object

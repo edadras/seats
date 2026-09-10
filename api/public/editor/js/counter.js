@@ -480,6 +480,21 @@
 								esc( App.t( 'panel.boxOffice.payments.' + kind ) ) + '</option>';
 						} ).join( '' ) +
 					'</select></div>' +
+				/*
+				 * How it was paid for, which is a different question from whether it was.
+				 *
+				 * Only cash goes in the drawer, and a till that could not tell a card from a note
+				 * would report every honest evening several hundred short. Cash first because at a
+				 * window it usually is.
+				 */
+				'<div class="field" id="c-method-field"><label class="field__label" for="c-method">' +
+					esc( App.t( 'panel.boxOffice.method' ) ) + '</label>' +
+					'<select class="select" id="c-method">' +
+						[ 'cash', 'card', 'transfer' ].map( function ( kind ) {
+							return '<option value="' + kind + '">' +
+								esc( App.t( 'panel.boxOffice.methods.' + kind ) ) + '</option>';
+						} ).join( '' ) +
+					'</select></div>' +
 				'<div class="field"><label class="field__label" for="c-note">' +
 					esc( App.t( 'panel.boxOffice.note' ) ) + '</label>' +
 					'<input class="input" id="c-note" maxlength="200"></div>' +
@@ -505,6 +520,11 @@
 					},
 					entry_slot_id: ( document.getElementById( 'c-slot' ) || {} ).value || null,
 					payment: document.getElementById( 'c-payment' ).value,
+					// A comp is a gift and an invoice is not paid yet: neither has a method, and
+					// sending one would put a number against a drawer nothing went into.
+					method: 'paid' === document.getElementById( 'c-payment' ).value
+						? document.getElementById( 'c-method' ).value
+						: null,
 					note: document.getElementById( 'c-note' ).value.trim() || null,
 					send_tickets: document.getElementById( 'c-send' ).checked,
 				};
@@ -516,6 +536,22 @@
 					} );
 			},
 		} );
+
+		/*
+		 * The method only means anything on a sale that is being paid for now.
+		 *
+		 * Bound after the modal exists, which is when its body is in the page — the shared modal
+		 * has no "opened" hook, and every screen that needs one does it here instead.
+		 */
+		( function () {
+			var payment = document.getElementById( 'c-payment' );
+			var method = document.getElementById( 'c-method-field' );
+
+			var sync = function () { method.hidden = 'paid' !== payment.value; };
+
+			payment.addEventListener( 'change', sync );
+			sync();
+		}() );
 	};
 
 	/* ------------------------------------------------------------------------------ helpers */
