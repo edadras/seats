@@ -166,6 +166,21 @@
 		// It resolves either way — a missing catalogue opens the panel in English rather than
 		// leaving somebody at a blank page.
 		i18n.load( this.api ).then( function () {
+			/*
+			 * An invitation link, which is the one URL the panel has that means something.
+			 *
+			 * Ahead of the token, because somebody who is already signed in as themselves may be
+			 * opening a link that invites them somewhere else, and the link is the more recent
+			 * intention. It is consumed either way: taken up, or refused with a reason.
+			 */
+			var invited = /^\/invite\/(.+)$/.exec( window.location.pathname );
+
+			if ( invited ) {
+				self.showInvitation( decodeURIComponent( invited[ 1 ] ) );
+
+				return;
+			}
+
 			if ( ! self.token ) {
 				self.showLogin();
 
@@ -282,6 +297,115 @@
 	};
 
 	/* ------------------------------------------------------------------------ auth shell */
+
+	/**
+	 * The other end of an invitation link.
+	 *
+	 * The token in the URL is asked about first, so somebody arrives at a screen that already knows
+	 * who invited them and as what — a form that asks for a password before saying whose account it
+	 * is asks for trust it has not earned. What it asks for depends on the answer: an address that
+	 * already has an account proves itself with the password it has, and one that does not chooses
+	 * one.
+	 */
+	App.showInvitation = function ( token ) {
+		var self = this;
+
+		this.root.innerHTML =
+			'<div class="auth"><div class="auth__card">' +
+				'<div class="auth__brand"><span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) +
+				'</span>' + esc( this.t( 'panel.brand' ) ) + '</div>' +
+				'<p class="muted">' + esc( this.t( 'panel.common.loading' ) ) + '</p>' +
+			'</div></div>';
+
+		this.request( 'POST', '/team/invitations/inspect', { token: token } )
+			.then( function ( invitation ) { self.paintInvitation( token, invitation ); } )
+			.catch( function ( error ) {
+				// Spent, expired or never real. The way out is the sign-in form, because somebody
+				// whose invitation is gone may well already have an account here.
+				self.showLogin();
+				self.toast( error.message, true );
+				window.history.replaceState( {}, '', '/' );
+			} );
+	};
+
+	App.paintInvitation = function ( token, invitation ) {
+		var self = this;
+		var known = !! invitation.has_account;
+		// A built-in role has a translated name; one the account invented for itself does not.
+		var role = this.has( 'team.roles.' + invitation.role )
+			? this.t( 'team.roles.' + invitation.role )
+			: titleCase( invitation.role );
+
+		this.root.innerHTML =
+			'<div class="auth"><form class="auth__card" id="join">' +
+				'<div class="auth__brand"><span class="sidebar__mark">' + icon( 'seat', { size: 16 } ) +
+				'</span>' + esc( this.t( 'panel.brand' ) ) + '</div>' +
+				'<h1 class="auth__title">' + esc( this.t( 'team.joinTitle', {
+					organiser: invitation.organiser || '',
+				} ) ) + '</h1>' +
+				'<p class="auth__sub">' + esc( this.t( known ? 'team.joinBodyKnown' : 'team.joinBody', {
+					role: role,
+				} ) ) + '</p>' +
+				'<div class="field"><label class="field__label" for="join-email">' +
+					esc( this.t( 'team.joinAs' ) ) + '</label>' +
+					// Shown and not editable: the invitation is to this address and no other, so an
+					// editable box would be a question with one right answer.
+					'<input class="input" id="join-email" type="email" value="' +
+					esc( invitation.email ) + '" readonly autocomplete="username"></div>' +
+				( known ? '' :
+					'<div class="field"><label class="field__label" for="join-name">' +
+						esc( this.t( 'team.joinName' ) ) + '</label>' +
+						'<input class="input" id="join-name" required autocomplete="name"></div>' ) +
+				'<div class="field"><label class="field__label" for="join-password">' +
+					esc( this.t( known ? 'team.joinExisting' : 'team.joinChoose' ) ) + '</label>' +
+					'<input class="input" id="join-password" type="password" required minlength="12" ' +
+					'autocomplete="' + ( known ? 'current-password' : 'new-password' ) + '">' +
+					( known ? '' : '<p class="field__hint">' + esc( this.t( 'team.joinHint' ) ) + '</p>' ) +
+				'</div>' +
+				'<div class="issue issue--error" id="join-error" role="alert" hidden></div>' +
+				'<button class="btn btn--primary btn--lg btn--block" type="submit">' +
+					esc( this.t( 'team.joinSubmit' ) ) + '</button>' +
+				'<p class="auth__foot"><button type="button" class="link" id="join-back">' +
+					esc( this.t( 'team.joinBack' ) ) + '</button></p>' +
+			'</form></div>';
+
+		var form = document.getElementById( 'join' );
+		var submit = form.querySelector( 'button[type=submit]' );
+		var problem = document.getElementById( 'join-error' );
+		var name = document.getElementById( 'join-name' );
+
+		( name || document.getElementById( 'join-password' ) ).focus();
+
+		document.getElementById( 'join-back' ).addEventListener( 'click', function () {
+			window.history.replaceState( {}, '', '/' );
+			self.showLogin();
+		} );
+
+		form.addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+			problem.hidden = true;
+			submit.disabled = true;
+			submit.textContent = self.t( 'panel.common.working' );
+
+			self.request( 'POST', '/team/invitations/accept', {
+				token: token,
+				name: name ? name.value : undefined,
+				password: document.getElementById( 'join-password' ).value,
+			} )
+				.then( function ( response ) {
+					// The link is spent now, so it comes out of the address bar before the workspace
+					// paints: a reload must not send somebody back to a token that will refuse them.
+					window.history.replaceState( {}, '', '/' );
+					self.finishSignIn( response, invitation.email );
+				} )
+				.catch( function ( error ) {
+					problem.innerHTML = icon( 'alert', { size: 16 } ) + '<span>' + esc( error.message ) + '</span>';
+					problem.hidden = false;
+					submit.disabled = false;
+					submit.textContent = self.t( 'team.joinSubmit' );
+				} );
+		} );
+	};
 
 	App.showLogin = function () {
 		var self = this;

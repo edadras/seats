@@ -7067,6 +7067,121 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /team/invitations/inspect:
+    post:
+      operationId: inspectInvitation
+      tags: [Team]
+      summary: What an invitation token says
+      security: []
+      description: >
+        Open, because there is nobody signed in to check yet — the token is the credential, and it
+        was sent to the address it names. The answer is what the join form needs to ask the right
+        question: who invited them, as what, and whether that address already has an account (in
+        which case they prove themselves with the password they have rather than choosing one).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: The invitation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string, format: email }
+                  organiser: { type: [string, "null"] }
+                  role: { type: string }
+                  has_account: { type: boolean }
+                  expires_at: { type: string, format: date-time }
+        "404":
+          description: "`invitation_unknown`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "`invitation_spent`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`invitation_expired`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /team/invitations/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [Team]
+      summary: Take up an invitation
+      security: []
+      description: |
+        The other half of `POST /team/invitations`. Ends with a membership and a token, so somebody
+        who follows the link is signed in where they were invited rather than left at a form.
+
+        An address that already has an account must send that account's password: the invitation
+        says the address may join, the password says it is them holding the link, and both are
+        required. An address that has none gets one, verified as it is made — the link reached the
+        address, which is the same proof a six-digit code gives and one round-trip fewer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string, maxLength: 200 }
+                name: { type: [string, "null"], maxLength: 120 }
+                password: { type: string, format: password, minLength: 12, maxLength: 200 }
+                device_name: { type: string, default: api }
+      responses:
+        "201":
+          description: Joined, and signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  tenant: { $ref: "#/components/schemas/Tenant" }
+                  role: { type: string }
+                  permissions:
+                    type: array
+                    items: { type: string }
+                  email_verified: { type: boolean }
+                  two_factor: { type: boolean }
+                  must_set_up_two_factor: { type: boolean }
+        "401":
+          description: "`invalid_credentials` — the address has an account and that is not its password"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: "`invitation_unknown`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "`invitation_spent`, `already_a_member`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: "`invitation_expired`, `invitation_account_closed`, `unknown_role`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
   /team/invitations/{invitation}:
     parameters:
       - name: invitation

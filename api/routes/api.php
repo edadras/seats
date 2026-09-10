@@ -100,6 +100,16 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login/two-factor', [AuthController::class, 'twoFactor'])
         ->middleware('throttle:20,1,login-2fa');
 
+    /*
+     * Taking up an invitation, which nobody can be signed in for: the token *is* the credential,
+     * and it was minted when the invitation was issued. Rationed hard for that reason — a way into
+     * an organiser's account must not also be a thing worth guessing at.
+     */
+    Route::post('team/invitations/inspect', [TeamController::class, 'inspectInvitation'])
+        ->middleware('throttle:20,1,invite-inspect');
+    Route::post('team/invitations/accept', [TeamController::class, 'acceptInvitation'])
+        ->middleware('throttle:10,1,invite-accept');
+
     Route::middleware(['auth:sanctum', 'tenant', 'throttle:240,1,panel'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         // Who this token belongs to and what it may do: the panel asks on every boot so the screens

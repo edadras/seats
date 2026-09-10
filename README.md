@@ -302,6 +302,13 @@ because a role can be narrowed while somebody has the tab open — and leaves ou
 buttons they cannot use. That is a courtesy rather than a control: every endpoint refuses on its own,
 and the panel only stops offering doors that would close in somebody's face.
 
+Somebody new gets in by invitation. Issuing one mints a token, keeps only its hash and hands the
+plaintext over exactly once, so it can go in an email; following the link opens a screen that already
+says who invited them and as what, and ends with a membership and a signed-in session. An address
+that already has an account sends that account's password — the invitation says the address may
+join, the password says it is them holding the link, and both are required. One link is worth one
+membership: spent, expired and never-real are told apart, because whoever is holding it was sent it.
+
 Two rules stop an account destroying itself: nobody changes their own membership — without that,
 every permission check is advice — and an account always keeps at least one owner who is not
 suspended, or nobody can grant anything ever again. Removing someone suspends them rather than
@@ -676,6 +683,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Signing in says what this person may do | `AccessControlTest` |
 | A role narrowed mid-session is the role the panel is told about | `AccessControlTest` |
 | Every permission and every role has a sentence in every language | `AccessControlTest` |
+| An invitation token exists once and is stored hashed | `AccessControlTest` |
+| The link says who invited them and as what before it asks for anything | `TeamInvitationTest`, `invite_smoke` |
+| Somebody new joins and lands where they were invited | `TeamInvitationTest`, `invite_smoke` |
+| A link is worth one membership and no more | `TeamInvitationTest`, `invite_smoke` |
+| An address that already has an account proves it is them | `TeamInvitationTest` |
+| A role deleted since the invitation went out is refused rather than guessed at | `TeamInvitationTest` |
 
 ## Installing the plugin
 

@@ -152,6 +152,10 @@ return [
     'already_a_member' => 'That person is already part of this account.',
     'role_exists' => 'A role already uses that name.',
     'unknown_role' => 'That role does not exist.',
+    'invitation_unknown' => 'That invitation could not be found.',
+    'invitation_spent' => 'That invitation has already been taken up.',
+    'invitation_expired' => 'That invitation has expired. Ask for a new one.',
+    'invitation_account_closed' => 'The organiser who invited you is no longer taking sign-ins.',
 
     // --- The platform console ---------------------------------------------------------------
     'too_many_attempts' => 'Too many attempts. Try again in :seconds seconds.',

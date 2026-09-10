@@ -152,6 +152,10 @@ return [
     'already_a_member' => 'Questa persona fa già parte di questo account.',
     'role_exists' => 'Un ruolo usa già quel nome.',
     'unknown_role' => 'Quel ruolo non esiste.',
+    'invitation_unknown' => 'Questo invito non è stato trovato.',
+    'invitation_spent' => 'Questo invito è già stato usato.',
+    'invitation_expired' => 'Questo invito è scaduto. Chiedine uno nuovo.',
+    'invitation_account_closed' => 'L’organizzatore che ti ha invitato non accetta più accessi.',
 
     // --- The platform console ---------------------------------------------------------------
     'too_many_attempts' => 'Troppi tentativi. Riprova fra :seconds secondi.',

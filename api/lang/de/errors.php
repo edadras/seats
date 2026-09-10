@@ -152,6 +152,10 @@ return [
     'already_a_member' => 'Diese Person gehört bereits zu diesem Konto.',
     'role_exists' => 'Eine Rolle trägt diesen Namen bereits.',
     'unknown_role' => 'Diese Rolle gibt es nicht.',
+    'invitation_unknown' => 'Diese Einladung wurde nicht gefunden.',
+    'invitation_spent' => 'Diese Einladung wurde bereits eingelöst.',
+    'invitation_expired' => 'Diese Einladung ist abgelaufen. Bitten Sie um eine neue.',
+    'invitation_account_closed' => 'Die einladende Veranstalterin nimmt keine Anmeldungen mehr an.',
 
     // --- The platform console ---------------------------------------------------------------
     'too_many_attempts' => 'Zu viele Versuche. Versuchen Sie es in :seconds Sekunden erneut.',

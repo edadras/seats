@@ -160,6 +160,195 @@ class TeamController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    /* ------------------------------------------------------------------- taking one up */
+
+    /*
+     * The other half of an invitation.
+     *
+     * Issuing one mints a token, hashes it and hands the plaintext over exactly once; these two are
+     * where somebody holding that plaintext turns it into a membership. Both are open — there is no
+     * signed-in person to check yet, and the token *is* the credential — so both are rationed at the
+     * route, and both answer the same way to a token that is wrong, spent or stale: an invitation
+     * link is a way into an organiser's account, and a slow one is not a way in at all.
+     *
+     * Neither runs inside a tenant, because which tenant this is is what the token says.
+     */
+    public function inspectInvitation(Request $request)
+    {
+        $data = $request->validate(['token' => ['required', 'string', 'max:200']]);
+
+        $invitation = $this->pendingInvitation($data['token']);
+
+        $tenant = $this->tenantContext->runUnscoped(
+            fn () => \App\Models\Tenant::find($invitation->tenant_id)
+        );
+
+        $account = $this->tenantContext->runUnscoped(
+            fn () => User::where('email', $invitation->email)->first()
+        );
+
+        return response()->json([
+            'email' => $invitation->email,
+            'organiser' => $tenant?->name,
+            'role' => $invitation->role,
+            /*
+             * Whether this address already has an account, so the form can ask the right question:
+             * somebody joining a second organiser proves who they are with the password they have,
+             * and somebody new chooses one. Answered only to a caller holding the token, which was
+             * sent to that address in the first place.
+             */
+            'has_account' => (bool) $account,
+            'expires_at' => $invitation->expires_at->toIso8601String(),
+        ]);
+    }
+
+    public function acceptInvitation(Request $request)
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string', 'max:200'],
+            'name' => ['sometimes', 'nullable', 'string', 'max:120'],
+            // Twelve, the same as signing up: this password protects a box office.
+            'password' => ['required', 'string', 'min:12', 'max:200'],
+            'device_name' => ['sometimes', 'string', 'max:100'],
+        ]);
+
+        $invitation = $this->pendingInvitation($data['token']);
+
+        $tenant = $this->tenantContext->runUnscoped(
+            fn () => \App\Models\Tenant::find($invitation->tenant_id)
+        );
+
+        if (! $tenant || ! $tenant->isActive()) {
+            throw ApiException::unprocessable(
+                'invitation_account_closed',
+                'The organiser who invited you is no longer taking sign-ins.',
+            );
+        }
+
+        // The role could have been deleted in the week since. Refused rather than substituted:
+        // guessing at what somebody meant to grant is how a person ends up with more than was meant.
+        $this->tenantContext->runAs($tenant, fn () => $this->assertRoleExists($invitation->role));
+
+        $user = $this->tenantContext->runUnscoped(
+            fn () => User::where('email', $invitation->email)->first()
+        );
+
+        if ($user) {
+            /*
+             * The address already has an account — somebody joining a second organiser, or somebody
+             * who signed up and was then invited. The invitation says the address may join; the
+             * password is what says it is them holding the link. Both, or neither.
+             */
+            if (! \Illuminate\Support\Facades\Hash::check($data['password'], $user->password)) {
+                throw ApiException::unauthorized(
+                    'invalid_credentials',
+                    'These credentials do not match our records.',
+                );
+            }
+
+            $already = $this->tenantContext->runUnscoped(
+                fn () => TenantUser::withoutGlobalScopes()
+                    ->where('user_id', $user->id)
+                    ->where('tenant_id', $tenant->id)
+                    ->exists()
+            );
+
+            if ($already) {
+                throw ApiException::conflict(
+                    'already_a_member',
+                    'That person is already part of this account.',
+                );
+            }
+        } else {
+            $user = $this->tenantContext->runUnscoped(fn () => User::create([
+                'name' => $data['name'] ?? $invitation->email,
+                'email' => $invitation->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
+            ]));
+
+            /*
+             * Verified as it is made. The invitation went to this address and came back with its
+             * token, which is the same proof a six-digit code gives and one round-trip fewer.
+             */
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
+        $membership = $this->tenantContext->runAs($tenant, function () use ($tenant, $user, $invitation) {
+            $membership = TenantUser::create([
+                'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
+                'role' => $invitation->role,
+            ]);
+
+            $invitation->forceFill(['accepted_at' => now()])->save();
+
+            /*
+             * The actor is the system, because it truly is: nobody was signed in when this
+             * happened. Who joined is in the context and in the subject, which is the membership
+             * itself — the row an organiser looks up when they ask when this person got in.
+             */
+            $this->audit->record('team.invitation_accepted', $membership, [
+                'email' => $invitation->email,
+                'role' => $invitation->role,
+            ]);
+
+            return $membership;
+        });
+
+        return response()->json([
+            'token' => $user->createToken($data['device_name'] ?? 'api')->plainTextToken,
+            'tenant' => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'slug' => $tenant->slug,
+                'status' => $tenant->status,
+                'timezone' => $tenant->timezone,
+                'locale' => $tenant->locale,
+            ],
+            'role' => $membership->role,
+            'permissions' => $this->tenantContext->runAs(
+                $tenant,
+                fn () => app(\App\Support\Access\Gate::class)->forMembership($membership),
+            ),
+            'email_verified' => null !== $user->email_verified_at,
+            'two_factor' => $user->hasTwoFactor(),
+            'must_set_up_two_factor' => (bool) $tenant->require_two_factor && ! $user->hasTwoFactor(),
+        ], 201);
+    }
+
+    /**
+     * The invitation this token names, if it is still worth anything.
+     *
+     * Looked up by the hash, because that is all that was kept. Spent and stale are told apart from
+     * wrong, because whoever is holding the link was sent it: "this expired last Tuesday" is what
+     * they need to hear, and it tells somebody who guessed the token nothing they did not know.
+     */
+    private function pendingInvitation(string $token): TenantInvitation
+    {
+        $invitation = $this->tenantContext->runUnscoped(
+            fn () => TenantInvitation::withoutGlobalScopes()
+                ->where('token_hash', TenantInvitation::hashToken($token))
+                ->first()
+        );
+
+        if (! $invitation) {
+            throw ApiException::notFound('That invitation could not be found.', 'invitation_unknown');
+        }
+
+        if (null !== $invitation->accepted_at) {
+            throw ApiException::conflict('invitation_spent', 'That invitation has already been taken up.');
+        }
+
+        if ($invitation->expires_at->isPast()) {
+            throw ApiException::unprocessable(
+                'invitation_expired',
+                'That invitation has expired. Ask for a new one.',
+            );
+        }
+
+        return $invitation;
+    }
+
     /* ----------------------------------------------------------------------------- roles */
 
     public function roles(Request $request)
