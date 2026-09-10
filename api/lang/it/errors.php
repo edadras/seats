@@ -206,4 +206,13 @@ return [
     'voucher_code_taken' => 'Avete già un buono con quel codice.',
     'no_address_for_credit' => 'Questa prenotazione non ha un indirizzo e-mail, quindi non c’è nessuno a cui accreditare il credito.',
     'credit_needs_whole_booking' => 'Il credito si emette per una prenotazione intera. Rimborsate i posti, poi emettete un buono per quanto dovete.',
+    'season_map_differs' => '«:name» ha una disposizione diversa, quindi gli stessi posti non possono essere tenuti.',
+    'season_night_unavailable' => 'Quei posti sono già presi per «:name», quindi non si può tenere tutta la serie.',
+    'not_in_this_run' => 'Quella serata non fa parte di questo abbonamento.',
+    'season_too_few_nights' => 'Questo abbonamento vale per almeno :count serate.',
+    'season_pass_named' => 'Questa serie ha già un abbonamento con quel nome.',
+    'season_pass_sold' => 'Qualcuno ha comprato questo abbonamento. Sospendetelo invece di eliminarlo — quelle prenotazioni resterebbero senza spiegazione.',
+    'season_needs_nights' => 'Un abbonamento di cui l’acquirente sceglie le serate deve dire quante.',
+    'season_not_payable' => 'Questo abbonamento non ha pagamenti da saldare.',
+    'discount_over_100' => 'Una percentuale non può superare 100.',
 ];

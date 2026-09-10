@@ -206,4 +206,13 @@ return [
     'voucher_code_taken' => 'You already have a voucher with that code.',
     'no_address_for_credit' => 'This booking has no email address, so there is nobody to give credit to.',
     'credit_needs_whole_booking' => 'Credit is issued for a whole booking. Refund the seats, then issue a voucher for what you owe.',
+    'season_map_differs' => '":name" is laid out differently, so the same seats cannot be held for it.',
+    'season_night_unavailable' => 'Those seats are already taken for ":name", so the whole run cannot be held.',
+    'not_in_this_run' => 'That night is not part of this season ticket.',
+    'season_too_few_nights' => 'This pass is for at least :count nights.',
+    'season_pass_named' => 'That run already has a season ticket with that name.',
+    'season_pass_sold' => 'Somebody has bought this season ticket. Pause it instead — deleting it would leave those bookings unexplained.',
+    'season_needs_nights' => 'A pass the buyer chooses nights for has to say how many.',
+    'season_not_payable' => 'This season ticket has no payment to settle.',
+    'discount_over_100' => 'A percentage cannot be more than 100.',
 ];

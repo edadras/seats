@@ -56,6 +56,17 @@ class CheckoutController extends Controller
             return redirect('/')->with('seatmap_message', __('site.holdGone'));
         }
 
+        /*
+         * A subscriber lands here too, because the picker sends everybody here.
+         *
+         * Their basket is the first night of a run and this page can only price one night, so they
+         * are handed on rather than shown a total that is a twelfth of what they agreed to. The
+         * picker itself is left knowing nothing about seasons, which is the point.
+         */
+        if ($request->session()->get('seatmap_season')) {
+            return redirect('/season/checkout');
+        }
+
         $snapshot = $hold->price_snapshot['decoded'] ?? [];
 
         // Re-asked on every render rather than remembered: a code that has run out, been paused or

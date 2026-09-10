@@ -178,6 +178,31 @@
         </section>
     @endif
 
+    @if (! empty($event['season_passes']))
+        {{-- The whole run, offered to the person already looking at one night of it. This is the
+             only moment a subscription is put in front of them, so it sits above the other dates
+             rather than under them. --}}
+        <section class="shell section section--tight">
+            <h2 class="dates__title">{{ __('site.season.title') }}</h2>
+            <ul class="season__offers">
+                @foreach ($event['season_passes'] as $pass)
+                    <li class="season__offer">
+                        <span class="season__offer-what">
+                            <strong dir="auto">{{ $pass['name'] }}</strong>
+                            @if ($pass['description'])
+                                <span class="muted" dir="auto">{{ $pass['description'] }}</span>
+                            @endif
+                            <span class="season__offer-saving">{{ $pass['saving'] }}</span>
+                        </span>
+                        <a class="button button--quiet" href="/season/{{ $pass['id'] }}">
+                            {{ __('site.season.see') }}
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @if (! empty($event['other_dates']))
         {{-- The rest of the run. Somebody who cannot come on Tuesday should not have to go back to
              the programme and hunt for Wednesday. --}}

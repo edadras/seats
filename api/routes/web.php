@@ -5,6 +5,7 @@ use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\GoogleSignInController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\SeasonController;
 use App\Http\Controllers\Site\SiteFilesController;
 use App\Http\Controllers\Site\SitePageController;
 use App\Http\Controllers\Site\StoreController;
@@ -66,6 +67,28 @@ Route::middleware('site')->group(function () {
     // What the booking would come to with these extras. A keystroke, so it is throttled loosely
     // and it writes nothing.
     Route::post('checkout/quote', [CheckoutController::class, 'quote'])->middleware('throttle:60,1,quote');
+    /*
+     * Season tickets: the same seats, every night of a run, bought once.
+     *
+     * The seat-choosing step is not here and never will be — a subscriber picks their seats in the
+     * ordinary picker, on the first night, and everything below repeats that basket across the
+     * rest of the run. What these routes own is the offer, the spread and the one payment.
+     */
+    Route::get('season/checkout', [SeasonController::class, 'checkout']);
+    Route::post('season/checkout', [SeasonController::class, 'place'])
+        ->middleware('throttle:20,1,season-pay');
+    Route::post('season/leave', [SeasonController::class, 'leave'])
+        ->middleware('throttle:20,1,season-leave');
+    Route::get('season/order/{reference}', [SeasonController::class, 'confirmation']);
+    Route::get('season/{pass}', [SeasonController::class, 'show']);
+    Route::post('season/{pass}', [SeasonController::class, 'begin'])
+        ->middleware('throttle:30,1,season-begin');
+    // The gateway's way back for a run, beside the one for a single night and separate from it:
+    // what has to be settled here is a purchase covering several orders, not one of them.
+    Route::match(['get', 'post'], 'pay/{gateway}/season/{reference}', [SeasonController::class, 'paymentReturn'])
+        ->middleware('throttle:60,1,season-return')
+        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
     // The same tickets, laid out for paper and for the browser's own "Save as PDF".
     Route::get('order/{reference}/tickets', [CheckoutController::class, 'tickets']);

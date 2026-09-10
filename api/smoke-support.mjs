@@ -92,6 +92,19 @@ export async function openASection(page) {
  * and there is nothing in the DOM to ask.
  */
 export async function seatPoint(page, index) {
+	/*
+	 * Put the plan in the middle of the window before measuring anything.
+	 *
+	 * The coordinates below are viewport coordinates, and a page that happens to be scrolled — the
+	 * picker scrolls itself into view on some routes — can leave a seat sitting behind the site's
+	 * own sticky header. The click then lands on the header, nothing is selected, and the failure
+	 * arrives much later as "the reserve button never became enabled".
+	 */
+	await page.evaluate(() => {
+		document.querySelector('.seatmap-widget').scrollIntoView({ block: 'center' });
+	});
+	await page.waitForTimeout(150);
+
 	const point = await page.evaluate((i) => {
 		const widget = document.querySelector('.seatmap-widget').seatmapWidget;
 		const seats = widget.seats.filter((seat) =>

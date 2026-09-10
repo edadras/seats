@@ -416,6 +416,29 @@ class SitePageController extends Controller
             // The other nights of the same run, so somebody who cannot come on Tuesday does not
             // have to go back to the programme and hunt for Wednesday.
             'other_dates' => $this->otherDates($site, $event),
+            /*
+             * Season tickets for this run, offered where the buyer already is.
+             *
+             * On the night's own page rather than on a separate part of the site nobody visits:
+             * somebody looking at one Tuesday is exactly the person who might rather have all
+             * twelve, and this is the only moment they are asked.
+             */
+            'season_passes' => app(\App\Domain\Seasons\Seasons::class)
+                ->passesFor($event->series_id)
+                ->map(fn (\App\Models\SeasonPass $pass) => [
+                    'id' => $pass->id,
+                    'name' => $pass->name,
+                    'description' => $pass->description,
+                    'saving' => 'percent' === $pass->discount_kind
+                        ? __('site.season.savePercent', [
+                            'percent' => \App\Support\Locale\Money::number($pass->discount_value),
+                        ])
+                        : __('site.season.saveAmount', [
+                            'amount' => \App\Support\Locale\Money::format(
+                                $pass->discount_value, $pass->currency, app()->getLocale()
+                            ),
+                        ]),
+                ])->all(),
             'waiting_list' => ('cancelled' !== $event->status)
                 && ('closed' === $event->status || ($onSale && 0 === app(WaitingList::class)->freePlaces($event))),
         ] + $this->cover($event->nameFor());

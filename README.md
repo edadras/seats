@@ -77,6 +77,11 @@ A seat is the start of it, not the end. Around the map:
 - **Add-ons and donations** at the checkout — a programme, a glass of wine, a parking space, and a
   box to give something. Add-ons are a sale and sit inside the fee and the VAT; a donation is a
   gift and sits outside both, because a booking fee on somebody's charity is a complaint.
+- **Season tickets** — the same seats, every night of a run, bought once. A subscriber picks their
+  seats in the ordinary picker on the first night and the rest of the run is held for them, all or
+  nothing; what comes out is one ordinary order per night, so the door, the door list and per-event
+  revenue never learn that a season exists. The saving is split across the nights so each one still
+  adds up on its own, and a flexible pass lets the buyer take any *n* of them.
 - **Gift vouchers and account credit**, which are not discount codes either: a discount changes
   what a booking cost and so changes the tax on it, while a voucher changes how an unchanged cost
   was settled. Applied last, to the amount payable, and a booking a voucher covers outright
@@ -259,7 +264,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 566 unit, feature and module tests
+./vendor/bin/phpunit                        # 586 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -285,7 +290,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all twenty-seven, in order
+./smoke.sh                    # all twenty-eight, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -368,6 +373,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A voucher moves what is payable and leaves the VAT exactly where it was | `VoucherTest` |
 | A voucher that covers a booking finishes it with no gateway, and gives the change back | `VoucherTest` |
 | A settlement says which part of its takings never reached a bank | `VoucherTest`, `SettlementTest` |
+| A season saving splits across the nights and sums to exactly itself | `SeasonTest` |
+| A night that cannot be matched takes the whole subscription with it, and frees the rest | `SeasonTest` |
+| A subscription is an ordinary order, allocation and ticket per night | `SeasonTest` |
 
 ## Installing the plugin
 

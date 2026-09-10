@@ -1272,6 +1272,74 @@ hr { border: none; }
 	color: var(--text);
 }
 
+/* ============================================================================= seasons */
+
+/*
+ * Subscriptions. The offer sits on a night's own page, because the person looking at one Tuesday
+ * is exactly the person who might rather have all twelve, and this is the only moment they are
+ * asked.
+ */
+.season__offers,
+.season__nights {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0.6rem;
+}
+
+.season__offer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	padding: 0.85rem 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.season__offer-what { display: grid; gap: 0.15rem; }
+
+.season__offer-saving,
+.season__saving {
+	color: var(--ok, var(--accent));
+	font-weight: 600;
+}
+
+.season__saving { margin-block: 0.4rem 1.2rem; font-size: 1.05rem; }
+
+.season__subhead {
+	margin-block: 1.6rem 0.7rem;
+	font-size: 1.05rem;
+}
+
+.season__night {
+	padding: 0.7rem 0.9rem;
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) * 0.8);
+}
+
+.season__night > span,
+.season__pick > span { display: grid; gap: 0.1rem; }
+
+.season__pick {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.7rem;
+	cursor: pointer;
+}
+
+/* One block per night on the confirmation, because one night is what a person turns up to. */
+.season__booked {
+	margin-block-start: 2rem;
+	padding-block-start: 1.4rem;
+	border-block-start: 1px solid var(--border);
+}
+
+.season__booked:first-of-type { border-block-start: none; }
+
 /* ============================================================================= tickets */
 
 .done {

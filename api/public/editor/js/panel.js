@@ -39,6 +39,7 @@
 			{ key: 'questions', icon: 'file' },
 			{ key: 'entryslots', icon: 'clock' },
 			{ key: 'discounts', icon: 'tag' },
+			{ key: 'seasons', icon: 'calendar' },
 			{ key: 'access', icon: 'lock' },
 			{ key: 'vouchers', icon: 'wallet' },
 		] },
@@ -624,6 +625,7 @@
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
+			case 'seasons': return window.SeatmapSeasons.render( this );
 			case 'events': return this.renderEvents();
 			default: return this.renderOverview();
 		}

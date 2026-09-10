@@ -54,6 +54,7 @@ tags:
   - name: Discounts
   - name: Access
   - name: Vouchers
+  - name: Seasons
   - name: Box office
   - name: Door
   - name: Waiting list
@@ -1187,6 +1188,164 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409":
           description: The code has been used, and is paused rather than deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /season-passes:
+    get:
+      operationId: listSeasonPasses
+      tags: [Seasons]
+      summary: What a whole run costs, bought at once
+      description: |
+        Requires `discounts.manage`, with the other decisions of the same shape: what a buyer pays
+        and what a promise costs the account. A season pass takes no seats out of sale and reserves
+        nothing, so it does not belong with the seat map or the box office.
+
+        A pass carries no price of its own. Every night is still priced by the event it belongs to
+        — a Tuesday that costs less costs less on a season ticket too — and the pass says only what
+        comes off the sum. `nights_on_sale` is what it would actually sell today: published, mapped
+        and still ahead. A pass whose run has been and gone reports `live: false`.
+      parameters:
+        - name: series_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, paused] }
+        - name: q
+          in: query
+          schema: { type: string }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: The passes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SeasonPass" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: createSeasonPass
+      tags: [Seasons]
+      summary: Offer a season ticket for a run
+      description: >-
+        Requires `discounts.manage`. `kind: all` is every published night still ahead; `kind:
+        choose` is the flexible pass and must say `nights`, the fewest the buyer may take. A pass
+        for fewer than two nights is a ticket, not a season, and is refused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SeasonPassInput" }
+      responses:
+        "201":
+          description: The pass
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonPass" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: That run already has a pass of that name
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /season-passes/series:
+    get:
+      operationId: listSubscribableSeries
+      tags: [Seasons]
+      summary: The runs a season ticket could be sold for
+      description: >-
+        Requires `discounts.manage`. Only runs of more than one published night: a "season" of one
+        night is a night, and a saving on it is a discount code wearing a different hat.
+      responses:
+        "200":
+          description: The runs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        slug: { type: string }
+                        nights: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /season-passes/{seasonPass}:
+    parameters:
+      - name: seasonPass
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getSeasonPass
+      tags: [Seasons]
+      summary: One pass, and who has subscribed to it
+      description: >-
+        Requires `discounts.manage`. The subscribers are the answer to the only question an
+        organiser asks about a pass after making one.
+      responses:
+        "200":
+          description: The pass
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SeasonPass"
+                  - type: object
+                    properties:
+                      bookings:
+                        type: array
+                        items: { $ref: "#/components/schemas/SeasonBooking" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+    patch:
+      operationId: updateSeasonPass
+      tags: [Seasons]
+      summary: Change a pass, except which run it is for
+      description: >-
+        Requires `discounts.manage`. The run is not editable: a pass moved to another series would
+        leave its subscribers holding nights it no longer covers, which is a lie nobody could
+        untangle afterwards. Pausing is how a pass is stopped.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SeasonPassInput" }
+      responses:
+        "200":
+          description: The pass as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonPass" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+    delete:
+      operationId: deleteSeasonPass
+      tags: [Seasons]
+      summary: Delete a pass nobody has bought
+      description: >-
+        Requires `discounts.manage`. Refused once somebody has subscribed: those bookings have to
+        keep pointing at why they cost what they cost, so pausing is the way to stop one.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Somebody has subscribed, and the pass is paused rather than deleted
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -5944,6 +6103,83 @@ components:
         suggested:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
+
+    SeasonPass:
+      type: object
+      description: >-
+        The offer: buy a whole run at once, and here is what that saves. A pass owns no inventory
+        and no price of its own — every night is still priced by the event it belongs to.
+      properties:
+        id: { type: string, format: uuid }
+        series_id: { type: string, format: uuid }
+        series_name: { type: [string, "null"] }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        kind:
+          type: string
+          enum: [all, choose]
+          description: "`all` is every published night still ahead; `choose` is a flexible pass."
+        nights:
+          type: [integer, "null"]
+          description: "`choose` only: the fewest nights that still count as a season ticket."
+        nights_on_sale:
+          type: integer
+          description: "How many nights it would actually sell today. Not how many the run has had."
+        discount_kind: { type: string, enum: [percent, fixed] }
+        discount_value:
+          type: integer
+          description: "A percentage 0–100, or an amount in minor units. Off the whole run, once."
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        max_seats: { type: integer, description: "Seats one subscription may take." }
+        on_sale_at: { type: [string, "null"], format: date-time }
+        off_sale_at: { type: [string, "null"], format: date-time }
+        status: { type: string, enum: [active, paused] }
+        live:
+          type: boolean
+          description: "Active, inside its dates, and with more than one night left. The honest answer."
+        sold: { type: integer, description: "Confirmed subscriptions." }
+        position: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    SeasonBooking:
+      type: object
+      description: >-
+        One purchase over several nights. It groups orders and charges once; it owns no seats, no
+        tickets and no allocations — those belong to the nights' own ordinary orders.
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        buyer: { type: [string, "null"] }
+        seats: { type: integer }
+        nights: { type: integer }
+        total:
+          type: integer
+          description: "The sum of the nights' orders, which is what the card was charged."
+        discount:
+          type: integer
+          description: "What the pass took off in total. Each night carries its own share of it."
+        status: { type: string, enum: [pending, confirmed, cancelled] }
+        at: { type: string, format: date-time }
+
+    SeasonPassInput:
+      type: object
+      properties:
+        series_id: { type: string, format: uuid }
+        name: { type: string, maxLength: 160 }
+        description: { type: [string, "null"], maxLength: 400 }
+        kind: { type: string, enum: [all, choose] }
+        nights:
+          type: [integer, "null"]
+          minimum: 2
+          description: "Required for `choose`, ignored for `all`."
+        discount_kind: { type: string, enum: [percent, fixed] }
+        discount_value: { type: integer, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        max_seats: { type: integer, minimum: 1, maximum: 100 }
+        on_sale_at: { type: [string, "null"], format: date-time }
+        off_sale_at: { type: [string, "null"], format: date-time }
+        status: { type: string, enum: [active, paused] }
+        position: { type: integer, minimum: 0 }
 
     Voucher:
       type: object

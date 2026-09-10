@@ -206,4 +206,13 @@ return [
     'voucher_code_taken' => 'Sie haben bereits einen Gutschein mit diesem Code.',
     'no_address_for_credit' => 'Zu dieser Buchung gibt es keine E-Mail-Adresse, also niemanden, dem Guthaben gutgeschrieben werden könnte.',
     'credit_needs_whole_booking' => 'Guthaben wird für eine ganze Buchung ausgestellt. Erstatten Sie die Plätze und stellen Sie dann einen Gutschein über den Betrag aus.',
+    'season_map_differs' => '„:name“ ist anders bestuhlt, dieselben Plätze lassen sich dafür nicht halten.',
+    'season_night_unavailable' => 'Diese Plätze sind für „:name“ bereits vergeben, die ganze Serie lässt sich nicht halten.',
+    'not_in_this_run' => 'Dieser Abend gehört nicht zu diesem Abonnement.',
+    'season_too_few_nights' => 'Dieses Abonnement gilt für mindestens :count Abende.',
+    'season_pass_named' => 'Diese Serie hat bereits ein Abonnement dieses Namens.',
+    'season_pass_sold' => 'Jemand hat dieses Abonnement gekauft. Pausieren Sie es statt es zu löschen — sonst stünden diese Buchungen ohne Erklärung da.',
+    'season_needs_nights' => 'Ein Abonnement, für das der Käufer Abende wählt, muss sagen wie viele.',
+    'season_not_payable' => 'Für dieses Abonnement gibt es keine Zahlung zu bestätigen.',
+    'discount_over_100' => 'Ein Prozentsatz kann nicht über 100 liegen.',
 ];

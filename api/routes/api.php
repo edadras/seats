@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Management\BoxOfficeController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\AccessCodeController;
+use App\Http\Controllers\Api\V1\Management\SeasonPassController;
 use App\Http\Controllers\Api\V1\Management\VoucherController;
 use App\Http\Controllers\Api\V1\Management\AddonController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
@@ -192,6 +193,16 @@ Route::prefix('v1')->group(function () {
         Route::get('discounts/{discount}', [DiscountController::class, 'show']);
         Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
         Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
+
+        // ---- Season tickets -------------------------------------------------------------------
+        // What a whole run costs bought at once. `series` before `{seasonPass}`, because the word
+        // "series" is not a pass id and would match nothing.
+        Route::get('season-passes', [SeasonPassController::class, 'index']);
+        Route::get('season-passes/series', [SeasonPassController::class, 'series']);
+        Route::post('season-passes', [SeasonPassController::class, 'store']);
+        Route::get('season-passes/{seasonPass}', [SeasonPassController::class, 'show']);
+        Route::patch('season-passes/{seasonPass}', [SeasonPassController::class, 'update']);
+        Route::delete('season-passes/{seasonPass}', [SeasonPassController::class, 'destroy']);
 
         // ---- Vouchers ----------------------------------------------------------------------
         // Money the organiser owes somebody, as against a code that changes a price. Behind its
