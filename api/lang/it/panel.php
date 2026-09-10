@@ -967,7 +967,25 @@ return [
         'currencyNeeded' => 'Indica in quale valuta è questo importo.',
     ],
 
+    'printing' => [
+        'title' => 'Stampa biglietti',
+        'tickets' => 'Stampa',
+        'one' => 'Ristampa',
+        'print' => 'Stampa',
+        'printNow' => 'Stampa i biglietti al termine della vendita',
+        'destination' => 'Destinazione',
+        'browser' => 'Stampante di questo browser',
+        'roll' => 'File per stampante a rotolo (ESC/POS)',
+        'rollHint' => 'Scarica i byte grezzi che un agente locale invia direttamente alla stampante a rotolo.',
+        'width' => 'Larghezza del rotolo',
+        'mm58' => '58 mm',
+        'mm80' => '80 mm',
+        'reissues' => 'La stampa genera un nuovo codice: ogni copia precedente del biglietto smette di funzionare.',
+        'sent' => 'Inviato alla stampante.',
+    ],
+
     'tickets' => [
+        'rowShort' => 'Fila',
         'title' => 'Biglietti',
         'description' => 'Tutti i biglietti di un evento. Cerca per nome, e-mail, posto o riferimento.',
         'noEventsTitle' => 'Nessun evento',

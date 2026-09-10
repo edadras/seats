@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'That listing is already finished with.',
     'resale_being_bought' => 'Somebody is buying that seat at this moment. It can be taken off sale again if they do not finish.',
     'buyer_blocked' => 'This account cannot book for this organiser. Please contact the box office.',
+    'ticket_not_printable' => 'There is nothing live to print here: the ticket has been used, refunded or was never issued.',
     'block_needs_somebody' => 'A block needs an email address or a telephone number.',
     'chargeback_not_paid' => 'Nothing was ever taken for that booking, so nothing can be taken back.',
     'companion_needs_accessible' => 'That seat is kept for whoever comes with a wheelchair user, so it is sold with the space beside it.',

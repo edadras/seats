@@ -314,6 +314,12 @@
 					? '<button class="btn" id="order-resend">' + icon( 'mail', { size: 15 } ) +
 						esc( App.t( 'panel.orders.resend' ) ) + '</button>'
 					: '' ) +
+				// Paper, at the window. Only where there is a live seat to print: a refunded
+				// booking has nothing to hand anybody.
+				( open.length
+					? '<button class="btn" id="order-print">' + icon( 'printer', { size: 15 } ) +
+						esc( App.t( 'panel.printing.tickets' ) ) + '</button>'
+					: '' ) +
 				( open.length && ( 'confirmed' === order.status || 'partially_refunded' === order.status )
 					? '<button class="btn btn--danger" id="order-refund">' +
 						esc( App.t( 'panel.orders.refund' ) ) + '</button>'
@@ -363,7 +369,13 @@
 									? '<span class="muted on-own-line">' + esc( line.entry ) + '</span>'
 									: '' ) + '</td>' +
 							'<td class="tnum">' + esc( App.money( line.amount, order.currency ) ) + '</td>' +
-							'<td>' + esc( App.t( 'panel.orders.allocation.' + line.status ) ) + '</td>' +
+							'<td>' + esc( App.t( 'panel.orders.allocation.' + line.status ) ) +
+								// One seat again, for the person who left theirs on the bus. It
+								// re-mints the code, so the copy they lost stops working.
+								( 'active' === line.status
+									? ' <button class="btn btn--sm" data-print="' + esc( line.id ) + '">' +
+										esc( App.t( 'panel.printing.one' ) ) + '</button>'
+									: '' ) + '</td>' +
 							'<td>' + ( line.used_at
 								? '<span class="badge badge--ok">' + esc( App.t( 'panel.tickets.checkedIn' ) ) +
 									'</span><span class="muted on-own-line tnum">' +
@@ -403,6 +415,19 @@
 			Orders.render( App );
 		} );
 
+		each( '[data-print]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				global.SeatmapReceipts.ask(
+					App,
+					'/allocations/' + button.dataset.print + '/receipt',
+					order.reference
+				);
+			} );
+		} );
+
+		bind( 'order-print', function () {
+			global.SeatmapReceipts.ask( App, '/orders/' + order.id + '/receipts', order.reference );
+		} );
 		bind( 'order-refund', function () { Orders.refund( open ); } );
 		bind( 'order-chargeback', function () { Orders.chargeback(); } );
 		bind( 'order-cancel', function () { Orders.cancel(); } );

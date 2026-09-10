@@ -968,7 +968,25 @@ return [
         'currencyNeeded' => 'Indiquez la devise de ce montant.',
     ],
 
+    'printing' => [
+        'title' => 'Imprimer les billets',
+        'tickets' => 'Imprimer',
+        'one' => 'Réimprimer',
+        'print' => 'Imprimer',
+        'printNow' => 'Imprimer les billets dès la vente terminée',
+        'destination' => 'Destination',
+        'browser' => 'Imprimante de ce navigateur',
+        'roll' => 'Fichier pour imprimante à rouleau (ESC/POS)',
+        'rollHint' => 'Télécharge les octets bruts qu’un agent local envoie directement à l’imprimante à rouleau.',
+        'width' => 'Largeur du rouleau',
+        'mm58' => '58 mm',
+        'mm80' => '80 mm',
+        'reissues' => 'L’impression émet un nouveau code. Toute copie antérieure de ce billet cesse de fonctionner.',
+        'sent' => 'Envoyé à l’imprimante.',
+    ],
+
     'tickets' => [
+        'rowShort' => 'Rang',
         'title' => 'Billets',
         'description' => 'Tous les billets d’un événement. Cherchez par nom, e-mail, place ou référence.',
         'noEventsTitle' => 'Aucun événement',

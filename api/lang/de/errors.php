@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'Dieses Angebot ist bereits erledigt.',
     'resale_being_bought' => 'Gerade kauft jemand diesen Platz. Er lässt sich wieder vom Verkauf nehmen, wenn der Kauf nicht zustande kommt.',
     'buyer_blocked' => 'Dieses Konto kann bei diesem Veranstalter nicht buchen. Bitte wenden Sie sich an die Kasse.',
+    'ticket_not_printable' => 'Hier gibt es nichts zu drucken: Das Ticket wurde benutzt, erstattet oder nie ausgestellt.',
     'block_needs_somebody' => 'Eine Sperre braucht eine E-Mail-Adresse oder eine Telefonnummer.',
     'chargeback_not_paid' => 'Für diese Buchung wurde nie etwas eingezogen, also kann nichts zurückgeholt werden.',
     'companion_needs_accessible' => 'Dieser Platz ist für die Begleitung eines Rollstuhlnutzers reserviert und wird zusammen mit dem Platz daneben verkauft.',

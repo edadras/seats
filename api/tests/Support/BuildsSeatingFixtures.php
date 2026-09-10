@@ -57,6 +57,23 @@ trait BuildsSeatingFixtures
     }
 
     /**
+     * Make the next request as this member.
+     *
+     * The token alone is not enough inside a test: Sanctum's guard is resolved once and keeps the
+     * user it found, so a second call with a different bearer would still be answered as the first
+     * caller — and a test that expects a refusal would quietly pass as somebody allowed. Forgetting
+     * the guards makes the switch real, the way a second HTTP request would.
+     */
+    protected function asMember(User $user, string $token = 'test'): static
+    {
+        app('auth')->forgetGuards();
+
+        return $this->withHeaders([
+            'Authorization' => 'Bearer '.$user->createToken($token)->plainTextToken,
+        ]);
+    }
+
+    /**
      * A v2 chart: one section holding `$rows` rows of `$perRow` seats, all in the "standard"
      * category, plus a stage.
      *

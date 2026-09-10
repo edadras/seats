@@ -980,7 +980,32 @@ return [
         'currencyNeeded' => 'Say which currency this amount is in.',
     ],
 
+    /*
+     | Paper, at the window.
+     |
+     | Two destinations because a box office has two kinds of printer, and the warning is here
+     | because it is the one thing an operator must know before pressing the button: printing
+     | re-mints the code, and the copy somebody says they lost stops working.
+     */
+    'printing' => [
+        'title' => 'Print tickets',
+        'tickets' => 'Print',
+        'one' => 'Reprint',
+        'print' => 'Print',
+        'printNow' => 'Print the tickets as the sale completes',
+        'destination' => 'Where',
+        'browser' => 'This browser’s printer',
+        'roll' => 'Roll printer file (ESC/POS)',
+        'rollHint' => 'Downloads the raw bytes for a local print agent to send straight to the roll printer.',
+        'width' => 'Roll width',
+        'mm58' => '58 mm',
+        'mm80' => '80 mm',
+        'reissues' => 'Printing issues a new code. Any earlier copy of this ticket stops working.',
+        'sent' => 'Sent to the printer.',
+    ],
+
     'tickets' => [
+        'rowShort' => 'Row',
         'title' => 'Tickets',
         'description' => 'Every ticket for one event. Search by name, email, seat or reference.',
         'noEventsTitle' => 'No events yet',

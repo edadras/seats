@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'Questa inserzione è già conclusa.',
     'resale_being_bought' => 'In questo momento qualcuno sta comprando quel posto. Si potrà togliere dalla vendita se non conclude l’acquisto.',
     'buyer_blocked' => 'Questo account non può prenotare presso questo organizzatore. Contatta il botteghino.',
+    'ticket_not_printable' => 'Qui non c’è nulla da stampare: il biglietto è stato usato, rimborsato o mai emesso.',
     'block_needs_somebody' => 'Un blocco ha bisogno di un\'email o di un numero di telefono.',
     'chargeback_not_paid' => 'Per quella prenotazione non è mai stato incassato nulla, quindi non c\'è nulla da riprendere.',
     'companion_needs_accessible' => 'Questo posto è riservato a chi accompagna una persona in sedia a rotelle, quindi si vende insieme al posto accanto.',

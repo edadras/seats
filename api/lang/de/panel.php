@@ -968,7 +968,25 @@ return [
         'currencyNeeded' => 'Geben Sie an, in welcher Währung dieser Betrag ist.',
     ],
 
+    'printing' => [
+        'title' => 'Tickets drucken',
+        'tickets' => 'Drucken',
+        'one' => 'Erneut drucken',
+        'print' => 'Drucken',
+        'printNow' => 'Tickets drucken, sobald der Verkauf abgeschlossen ist',
+        'destination' => 'Wohin',
+        'browser' => 'Drucker dieses Browsers',
+        'roll' => 'Bondrucker-Datei (ESC/POS)',
+        'rollHint' => 'Lädt die Rohdaten herunter, die ein lokaler Druckdienst direkt an den Bondrucker schickt.',
+        'width' => 'Papierbreite',
+        'mm58' => '58 mm',
+        'mm80' => '80 mm',
+        'reissues' => 'Beim Drucken entsteht ein neuer Code. Jede frühere Kopie dieses Tickets wird ungültig.',
+        'sent' => 'An den Drucker gesendet.',
+    ],
+
     'tickets' => [
+        'rowShort' => 'Reihe',
         'title' => 'Tickets',
         'description' => 'Alle Tickets einer Veranstaltung. Suchen Sie nach Name, E-Mail, Platz oder Buchungsnummer.',
         'noEventsTitle' => 'Noch keine Veranstaltungen',

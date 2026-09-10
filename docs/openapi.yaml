@@ -482,6 +482,88 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /orders/{order}/receipts:
+    parameters:
+      - { name: order, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: printOrderTickets
+      tags: [Orders]
+      summary: The whole booking, as a box office prints it
+      description: >
+        Behind `orders.sell` rather than a viewing permission, because printing re-mints the code:
+        a stored ticket cannot reproduce its QR — the database keeps a hash, and nothing recovers
+        the code from a hash — so the only honest answer is a new one, which necessarily stops any
+        earlier copy working. At a counter that is exactly right, and it is the wrong thing for
+        somebody who may only look at a booking to do by accident.
+
+
+        Two representations of one list of lines. The default is JSON, which a panel lays out and
+        prints through the browser and the operating system's own driver — the only way to print a
+        Persian event name on hardware bought in Berlin. `format=escpos` is the byte stream a roll
+        printer understands, for a local print agent to send straight at it.
+
+
+        Refuses with `ticket_not_printable` when the booking has no live seat left to print.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, escpos], default: json }
+        - name: width
+          in: query
+          description: Roll width in millimetres. The two anybody buys.
+          schema: { type: integer, enum: [58, 80], default: 80 }
+        - name: cut
+          in: query
+          description: >
+            Whether to cut between tickets. Only meaningful for `escpos`. Two seats left on one
+            strip of paper is two people sharing a ticket at the door, so the default is to cut.
+          schema: { type: boolean, default: true }
+      responses:
+        "200":
+          description: The tickets, as lines or as bytes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketReceipts" }
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /allocations/{allocation}/receipt:
+    parameters:
+      - { name: allocation, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: printSeatTicket
+      tags: [Orders]
+      summary: One seat again, for the person who left theirs on the bus
+      description: >
+        The same as printing the booking, for a single seat. It re-mints that seat's code and no
+        other, so the rest of a family's tickets keep working while the lost one stops.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, escpos], default: json }
+        - name: width
+          in: query
+          schema: { type: integer, enum: [58, 80], default: 80 }
+        - name: cut
+          in: query
+          schema: { type: boolean, default: true }
+      responses:
+        "200":
+          description: The ticket, as lines or as bytes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketReceipts" }
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /orders/{order}/chargeback:
     parameters:
       - { name: order, in: path, required: true, schema: { type: string, format: uuid } }
@@ -7358,6 +7440,43 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    TicketReceipts:
+      type: object
+      description: >
+        One ticket per entry, each a list of lines in the order they come off the roll. Both
+        outputs are built from these, so the bytes and the browser cannot disagree about which
+        seat somebody has.
+      properties:
+        width:
+          type: integer
+          enum: [58, 80]
+          description: The roll width the lines were laid out for, in millimetres.
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum: [title, centre, seat, small, pair, rule, qr]
+                      description: >
+                        How to set the line. `title` is the event, `seat` the one line worth
+                        shouting, `pair` a label and a value on one row, `rule` a dashed divider,
+                        `qr` the code itself.
+                    text: { type: string }
+                    left: { type: string }
+                    right: { type: string }
+                    image:
+                      type: string
+                      description: >
+                        The QR as an SVG data URI, on `qr` lines only. Present so a print view can
+                        draw a code it cannot compute — the plain token is in `text` for anything
+                        that renders its own.
     RefundRequest:
       type: object
       properties:

@@ -500,6 +500,11 @@
 					'<input class="input" id="c-note" maxlength="200"></div>' +
 				'<label class="perms__row"><input type="checkbox" class="checkbox" id="c-send">' +
 					'<span>' + esc( App.t( 'panel.boxOffice.sendTickets' ) ) + '</span></label>' +
+				// Paper, as the sale completes. Remembered per browser, because whether this
+				// counter has a printer beside it is a property of the counter, not of the sale.
+				'<label class="perms__row"><input type="checkbox" class="checkbox" id="c-print"' +
+					( Counter.printing() ? ' checked' : '' ) + '>' +
+					'<span>' + esc( App.t( 'panel.printing.printNow' ) ) + '</span></label>' +
 				'</div>',
 			onSubmit: function () {
 				var name = document.getElementById( 'c-name' ).value.trim();
@@ -529,9 +534,22 @@
 					send_tickets: document.getElementById( 'c-send' ).checked,
 				};
 
+				var printing = document.getElementById( 'c-print' ).checked;
+
+				Counter.printing( printing );
+
 				return App.request( 'POST', '/events/' + Counter.eventId + '/sell', payload )
 					.then( function ( sale ) {
 						App.toast( App.t( 'panel.boxOffice.sold', { reference: sale.reference } ) );
+
+						if ( printing ) {
+							global.SeatmapReceipts.send(
+								App,
+								'/orders/' + sale.id + '/receipts',
+								sale.reference
+							);
+						}
+
 						Counter.choose( Counter.eventId );
 					} );
 			},
@@ -555,6 +573,27 @@
 	};
 
 	/* ------------------------------------------------------------------------------ helpers */
+
+	/**
+	 * Whether this browser prints as it sells. Read with no argument, set with one.
+	 *
+	 * Kept in the browser rather than against the user: the same person works the window on
+	 * Tuesday and answers the telephone from a desk on Wednesday, and only one of those has a
+	 * printer beside it.
+	 */
+	Counter.printing = function ( value ) {
+		try {
+			if ( undefined === value ) {
+				return 'yes' === global.localStorage.getItem( 'seatmap.counter.print' );
+			}
+
+			global.localStorage.setItem( 'seatmap.counter.print', value ? 'yes' : 'no' );
+		} catch ( error ) {
+			// Storage switched off: the box stays unticked and the operator ticks it each time.
+		}
+
+		return !! value;
+	};
 
 	function bind( id, handler ) {
 		var element = document.getElementById( id );

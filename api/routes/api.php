@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\V1\Management\ResaleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
+use App\Http\Controllers\Api\V1\Management\ReceiptController;
 use App\Http\Controllers\Api\V1\Management\RiskController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
@@ -156,6 +157,9 @@ Route::prefix('v1')->group(function () {
         Route::put('events/{event}/addons', [AddonController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty
         // thousand seats and a repricing usually touches eight.
+        Route::get('orders/{order}/receipts', [ReceiptController::class, 'forOrder']);
+        Route::get('allocations/{allocation}/receipt', [ReceiptController::class, 'forSeat']);
+
         Route::post('orders/{order}/chargeback', [RiskController::class, 'chargeback']);
         Route::get('blocked-buyers', [RiskController::class, 'blocks']);
         Route::post('blocked-buyers', [RiskController::class, 'block']);

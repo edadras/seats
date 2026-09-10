@@ -242,6 +242,7 @@ return [
     'resale_settled' => 'Cette mise en vente est déjà close.',
     'resale_being_bought' => 'Quelqu’un est en train d’acheter cette place. Elle pourra être retirée de la vente s’il ne va pas au bout.',
     'buyer_blocked' => 'Ce compte ne peut pas réserver auprès de cet organisateur. Merci de contacter la billetterie.',
+    'ticket_not_printable' => 'Il n’y a rien à imprimer ici : le billet a été utilisé, remboursé ou jamais émis.',
     'block_needs_somebody' => 'Un blocage a besoin d\'une adresse e-mail ou d\'un numéro de téléphone.',
     'chargeback_not_paid' => 'Rien n\'a jamais été encaissé pour cette réservation, donc rien ne peut être repris.',
     'companion_needs_accessible' => 'Ce siège est réservé à l\'accompagnant d\'un utilisateur de fauteuil roulant : il se vend avec la place voisine.',

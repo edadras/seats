@@ -85,6 +85,13 @@ A seat is the start of it, not the end. Around the map:
   has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
   carry a date that lifts it without anybody acting, and is checked where a booking is registered so
   the refusal arrives before the money — with a sentence, not a silent failure.
+- **Thermal ticket printing at the window** — paper, a second after the card clears. One list of
+  lines, two ways out: the byte stream a roll printer understands, for a local agent to push
+  straight at the hardware, and a print view the browser lays out through the operating system's
+  own driver — which is the only way to print a Persian event name on a printer bought in Berlin.
+  Printing re-mints the code, because a stored ticket cannot reproduce its QR and the honest answer
+  is a new one; that is exactly right at a counter, where a reprint is the live ticket and the copy
+  somebody says they lost is not. It sits behind the selling permission for the same reason.
 - **Sales attribution and promoter links** — a promoter is a person an organiser created on purpose,
   with a name, a link of their own and a percentage, which is what makes it safe to pay against; a
   `utm_source` is a string anybody can type. What was clicked is stamped on the booking once, name
@@ -570,6 +577,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A chargeback is told apart from a refund in the takings | `ChargebackTest` |
 | A block lapses on its date without anybody acting | `ChargebackTest` |
 | A blocked buyer is refused before the money, and told to ring | `ChargebackTest`, `chargeback_smoke` |
+| A ticket prints what somebody is holding the paper for | `TicketPrintingTest`, `printing_smoke` |
+| Printing re-mints the code, so the copy that was lost stops working | `TicketPrintingTest`, `printing_smoke` |
+| The bytes and the print view say the same thing about the same seat | `TicketPrintingTest`, `printing_smoke` |
+| A script the printer cannot set is dropped rather than printed as questions | `TicketPrintingTest` |
+| Only somebody who may sell may print | `TicketPrintingTest` |
 
 ## Installing the plugin
 
