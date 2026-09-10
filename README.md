@@ -44,6 +44,43 @@ Rows (straight or curved), enterable polygon sections, general admission areas, 
 the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
 floors, on four selection layers, with categories, a focal point and a validation checklist.
 
+## What it sells
+
+A seat is the start of it, not the end. Around the map:
+
+- **Ticket types and concessions** — adult, child, member, priced per type per event, with minimum
+  and maximum quantities the picker enforces before the server has to.
+- **Booking fees and VAT**, as their own lines rather than folded into a price, so a buyer can see
+  what they are paying and an organiser can reconcile it. **Invoices** carry a VAT number.
+- **Discount codes**, percentage or fixed, per event or account-wide, with a cap on uses and a
+  record of who spent them.
+- **Best available** — "four together" without a buyer hunting for them, scored by price, by how
+  central the run is, and by how many orphan seats it would leave behind.
+- **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
+  so the window cannot oversell while a basket is open.
+- **Multi-date events and seasons**, so a run of nights is one thing to manage and one thing to buy
+  from.
+- **A waiting list** for a sold-out night, told automatically when seats come back.
+- **The counter** — a box office selling at the window, taking cash, and giving seats away as
+  comps, with a reason recorded against each.
+- **The door list** and its export, for the venue that would rather hold paper than a phone.
+- **Attendee questions** at checkout, answered per ticket rather than per booking.
+- **Ticket transfer**, so the friend who is actually coming holds a ticket in their own name.
+- **Refunds** the buyer can ask for, granted at once inside the terms the organiser wrote and
+  queued for a person when they are outside them.
+- **Calling a night off, or moving it** — releasing every live basket, settling every booking, and
+  telling every buyer the date has changed, with the arrival windows shifted to match.
+- **Wallet passes** in Apple Wallet and Google Wallet, signed with the organiser's own credentials,
+  because a pass this platform signed would say this platform sold the ticket.
+- **Settlement** — what was taken, what was handed back, what the platform's commission was, per
+  period or per event, as a statement somebody can send to an accountant.
+- **Reports** built by dragging fields, with no SQL box — [ADR-0006](docs/adr/0006-report-engine.md)
+  says why.
+- **Two-step sign-in** for staff, and **GDPR export and erasure** for buyers.
+
+Every one of these is behind a named permission, translated into all six languages, and driven by a
+browser check in `api/smoke.sh`.
+
 ## Who may do what
 
 Six built-in roles — owner, administrator, manager, box office, door staff, viewer — over a closed
@@ -78,15 +115,23 @@ reader looking at a Berlin show sees euros, in Persian digits, on the Persian ca
 tomans, and not the German way of writing a euro. That is `Money::format()` and `Dates::longWhen()`
 and never string concatenation, because the alternative misstates a price.
 
-Nothing may be left behind, and that is enforced rather than asked for:
+Nothing may be left behind, and that is enforced rather than asked for. Four checks run in CI on
+every push, and each one exists because the thing it catches is invisible to the others:
 
-```bash
-node tools/i18n-check.mjs     # runs in CI on every push
-```
-
-It fails the build on a missing key, on a stale key left behind by a rename, and on a placeholder
-that appears in one translation of a string and not another — a translation that quietly drops
-`:max` tells a buyer they may select *up to seats*.
+- `tools/i18n-check.mjs` — a missing key, a stale key left behind by a rename, and a placeholder
+  that appears in one translation of a string and not another. A translation that quietly drops
+  `:max` tells a buyer they may select *up to seats*.
+- `tools/panel-strings-check.mjs` — the panel and its catalogue, in both directions. `t()` never
+  throws: a mistyped key renders its own last segment on the screen, and a catalogue entry nobody
+  looks up is six translations of a string that is never shown. Both are invisible above, because
+  the locales agree with each other either way.
+- `tools/picker-strings-check.mjs` — every host provides every string the shared seat picker asks
+  for, so a WordPress shop cannot render a blank where the hosted site renders a sentence.
+- `tools/error-strings-check.php` — every refusal the API can give has a sentence in the catalogue,
+  and every sentence belongs to a refusal. `ApiException` falls back to the English literal the
+  call site wrote, which is a safety net for the minute between writing a refusal and translating
+  it; eighty-four codes once lived in that net, because a fallback and a translation look identical
+  to anybody reading English.
 
 ## Modules
 
@@ -195,20 +240,26 @@ php artisan serve
 Requires PHP 8.3+, PostgreSQL 14+ and Redis. Postgres is not optional: the correctness guarantees
 use partial unique indexes and `SELECT … FOR UPDATE`.
 
-`php artisan migrate --seed` creates a demo tenant, a published 150-seat map, a priced event and a
-connected API client, and prints the credentials you need for the plugin.
+`php artisan migrate --seed` creates two demo organisers with a hosted site each, four priced
+events across two published maps — a theatre with named chairs and a warehouse sold by the head,
+because half the events on this platform are the second kind — and a connected API client. It
+prints the credentials you need for the plugin, and a platform-console operator.
 
 ## Tests
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 163 unit, feature and module tests
+./vendor/bin/phpunit                        # 509 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
-cd ../checkin-app && flutter test           # 13 scanner tests
+cd ../checkin-app && flutter test           # the scanner, including its offline queue
 
-cd .. && node tools/i18n-check.mjs          # every locale complete
+cd ..
+node tools/i18n-check.mjs                   # every locale complete
+node tools/panel-strings-check.mjs          # the panel and its catalogue agree, both ways
+node tools/picker-strings-check.mjs         # every host provides what the picker asks for
+php tools/error-strings-check.php           # every refusal has a sentence, and vice versa
 ```
 
 The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concurrency tests spawn
@@ -219,23 +270,21 @@ A few further checks are run by hand against a live instance rather than in CI, 
 server and a browser:
 
 ```bash
-php artisan migrate:fresh --seed --force
+cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-node api/editor_smoke.mjs                                        # drives the designer in Chromium
-node api/a11y_check.mjs                                          # contrast and keyboard paths
-node api/reports_smoke.mjs                                       # builds a report by dragging, then a page
-node api/customers_smoke.mjs                                     # the customer directory and its CSV
-node api/messaging_smoke.mjs                                     # an announcement, its deliveries, the notice bell
-node api/embed_smoke.mjs                                         # the picker on a third-party page, through to checkout
-node api/site_smoke.mjs                                          # searching the programme, the sitemap, the .ics
-node api/discount_smoke.mjs                                      # a code made in the panel, then spent at a checkout
-node api/ticket_types_smoke.mjs                                  # a concession priced in the panel, chosen by a buyer
-node api/counter_smoke.mjs                                       # a window sale, seats to comp, from the panel
-node api/door_smoke.mjs                                          # tonight's list, searched and downloaded
-php wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT  # the plugin's exact signing code
+./smoke.sh                    # all twenty-four, in order
+./smoke.sh editor_smoke       # or just the one you are working on
+
+php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
 ```
+
+`smoke.sh` re-seeds and empties the rate limiter between checks, which is not decoration: a dozen
+of them signing in as the same owner trips `throttle:20,1` on `/v1/auth/login`, and everything
+after that fails with a timeout that says nothing about why. Each check names what it drives at
+the top of its own file — the designer, the picker, a discount code spent at a checkout, tonight's
+door list, a wallet pass signed with a real certificate — and prints a line per assertion.
 
 And one against a real WordPress, which stands itself up on SQLite and needs no database server:
 
@@ -283,6 +332,19 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Standing room never oversells, even under contention | `GeneralAdmissionTest`, `SeatConcurrencyTest` |
 | The PHP and JavaScript seat maths agree exactly | `RowGeometryTest` |
 | Webhooks retry, die honestly, and stay tenant-scoped | `WebhookDeliveryTest` |
+| A concession's minimum and maximum are enforced by the server, not the picker | `TicketTypeTest` |
+| A booking fee and its VAT are their own lines, and the total is the sum | `FeesAndTaxTest`, `InvoiceTest` |
+| A discount cannot be spent past its cap, and expires without anybody touching it | `DiscountCodeTest` |
+| "Four together" is really together, and prefers not to orphan a seat | `BestAvailableTest` |
+| An arrival window cannot oversell while a basket is open | `TimedEntryTest` |
+| Calling a night off releases every live basket and tells every buyer | `EventCancellationTest` |
+| A refund inside the organiser's terms is granted at once; outside them a person answers | `RefundRequestTest` |
+| A wallet pass is a signed zip whose manifest matches its files | `WalletPassTest` |
+| No wallet button is offered where nothing can be signed | `WalletPassTest` |
+| A transferred ticket leaves the old holder and reaches the new one | `TicketTransferTest` |
+| Settlement adds up: taken, returned, commission, per currency | `SettlementTest` |
+| A buyer's data can be handed over and erased without breaking the books | `PersonalDataTest` |
+| Two-step sign-in cannot be turned off from a borrowed tab | `TwoFactorTest` |
 
 ## Installing the plugin
 
