@@ -842,6 +842,89 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/translations:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getEventTranslations
+      tags: [Events]
+      summary: What this event is called, in each of the six languages
+      description: |
+        Requires `events.view`. The panel, the site's furniture, the door app and the WordPress
+        plugin have spoken six languages since ADR-0005; the one thing that did not is what an
+        organiser actually types. An event called "Opening night" read "Opening night" to somebody
+        reading the rest of the page in Persian, which is the most visible untranslated thing on a
+        site claiming six languages.
+
+        `original` is what the event was created with — the fallback, and always present.
+      responses:
+        "200":
+          description: The translations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  original:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      description: { type: [string, "null"] }
+                      category: { type: [string, "null"] }
+                  locales:
+                    type: array
+                    items: { type: string }
+                  data:
+                    type: object
+                    description: "Locale code to written fields. Absent locales fall back."
+                    additionalProperties:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        description: { type: string }
+                        category: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: replaceEventTranslations
+      tags: [Events]
+      summary: Replace the whole set
+      description: |
+        Requires `events.manage`. Its own endpoint rather than a field on the event: these are
+        written a language at a time, often weeks later and often by somebody else, and folding
+        them into the general update would mean every save of a start time carried every
+        translation with it.
+
+        A language blank in both fields is a language deliberately not written and is dropped
+        rather than stored — an empty string would render as nothing where a fallback belongs. A
+        locale this platform does not speak is ignored. The fallback is field by field, not all or
+        nothing: a Persian name with no Persian description uses the original description.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [translations]
+              properties:
+                translations:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      name: { type: [string, "null"], maxLength: 200 }
+                      description: { type: [string, "null"], maxLength: 5000 }
+                      category: { type: [string, "null"], maxLength: 60 }
+      responses:
+        "200":
+          description: The translations, as saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/cancel:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     post:

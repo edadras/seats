@@ -15,7 +15,7 @@
 
             <p class="muted">{{ __('site.orderLine', [
                 'reference' => $order->external_order_id,
-                'event' => $order->event?->name,
+                'event' => $order->event?->nameFor(),
             ]) }}</p>
 
             @if (count($tokens))

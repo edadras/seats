@@ -30,7 +30,7 @@
         <tr>
             <td width="70%" valign="top">
                 <div class="venue">{{ $order->event?->venue?->name ?? $site->name }}</div>
-                <div class="event">{{ $order->event?->name }}</div>
+                <div class="event">{{ $order->event?->nameFor() }}</div>
                 <div class="when">{{ $starts ? \App\Support\Locale\Dates::longWhen($starts) : '' }}</div>
 
                 <div class="seat">

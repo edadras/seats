@@ -173,7 +173,9 @@ class WaitingList
             ['email' => $entry->email, 'phone' => $entry->phone],
             [
                 'buyer' => $entry->name,
-                'event' => $event->name,
+                // Their own language: they gave one when they joined the list, and this whole
+                // message is being written in it.
+                'event' => $event->nameFor($entry->locale),
                 'venue' => $event->venue?->name ?? '',
                 'starts' => $event->starts_at
                     ? Dates::longWhen($event->starts_at->setTimezone($event->timezone), $entry->locale)

@@ -13,6 +13,7 @@ use App\Models\EventSeatOverride;
 use App\Models\Seat;
 use App\Models\SeatMap;
 use App\Support\Audit\AuditLogger;
+use App\Support\Locale\Locales;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
@@ -109,6 +110,76 @@ class EventController extends Controller
      * is priced from last season" bugs come from. Sending the complete intended state each time
      * makes the result unambiguous.
      */
+    /**
+     * What this event is called, in each of the six languages.
+     *
+     * Its own endpoint rather than a field on the event: this is a list an organiser works through
+     * a language at a time, sometimes weeks after the event was created and often by somebody else
+     * — and folding it into the general update would mean every save of a start time had to carry
+     * every translation with it.
+     *
+     * Saved as a whole set, like the price zones and the ticket types. A language left blank is a
+     * language deliberately not written, and it falls back to the original rather than being
+     * stored as an empty string that would render as nothing.
+     */
+    public function translations(Request $request, Event $event)
+    {
+        $this->authorize($request, 'events.view');
+
+        return response()->json([
+            'original' => [
+                'name' => $event->name,
+                'description' => $event->description,
+                'category' => $event->category,
+            ],
+            'locales' => Locales::codes(),
+            'data' => (object) ($event->translations ?? []),
+        ]);
+    }
+
+    public function saveTranslations(Request $request, Event $event)
+    {
+        $this->authorize($request, 'events.manage');
+
+        $data = $request->validate([
+            'translations' => ['present', 'array'],
+            'translations.*.name' => ['nullable', 'string', 'max:200'],
+            'translations.*.description' => ['nullable', 'string', 'max:5000'],
+            'translations.*.category' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $kept = [];
+
+        foreach ($data['translations'] as $locale => $fields) {
+            if (! Locales::supports($locale)) {
+                // A language this platform does not speak is a typo or a client bug, and storing
+                // it would put a key in the column that nothing will ever read again.
+                continue;
+            }
+
+            $written = array_filter([
+                'name' => trim((string) ($fields['name'] ?? '')),
+                'description' => trim((string) ($fields['description'] ?? '')),
+                'category' => trim((string) ($fields['category'] ?? '')),
+            ], fn (string $value) => '' !== $value);
+
+            if ([] === $written) {
+                continue;
+            }
+
+            $kept[$locale] = $written;
+        }
+
+        $event->forceFill(['translations' => $kept ?: null])->save();
+
+        $this->audit->record('event.translations_set', $event, [
+            'event' => $event->name,
+            'languages' => array_keys($kept),
+        ]);
+
+        return $this->translations($request, $event->refresh());
+    }
+
     /**
      * Call a night off.
      *

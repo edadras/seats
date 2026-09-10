@@ -73,8 +73,8 @@ class SitePageController extends Controller
             : [['id' => 'auto', 'type' => 'eventDetail', 'event_public_id' => '']];
 
         return $this->render($site, $page, $blocks, [
-            'title' => $event->name.' · '.$site->name,
-            'description' => Str::limit((string) $event->description, 300),
+            'title' => $event->nameFor().' · '.$site->name,
+            'description' => Str::limit((string) $event->descriptionFor(), 300),
             'canonical' => $site->url('/events/'.$event->public_id),
             // What a link to this page looks like when it is pasted into a message. Without it,
             // an event with a poster shares as a grey rectangle.
@@ -132,7 +132,7 @@ class SitePageController extends Controller
         $data = [
             '@context' => 'https://schema.org',
             '@type' => 'Event',
-            'name' => $event->name,
+            'name' => $event->nameFor(),
             'startDate' => $event->starts_at?->toIso8601String(),
             'eventStatus' => match ($event->status) {
                 'cancelled' => 'https://schema.org/EventCancelled',
@@ -147,8 +147,8 @@ class SitePageController extends Controller
             $data['endDate'] = $event->ends_at->toIso8601String();
         }
 
-        if ($event->description) {
-            $data['description'] = Str::limit((string) $event->description, 500);
+        if ($event->descriptionFor()) {
+            $data['description'] = Str::limit((string) $event->descriptionFor(), 500);
         }
 
         if ($image = Themes::url($event->image_url)) {
@@ -207,17 +207,17 @@ class SitePageController extends Controller
 
         $body = IcsFile::event(
             uid: $event->public_id.'@'.($site->canonicalHost() ?: 'seatmap'),
-            summary: $event->name,
+            summary: $event->nameFor(),
             starts: $event->starts_at,
             ends: $event->ends_at,
             location: trim(implode(', ', array_filter([$event->venue?->name, $event->venue?->city]))) ?: null,
-            description: $event->description,
+            description: $event->descriptionFor(),
             url: $site->url('/events/'.$event->public_id),
         );
 
         return response($body, 200, [
             'Content-Type' => 'text/calendar; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.Str::slug($event->name).'.ics"',
+            'Content-Disposition' => 'attachment; filename="'.Str::slug($event->nameFor()).'.ics"',
         ]);
     }
 
@@ -305,12 +305,12 @@ class SitePageController extends Controller
             $cheapest = $event->priceZones->min('amount');
 
             return [
-                'name' => $event->name,
+                'name' => $event->nameFor(),
                 'url' => '/events/'.$event->public_id,
                 'starts_at_iso' => $event->starts_at?->toIso8601String(),
                 'image' => Themes::url($event->image_url),
-                'category' => $event->category,
-            ] + $this->cover($event->name) + [
+                'category' => $event->categoryFor(),
+            ] + $this->cover($event->nameFor()) + [
                 // Dates, not format(): `D j M` prints "Tue 29 Sep" in every language, which is the
                 // exact bug this exercise exists to remove — and the calendar follows the reader
                 // too, so an Iranian visitor is told ۷ مهر rather than a date they must convert.
@@ -345,10 +345,12 @@ class SitePageController extends Controller
 
         return [
             'public_id' => $event->public_id,
-            'name' => $event->name,
-            'description' => $event->description,
+            // The reader's own language where the organiser wrote one, and the words they were
+            // typed in where they did not. A missing translation is not a blank page.
+            'name' => $event->nameFor(),
+            'description' => $event->descriptionFor(),
+            'category' => $event->categoryFor(),
             'image' => Themes::url($event->image_url),
-            'category' => $event->category,
             'venue' => $event->venue?->name,
             'long_when' => Dates::longWhen($starts),
             'day' => Dates::day($starts, app()->getLocale()),
@@ -387,7 +389,7 @@ class SitePageController extends Controller
             'other_dates' => $this->otherDates($site, $event),
             'waiting_list' => ('cancelled' !== $event->status)
                 && ('closed' === $event->status || ($onSale && 0 === app(WaitingList::class)->freePlaces($event))),
-        ] + $this->cover($event->name);
+        ] + $this->cover($event->nameFor());
     }
 
     /**

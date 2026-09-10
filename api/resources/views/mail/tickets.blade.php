@@ -17,7 +17,7 @@
         <td style="padding:24px;background:#ffffff;border-radius:12px;">
             <h1 style="margin:0 0 4px;font-size:20px;">{{ $site->name }}</h1>
             <p style="margin:0 0 20px;color:#5f6878;font-size:14px;">
-                {{ $order->event?->name }}@if ($order->event?->starts_at) ·
+                {{ $order->event?->nameFor() }}@if ($order->event?->starts_at) ·
                     {{-- Not format(): `l j F Y` prints English month names in every language, and
                          the calendar matters too — an Iranian reader wants ۷ مهر, not 29 September. --}}
                     {{ \App\Support\Locale\Dates::longWhen($order->event->starts_at->setTimezone($site->timezone), $locale) }}

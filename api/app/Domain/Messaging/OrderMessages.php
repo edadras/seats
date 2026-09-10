@@ -68,7 +68,10 @@ class OrderMessages
 
         return [
             'buyer' => (string) ($order->buyer['name'] ?? ''),
-            'event' => (string) ($event?->name ?? ''),
+            // The buyer's own language, which is the language this whole message is being
+            // written in — an event called one thing in the subject line and another in the body
+            // would read as two different events.
+            'event' => (string) ($event?->nameFor($locale) ?? ''),
             'venue' => (string) ($event?->venue?->name ?? ''),
             'starts' => $event?->starts_at
                 ? Dates::longWhen($event->starts_at, $locale)

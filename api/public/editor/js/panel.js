@@ -1248,6 +1248,7 @@
 						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
 						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
+						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
 						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
 						// Not offered on a night that is already off: there is nothing left to
 						// cancel, and the button would only invite somebody to try.
@@ -1316,6 +1317,18 @@
 
 						if ( event ) {
 							self.repeatEvent( event );
+						}
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-words]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						var event = results[ 0 ].data.filter( function ( row ) {
+							return row.id === button.dataset.words;
+						} )[ 0 ];
+
+						if ( event ) {
+							self.translateEvent( event );
 						}
 					} );
 				} );
@@ -1539,6 +1552,123 @@
 	 * That one is deliberately absent: an event keeps selling against the version published when it
 	 * was created, and moving a live event onto another chart would strand every seat already sold.
 	 */
+	/**
+	 * What the event is called, in each of the six languages.
+	 *
+	 * One language on screen at a time rather than twelve fields at once: an organiser writes
+	 * these a language at a time, usually with somebody else's help, and a wall of boxes is a wall
+	 * nobody finishes. What is typed is kept as the picker moves between languages and the whole
+	 * set is saved together.
+	 *
+	 * A language left blank is a language deliberately not written. It falls back to the words the
+	 * event was typed in — an organiser who has done Persian and German has not thereby broken
+	 * their French page.
+	 */
+	/** A language's own name for itself, which is what somebody choosing one looks for. */
+	App.languageName = function ( code ) {
+		var found = ( i18n.locales || [] ).filter( function ( entry ) {
+			return entry.code === code;
+		} )[ 0 ];
+
+		return found ? found.native : code;
+	};
+
+	App.translateEvent = function ( event ) {
+		var self = this;
+
+		this.request( 'GET', '/events/' + event.id + '/translations' )
+			.then( function ( response ) {
+				var words = response.data || {};
+				var locales = response.locales || [];
+				var showing = locales[ 0 ];
+
+				var field = function ( id, label, value, rows ) {
+					return '<div class="field"><label class="field__label" for="' + id + '">' +
+						esc( label ) + '</label>' +
+						( rows
+							? '<textarea class="input" id="' + id + '" rows="' + rows + '">' +
+								esc( value ) + '</textarea>'
+							: '<input class="input" id="' + id + '" maxlength="200" value="' +
+								esc( value ) + '">' ) +
+					'</div>';
+				};
+
+				var read = function () {
+					var name = document.getElementById( 'tr-name' );
+					var description = document.getElementById( 'tr-description' );
+
+					if ( ! name ) {
+						return;
+					}
+
+					words[ showing ] = {
+						name: name.value.trim(),
+						description: description.value.trim(),
+						category: document.getElementById( 'tr-category' ).value.trim(),
+					};
+				};
+
+				var paint = function () {
+					var current = words[ showing ] || {};
+
+					document.getElementById( 'tr-fields' ).innerHTML =
+						field( 'tr-name', self.t( 'panel.events.nameIn', {
+							language: self.languageName( showing ),
+						} ), current.name || '', 0 ) +
+						field( 'tr-category', self.t( 'panel.events.categoryIn', {
+							language: self.languageName( showing ),
+						} ), current.category || '', 0 ) +
+						field( 'tr-description', self.t( 'panel.events.descriptionIn', {
+							language: self.languageName( showing ),
+						} ), current.description || '', 5 );
+				};
+
+				self.modal( {
+					title: self.t( 'panel.events.translationsTitle', { name: event.name } ),
+					submitLabel: self.t( 'panel.common.save' ),
+					body:
+						'<div class="stack">' +
+							'<p class="hint">' + esc( self.t( 'panel.events.translationsHint' ) ) + '</p>' +
+							'<div class="field"><label class="field__label" for="tr-locale">' +
+								esc( self.t( 'panel.events.language' ) ) + '</label>' +
+								'<select class="select" id="tr-locale">' +
+									locales.map( function ( code ) {
+										return '<option value="' + esc( code ) + '">' +
+											esc( self.languageName( code ) ) +
+											( ( words[ code ] || {} ).name ? ' ✓' : '' ) + '</option>';
+									} ).join( '' ) +
+								'</select></div>' +
+							'<div id="tr-fields"></div>' +
+							'<p class="hint">' + esc( self.t( 'panel.events.originalIs', {
+								name: response.original.name,
+							} ) ) + '</p>' +
+						'</div>',
+					onSubmit: function () {
+						read();
+
+						return self.request( 'PUT', '/events/' + event.id + '/translations', {
+							translations: words,
+						} ).then( function () {
+							self.toast( self.t( 'panel.events.translationsSaved' ) );
+						} );
+					},
+				} );
+
+				var picker = document.getElementById( 'tr-locale' );
+
+				picker.addEventListener( 'change', function () {
+					// Keep what was typed before moving on: a picker that discarded it would be a
+					// picker nobody uses twice.
+					read();
+					showing = picker.value;
+					paint();
+				} );
+
+				paint();
+			} )
+			.catch( function ( error ) { self.toast( error.message, true ); } );
+	};
+
 	/**
 	 * Move a night to another night.
 	 *

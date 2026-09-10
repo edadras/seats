@@ -38,8 +38,10 @@ class EmbedController extends Controller
 
         return response()->json([
             'public_id' => $event->public_id,
-            'name' => $event->name,
-            'description' => $event->description,
+            // A picker pasted onto somebody's own page is read in whatever language that page
+            // asked for, so the event's own words follow the same rule as the site's.
+            'name' => $event->nameFor(),
+            'description' => $event->descriptionFor(),
             'starts_at' => $event->starts_at?->toIso8601String(),
             'ends_at' => $event->ends_at?->toIso8601String(),
             'timezone' => $event->timezone,

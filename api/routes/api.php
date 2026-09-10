@@ -98,6 +98,9 @@ Route::prefix('v1')->group(function () {
         Route::post('events/{event}/repeat', [EventController::class, 'repeat']);
         // The night that is off, and the night that moved. One refunds everything and voids every
         // ticket; the other keeps them all and says so.
+        // What the event is called, in each of the six languages the rest of the platform speaks.
+        Route::get('events/{event}/translations', [EventController::class, 'translations']);
+        Route::put('events/{event}/translations', [EventController::class, 'saveTranslations']);
         Route::post('events/{event}/cancel', [EventController::class, 'cancel']);
         Route::post('events/{event}/reschedule', [EventController::class, 'reschedule']);
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
