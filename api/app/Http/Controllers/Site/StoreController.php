@@ -94,12 +94,23 @@ class StoreController extends Controller
 
         $accessCode = $data['access_code'] ?? $request->session()->get('seatmap_access_code');
 
+        /*
+         * Which channel this basket belongs to.
+         *
+         * The site's own API client — the one its orders are already registered against. Passing it
+         * here as well makes the *hold* attributable to the channel it came from, which is what a
+         * quota has to count: a limit that only saw completed bookings would let a channel hold
+         * four hundred places it had no allowance for and find out at the checkout.
+         */
+        $client = app(\App\Domain\Sites\StorefrontCheckout::class)
+            ->clientFor($request->attributes->get('site'))->id;
+
         $hold = ($data['best_available'] ?? null)
             ? $this->holds->createBestAvailable(
                 $event,
                 (int) $data['best_available']['quantity'],
                 $this->sessionId($request),
-                null,
+                $client,
                 $request->ip(),
                 $data['best_available'],
                 ['all' => $data['best_available']['ticket_type_id'] ?? null],
@@ -110,7 +121,7 @@ class StoreController extends Controller
                 $event,
                 $data['seat_ids'] ?? [],
                 $this->sessionId($request),
-                null,
+                $client,
                 $request->ip(),
                 $data['areas'] ?? [],
                 $data['seat_types'] ?? [],

@@ -13,20 +13,27 @@ use Illuminate\Support\Facades\DB;
  *
  * Precedence, highest first: allocated > blocked > held > available. Allocated beats blocked so an
  * organiser who blocks a seat after it was sold does not make a sold seat look free again.
+ *
+ * One channel sees a different hall: the counter. A house seat — blocked, with a label saying who
+ * it is being kept for — is off public sale and on sale at the window, so the counter asks with
+ * `counter: true` and gets those seats back as available. It is the same statement and the same
+ * precedence either way, which is the point: a house seat already sold is still sold, and one
+ * sitting in another clerk's basket still comes back held rather than free.
  */
 class AvailabilityService
 {
     /**
+     * @param  bool  $counter  ask as the box office, to which house seats are on sale
      * @return list<array{seat_id: string, state: string, amount: int|null, zone_key: string|null}>
      */
-    public function forEvent(Event $event): array
+    public function forEvent(Event $event, bool $counter = false): array
     {
         return array_map(fn (array $seat) => [
             'seat_id' => $seat['seat_id'],
             'state' => $seat['state'],
             'amount' => $seat['amount'],
             'zone_key' => $seat['zone_key'],
-        ], $this->placedSeats($event));
+        ], $this->placedSeats($event, $counter));
     }
 
     /**
@@ -41,7 +48,7 @@ class AvailabilityService
      *                    row_id: string, row_name: string, label: string, accessible: bool,
      *                    x: float, y: float, floor_key: string|null}>
      */
-    public function placedSeats(Event $event): array
+    public function placedSeats(Event $event, bool $counter = false): array
     {
         if (! $event->seat_map_version_id) {
             return [];
@@ -51,6 +58,9 @@ class AvailabilityService
             'version_id' => $event->seat_map_version_id,
             'event_id' => $event->id,
             'tenant_id' => $event->tenant_id,
+            // Bound as 0/1 rather than a PHP boolean: PDO sends a bool to PostgreSQL as an empty
+            // string for false, and an empty string is not something `= 0` can be asked about.
+            'counter' => $counter ? 1 : 0,
         ]);
 
         return array_map(fn ($row) => [
@@ -221,7 +231,8 @@ class AvailabilityService
                 sp.seat_id,
                 CASE
                     WHEN a.id IS NOT NULL THEN 'allocated'
-                    WHEN o.blocked THEN 'blocked'
+                    -- A house seat stays blocked to everybody but the counter; see the class note.
+                    WHEN o.blocked AND (:counter = 0 OR o.held_for IS NULL) THEN 'blocked'
                     WHEN h.id IS NOT NULL THEN 'held'
                     ELSE 'available'
                 END AS state,

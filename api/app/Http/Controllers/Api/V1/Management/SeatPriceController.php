@@ -84,6 +84,9 @@ class SeatPriceController extends Controller
                 // Set only when this seat carries its own price rather than its zone's.
                 'own_amount' => null === $row->override_amount ? null : (int) $row->override_amount,
                 'blocked' => (bool) $row->blocked,
+                // Who a blocked seat is being kept for. A blocked seat with a label is a house
+                // seat: off public sale, and sellable at the counter on the night.
+                'held_for' => $row->held_for,
                 'note' => $row->note,
                 // A sold seat keeps the price it was sold at; changing it changes what the *next*
                 // buyer pays, and the screen says so rather than letting somebody assume a refund.
@@ -123,6 +126,7 @@ class SeatPriceController extends Controller
             'seats.*.amount' => ['present', 'nullable', 'integer', 'min:0'],
             'seats.*.zone_key' => ['present', 'nullable', 'string', 'max:60'],
             'seats.*.blocked' => ['sometimes', 'boolean'],
+            'seats.*.held_for' => ['sometimes', 'nullable', 'string', 'max:60'],
             'seats.*.note' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
@@ -171,8 +175,11 @@ class SeatPriceController extends Controller
                 $zoneKey = $seat['zone_key'] ?? null;
                 $blocked = (bool) ($seat['blocked'] ?? false);
                 $note = $seat['note'] ?? null;
+                // A label only means anything on a blocked seat, which is what the database's own
+                // CHECK says too — said here as well so the answer is a saved row and not an error.
+                $heldFor = $blocked ? ($seat['held_for'] ?? null) : null;
 
-                if (null === $amount && null === $zoneKey && ! $blocked && ! $note) {
+                if (null === $amount && null === $zoneKey && ! $blocked && ! $note && ! $heldFor) {
                     $cleared += EventSeatOverride::where('event_id', $event->id)
                         ->where('seat_id', $seat['seat_id'])
                         ->delete();
@@ -182,7 +189,13 @@ class SeatPriceController extends Controller
 
                 EventSeatOverride::updateOrCreate(
                     ['event_id' => $event->id, 'seat_id' => $seat['seat_id']],
-                    ['amount' => $amount, 'zone_key' => $zoneKey, 'blocked' => $blocked, 'note' => $note],
+                    [
+                        'amount' => $amount,
+                        'zone_key' => $zoneKey,
+                        'blocked' => $blocked,
+                        'held_for' => $heldFor,
+                        'note' => $note,
+                    ],
                 );
 
                 $changed++;
@@ -217,6 +230,7 @@ class SeatPriceController extends Controller
                 o.amount AS override_amount,
                 o.zone_key AS override_zone,
                 COALESCE(o.blocked, false) AS blocked,
+                o.held_for,
                 o.note,
                 COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
                 (a.id IS NOT NULL) AS sold

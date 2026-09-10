@@ -1167,6 +1167,25 @@
 .menu-row input[hidden] { display: none !important; }
 .menu-row:has(input:not([hidden]):nth-child(3)) { grid-template-columns: 1fr 1fr 1fr auto; }
 
+/* ------------------------------------------------------------------------------ quotas */
+
+/*
+ * One channel's promise: what it is called and what it is doing on the left, the number on the
+ * right. The box is narrow on purpose — a quota is three digits, and a full-width field invites
+ * somebody to type a sentence into it.
+ */
+.quota-row {
+	display: grid;
+	grid-template-columns: 1fr 7rem;
+	align-items: center;
+	gap: var(--s-3);
+	margin-block-end: var(--s-2);
+}
+
+@media (max-width: 30rem) {
+	.quota-row { grid-template-columns: 1fr; }
+}
+
 /* ----------------------------------------------------------------------------- domains */
 
 .domain {
@@ -1575,6 +1594,14 @@
 	font-weight: 600;
 }
 
+/* Kept back for somebody, and sellable here and nowhere else. Dashed, like the chip on the
+   seats screen that put it there, so the two screens describe one thing the same way. */
+.counter__seat--house {
+	border-style: dashed;
+	border-color: color-mix(in srgb, var(--warn, #b8860b) 55%, var(--border));
+	background: color-mix(in srgb, var(--warn, #b8860b) 12%, var(--surface));
+}
+
 /* Sold or in somebody's cart. Shown, not hidden: "A5 has gone" is the answer a clerk needs. */
 .counter__seat.is-gone {
 	opacity: 0.35;
@@ -1798,6 +1825,18 @@
 .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .chip--own { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .chip--blocked { background: var(--surface-hover); border-style: dashed; color: var(--text-muted); }
+
+/*
+ * A house seat: blocked to the public, sellable at the counter. Dashed like a block, because it is
+ * one — and tinted, because the difference between "nobody may have this" and "we are keeping this
+ * for the producer" is the difference between a mistake and a plan.
+ */
+.chip--house {
+	background: color-mix(in srgb, var(--warn, #b8860b) 14%, var(--surface));
+	border-style: dashed;
+	border-color: color-mix(in srgb, var(--warn, #b8860b) 45%, var(--border));
+	color: var(--text);
+}
 .chip--sold { box-shadow: inset 0 -3px 0 var(--warn); }
 .chip.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .chip.is-dirty::after {

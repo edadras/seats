@@ -569,6 +569,8 @@ return [
         'noneTogether' => "Non ci sono così tanti posti vicini.",
         'allSections' => 'Tutti i settori',
         'freeSeats' => ':count liberi',
+        // A chair the website is not allowed to sell. The name is what tells a clerk why.
+        'heldFor' => 'Tenuto per :name — solo a questo botteghino',
         'sectionFull' => 'Esaurito',
         'standing' => 'Posti in piedi',
         'placesLeft' => ':count posti rimasti',
@@ -1539,5 +1541,15 @@ return [
         'doorsOpen' => 'Le porte sono aperte.',
         'doorsShut' => 'Le porte non sono ancora aperte. Chi attende è nell’atrio, senza numero — l’ordine si estrae all’apertura.',
         'hint' => 'La coda si muove perché la gente la guarda: chi controlla il proprio posto ripulisce anche gli ingressi scaduti e fa entrare i successivi.',
+    ],
+
+    'quotas' => [
+        'title' => 'Quote per canale',
+        'description' => 'Quanto può vendere ogni canale di questa serata. Lasciate vuoto per nessun limite, che è il caso normale. Una prenotazione annullata restituisce i suoi posti.',
+        'taken' => ':count presi',
+        'left' => ':count rimasti',
+        'noLimit' => 'Nessun limite',
+        'noChannels' => 'Questo account vende da un solo canale, quindi non c’è nulla da dividere.',
+        'saved' => 'Quote salvate.',
     ],
 ];

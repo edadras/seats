@@ -187,15 +187,27 @@
 						row.seats.map( function ( seat ) {
 							var free = 'available' === seat.state;
 							var chosen = !! Counter.selected[ seat.id ];
+							/*
+							 * A chair the website is not allowed to sell and this window is.
+							 *
+							 * Marked rather than merely offered: a clerk who hands out the seat
+							 * kept for the director's mother because it looked like any other free
+							 * chair has made exactly the mistake holding it back was meant to
+							 * prevent. The name is on the seat, in its tooltip and its label.
+							 */
+							var house = free && seat.held_for;
 
 							return '<button class="counter__seat' +
 								( chosen ? ' is-chosen' : '' ) +
+								( house ? ' counter__seat--house' : '' ) +
 								( free ? '' : ' is-gone' ) + '"' +
 								( free ? '' : ' disabled' ) +
 								' data-seat="' + esc( seat.id ) + '"' +
 								' data-amount="' + esc( seat.amount === null ? '' : seat.amount ) + '"' +
 								' data-label="' + esc( [ section.name, row.name, seat.label ].join( ' · ' ) ) + '"' +
-								' title="' + esc( seat.label ) + '">' +
+								' title="' + esc( house
+									? App.t( 'panel.boxOffice.heldFor', { name: seat.held_for } )
+									: seat.label ) + '">' +
 								esc( seat.label ) +
 							'</button>';
 						} ).join( '' ) +

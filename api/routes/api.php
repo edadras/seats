@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\AccessCodeController;
 use App\Http\Controllers\Api\V1\Management\BasketRecoveryController;
+use App\Http\Controllers\Api\V1\Management\ChannelQuotaController;
 use App\Http\Controllers\Api\V1\Management\SeasonPassController;
 use App\Http\Controllers\Api\V1\Management\VoucherController;
 use App\Http\Controllers\Api\V1\Management\WaitingRoomController;
@@ -195,6 +196,15 @@ Route::prefix('v1')->group(function () {
         Route::get('discounts/{discount}', [DiscountController::class, 'show']);
         Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
         Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
+
+        /*
+         * How much of one night each channel may sell.
+         *
+         * A PUT of the whole set, like the prices and the ticket types: partial edits across a set
+         * of limits are where "the agent still has last season's allocation" comes from.
+         */
+        Route::get('events/{event}/quotas', [ChannelQuotaController::class, 'index']);
+        Route::put('events/{event}/quotas', [ChannelQuotaController::class, 'update']);
 
         // The door on a big sale, live. A read that also turns the handle — see the controller.
         Route::get('events/{event}/queue', [WaitingRoomController::class, 'show'])

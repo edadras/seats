@@ -41,7 +41,22 @@ class HoldService
         private readonly \App\Domain\Events\EntrySlots $slots,
         private readonly \App\Domain\Availability\BestAvailable $bestAvailable,
         private readonly \App\Domain\Access\AccessCodes $access,
+        private readonly \App\Domain\Channels\ChannelQuotas $quotas,
     ) {}
+
+    /**
+     * Whether the caller is the counter.
+     *
+     * The box office is a channel like any other — it has an API client, the same as a hosted site
+     * or a partner shop — and it is the one channel allowed to sell a house seat: that is what a
+     * house seat is for.
+     */
+    private function isCounter(?string $apiClientId): bool
+    {
+        return $apiClientId
+            && 'box_office' === \App\Models\ApiClient::withoutGlobalScope('tenant')
+                ->whereKey($apiClientId)->value('kind');
+    }
 
     /**
      * "Four together, please" — chosen and held in one movement.
@@ -202,13 +217,25 @@ class HoldService
                 }
 
                 $prices = $seatIds === [] ? [] : $this->priceSeats($event, $seatIds);
-                $unavailable = $seatIds === [] ? [] : $this->findUnavailable($event, $seatIds, $prices);
+                $unavailable = $seatIds === []
+                    ? []
+                    : $this->findUnavailable($event, $seatIds, $prices, $this->isCounter($apiClientId));
 
                 if ($unavailable !== []) {
                     throw ApiException::seatsUnavailable($unavailable);
                 }
 
                 $capacityLines = $this->reserveCapacity($event, $capacity, $areaTypes, $types);
+
+                /*
+                 * And whether this channel has any allowance left.
+                 *
+                 * Here, inside the transaction and after the seats are locked, because the count it
+                 * reads has to be the count that is still true when the hold is written. Checked
+                 * before the lock it would be a suggestion, and two agents' baskets would both fit
+                 * inside the last four places.
+                 */
+                $this->quotas->assertWithin($event, $apiClientId, $requested);
 
                 $hold = $this->insertHold(
                     $event, $seats, $prices, $sessionId, $apiClientId, $ip, $capacityLines, $types,
@@ -635,6 +662,9 @@ class HoldService
                 COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
                 COALESCE(o.zone_key, sp.zone_key) AS zone_key,
                 COALESCE(o.blocked, false) AS blocked,
+                -- Who a blocked seat is being kept for, where it is being kept for somebody. A
+                -- blocked seat with a label is a house seat, and the box office may sell it.
+                o.held_for,
                 (SELECT 1 FROM allocations a
                   WHERE a.event_id = :event_id AND a.seat_id = sp.seat_id AND a.status = 'active'
                   LIMIT 1) AS allocated,
@@ -664,6 +694,7 @@ class HoldService
                 'amount' => $row->amount === null ? null : (int) $row->amount,
                 'zone_key' => $row->zone_key,
                 'blocked' => (bool) $row->blocked,
+                'held_for' => $row->held_for,
                 'allocated' => (bool) $row->allocated,
                 'held' => (bool) $row->held,
             ];
@@ -672,8 +703,11 @@ class HoldService
         return $prices;
     }
 
-    /** @return list<string> */
-    private function findUnavailable(Event $event, array $seatIds, array $prices): array
+    /**
+     * @param  bool  $counter  whether the caller is the box office, which may sell a house seat
+     * @return list<string>
+     */
+    private function findUnavailable(Event $event, array $seatIds, array $prices, bool $counter = false): array
     {
         $unavailable = [];
         $unpriced = [];
@@ -687,7 +721,16 @@ class HoldService
                 continue;
             }
 
-            if ($seat['allocated'] || $seat['blocked'] || $seat['held']) {
+            /*
+             * A house seat is a blocked seat with a label saying who it is kept for.
+             *
+             * Every public path already excludes blocked seats, so nothing here had to be taught
+             * to hide these — which is exactly why they are modelled that way. The counter is the
+             * one caller that opts in, and it opts in by being the box office.
+             */
+            $houseSeat = $seat['blocked'] && null !== ($seat['held_for'] ?? null);
+
+            if ($seat['allocated'] || $seat['held'] || ($seat['blocked'] && ! ($houseSeat && $counter))) {
                 $unavailable[] = $seatId;
                 continue;
             }

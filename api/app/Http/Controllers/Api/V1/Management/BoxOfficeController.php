@@ -12,6 +12,7 @@ use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\ApiClient;
 use App\Models\Event;
+use App\Models\EventSeatOverride;
 use App\Models\ExternalOrder;
 use App\Models\Site;
 use App\Support\Audit\AuditLogger;
@@ -56,9 +57,21 @@ class BoxOfficeController extends Controller
 
         $states = [];
 
-        foreach ($this->availability->forEvent($event) as $seat) {
+        /*
+         * Asked as the counter, which sees one seat nobody else does: a house seat is blocked to
+         * the website and on sale here. That is the whole point of holding one back — somebody is
+         * going to be handed it on the night, and the person handing it over works at this window.
+         */
+        foreach ($this->availability->forEvent($event, counter: true) as $seat) {
             $states[$seat['seat_id']] = $seat;
         }
+
+        // Who each house seat is being kept for, so the clerk reads "Production" and not a chair
+        // that is somehow free in a sold-out row. Taken separately rather than added to the
+        // availability payload, which the public picker also reads: the label is not the public's.
+        $house = EventSeatOverride::where('event_id', $event->id)
+            ->whereNotNull('held_for')
+            ->pluck('held_for', 'seat_id');
 
         $sections = [];
 
@@ -83,6 +96,9 @@ class BoxOfficeController extends Controller
                 'accessible' => (bool) $row->accessible,
                 'state' => $state['state'] ?? 'unavailable',
                 'amount' => isset($state['amount']) ? (int) $state['amount'] : null,
+                // Null on almost every chair. Where it is set, the seat is sellable here and
+                // nowhere else, and the screen says so rather than offering it silently.
+                'held_for' => $house[$row->seat_id] ?? null,
             ];
         }
 
@@ -176,11 +192,20 @@ class BoxOfficeController extends Controller
          * Holds are limited per browser session, and every counter sale sharing one identifier
          * would mean the fourth sale of the evening being refused as "too many carts".
          */
+        /*
+         * The counter's own channel identity, resolved before the hold rather than after it.
+         *
+         * It is what makes this a *channel* sale and not an anonymous one: house seats are sold to
+         * the box office and to nobody else, and a quota counts what a channel is holding as well
+         * as what it has sold. A hold taken with no client is a hold that is neither.
+         */
+        $client = $this->counterClient($event);
+
         $hold = $this->holds->create(
             $event,
             $data['seat_ids'] ?? [],
             'counter:'.Str::random(24),
-            null,
+            $client->id,
             $request->ip(),
             $data['areas'] ?? [],
             $data['seat_types'] ?? [],
@@ -188,7 +213,6 @@ class BoxOfficeController extends Controller
             $data['entry_slot_id'] ?? null,
         );
 
-        $client = $this->counterClient($event);
         $reference = 'bo-'.Str::lower(Str::random(12));
 
         [$order] = $this->orders->register($client, $reference, $hold->token, $data['buyer'], [

@@ -1262,6 +1262,7 @@
 						( event.waiting_room
 							? actionButton( 'queue', event.id, self.t( 'panel.room.title' ), 'users' )
 							: '' ) +
+						actionButton( 'quotas', event.id, self.t( 'panel.quotas.title' ), 'plug' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
 						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
 						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
@@ -1359,6 +1360,13 @@
 								self[ pair[ 1 ] ]( event );
 							}
 						} );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-quotas]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						self.showQuotas( button.dataset.quotas,
+							button.closest( 'tr' ).querySelector( '.table__primary' ).textContent );
 					} );
 				} );
 
@@ -2063,6 +2071,64 @@
 		} );
 
 		ask();
+	};
+
+	/**
+	 * How much of one night each channel may sell.
+	 *
+	 * Every channel is listed, including the ones with no limit — an organiser deciding whether to
+	 * promise an agent four hundred needs to see what the website is already doing. An empty box is
+	 * "no limit", which is the ordinary case and is stored as no row at all rather than as a very
+	 * large number somebody would later have to interpret.
+	 */
+	App.showQuotas = function ( eventId, name ) {
+		var self = this;
+
+		this.request( 'GET', '/events/' + eventId + '/quotas' ).then( function ( response ) {
+			var rows = response.data.map( function ( channel ) {
+				return '<label class="quota-row">' +
+					'<span><strong>' + esc( channel.name ) + '</strong>' +
+						'<span class="muted on-own-line">' +
+						esc( self.t( 'panel.quotas.taken', {
+							count: self.number( channel.taken ),
+						} ) ) +
+						( null === channel.left
+							? ''
+							: ' · ' + esc( self.t( 'panel.quotas.left', {
+								count: self.number( channel.left ),
+							} ) ) ) +
+					'</span></span>' +
+					'<input class="input tnum" type="number" min="0" ' +
+						'data-channel="' + esc( channel.api_client_id ) + '" ' +
+						'placeholder="' + esc( self.t( 'panel.quotas.noLimit' ) ) + '" value="' +
+						esc( null === channel.places ? '' : channel.places ) + '">' +
+				'</label>';
+			} ).join( '' );
+
+			self.modal( {
+				title: name || self.t( 'panel.quotas.title' ),
+				submitLabel: self.t( 'panel.common.save' ),
+				body:
+					'<p class="hint">' + esc( self.t( 'panel.quotas.description' ) ) + '</p>' +
+					'<div class="stack">' + ( rows || '<p class="hint">' +
+						esc( self.t( 'panel.quotas.noChannels' ) ) + '</p>' ) + '</div>',
+				onSubmit: function () {
+					var quotas = [];
+
+					document.querySelectorAll( '[data-channel]' ).forEach( function ( field ) {
+						quotas.push( {
+							api_client_id: field.dataset.channel,
+							// Empty is "no limit", and no limit is no row: a channel left out of
+							// the payload is one whose promise is finished with.
+							places: '' === field.value.trim() ? null : Number( field.value ),
+						} );
+					} );
+
+					return self.request( 'PUT', '/events/' + eventId + '/quotas', { quotas: quotas } )
+						.then( function () { self.toast( self.t( 'panel.quotas.saved' ) ); } );
+				},
+			} );
+		} ).catch( function ( error ) { self.toast( error.message, true ); } );
 	};
 
 	App.renderConnections = function () {

@@ -3370,6 +3370,15 @@ paths:
                           Different from copying today's number onto the seat: the seat moves when
                           the zone is repriced.
                       blocked: { type: boolean }
+                      held_for:
+                        type: [string, "null"]
+                        maxLength: 60
+                        description: >-
+                          Who a blocked seat is being kept for. A blocked seat with a label is a
+                          **house seat**: off public sale, and sellable at the counter on the
+                          night. Only meaningful on a blocked seat, and the database says so with a
+                          CHECK — a label sent for a seat on public sale is dropped rather than
+                          stored.
                       note: { type: [string, 'null'], maxLength: 255 }
       responses:
         "200":
@@ -3386,6 +3395,85 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  /events/{event}/quotas:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getEventQuotas
+      tags: [Events]
+      summary: How much of this night each channel may sell
+      description: |
+        Requires `pricing.manage`. A channel is an API client — the hosted site has one, a
+        WooCommerce shop has one, the box office has one — so a quota hangs off that and nothing new
+        has to be invented to name a channel.
+
+        Every channel is listed, including the ones with no limit: an organiser deciding whether to
+        promise an agent four hundred needs to see what the website is already doing. `taken` is
+        counted on every read — live holds plus live allocations, in **places** rather than rows,
+        because a standing area sold four at a time is four places and a quota that counted it as
+        one would let an agent sell a stadium.
+      responses:
+        "200":
+          description: Every channel, its promise and its progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ChannelQuota" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    put:
+      operationId: setEventQuotas
+      tags: [Events]
+      summary: Promise each channel a share of this night
+      description: |
+        Requires `pricing.manage`. A PUT of the whole set rather than a patch per channel, for the
+        same reason the prices are: partial edits across a set of limits are where "the agent still
+        has last season's allocation" comes from.
+
+        A channel sent with `places: null`, or left out of the payload altogether, has no limit any
+        more — which is the only way "that allocation is finished with" can be said. A quota against
+        a client belonging to another account is ignored rather than obeyed.
+
+        The limit is enforced when a basket is made, inside the hold's own transaction and after the
+        advisory lock on the event: checked before it, it would be a suggestion, and two agents'
+        baskets would both fit inside the last four places.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quotas]
+              properties:
+                quotas:
+                  type: array
+                  items:
+                    type: object
+                    required: [api_client_id, places]
+                    properties:
+                      api_client_id: { type: string, format: uuid }
+                      places:
+                        type: [integer, "null"]
+                        minimum: 0
+                        description: "Null means no limit, and is stored as no row at all."
+                      note: { type: [string, "null"], maxLength: 160 }
+      responses:
+        "200":
+          description: The set as it now stands
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ChannelQuota" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /events/{event}/queue:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
@@ -4254,6 +4342,10 @@ paths:
         can be sold right now. Seats already sold or in somebody's cart are returned too, marked as
         such: a clerk asked for "A5" needs to be told it has gone, not left to wonder why it is
         missing from a list.
+
+        This is the one hall that includes house seats. A seat blocked with a label is being kept
+        for somebody and the person who hands it over works at this window, so it is reported
+        `available` here with `held_for` set. A seat blocked without a label is nobody's to sell.
       responses:
         "200":
           description: The hall
@@ -4287,6 +4379,13 @@ paths:
                                     accessible: { type: boolean }
                                     state: { type: string }
                                     amount: { type: [integer, "null"] }
+                                    held_for:
+                                      type: [string, "null"]
+                                      description: >-
+                                        Who this seat is being kept for. A **house seat** is off
+                                        public sale and on sale here, so it comes back
+                                        `available` to this endpoint and `blocked` to every
+                                        public one. Null on almost every chair.
                   areas:
                     type: array
                     items: { type: object }
@@ -6220,6 +6319,29 @@ components:
         suggested:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
+
+    ChannelQuota:
+      type: object
+      description: >-
+        One channel's promise for one night, and how much of it is gone. The promise is stored; the
+        progress is counted on every read, because a quota kept in a column is a quota two
+        simultaneous baskets both fit inside.
+      properties:
+        api_client_id: { type: string, format: uuid }
+        name: { type: string }
+        kind:
+          type: string
+          description: "What sort of channel it is — `storefront`, `box_office`, an integration."
+        places:
+          type: [integer, "null"]
+          description: "The promise. Null is no limit, which is the ordinary case."
+        note: { type: [string, "null"] }
+        taken:
+          type: integer
+          description: >-
+            Live holds plus live allocations, in places. A cancelled or refunded booking gives its
+            places back: the agent who returns two hundred unsold seats gets the allowance with them.
+        left: { type: [integer, "null"], description: "Null where there is no limit." }
 
     BasketRecovery:
       type: object

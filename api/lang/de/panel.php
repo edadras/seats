@@ -570,6 +570,8 @@ return [
         'noneTogether' => "So viele Plätze liegen nirgends nebeneinander.",
         'allSections' => 'Alle Bereiche',
         'freeSeats' => ':count frei',
+        // A chair the website is not allowed to sell. The name is what tells a clerk why.
+        'heldFor' => 'Reserviert für :name — nur an dieser Kasse',
         'sectionFull' => 'Voll',
         'standing' => 'Stehplätze',
         'placesLeft' => 'noch :count',
@@ -1540,5 +1542,15 @@ return [
         'doorsOpen' => 'Die Türen sind offen.',
         'doorsShut' => 'Die Türen sind noch zu. Alle Wartenden sind im Foyer, ohne Platznummer — die Reihenfolge wird bei Verkaufsstart gelost.',
         'hint' => 'Die Schlange bewegt sich, weil Leute hinsehen: Wer seinen Platz prüft, räumt zugleich abgelaufene Einlässe weg und lässt die Nächsten herein.',
+    ],
+
+    'quotas' => [
+        'title' => 'Kontingente je Kanal',
+        'description' => 'Wie viel jeder Kanal von diesem Abend verkaufen darf. Feld leer lassen heißt kein Limit — das ist der Normalfall. Eine stornierte Buchung gibt ihre Plätze zurück.',
+        'taken' => ':count genommen',
+        'left' => ':count übrig',
+        'noLimit' => 'Kein Limit',
+        'noChannels' => 'Dieses Konto verkauft über einen Kanal, es gibt also nichts aufzuteilen.',
+        'saved' => 'Kontingente gespeichert.',
     ],
 ];

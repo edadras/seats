@@ -582,6 +582,8 @@ return [
         'noneTogether' => "No seats side by side in that number.",
         'allSections' => 'All sections',
         'freeSeats' => ':count free',
+        // A chair the website is not allowed to sell. The name is what tells a clerk why.
+        'heldFor' => 'Kept for :name — this window only',
         'sectionFull' => 'Full',
         'standing' => 'Standing room',
         'placesLeft' => ':count places left',
@@ -1554,5 +1556,15 @@ return [
         'doorsOpen' => 'The doors are open.',
         'doorsShut' => 'The doors have not opened yet. Everybody waiting is in the lobby, with no place — the order is drawn when the sale starts.',
         'hint' => 'The queue moves as people look at it: every visitor who checks their place also sweeps the leases that have run out and lets the next people in.',
+    ],
+
+    'quotas' => [
+        'title' => 'Channel allocations',
+        'description' => 'How much of this night each channel may sell. Leave a box empty for no limit, which is the ordinary case. A cancelled booking gives its places back.',
+        'taken' => ':count taken',
+        'left' => ':count left',
+        'noLimit' => 'No limit',
+        'noChannels' => 'This account sells through one channel, so there is nothing to divide.',
+        'saved' => 'Allocations saved.',
     ],
 ];

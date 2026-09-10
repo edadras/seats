@@ -223,4 +223,6 @@ return [
     'basket_has_no_site' => 'Non c’è nessun posto a cui rimandare questo acquirente.',
     'basket_message_off' => 'Accendete prima «Prenotazione a metà» in Messaggi — finché non lo fate non parte nulla.',
     'waiting_your_turn' => 'Non è ancora il vostro turno. Il posto in coda resta vostro.',
+    'channel_quota_reached' => 'A questo canale di vendita restano :count posti per questo evento.',
+    'channel_quota_gone' => 'Questo canale di vendita ha venduto tutta la sua quota per questo evento.',
 ];

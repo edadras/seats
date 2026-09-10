@@ -58,6 +58,7 @@
 				own: seat.own_amount,
 				zoneKey: seat.zone_key,
 				blocked: seat.blocked,
+			held_for: seat.held_for,
 				dirty: false,
 			};
 		}
@@ -70,6 +71,7 @@
 			own: staged.amount,
 			zoneKey: staged.zone_key || seat.chart_zone_key,
 			blocked: staged.blocked,
+			held_for: staged.held_for,
 			dirty: true,
 		};
 	};
@@ -231,6 +233,16 @@
 				'</select>' +
 				'<button class="btn btn--sm" id="seat-block">' +
 					esc( App.t( 'pricing.seats.block' ) ) + '</button>' +
+				/*
+				 * A house seat: off public sale, and sellable at the counter on the night.
+				 *
+				 * Beside "block" rather than instead of it, because they are different promises.
+				 * A blocked seat is one nobody may have — a sightline, a camera position. A house
+				 * seat is one the venue is keeping for somebody, and the box office can hand it
+				 * over. The label is what tells the two apart, here and everywhere else.
+				 */
+				'<button class="btn btn--sm" id="seat-house">' +
+					esc( App.t( 'pricing.seats.holdBack' ) ) + '</button>' +
 				'<button class="btn btn--sm" id="seat-unblock">' +
 					esc( App.t( 'pricing.seats.unblock' ) ) + '</button>' +
 				'<button class="btn btn--sm" id="seat-reset">' +
@@ -249,7 +261,7 @@
 		}
 
 		if ( state.blocked ) {
-			classes.push( 'chip--blocked' );
+			classes.push( state.held_for ? 'chip--house' : 'chip--blocked' );
 		} else if ( null !== state.own && undefined !== state.own ) {
 			classes.push( 'chip--own' );
 		}
@@ -265,7 +277,9 @@
 		// The price is on the chip's tooltip and in its accessible name, not printed inside it:
 		// a hall of 2,000 chairs each showing "€45.00" is a wall of text nobody reads.
 		var label = row.name + ' ' + seat.label + ' — ' +
-			( state.blocked ? Seats.App.t( 'pricing.seats.legendBlocked' ) : Seats.money( state.amount ) );
+			( state.blocked
+				? ( state.held_for || Seats.App.t( 'pricing.seats.legendBlocked' ) )
+				: Seats.money( state.amount ) );
 
 		return '<button class="' + classes.join( ' ' ) + '" data-seat="' + esc( seat.id ) + '" ' +
 			'data-row="' + esc( row.key ) + '" aria-pressed="' + ( Seats.selected[ seat.id ] ? 'true' : 'false' ) +
@@ -356,6 +370,7 @@
 					amount: Math.round( Number( field.value ) * Math.pow( 10, decimals ) ),
 					zone_key: null,
 					blocked: current.blocked,
+					held_for: current.held_for,
 					note: current.note,
 				};
 			} );
@@ -363,19 +378,73 @@
 
 		bindClick( 'seat-block', function () {
 			Seats.stage( function ( current ) {
-				return { amount: current.amount, zone_key: current.zone_key, blocked: true, note: current.note };
+				return {
+					amount: current.amount,
+					zone_key: current.zone_key,
+					blocked: true,
+					// Blocked outright: nobody may have it, not even the counter.
+					held_for: null,
+					note: current.note,
+				};
+			} );
+		} );
+
+		bindClick( 'seat-house', function () {
+			App.modal( {
+				title: App.t( 'pricing.seats.holdBackTitle' ),
+				submitLabel: App.t( 'pricing.seats.holdBack' ),
+				body:
+					'<p>' + esc( App.t( 'pricing.seats.holdBackBody' ) ) + '</p>' +
+					'<div class="field">' +
+						'<label class="field__label" for="seat-held-for">' +
+							esc( App.t( 'pricing.seats.heldFor' ) ) + '</label>' +
+						'<input class="input" id="seat-held-for" maxlength="60" required ' +
+							'placeholder="' + esc( App.t( 'pricing.seats.heldForPlaceholder' ) ) + '">' +
+						'<span class="field__hint">' +
+							esc( App.t( 'pricing.seats.heldForHint' ) ) + '</span>' +
+					'</div>',
+				onSubmit: function () {
+					var label = String( document.getElementById( 'seat-held-for' ).value ).trim();
+
+					if ( ! label ) {
+						App.toast( App.t( 'pricing.seats.heldForNeeded' ), true );
+
+						return Promise.reject( new Error( 'no label' ) );
+					}
+
+					Seats.stage( function ( current ) {
+						return {
+							amount: current.amount,
+							zone_key: current.zone_key,
+							// A house seat is a blocked seat with a label. Both, always: the
+							// database refuses a label without the block, and rightly.
+							blocked: true,
+							held_for: label,
+							note: current.note,
+						};
+					} );
+
+					return Promise.resolve();
+				},
 			} );
 		} );
 
 		bindClick( 'seat-unblock', function () {
 			Seats.stage( function ( current ) {
-				return { amount: current.amount, zone_key: current.zone_key, blocked: false, note: current.note };
+				// Back on public sale, and no longer kept for anybody.
+				return {
+					amount: current.amount,
+					zone_key: current.zone_key,
+					blocked: false,
+					held_for: null,
+					note: current.note,
+				};
 			} );
 		} );
 
 		bindClick( 'seat-reset', function () {
 			Seats.stage( function () {
-				return { amount: null, zone_key: null, blocked: false, note: null };
+				return { amount: null, zone_key: null, blocked: false, held_for: null, note: null };
 			} );
 		} );
 
@@ -393,7 +462,13 @@
 				}
 
 				Seats.stage( function ( current ) {
-					return { amount: null, zone_key: zoneField.value, blocked: current.blocked, note: current.note };
+					return {
+						amount: null,
+						zone_key: zoneField.value,
+						blocked: current.blocked,
+						held_for: current.held_for,
+						note: current.note,
+					};
 				} );
 			} );
 		}
@@ -435,6 +510,7 @@
 				amount: seat.own_amount,
 				zone_key: seat.own_amount === null && seat.zone_key !== seat.chart_zone_key ? seat.zone_key : null,
 				blocked: seat.blocked,
+			held_for: seat.held_for,
 				note: seat.note,
 			};
 
@@ -488,6 +564,7 @@
 					amount: Seats.staged[ id ].amount,
 					zone_key: Seats.staged[ id ].zone_key,
 					blocked: !! Seats.staged[ id ].blocked,
+					held_for: Seats.staged[ id ].held_for || null,
 					note: Seats.staged[ id ].note || null,
 				};
 			} ),

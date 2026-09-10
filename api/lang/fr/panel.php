@@ -570,6 +570,8 @@ return [
         'noneTogether' => "Pas autant de places côte à côte.",
         'allSections' => 'Toutes les zones',
         'freeSeats' => ':count libres',
+        // A chair the website is not allowed to sell. The name is what tells a clerk why.
+        'heldFor' => 'Réservé pour :name — à ce guichet seulement',
         'sectionFull' => 'Complet',
         'standing' => 'Places debout',
         'placesLeft' => ':count places restantes',
@@ -1540,5 +1542,15 @@ return [
         'doorsOpen' => 'Les portes sont ouvertes.',
         'doorsShut' => 'Les portes ne sont pas encore ouvertes. Tout le monde attend dans le hall, sans numéro — l’ordre est tiré au sort à l’ouverture.',
         'hint' => 'La file avance parce que les gens la regardent : chaque visiteur qui vérifie sa place balaie aussi les entrées expirées et fait entrer les suivants.',
+    ],
+
+    'quotas' => [
+        'title' => 'Quotas par canal',
+        'description' => 'Ce que chaque canal peut vendre de cette soirée. Laissez vide pour aucune limite, ce qui est le cas ordinaire. Une réservation annulée rend ses places.',
+        'taken' => ':count pris',
+        'left' => ':count restants',
+        'noLimit' => 'Sans limite',
+        'noChannels' => 'Ce compte vend par un seul canal : il n’y a rien à répartir.',
+        'saved' => 'Quotas enregistrés.',
     ],
 ];

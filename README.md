@@ -90,6 +90,13 @@ A seat is the start of it, not the end. Around the map:
   nothing; what comes out is one ordinary order per night, so the door, the door list and per-event
   revenue never learn that a season exists. The saving is split across the nights so each one still
   adds up on its own, and a flexible pass lets the buyer take any *n* of them.
+- **House seats and channel quotas** — the two ways of keeping part of a house back, and neither of
+  them is "blocked". A house seat is a blocked seat *with a label saying who it is for*: off public
+  sale everywhere, on sale at the window, and named on the clerk's screen so the chair kept for the
+  director's mother is not handed to whoever asks. A quota is the other shape of the same wish —
+  not *these* seats but *this many*: an agent gets four hundred, the website gets the rest, and
+  what each has taken is counted rather than stored, under the same lock the seats are sold under.
+  A cancelled booking gives its places back, because the channel did not sell them in the end.
 - **Gift vouchers and account credit**, which are not discount codes either: a discount changes
   what a booking cost and so changes the tax on it, while a voucher changes how an unchanged cost
   was settled. Applied last, to the amount payable, and a booking a voucher covers outright
@@ -272,7 +279,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 614 unit, feature and module tests
+./vendor/bin/phpunit                        # 630 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -298,7 +305,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty, in order
+./smoke.sh                    # all thirty-one, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -390,6 +397,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Arriving early at a queue buys nothing: the waiting are drawn, not sorted | `WaitingRoomTest` |
 | The door is on the hold, not only on the page | `WaitingRoomTest` |
 | A lapsed admission gives its place away | `WaitingRoomTest` |
+| A house seat is off public sale and the counter can still sell it | `ChannelQuotaTest` |
+| A seat blocked without a label is sellable by nobody, at any window | `ChannelQuotaTest` |
+| A channel's allowance counts live baskets, not only completed sales | `ChannelQuotaTest` |
+| One channel running out does not touch another channel's allocation | `ChannelQuotaTest` |
 
 ## Installing the plugin
 

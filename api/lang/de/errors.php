@@ -223,4 +223,6 @@ return [
     'basket_has_no_site' => 'Es gibt keinen Ort, an den dieser Käufer zurückgeschickt werden könnte.',
     'basket_message_off' => 'Schalten Sie „Nicht beendete Buchung“ zuerst unter Nachrichten ein — vorher wird nichts gesendet.',
     'waiting_your_turn' => 'Sie sind noch nicht dran. Ihr Platz in der Schlange bleibt Ihnen.',
+    'channel_quota_reached' => 'Diesem Verkaufskanal bleiben für diese Veranstaltung :count Plätze.',
+    'channel_quota_gone' => 'Dieser Verkaufskanal hat sein gesamtes Kontingent für diese Veranstaltung verkauft.',
 ];

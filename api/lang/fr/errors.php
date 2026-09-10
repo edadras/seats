@@ -223,4 +223,6 @@ return [
     'basket_has_no_site' => 'Il n’y a nulle part où renvoyer cet acheteur.',
     'basket_message_off' => 'Activez d’abord « Réservation inachevée » dans Messages — rien n’est envoyé tant que ce n’est pas fait.',
     'waiting_your_turn' => 'Ce n’est pas encore votre tour. Votre place dans la file est conservée.',
+    'channel_quota_reached' => 'Il reste :count places à ce canal de vente pour cet événement.',
+    'channel_quota_gone' => 'Ce canal de vente a vendu tout son quota pour cet événement.',
 ];

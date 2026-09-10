@@ -223,4 +223,6 @@ return [
     'basket_has_no_site' => 'There is nowhere to send this buyer back to.',
     'basket_message_off' => 'Switch "Unfinished booking" on under Messages first — nothing is sent until you do.',
     'waiting_your_turn' => 'It is not your turn yet. Your place in the queue is being held.',
+    'channel_quota_reached' => 'This sales channel has :count places left for this event.',
+    'channel_quota_gone' => 'This sales channel has sold its whole allocation for this event.',
 ];

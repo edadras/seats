@@ -11,7 +11,7 @@ class EventSeatOverride extends Model
 {
     use BelongsToTenant, HasFactory, HasUuids;
 
-    protected $fillable = ['tenant_id', 'event_id', 'seat_id', 'blocked', 'amount', 'zone_key', 'note'];
+    protected $fillable = ['tenant_id', 'event_id', 'seat_id', 'blocked', 'held_for', 'amount', 'zone_key', 'note'];
 
     protected $casts = ['blocked' => 'boolean', 'amount' => 'integer'];
 }
