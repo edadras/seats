@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
 use App\Http\Controllers\Api\V1\Management\ReceiptController;
+use App\Http\Controllers\Api\V1\Management\PaymentPlanController;
 use App\Http\Controllers\Api\V1\Management\RiskController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
@@ -159,6 +160,15 @@ Route::prefix('v1')->group(function () {
         // thousand seats and a repricing usually touches eight.
         Route::get('orders/{order}/receipts', [ReceiptController::class, 'forOrder']);
         Route::get('allocations/{allocation}/receipt', [ReceiptController::class, 'forSeat']);
+
+        // A school pays a deposit in November and the balance in March. The seats are theirs from
+        // the first payment; the codes that open a door arrive with the last.
+        Route::get('orders/{order}/payment-plan', [PaymentPlanController::class, 'show']);
+        Route::post('orders/{order}/payment-plan', [PaymentPlanController::class, 'store']);
+        Route::post('instalments/{instalment}/pay', [PaymentPlanController::class, 'pay']);
+        Route::patch('instalments/{instalment}', [PaymentPlanController::class, 'amend']);
+        // What is owed, across every booking: the list somebody works down on a Monday morning.
+        Route::get('instalments', [PaymentPlanController::class, 'outstanding']);
 
         Route::post('orders/{order}/chargeback', [RiskController::class, 'chargeback']);
         Route::get('blocked-buyers', [RiskController::class, 'blocks']);

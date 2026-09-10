@@ -52,6 +52,7 @@ class DoorList
                 DB::raw("coalesce(external_orders.buyer->>'name', '') as buyer_name"),
                 DB::raw("coalesce(external_orders.buyer->>'email', '') as buyer_email"),
                 'external_orders.access_needs',
+                'external_orders.group_name',
             ]);
 
         if (($filters['q'] ?? '') !== '') {
@@ -158,6 +159,9 @@ class DoorList
             // buyer's otherwise. A door asks for a name and does not care which of the two it is.
             'name' => $row->holder_name ?: $row->buyer_name,
             'buyer_name' => $row->buyer_name,
+            // Forty people arriving together are one party at a door, and the name that is shouted
+            // across a foyer is the school's, not the teacher's.
+            'group_name' => $row->group_name ?: null,
             'email' => $row->buyer_email,
             'reference' => $row->reference,
             // What this person told the venue they need. On the door list because that is where

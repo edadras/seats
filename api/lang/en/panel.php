@@ -27,6 +27,7 @@ return [
         'counter' => 'The counter',
         'tills' => 'The till',
         'orders' => 'Orders',
+        'plans' => 'Payment plans',
         'tickets' => 'Tickets',
         'doorlist' => 'Door list',
         'questions' => 'Questions',
@@ -667,6 +668,7 @@ return [
             'paid' => 'Paid — taken at the window',
             'owed' => 'To be paid on the night',
             'comp' => 'A comp — free',
+            'plan' => 'A payment plan — a deposit now',
         ],
         'note' => 'Note',
         'sendTickets' => 'Email the tickets now',
@@ -987,6 +989,55 @@ return [
      | because it is the one thing an operator must know before pressing the button: printing
      | re-mints the code, and the copy somebody says they lost stops working.
      */
+    /*
+     | A party of forty, a deposit now and the balance in March.
+     |
+     | The wording matters in one place: the screen has to say that the seats are theirs and the
+     | codes are not, because that is the whole arrangement and a box office is asked about it on
+     | the telephone.
+     */
+    'plans' => [
+        'title' => 'Payment plan',
+        'subtitle' => 'Bookings still being paid for. The late ones first, because that is the order somebody rings.',
+        'show' => 'Show',
+        'filters' => [
+            'all' => 'Everything owed',
+            'overdue' => 'Overdue',
+            'due' => 'Still to come',
+        ],
+        'due' => 'Due',
+        'what' => 'Payment',
+        'who' => 'Who',
+        'event' => 'Event',
+        'thisPayment' => 'This payment',
+        'balance' => 'Still owed',
+        'openBooking' => 'Open booking',
+        'nothing' => 'Nothing is owed.',
+        'owing' => ':balance still to come. The seats are held; the tickets are issued when it is paid in full.',
+        'settledBody' => 'Paid in full — :paid. The tickets have been issued.',
+        'kinds' => [
+            'deposit' => 'Deposit',
+            'instalment' => 'Instalment',
+        ],
+        'states' => [
+            'paid' => 'Paid',
+            'due' => 'Due',
+            'overdue' => 'Overdue',
+        ],
+        'record' => 'Record payment',
+        'recordTitle' => 'Record a payment',
+        'recordBody' => 'Say how it arrived. Cash goes into the open till as a movement, because the sale itself was counted on the evening it was made.',
+        'recorded' => 'Payment recorded.',
+        'settled' => 'Paid in full. The tickets have been issued.',
+        'deposit' => 'Deposit now',
+        'depositHint' => 'What is being taken today. The rest is split over the payments below.',
+        'instalments' => 'Payments after the deposit',
+        'everyDays' => 'Days between payments',
+        'groupName' => 'Party or group',
+        'groupHint' => 'A school, a coach party, a company. Shown on the door list instead of the name that signed for it.',
+        'tillReason' => 'Instalment on',
+    ],
+
     'printing' => [
         'title' => 'Print tickets',
         'tickets' => 'Print',

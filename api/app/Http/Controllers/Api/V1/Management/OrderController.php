@@ -80,6 +80,9 @@ class OrderController extends Controller
                 'phone' => $order->buyer['phone'] ?? null,
             ],
             'channel' => $order->apiClient?->name,
+            // What is still owed and when, on a booking being paid in instalments. Worked out on
+            // every read, so a plan cannot be late in the database and current on the screen.
+            'plan' => app(\App\Domain\Payments\PaymentPlans::class)->state($order),
             'confirmed_at' => $order->confirmed_at?->toIso8601String(),
             'cancelled_at' => $order->cancelled_at?->toIso8601String(),
             'refunded_at' => $order->refunded_at?->toIso8601String(),
@@ -313,6 +316,9 @@ class OrderController extends Controller
             'total_amount' => (int) $order->total_amount,
             'placed_at' => $order->created_at?->toIso8601String(),
             'buyer_name' => $order->buyer['name'] ?? null,
+            // The party, where there is one: the useful line about a school booking is the school,
+            // not the teacher who signed for it.
+            'group_name' => $order->group_name,
             'buyer_email' => $order->buyer['email'] ?? null,
             'seats' => (int) ($order->seats_count ?? $order->allocations()->where('status', 'active')->count()),
             'event' => $order->event ? [

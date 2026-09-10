@@ -283,7 +283,17 @@ class OrderService
             // in this response to render the QR. Re-reading the order below would lose them.
             $issuedTokens = [];
 
-            foreach ($allocations as $allocation) {
+            /*
+             * A booking being paid in instalments gets its seats now and its code when it is paid
+             * for.
+             *
+             * Two promises, and running them together is how a party of forty arrives with codes
+             * they never paid for. The chairs above are already theirs — nobody else can have them
+             * — and the ticket is minted by `PaymentPlans` with the last payment.
+             */
+            $owing = app(\App\Domain\Payments\PaymentPlans::class)->owes($order);
+
+            foreach ($owing ? [] : $allocations as $allocation) {
                 $ticket = $this->tickets->issue($allocation, $buyer['name'] ?? null);
 
                 if ($ticket->plainToken !== null) {

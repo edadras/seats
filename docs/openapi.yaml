@@ -482,6 +482,199 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /orders/{order}/payment-plan:
+    parameters:
+      - { name: order, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: showPaymentPlan
+      tags: [Orders]
+      summary: What a booking still owes, and when
+      description: >
+        Counted on every read: the balance is the unpaid instalments, and whether the booking is
+        overdue is a comparison against the clock at the moment somebody asks. No column goes
+        stale, and nothing has to run at midnight for a plan to become late.
+
+
+        A booking with no plan answers `has_plan: false` and a balance of nought rather than a
+        404 — "does this owe anything" is a fair question about any booking.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: Where it stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentPlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: agreePaymentPlan
+      tags: [Orders]
+      summary: Agree a deposit and the dates the rest is due on
+      description: >
+        Either the shape of the conversation — a `deposit`, how many `instalments` follow it and
+        how many days apart — or the dates themselves in `schedule`.
+
+
+        The payments must come to exactly what the booking costs: a schedule that comes to less is
+        a debt nobody agreed to, and one that comes to more is an overcharge somebody will find.
+        Refused with `plan_does_not_add_up`, which carries both figures.
+
+
+        A booking may have one plan. Changing an agreed plan is done a step at a time, so that
+        moving one date cannot silently rewrite the total.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deposit:
+                  type: integer
+                  minimum: 0
+                  description: Taken now, in the event's minor unit.
+                instalments: { type: integer, minimum: 1, maximum: 24 }
+                every_days: { type: integer, minimum: 1, maximum: 365 }
+                first_due_on: { type: [string, "null"], format: date }
+                deposit_paid:
+                  type: boolean
+                  description: Whether the deposit has already been taken, as at a counter.
+                method: { type: [string, "null"], enum: [cash, card, transfer, null] }
+                schedule:
+                  type: array
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [amount, due_on]
+                    properties:
+                      amount: { type: integer, minimum: 1 }
+                      due_on: { type: string, format: date }
+      responses:
+        "201":
+          description: Agreed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentPlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /instalments:
+    get:
+      operationId: listOutstandingInstalments
+      tags: [Orders]
+      summary: What is owed, across every booking
+      description: >
+        The chase list, oldest first, because that is the order somebody works down on a Monday
+        morning. Each row carries the whole booking's balance as well as its own amount: a party
+        three payments behind is a different telephone call from one a week late.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: state
+          in: query
+          schema: { type: string, enum: [all, due, overdue], default: all }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 200 }
+      responses:
+        "200":
+          description: The list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        order_id: { type: string, format: uuid }
+                        reference: { type: [string, "null"] }
+                        group_name: { type: [string, "null"] }
+                        buyer: { type: [string, "null"] }
+                        email: { type: [string, "null"] }
+                        event: { type: [string, "null"] }
+                        currency: { type: [string, "null"] }
+                        amount: { type: integer }
+                        balance: { type: integer }
+                        due_on: { type: string, format: date }
+                        state: { type: string, enum: [due, overdue] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /instalments/{instalment}:
+    parameters:
+      - { name: instalment, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: amendInstalment
+      tags: [Orders]
+      summary: Move a date, or agree a different amount
+      description: >
+        On a step nobody has paid. An amount that would stop the plan adding up to the booking is
+        refused: the total is the price, and a plan that drifts from it is discovered by whoever
+        pays the last instalment.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount: { type: integer, minimum: 1 }
+                due_on: { type: string, format: date }
+                note: { type: [string, "null"], maxLength: 200 }
+      responses:
+        "200":
+          description: The plan as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentPlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /instalments/{instalment}/pay:
+    parameters:
+      - { name: instalment, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: payInstalment
+      tags: [Orders]
+      summary: Somebody has paid one of them
+      description: >
+        Idempotent by the row: a payment entered by two clerks on the telephone is one payment,
+        because the second finds it already marked and changes nothing.
+
+
+        Cash recorded by somebody with a till open goes into that drawer as a movement rather than
+        as takings — the sale was counted on the evening it was made, and counting it again today
+        would make one of the two evenings wrong.
+
+
+        The last payment mints the tickets and sends them where there is an address: the seats have
+        been theirs since the deposit, and this is the part that opens a door.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                method: { type: [string, "null"], enum: [cash, card, transfer, null] }
+                note: { type: [string, "null"], maxLength: 200 }
+      responses:
+        "200":
+          description: The plan as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentPlan" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /orders/{order}/receipts:
     parameters:
       - { name: order, in: path, required: true, schema: { type: string, format: uuid } }
@@ -5575,11 +5768,18 @@ paths:
         that left a hold behind would be a seat locked for ten minutes because the clerk was
         interrupted.
 
-        `payment` says which of three things happened. `paid` means the money was taken elsewhere —
+        `payment` says which of four things happened. `paid` means the money was taken elsewhere —
         cash, or the venue's own card terminal. `owed` means they will pay on the night, and the
         ticket is issued anyway because it is a reservation. `comp` means it is a gift and the
         order is worth nothing, because a report that counted free seats as revenue would overstate
         the evening by exactly the generosity of the house.
+
+
+        `plan` is how a school or a coach party books: a deposit today and the balance on dates
+        somebody agreed, described in `plan`. The seats are allocated as they are for any other
+        sale — they are gone, nobody else can have them — and the tickets are withheld until the
+        last payment, because a party holding forty codes they have not paid for is the thing this
+        exists to prevent.
       requestBody:
         required: true
         content:
@@ -5616,7 +5816,34 @@ paths:
                     name: { type: string, maxLength: 120 }
                     email: { type: [string, "null"], format: email }
                     phone: { type: [string, "null"] }
-                payment: { type: string, enum: [paid, owed, comp] }
+                payment: { type: string, enum: [paid, owed, comp, plan] }
+                group_name:
+                  type: [string, "null"]
+                  maxLength: 160
+                  description: >-
+                    Who the party is, as against who signed for it. A door list shows the school
+                    rather than the teacher.
+                plan:
+                  type: object
+                  description: >-
+                    Only on a `plan` sale. Either a `deposit` with how many `instalments` follow it
+                    and how many days apart, or the dates themselves in `schedule`. The payments
+                    must come to exactly what the booking costs. The deposit is treated as taken at
+                    the window, so the `method` above is the deposit's.
+                  properties:
+                    deposit: { type: integer, minimum: 0 }
+                    instalments: { type: integer, minimum: 1, maximum: 24 }
+                    every_days: { type: integer, minimum: 1, maximum: 365 }
+                    first_due_on: { type: [string, "null"], format: date }
+                    schedule:
+                      type: array
+                      maxItems: 24
+                      items:
+                        type: object
+                        required: [amount, due_on]
+                        properties:
+                          amount: { type: integer, minimum: 1 }
+                          due_on: { type: string, format: date }
                 method:
                   type: [string, "null"]
                   enum: [cash, card, transfer, null]
@@ -7440,6 +7667,37 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    PaymentPlan:
+      type: object
+      description: >
+        Where a booking stands. Every figure is counted from the instalment rows at the moment of
+        reading; none of them is stored.
+      properties:
+        has_plan: { type: boolean }
+        total: { type: integer }
+        paid: { type: integer }
+        balance: { type: integer }
+        state:
+          type: string
+          enum: [settled, due, overdue]
+          description: >
+            `overdue` where any unpaid step's date has passed; end of day rather than the stroke
+            of midnight, which is what everybody means by it.
+        next_due_on: { type: [string, "null"], format: date }
+        instalments:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              sequence: { type: integer }
+              kind: { type: string, enum: [deposit, instalment] }
+              amount: { type: integer }
+              due_on: { type: string, format: date }
+              paid_at: { type: [string, "null"], format: date-time }
+              method: { type: [string, "null"] }
+              note: { type: [string, "null"] }
+              state: { type: string, enum: [paid, due, overdue] }
     TicketReceipts:
       type: object
       description: >

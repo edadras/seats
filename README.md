@@ -85,6 +85,16 @@ A seat is the start of it, not the end. Around the map:
   has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
   carry a date that lifts it without anybody acting, and is checked where a booking is registered so
   the refusal arrives before the money — with a sentence, not a silent failure.
+- **Group bookings, deposits and payment plans** — a school, a coach party or a company night out
+  asks for forty seats now and pays for them by a date somebody agreed on the telephone. The plan is
+  rows rather than a formula, because what gets chased is a date and an amount, and a date moved
+  because a treasurer is away is a fact about that booking. The seats go at the deposit and the
+  tickets go at the last payment: two different promises, and running them together is how a party
+  arrives with forty codes nobody paid for. What is owed is the unpaid instalments and whether it is
+  late is a comparison against the clock, so no column goes stale and nothing runs at midnight. Cash
+  paid against a plan reaches an open till as a movement, because the sale itself was counted on the
+  evening it was made. The party's name travels to the door list, where it is what somebody shouts
+  across a foyer.
 - **Thermal ticket printing at the window** — paper, a second after the card clears. One list of
   lines, two ways out: the byte stream a roll printer understands, for a local agent to push
   straight at the hardware, and a print view the browser lays out through the operating system's
@@ -582,6 +592,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The bytes and the print view say the same thing about the same seat | `TicketPrintingTest`, `printing_smoke` |
 | A script the printer cannot set is dropped rather than printed as questions | `TicketPrintingTest` |
 | Only somebody who may sell may print | `TicketPrintingTest` |
+| The seats go at the deposit and the tickets at the last payment | `PaymentPlanTest`, `plans_smoke` |
+| A plan has to add up to what the booking costs | `PaymentPlanTest` |
+| A booking is overdue because the date arrived, not because a job ran | `PaymentPlanTest` |
+| A payment recorded twice by two clerks is one payment | `PaymentPlanTest` |
+| A date can be moved and an amount cannot quietly change the total | `PaymentPlanTest` |
+| Reading a plan is not being able to take money for one | `PaymentPlanTest` |
+| The party's name reaches the door, not just the person who signed | `PaymentPlanTest`, `plans_smoke` |
 
 ## Installing the plugin
 

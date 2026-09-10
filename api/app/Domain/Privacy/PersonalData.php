@@ -83,6 +83,9 @@ class PersonalData
                 'billing' => $order->metadata['billing'] ?? null,
                 // What they told the venue they needed. Held about them, so it is in the copy.
                 'access_needs' => $order->access_needs,
+                // Usually a school or a company, sometimes "the Khan family party" — which is a
+                // name about people, so it belongs in a copy of what is held about them.
+                'group_name' => $order->group_name,
             ])->values()->all(),
             'answers' => QuestionAnswer::whereIn('external_order_row_id', $orderIds)
                 ->orderBy('created_at')
@@ -164,6 +167,9 @@ class PersonalData
                     // A health-adjacent sentence somebody wrote about themselves. It goes with
                     // the name rather than being kept as anonymous colour about a booking.
                     'access_needs' => null,
+                    // A party name can be a family's name. Redacting the buyer and leaving it
+                    // would erase the label and keep the person.
+                    'group_name' => null,
                 ])->save();
             }
 

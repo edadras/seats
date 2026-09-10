@@ -164,13 +164,27 @@ class BoxOfficeController extends Controller
             'buyer.email' => ['nullable', 'email', 'max:190'],
             'buyer.phone' => ['nullable', 'string', 'max:40'],
             // paid: the money was taken elsewhere. owed: they will pay on the night.
-            // comp: it is a gift and the order is worth nothing.
-            'payment' => ['required', Rule::in(['paid', 'owed', 'comp'])],
+            // comp: it is a gift and the order is worth nothing. plan: a deposit now and the rest
+            // on dates somebody agreed, which is how a school or a coach party books.
+            'payment' => ['required', Rule::in(['paid', 'owed', 'comp', 'plan'])],
             // How it was paid for, which is a different question from whether it was. Only cash
             // touches the drawer, and a till that could not tell a card from a note would report
             // every honest evening several hundred short.
             'method' => ['sometimes', 'nullable', Rule::in(\App\Domain\BoxOffice\Tills::METHODS)],
             'note' => ['nullable', 'string', 'max:200'],
+            // Who the party is, as against who signed for it: a door list wants the school.
+            'group_name' => ['sometimes', 'nullable', 'string', 'max:160'],
+            // The plan, where this is one. Either the shape of the conversation — a deposit, how
+            // many payments follow and how far apart — or the dates themselves.
+            'plan' => ['sometimes', 'array'],
+            'plan.deposit' => ['sometimes', 'integer', 'min:0'],
+            'plan.instalments' => ['sometimes', 'integer', 'min:1', 'max:24'],
+            'plan.every_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'plan.first_due_on' => ['sometimes', 'nullable', 'date'],
+            'plan.deposit_paid' => ['sometimes', 'boolean'],
+            'plan.schedule' => ['sometimes', 'array', 'max:24'],
+            'plan.schedule.*.amount' => ['required_with:plan.schedule', 'integer', 'min:1'],
+            'plan.schedule.*.due_on' => ['required_with:plan.schedule', 'date'],
             'send_tickets' => ['sometimes', 'boolean'],
             // The counter sells timed entry too: somebody walking up at ten past ten still has to
             // be put in a window, and the window still has to have room.
@@ -246,6 +260,10 @@ class BoxOfficeController extends Controller
             $order->forceFill(['shift_id' => $shift->id])->save();
         }
 
+        if (! empty($data['group_name'])) {
+            $order->forceFill(['group_name' => $data['group_name']])->save();
+        }
+
         // A comp is worth nothing and must say so before the ticket exists: a report that counted
         // free seats as revenue would overstate the evening by exactly the generosity of the house.
         $totals = OrderTotals::for(
@@ -259,6 +277,20 @@ class BoxOfficeController extends Controller
             'total_amount' => $totals->total,
             'metadata' => ($order->metadata ?? []) + ['totals' => $totals->toArray()],
         ])->save();
+
+        /*
+         * The plan is written before the booking is confirmed, because confirming is what mints
+         * the tickets — and a plan that owes anything is precisely a booking whose tickets are not
+         * due yet. Written the other way round, a party of forty would be handed forty codes for
+         * a deposit.
+         */
+        if ('plan' === $data['payment']) {
+            app(\App\Domain\Payments\PaymentPlans::class)->create(
+                $order,
+                ($data['plan'] ?? []) + ['deposit_paid' => true, 'method' => $data['method'] ?? 'cash'],
+                $request->user(),
+            );
+        }
 
         $order = $this->orders->confirm($order, $data['buyer'], now());
 
@@ -291,6 +323,7 @@ class BoxOfficeController extends Controller
             // Which till it was rung into, so the screen can show the running total without
             // asking a second question.
             'shift_id' => $shift?->id,
+            'plan' => app(\App\Domain\Payments\PaymentPlans::class)->state($order),
             'seats' => $order->allocations->count(),
             'tickets_sent' => $sent,
         ], 201);

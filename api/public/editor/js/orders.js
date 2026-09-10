@@ -316,7 +316,7 @@
 					: '' ) +
 				// Paper, at the window. Only where there is a live seat to print: a refunded
 				// booking has nothing to hand anybody.
-				( open.length
+				( open.some( function ( line ) { return !! line.ticket_status; } )
 					? '<button class="btn" id="order-print">' + icon( 'printer', { size: 15 } ) +
 						esc( App.t( 'panel.printing.tickets' ) ) + '</button>'
 					: '' ) +
@@ -340,12 +340,16 @@
 						Orders.badgeText( order.status ) ) +
 					tile( App.t( 'panel.orders.seats' ), App.number( order.seats ),
 						App.t( 'panel.orders.placedOn', { date: App.date( order.placed_at ) } ) ) +
-					tile( App.t( 'panel.orders.buyer' ), order.buyer.name || '—',
-						order.buyer.email || '' ) +
+					tile( App.t( 'panel.orders.buyer' ),
+						// The party is what somebody says at a door; the person who signed for it
+						// is who gets rung when the coach is late. Both, in one tile.
+						order.group_name || order.buyer.name || '—',
+						order.group_name ? ( order.buyer.name || '' ) : ( order.buyer.email || '' ) ) +
 					tile( App.t( 'panel.orders.channel' ), order.channel || '—', '' ) +
 				'</div>' +
 
 				Orders.breakdown( App, order ) +
+				Orders.plan( App, order ) +
 				Orders.answers( App, order ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'panel.orders.whatWasBought' ) ) + '</h3>' +
@@ -372,7 +376,9 @@
 							'<td>' + esc( App.t( 'panel.orders.allocation.' + line.status ) ) +
 								// One seat again, for the person who left theirs on the bus. It
 								// re-mints the code, so the copy they lost stops working.
-								( 'active' === line.status
+								// Only where there is a code to print. A booking on a payment plan
+								// has its seats and no tickets until the balance is in.
+								( 'active' === line.status && line.ticket_status
 									? ' <button class="btn btn--sm" data-print="' + esc( line.id ) + '">' +
 										esc( App.t( 'panel.printing.one' ) ) + '</button>'
 									: '' ) + '</td>' +
@@ -423,6 +429,10 @@
 					order.reference
 				);
 			} );
+		} );
+
+		each( '[data-pay]', function ( button ) {
+			button.addEventListener( 'click', function () { Orders.payInstalment( button.dataset.pay ); } );
 		} );
 
 		bind( 'order-print', function () {
@@ -671,6 +681,93 @@
 					'</tr>';
 				} ).join( '' )
 			);
+	};
+
+	/**
+	 * A booking being paid for over months.
+	 *
+	 * The seats are theirs from the deposit and the codes arrive with the last payment, so the
+	 * screen says which of those has happened rather than leaving somebody to work it out from an
+	 * empty ticket column.
+	 */
+	Orders.plan = function ( App, order ) {
+		var plan = order.plan;
+
+		if ( ! plan || ! plan.has_plan ) {
+			return '';
+		}
+
+		return '<h3 class="subhead">' + esc( App.t( 'panel.plans.title' ) ) + '</h3>' +
+			'<p class="muted">' + esc( App.t(
+				plan.balance
+					? 'panel.plans.owing'
+					: 'panel.plans.settledBody',
+				{
+					balance: App.money( plan.balance, order.currency ),
+					paid: App.money( plan.paid, order.currency ),
+				}
+			) ) + '</p>' +
+			App.table(
+				[
+					App.t( 'panel.plans.due' ),
+					App.t( 'panel.plans.what' ),
+					{ label: App.t( 'panel.orders.total' ), numeric: true },
+					App.t( 'panel.common.status' ),
+				],
+				plan.instalments.map( function ( step ) {
+					return '<tr>' +
+						// A date, not a moment: an instalment is due on a day, and "00:00" beside it
+						// is a precision nobody agreed to.
+						'<td class="nowrap tnum">' + esc( App.date( step.due_on, { dateStyle: 'medium' } ) ) +
+							'</td>' +
+						'<td>' + esc( App.t( 'panel.plans.kinds.' + step.kind ) ) + '</td>' +
+						'<td class="tnum">' + esc( App.money( step.amount, order.currency ) ) + '</td>' +
+						'<td>' + ( 'paid' === step.state
+							? '<span class="badge badge--ok">' + esc( App.t( 'panel.plans.states.paid' ) ) +
+								'</span>'
+							: '<span class="badge' + ( 'overdue' === step.state ? ' badge--danger' : '' ) +
+								'">' + esc( App.t( 'panel.plans.states.' + step.state ) ) + '</span>' +
+								' <button class="btn btn--sm" data-pay="' + esc( step.id ) + '">' +
+								esc( App.t( 'panel.plans.record' ) ) + '</button>' ) + '</td>' +
+					'</tr>';
+				} ).join( '' )
+			);
+	};
+
+	/** Somebody has paid one of them, at the window or into the bank. */
+	Orders.payInstalment = function ( id ) {
+		var App = Orders.App;
+
+		App.modal( {
+			title: App.t( 'panel.plans.recordTitle' ),
+			submitLabel: App.t( 'panel.plans.record' ),
+			body:
+				'<div class="stack">' +
+					'<p class="muted">' + esc( App.t( 'panel.plans.recordBody' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="pay-method">' +
+						esc( App.t( 'panel.boxOffice.method' ) ) + '</label>' +
+						'<select class="select" id="pay-method">' +
+							[ 'cash', 'card', 'transfer' ].map( function ( kind ) {
+								return '<option value="' + kind + '">' +
+									esc( App.t( 'panel.boxOffice.methods.' + kind ) ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+					'<div class="field"><label class="field__label" for="pay-note">' +
+						esc( App.t( 'panel.boxOffice.note' ) ) + '</label>' +
+						'<input class="input" id="pay-note" maxlength="200"></div>' +
+				'</div>',
+			onSubmit: function () {
+				return App.request( 'POST', '/instalments/' + id + '/pay', {
+					method: document.getElementById( 'pay-method' ).value,
+					note: document.getElementById( 'pay-note' ).value.trim() || null,
+				} ).then( function ( state ) {
+					App.toast( state.balance
+						? App.t( 'panel.plans.recorded' )
+						: App.t( 'panel.plans.settled' ) );
+					Orders.open( Orders.order.id );
+				} );
+			},
+		} );
 	};
 
 	/**

@@ -22,6 +22,7 @@
     <script src="{{ asset('editor/js/promoters.js') }}"></script>
     <script src="{{ asset('editor/js/receipts.js') }}"></script>
     <script src="{{ asset('editor/js/orders.js') }}"></script>
+    <script src="{{ asset('editor/js/plans.js') }}"></script>
     <script src="{{ asset('editor/js/counter.js') }}"></script>
     <script src="{{ asset('editor/js/doorlist.js') }}"></script>
     <script src="{{ asset('editor/js/waitlist.js') }}"></script>

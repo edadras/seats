@@ -35,6 +35,7 @@
 			{ key: 'counter', icon: 'ticket' },
 			{ key: 'tills', icon: 'wallet' },
 			{ key: 'orders', icon: 'file' },
+			{ key: 'plans', icon: 'clock' },
 			{ key: 'tickets', icon: 'ticket' },
 			{ key: 'doorlist', icon: 'check' },
 			{ key: 'questions', icon: 'file' },
@@ -630,6 +631,7 @@
 			case 'wallet': return window.SeatmapWallet.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
+			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
 			case 'seasons': return window.SeatmapSeasons.render( this );
 			case 'events': return this.renderEvents();

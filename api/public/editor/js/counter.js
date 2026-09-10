@@ -475,7 +475,7 @@
 				'<div class="field"><label class="field__label" for="c-payment">' +
 					esc( App.t( 'panel.boxOffice.payment' ) ) + '</label>' +
 					'<select class="select" id="c-payment">' +
-						[ 'paid', 'owed', 'comp' ].map( function ( kind ) {
+						[ 'paid', 'owed', 'comp', 'plan' ].map( function ( kind ) {
 							return '<option value="' + kind + '">' +
 								esc( App.t( 'panel.boxOffice.payments.' + kind ) ) + '</option>';
 						} ).join( '' ) +
@@ -495,6 +495,31 @@
 								esc( App.t( 'panel.boxOffice.methods.' + kind ) ) + '</option>';
 						} ).join( '' ) +
 					'</select></div>' +
+				/*
+				 * A deposit now and the rest on dates somebody agreed.
+				 *
+				 * Hidden until it is the way this booking is being paid for, because four more
+				 * fields on every walk-up sale is four more things to tab past at a window.
+				 */
+				'<div id="c-plan-fields" hidden>' +
+					'<div class="field"><label class="field__label" for="c-deposit">' +
+						esc( App.t( 'panel.plans.deposit' ) ) + '</label>' +
+						'<input class="input" id="c-deposit" type="number" min="0" step="0.01" value="0">' +
+						'<span class="field__hint">' + esc( App.t( 'panel.plans.depositHint' ) ) +
+						'</span></div>' +
+					'<div class="field"><label class="field__label" for="c-instalments">' +
+						esc( App.t( 'panel.plans.instalments' ) ) + '</label>' +
+						'<input class="input" id="c-instalments" type="number" min="1" max="24" value="3"></div>' +
+					'<div class="field"><label class="field__label" for="c-every">' +
+						esc( App.t( 'panel.plans.everyDays' ) ) + '</label>' +
+						'<input class="input" id="c-every" type="number" min="1" max="365" value="30"></div>' +
+				'</div>' +
+				// Who the party is, as against who signed for it.
+				'<div class="field"><label class="field__label" for="c-group">' +
+					esc( App.t( 'panel.plans.groupName' ) ) + '</label>' +
+					'<input class="input" id="c-group" maxlength="160">' +
+					'<span class="field__hint">' + esc( App.t( 'panel.plans.groupHint' ) ) +
+					'</span></div>' +
 				'<div class="field"><label class="field__label" for="c-note">' +
 					esc( App.t( 'panel.boxOffice.note' ) ) + '</label>' +
 					'<input class="input" id="c-note" maxlength="200"></div>' +
@@ -531,8 +556,23 @@
 						? document.getElementById( 'c-method' ).value
 						: null,
 					note: document.getElementById( 'c-note' ).value.trim() || null,
+					group_name: document.getElementById( 'c-group' ).value.trim() || null,
 					send_tickets: document.getElementById( 'c-send' ).checked,
 				};
+
+				if ( 'plan' === payload.payment ) {
+					// The deposit is typed in the currency people speak, and the API counts in the
+					// minor unit — the same conversion the rest of the panel makes.
+					payload.plan = {
+						deposit: Math.round(
+							( parseFloat( document.getElementById( 'c-deposit' ).value ) || 0 ) * 100
+						),
+						instalments: parseInt( document.getElementById( 'c-instalments' ).value, 10 ) || 1,
+						every_days: parseInt( document.getElementById( 'c-every' ).value, 10 ) || 30,
+					};
+					// A plan takes its deposit at the window, so the method is the deposit's.
+					payload.method = document.getElementById( 'c-method' ).value;
+				}
 
 				var printing = document.getElementById( 'c-print' ).checked;
 
@@ -565,7 +605,14 @@
 			var payment = document.getElementById( 'c-payment' );
 			var method = document.getElementById( 'c-method-field' );
 
-			var sync = function () { method.hidden = 'paid' !== payment.value; };
+			var plan = document.getElementById( 'c-plan-fields' );
+
+			var sync = function () {
+				// A deposit is money taken now, so a plan wants the method as much as a paid sale
+				// does; a comp and an invoice are not paid at all and have none.
+				method.hidden = 'paid' !== payment.value && 'plan' !== payment.value;
+				plan.hidden = 'plan' !== payment.value;
+			};
 
 			payment.addEventListener( 'change', sync );
 			sync();
