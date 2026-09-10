@@ -162,6 +162,9 @@ Route::prefix('v1')->group(function () {
         Route::get('customers', [CustomerController::class, 'index']);
         Route::get('customers/export', [CustomerController::class, 'export']);
         Route::get('customers/{customer}', [CustomerController::class, 'show']);
+        // An answer somebody gave on paper, written down with where it came from. `messages.send`
+        // rather than `orders.view`: this is about who may be written to, not about who bought.
+        Route::put('customers/{customer}/consent', [CustomerController::class, 'consent']);
         /*
          * The two things a person may ask for about themselves.
          *

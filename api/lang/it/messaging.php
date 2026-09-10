@@ -183,4 +183,8 @@ return [
     'segmentMinSpend' => 'hanno speso :amount o più',
     'segmentAttended' => 'sono venuti',
     'segmentEverybody' => 'tutti quelli che hanno acquistato',
+    'unsubscribeLine' => 'Non vuoi riceverle? Interrompile qui: :link',
+    'announceNotAsked' => ':count non sono stati interpellati',
+    'announceService' => 'Su una prenotazione che hanno: viene scritto a tutti quelli che hanno acquistato per questo evento.',
+    'announceNews' => 'Novità: si scrive solo a chi ha acconsentito, e in fondo viene aggiunto un modo per non riceverle più.',
 ];

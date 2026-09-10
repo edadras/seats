@@ -386,4 +386,12 @@ return [
     'checkoutRefused' => 'Diese Buchung konnte nicht angenommen werden. Bitte versuchen Sie es vom Saalplan aus erneut.',
     'checkoutTooQuick' => 'Das wurde abgeschickt, bevor das Formular ausgefüllt war. Bitte prüfen Sie Ihre Angaben und bestätigen Sie erneut.',
     'limitPerBuyer' => 'Für diese Veranstaltung gilt eine Grenze von einer Karte pro Person.|Für diese Veranstaltung gilt eine Grenze von :count Karten pro Person.',
+    'consent' => [
+        'title' => 'Was wir Ihnen schicken',
+        'about' => 'Dies betrifft :email.',
+        'line' => 'Informieren Sie mich per E-Mail über kommende Veranstaltungen',
+        'serviceStays' => 'So oder so schreiben wir Ihnen weiterhin zu Ihren Buchungen — zu Ihren Karten und zu allem, was sich an einem Abend ändert, zu dem Sie kommen.',
+        'save' => 'Speichern',
+        'saved' => 'Gespeichert. Vielen Dank.',
+    ],
 ];

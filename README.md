@@ -132,6 +132,16 @@ A seat is the start of it, not the end. Around the map:
   interesting as one four short, and neither can be edited afterwards. What the drawer should hold
   is counted on every read while the shift is open, and photographed once at the close, so a refund
   granted the next morning cannot rewrite last night's discrepancy into agreement.
+- **Consent, and the line between service and news** — a confirmation of a booking somebody made
+  and an advertisement for next season are different acts, and this platform now treats them
+  differently. A message about a booking they hold reaches everybody who bought; a message about
+  something they have not bought reaches only the people who said yes, and carries a link that lets
+  them stop it without signing in to anything. Silence is not consent: the box at the checkout
+  starts empty, nobody who has never been asked is written to, and there is no setting that changes
+  that. The log of who agreed, when, and what they were shown is append-only — because what an
+  audit asks a year later is not what the answer is but how you know — and an erasure deletes it
+  outright rather than redacting it, since keeping "this person once said no" would be keeping a
+  record of somebody in order to honour their wish not to be on one.
 - **Saved audiences** — "everybody who came last season and has not booked this one", which is the
   audience an organiser actually wants and is two clauses rather than one. Named and saved, so it
   can be asked again next season: bought any of these nights and none of those, in these categories,
@@ -322,7 +332,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 685 unit, feature and module tests
+./vendor/bin/phpunit                        # 695 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -348,7 +358,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-six, in order
+./smoke.sh                    # all thirty-seven, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -461,6 +471,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The limit is applied before the money and never after it | `PurchaseLimitTest` |
 | A field only a script fills, and a form sent faster than a person fills one | `PurchaseLimitTest` |
 | A page is read in the visitor's language, field by field | `SitePageTranslationTest` |
+| Nobody who has never been asked is sent marketing | `MarketingConsentTest` |
+| A message about a booking somebody holds needs no permission | `MarketingConsentTest` |
+| Leaving needs no sign-in, and a wrong signature says nothing at all | `MarketingConsentTest` |
+| The stored answer is the log folded, and can be proved so | `MarketingConsentTest` |
 | A translation cannot invent a block, a field, or a second page shape | `SitePageTranslationTest` |
 | The switcher offers what the site is written in, and the site's own language always | `SitePageTranslationTest` |
 

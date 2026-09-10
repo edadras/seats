@@ -1678,3 +1678,20 @@ hr { border: none; }
 	color: var(--muted, #6b7280);
 	font-size: 0.9375rem;
 }
+
+/* The one question at a checkout that is not about the booking. Given room rather than tucked
+   under the button: a box somebody has to hunt for is a box they did not really answer. */
+.consent {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--space-2, 0.5rem);
+	margin-block: var(--space-4, 1rem);
+	line-height: 1.4;
+}
+
+.consent input {
+	margin-block-start: 0.15rem;
+	inline-size: 1.1rem;
+	block-size: 1.1rem;
+	flex: none;
+}

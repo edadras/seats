@@ -385,4 +385,12 @@ return [
     'checkoutRefused' => 'Non è stato possibile accettare questa prenotazione. Riprova dalla mappa dei posti.',
     'checkoutTooQuick' => 'Il modulo è stato inviato prima di essere compilato. Controlla i dati e conferma di nuovo.',
     'limitPerBuyer' => 'Questo evento ha un limite di un biglietto a persona.|Questo evento ha un limite di :count biglietti a persona.',
+    'consent' => [
+        'title' => 'Che cosa ti mandiamo',
+        'about' => 'Riguarda :email.',
+        'line' => 'Avvisami dei prossimi eventi via e-mail',
+        'serviceStays' => 'In ogni caso continueremo a scriverti riguardo alle tue prenotazioni — i biglietti e qualsiasi cambiamento su una serata a cui verrai.',
+        'save' => 'Salva',
+        'saved' => 'Salvato. Grazie.',
+    ],
 ];

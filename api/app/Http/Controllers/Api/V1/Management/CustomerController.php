@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Management;
 
 use App\Domain\Customers\CustomerDirectory;
+use App\Domain\Privacy\Consents;
 use App\Domain\Privacy\PersonalData;
 use App\Http\Controllers\Controller;
 use App\Support\Audit\AuditLogger;
@@ -64,7 +65,58 @@ class CustomerController extends Controller
             throw new NotFoundHttpException('No such customer.');
         }
 
+        // What they said about being written to, beside what they bought. On one screen because
+        // it is one question a member of staff has when they are looking at a person: may I put
+        // them on the list?
+        $found['marketing'] = app(Consents::class)->forEmail((string) ($found['email'] ?? ''));
+
         return response()->json($found);
+    }
+
+    /**
+     * Write down an answer somebody gave somewhere this software could not watch.
+     *
+     * A venue with a paper sign-up sheet at the interval is a real venue, and refusing to let them
+     * record it would only send them to a spreadsheet where nobody can check anything. So it is
+     * allowed — and it asks where the answer came from, in a required note, because that is the
+     * question an audit will ask a year later and the one thing a bought list cannot answer.
+     *
+     * Recorded against the member of staff who typed it, for the same reason.
+     */
+    public function consent(Request $request, string $customer)
+    {
+        $this->authorize($request, 'messages.send');
+
+        $found = $this->directory->find($customer);
+
+        if (! $found || empty($found['email'])) {
+            throw new NotFoundHttpException('No such customer.');
+        }
+
+        $data = $request->validate([
+            'state' => ['required', 'in:in,out'],
+            // Required both ways. "Somebody telephoned to be taken off" is as much a thing worth
+            // knowing as where a yes came from.
+            'note' => ['required', 'string', 'max:200'],
+        ]);
+
+        app(Consents::class)->record(
+            (string) $found['email'],
+            $data['state'],
+            'panel',
+            $request->ip(),
+            $data['note'],
+            $request->user()->id,
+        );
+
+        // Audited without the address, like the erasure is: a log of who was added to a mailing
+        // list is a mailing list.
+        $this->audit->record('customer.consent_recorded', null, [
+            'state' => $data['state'],
+            'note' => $data['note'],
+        ]);
+
+        return response()->json(app(Consents::class)->forEmail((string) $found['email']));
     }
 
     /**

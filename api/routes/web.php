@@ -6,6 +6,7 @@ use App\Http\Controllers\GoogleSignInController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\BasketController;
 use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\PreferencesController;
 use App\Http\Controllers\Site\QueueController;
 use App\Http\Controllers\Site\SeasonController;
 use App\Http\Controllers\Site\SiteFilesController;
@@ -151,6 +152,16 @@ Route::middleware('site')->group(function () {
      * signed out it offers the button — and the rest of these 404 on a site that does not offer
      * signing in at all.
      */
+    /*
+     * "Tell us to stop" — no sign-in, because leaving a mailing list must be easier than reporting
+     * it. The link is signed over the account and the address; a wrong signature is a 404, since
+     * "wrong token" would confirm that the address is known to this organiser.
+     */
+    Route::get('preferences/{email}/{token}', [PreferencesController::class, 'show'])
+        ->middleware('throttle:30,1,preferences');
+    Route::post('preferences/{email}/{token}', [PreferencesController::class, 'update'])
+        ->middleware('throttle:20,1,preferences-save');
+
     Route::get('account', [BuyerAccountController::class, 'show']);
     Route::get('account/google', [BuyerAccountController::class, 'start'])->middleware('throttle:20,1,signin');
     Route::get('account/google/finish', [BuyerAccountController::class, 'finish'])

@@ -284,6 +284,88 @@
 			.catch( function ( error ) { App.error( error ); } );
 	};
 
+	/**
+	 * Whether this person may be written to about things they have not bought.
+	 *
+	 * Three states, not two: "never asked" is the one most people are in, and showing it as "no"
+	 * would suggest somebody had refused. The history is here too, because the question staff
+	 * actually get asked is not what the answer is but when it was given.
+	 */
+	Customers.consentMarkup = function ( person ) {
+		var App = Customers.App;
+		var consent = person.marketing || { state: 'unasked', history: [] };
+
+		return '<h3 class="subhead">' + esc( App.t( 'panel.customers.marketing' ) ) + '</h3>' +
+			'<div class="row spaced">' +
+				'<p>' +
+					'<span class="badge badge--' +
+						( 'in' === consent.state ? 'ok' : ( 'out' === consent.state ? 'warn' : 'neutral' ) ) +
+						'">' + esc( App.t( 'panel.customers.consent.' + consent.state ) ) + '</span>' +
+					( consent.decided_at
+						? '<span class="muted on-own-line">' +
+							esc( App.t( 'panel.customers.consentWhen', {
+								when: App.date( consent.decided_at ),
+								source: App.t( 'panel.customers.consentSources.' + consent.source ),
+							} ) ) + '</span>'
+						: '<span class="muted on-own-line">' +
+							esc( App.t( 'panel.customers.consentUnaskedHint' ) ) + '</span>' ) +
+				'</p>' +
+				'<button class="btn" id="customer-consent">' +
+					esc( App.t( 'panel.customers.consentRecord' ) ) + '</button>' +
+			'</div>' +
+			( ( consent.history || [] ).length
+				? '<ul class="plain muted">' + consent.history.map( function ( entry ) {
+					return '<li>' + esc( App.date( entry.at ) ) + ' · ' +
+						esc( App.t( 'panel.customers.consent.' + entry.action ) ) + ' · ' +
+						esc( App.t( 'panel.customers.consentSources.' + entry.source ) ) +
+						( entry.note ? ' · ' + esc( entry.note ) : '' ) + '</li>';
+				} ).join( '' ) + '</ul>'
+				: '' );
+	};
+
+	/**
+	 * An answer somebody gave where this software could not watch — a sheet at the interval, a
+	 * telephone call asking to be taken off.
+	 *
+	 * The note is required both ways, because "where did this yes come from" is the question an
+	 * audit asks and the one thing a bought list cannot answer.
+	 */
+	Customers.recordConsent = function ( person ) {
+		var App = Customers.App;
+
+		App.modal( {
+			title: App.t( 'panel.customers.consentRecord' ),
+			submitLabel: App.t( 'panel.common.save' ),
+			body:
+				'<div class="stack">' +
+					'<p class="hint">' + esc( App.t( 'panel.customers.consentHint' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="con-state">' +
+						esc( App.t( 'panel.customers.marketing' ) ) + '</label>' +
+						'<select class="select" id="con-state">' +
+							[ 'in', 'out' ].map( function ( state ) {
+								return '<option value="' + state + '">' +
+									esc( App.t( 'panel.customers.consent.' + state ) ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+					'<div class="field"><label class="field__label" for="con-note">' +
+						esc( App.t( 'panel.customers.consentNote' ) ) + '</label>' +
+						'<input class="input" id="con-note" maxlength="200" required>' +
+						'<span class="field__hint">' +
+							esc( App.t( 'panel.customers.consentNoteHint' ) ) + '</span></div>' +
+				'</div>',
+			onSubmit: function () {
+				return App.request( 'PUT', '/customers/' + encodeURIComponent( person.id ) + '/consent', {
+					state: document.getElementById( 'con-state' ).value,
+					note: String( document.getElementById( 'con-note' ).value ).trim(),
+				} ).then( function ( saved ) {
+					person.marketing = saved;
+					App.toast( App.t( 'panel.customers.consentSaved' ) );
+					Customers.paintProfile( person );
+				} );
+			},
+		} );
+	};
+
 	Customers.paintProfile = function ( person ) {
 		var App = Customers.App;
 
@@ -313,6 +395,7 @@
 							: '—',
 						App.t( 'panel.customers.sinceLine', { date: App.date( person.first_order_at ) } ) ) +
 				'</div>' +
+				Customers.consentMarkup( person ) +
 				'<h3 class="subhead">' + esc( App.t( 'panel.customers.ordersHeading' ) ) + '</h3>' +
 				person.orders.map( function ( order ) {
 					return Customers.orderMarkup( order );
@@ -322,6 +405,12 @@
 		document.getElementById( 'customer-back' ).addEventListener( 'click', function () {
 			Customers.render( App );
 		} );
+
+		var consent = document.getElementById( 'customer-consent' );
+
+		if ( consent ) {
+			consent.addEventListener( 'click', function () { Customers.recordConsent( person ); } );
+		}
 
 		document.getElementById( 'customer-data' ).addEventListener( 'click', function () {
 			Customers.personalData( person );

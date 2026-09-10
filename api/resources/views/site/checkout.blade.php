@@ -213,6 +213,18 @@
                     {{ __('site.voucher.settled') }}
                 </p>
 
+                {{-- The one question this checkout asks that is not about the booking.
+
+                     Empty by default and never remembered from a previous visit: a tick box that
+                     arrives ticked is not consent, it is a default somebody failed to notice. What
+                     it says is written out in full beside it, because "keep me updated" is not a
+                     description of anything. --}}
+                <label class="consent">
+                    <input type="checkbox" name="news" value="1">
+                    <span>{{ __('site.consent.line') }}</span>
+                </label>
+                <p class="field__hint">{{ __('site.consent.serviceStays') }}</p>
+
                 {{-- A field that is not there.
 
                      Hidden from sight, out of the tab order, announced to nothing, and named the

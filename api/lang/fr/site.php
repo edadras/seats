@@ -385,4 +385,12 @@ return [
     'checkoutRefused' => 'Cette réservation n’a pas pu être prise. Veuillez réessayer depuis le plan de salle.',
     'checkoutTooQuick' => 'Le formulaire a été envoyé avant d’être rempli. Vérifiez vos informations et confirmez à nouveau.',
     'limitPerBuyer' => 'Cet événement est limité à un billet par personne.|Cet événement est limité à :count billets par personne.',
+    'consent' => [
+        'title' => 'Ce que nous vous envoyons',
+        'about' => 'Il s’agit de :email.',
+        'line' => 'Prévenez-moi des prochains événements par e-mail',
+        'serviceStays' => 'Dans tous les cas, nous continuerons à vous écrire au sujet de vos réservations — vos billets, et tout changement concernant une soirée où vous venez.',
+        'save' => 'Enregistrer',
+        'saved' => 'Enregistré. Merci.',
+    ],
 ];

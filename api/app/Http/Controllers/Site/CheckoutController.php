@@ -311,6 +311,9 @@ class CheckoutController extends Controller
             'addons' => ['sometimes', 'array', 'max:40'],
             'addons.*' => ['integer', 'min:0', 'max:999'],
             'donation' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            // The one question on this page that is not about the booking. Absent means no, which
+            // is what an unticked box is: silence is not consent.
+            'news' => ['sometimes', 'boolean'],
         ]);
 
         $offer = $this->offerFor($request, $hold);
@@ -479,6 +482,27 @@ class CheckoutController extends Controller
             'tax_number' => $data['tax_number'] ?? null,
             'address' => $data['billing_address'] ?? null,
         ]) : [];
+
+        /*
+         * Their answer about being written to, recorded before the money rather than after it.
+         *
+         * Before, because a payment that fails should not lose the one thing they said about
+         * themselves that this platform is obliged to remember — and because the record is of what
+         * they were shown on this page, which is true whether or not the card worked.
+         *
+         * Only ever written when they ticked it, or when they have said something before: a
+         * checkout must not record a `no` on behalf of everybody who left a box alone, or the
+         * absence of an answer stops meaning "nobody asked".
+         */
+        if ($request->boolean('news')) {
+            app(\App\Domain\Privacy\Consents::class)->record(
+                $data['email'],
+                'in',
+                'checkout',
+                $request->ip(),
+                __('site.consent.line'),
+            );
+        }
 
         try {
             [$order, $intent] = $this->checkout->place(

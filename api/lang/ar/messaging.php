@@ -183,4 +183,8 @@ return [
     'segmentMinSpend' => 'أنفقوا :amount أو أكثر',
     'segmentAttended' => 'حضروا',
     'segmentEverybody' => 'كل من اشترى',
+    'unsubscribeLine' => 'لا ترغب بهذه الرسائل؟ أوقفها من هنا: :link',
+    'announceNotAsked' => 'لم يُسأل :count',
+    'announceService' => 'بشأن حجز يملكونه: تُرسل إلى كل من اشترى لهذه الفعالية.',
+    'announceNews' => 'أخبار: تُرسل فقط إلى من وافق، ويُضاف في أسفلها طريق للإيقاف.',
 ];

@@ -592,7 +592,8 @@
 							} ).join( '' ) +
 						'</optgroup>' +
 					'</select>' +
-					'<span class="field__hint">' + esc( App.t( 'messaging.announceOnlyPaid' ) ) + '</span></div>' +
+					'<span class="field__hint" id="a-kind">' +
+						esc( App.t( 'messaging.announceOnlyPaid' ) ) + '</span></div>' +
 
 					'<div class="field"><span class="field__label">' +
 						esc( App.t( 'messaging.announceChannels' ) ) + '</span>' +
@@ -713,6 +714,22 @@
 
 		var count = function () {
 			var channels = Messaging.chosenChannels();
+			var kind = document.getElementById( 'a-kind' );
+			var audience = Messaging.chosenAudience();
+
+			/*
+			 * Service or news, said on the screen where the choice is made.
+			 *
+			 * Writing to the buyers of one event is about a booking they hold and needs nobody's
+			 * permission; writing to everybody, or to a saved audience, is marketing and only
+			 * reaches the people who agreed to it. An organiser who does not know which one they
+			 * are doing will not understand the number underneath either.
+			 */
+			if ( kind ) {
+				kind.textContent = App.t( audience.event_id
+					? 'messaging.announceService'
+					: 'messaging.announceNews' );
+			}
 
 			if ( ! host || ! channels.length ) {
 				Messaging.reach = 0;
@@ -731,12 +748,26 @@
 			App.request( 'GET', '/messaging/announcements/audience?' + query )
 				.then( function ( reach ) {
 					Messaging.reach = reach.messages || 0;
-					host.textContent = reach.messages
+
+					/*
+					 * Who this cannot reach, said out loud.
+					 *
+					 * "This reaches 900 of your 4,000 buyers, because the rest have not been
+					 * asked" is the sentence that sends an organiser to go and ask them. A screen
+					 * that quietly dropped 3,100 people would leave them believing they had a
+					 * mailing list they do not have.
+					 */
+					host.textContent = ( reach.messages
 						? App.t( 'messaging.announceReach', {
 							people: App.number( reach.people ),
 							messages: App.number( reach.messages ),
 						} )
-						: App.t( 'messaging.announceReachNobody' );
+						: App.t( 'messaging.announceReachNobody' ) ) +
+						( reach.unreachable
+							? ' · ' + App.t( 'messaging.announceNotAsked', {
+								count: App.number( reach.unreachable ),
+							} )
+							: '' );
 				} )
 				.catch( function () { host.textContent = ''; } );
 		};

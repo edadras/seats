@@ -2844,6 +2844,48 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /customers/{customer}/consent:
+    parameters:
+      - name: customer
+        in: path
+        required: true
+        description: The SHA-256 of the buyer's address — an email in a path is an email in an access log.
+        schema: { type: string }
+    put:
+      operationId: recordCustomerConsent
+      tags: [Customers]
+      summary: Write down an answer given where this system could not see it
+      description: |
+        Requires `messages.send` — this is about who may be written to, not about who bought.
+
+        A venue with a paper sign-up sheet at the interval is a real venue, and refusing to let them
+        record it would only send them to a spreadsheet where nobody can check anything. So it is
+        allowed, and it asks where the answer came from in a required note: that is the question an
+        audit asks a year later, and the one thing a bought list cannot answer. The member of staff
+        who typed it is recorded against it.
+
+        The note is required in both directions — "somebody telephoned to be taken off" is as much
+        worth knowing as where a yes came from.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state, note]
+              properties:
+                state: { type: string, enum: [in, out] }
+                note: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: The answer as it now stands, with its history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MarketingConsent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /messaging/announcements:
     get:
       operationId: listAnnouncements
@@ -2887,6 +2929,14 @@ paths:
         by `messages:announce`, through the same code.
 
         `{buyer}`, `{event}` and `{site}` in the subject or body are substituted per recipient.
+
+        **Service or news.** An announcement to the buyers of one event is about a booking they
+        hold — the doors have moved, bring a coat — and is part of having sold them the ticket, so
+        it reaches everybody who bought. An announcement to everybody, or to a saved audience, is
+        about something they have not bought: it reaches only the people who have said they want to
+        hear from this organiser, and it carries a link at the bottom that lets them stop it without
+        signing in to anything. Silence is not consent — somebody nobody has asked is not written
+        to — and there is no setting that changes that.
       requestBody:
         required: true
         content:
@@ -2959,6 +3009,14 @@ paths:
                 properties:
                   people: { type: integer }
                   messages: { type: integer }
+                  unreachable:
+                    type: integer
+                    description: >-
+                      People this would match but may not be sent to, because nobody has asked them
+                      whether they want to hear from this organiser — or they said no. Counted and
+                      returned rather than quietly dropped: "this reaches 900 of your 4,000 buyers"
+                      is the sentence that sends somebody to go and ask the other 3,100. Always
+                      nought on a message about one event's own buyers, which needs no permission.
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
@@ -7778,6 +7836,38 @@ components:
             way a person says it. Null while the till is open: a zero there would read as
             "it balanced".
         note: { type: [string, "null"] }
+
+    MarketingConsent:
+      type: object
+      description: >-
+        One person's current answer to "may we write to you about things you have not bought?",
+        with the log it was folded from. Consent is given to an organiser and never to this
+        platform: agreeing to hear from a theatre in Berlin is not agreeing to hear from a promoter
+        in Tehran who uses the same software, so nothing here is shared between accounts.
+      properties:
+        state:
+          type: string
+          enum: [in, out, unasked]
+          description: >-
+            Three states, not two. `unasked` is where most people are, and showing it as a refusal
+            would suggest somebody had said no — which is exactly the mistake this table exists to
+            prevent.
+        source:
+          type: [string, "null"]
+          enum: [checkout, link, panel, import, erasure, null]
+        decided_at: { type: [string, "null"], format: date-time }
+        history:
+          type: array
+          description: >-
+            Append-only. A year later the question is not what the answer is but when it was given
+            and what the person was shown, and only a log answers that.
+          items:
+            type: object
+            properties:
+              action: { type: string, enum: [in, out] }
+              source: { type: string }
+              note: { type: [string, "null"] }
+              at: { type: string, format: date-time }
 
     MessageChannel:
       type: object

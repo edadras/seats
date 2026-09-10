@@ -27,7 +27,7 @@ ALL=(
 	editor_smoke picker_smoke site_smoke embed_smoke locale_smoke console_smoke
 	pricing_smoke ticket_types_smoke discount_smoke counter_smoke customers_smoke
 	door_smoke entry_smoke together_smoke cancel_smoke translations_smoke
-	refund_smoke settlement_smoke wallet_smoke presale_smoke addons_smoke voucher_smoke season_smoke basket_smoke queue_smoke quota_smoke pace_smoke till_smoke limits_smoke messaging_smoke segments_smoke languages_smoke reports_smoke
+	refund_smoke settlement_smoke wallet_smoke presale_smoke addons_smoke voucher_smoke season_smoke basket_smoke queue_smoke quota_smoke pace_smoke till_smoke limits_smoke messaging_smoke segments_smoke languages_smoke consent_smoke reports_smoke
 	themes_smoke signup_smoke a11y_check
 )
 

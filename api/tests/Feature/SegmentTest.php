@@ -232,6 +232,7 @@ class SegmentTest extends TestCase
         $this->sell($fixture, ['name' => 'Dana', 'email' => 'dana@example.test'], [0]);
         $this->sell($fixture, ['name' => 'Amir', 'email' => 'amir@example.test'], [1]);
         $this->sell($fixture, ['name' => 'Amir', 'email' => 'amir@example.test'], [2], $thisSeason);
+        $this->agreed($fixture, 'dana@example.test', 'amir@example.test');
 
         $segment = $this->actingAs($owner)->postJson('/v1/segments', [
             'name' => 'Came last season, has not booked',
@@ -298,6 +299,7 @@ class SegmentTest extends TestCase
         $owner = $this->makeUser($fixture['tenant']);
 
         $this->sell($fixture, ['name' => 'Dana', 'email' => 'dana@example.test'], [0]);
+        $this->agreed($fixture, 'dana@example.test');
 
         $segment = $this->actingAs($owner)->postJson('/v1/segments', [
             'name' => 'Everybody',
@@ -326,6 +328,23 @@ class SegmentTest extends TestCase
     }
 
     /* ------------------------------------------------------------------------------ helpers */
+
+    /**
+     * These people agreed to hear about things they have not bought.
+     *
+     * A saved audience is marketing by definition — it describes people by what they bought
+     * *before*, in order to tell them about something else — so every send here has to say who
+     * agreed. Silence is not consent, and a test that did not have to say it would be testing the
+     * behaviour this platform deliberately no longer has.
+     */
+    private function agreed(array $fixture, string ...$emails): void
+    {
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($emails) {
+            foreach ($emails as $email) {
+                app(\App\Domain\Privacy\Consents::class)->record($email, 'in', 'checkout');
+            }
+        });
+    }
 
     /** @return list<string> the addresses a rule set describes, sorted */
     private function resolve(array $fixture, array $rules): array

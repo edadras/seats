@@ -54,6 +54,14 @@ class PersonalData
                 'names' => $orders->pluck('buyer.name')->filter()->unique()->values()->all(),
                 'phones' => $orders->pluck('buyer.phone')->filter()->unique()->values()->all(),
             ],
+            /*
+             * What they were asked about being written to, and every time the answer changed.
+             *
+             * Part of the copy rather than a separate screen, because "when did I agree to this,
+             * and what was I shown" is one of the two questions a person actually has when they
+             * ask what is held about them.
+             */
+            'marketing' => app(Consents::class)->forEmail($email),
             'orders' => $orders->map(fn (ExternalOrder $order) => [
                 'reference' => $order->external_order_id,
                 'status' => $order->status,
@@ -174,6 +182,17 @@ class PersonalData
             $counts['transfers'] = TicketTransfer::where('from_email', $email)
                 ->orWhere('to_email', $email)
                 ->update(['from_email' => '', 'to_email' => '', 'from_name' => null, 'to_name' => self::REDACTED]);
+
+            /*
+             * Their answer about being written to goes entirely — log and all.
+             *
+             * Everything else here is redacted rather than deleted, because an organiser still has
+             * to be able to show their takings. This is the exception, and it has to be: keeping
+             * "this person once said no" after they have asked to be forgotten would be keeping a
+             * record of them in order to honour their wish not to be on record. Somebody who comes
+             * back and buys again starts as somebody nobody has asked.
+             */
+            app(Consents::class)->forget($email);
 
             // The deliveries stay as a record that something was sent — an organiser has to be
             // able to show they sent a confirmation — with the address taken off them.

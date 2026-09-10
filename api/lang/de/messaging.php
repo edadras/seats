@@ -183,4 +183,8 @@ return [
     'segmentMinSpend' => 'gaben :amount oder mehr aus',
     'segmentAttended' => 'waren da',
     'segmentEverybody' => 'alle, die gekauft haben',
+    'unsubscribeLine' => 'Sie möchten das nicht? Hier abbestellen: :link',
+    'announceNotAsked' => ':count wurden nicht gefragt',
+    'announceService' => 'Zu einer Buchung, die sie haben: Alle, die für diese Veranstaltung gekauft haben, werden angeschrieben.',
+    'announceNews' => 'Neuigkeiten: Nur wer zugestimmt hat, wird angeschrieben, und unten wird ein Weg zum Abbestellen angefügt.',
 ];

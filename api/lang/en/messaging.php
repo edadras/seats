@@ -189,4 +189,8 @@ return [
     'segmentMinSpend' => 'spent :amount or more',
     'segmentAttended' => 'turned up',
     'segmentEverybody' => 'everybody who has bought',
+    'unsubscribeLine' => 'Do not want these? Tell us to stop: :link',
+    'announceNotAsked' => ':count have not been asked',
+    'announceService' => 'About a booking they hold: everybody who bought for this event is written to.',
+    'announceNews' => 'News: only people who agreed to hear from you are written to, and a way out is added at the bottom.',
 ];

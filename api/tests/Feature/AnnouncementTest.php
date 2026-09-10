@@ -34,6 +34,7 @@ class AnnouncementTest extends TestCase
         $this->sell($fixture, ['name' => 'Dana', 'email' => 'dana@example.test'], [0]);
         $this->sell($fixture, ['name' => 'Dana', 'email' => 'DANA@example.test'], [1]);
         $this->sell($fixture, ['name' => 'Amir', 'email' => 'amir@example.test'], [2]);
+        $this->agreed($fixture, 'dana@example.test', 'amir@example.test');
 
         $reach = $this->actingAs($owner)
             ->getJson('/v1/messaging/announcements/audience?channels[]=email')
@@ -69,6 +70,7 @@ class AnnouncementTest extends TestCase
 
         $this->sell($fixture, ['name' => 'Paid', 'email' => 'paid@example.test'], [0]);
         $this->sell($fixture, ['name' => 'Waiting', 'email' => 'waiting@example.test'], [1], confirm: false);
+        $this->agreed($fixture, 'paid@example.test', 'waiting@example.test');
 
         $reach = $this->actingAs($owner)
             ->getJson('/v1/messaging/announcements/audience?channels[]=email')
@@ -87,6 +89,7 @@ class AnnouncementTest extends TestCase
 
         $this->sell($fixture, ['name' => 'First', 'email' => 'first@example.test'], [0]);
         $this->sell($other, ['name' => 'Second', 'email' => 'second@example.test'], [0]);
+        $this->agreed($fixture, 'first@example.test', 'second@example.test');
 
         $everyone = $this->actingAs($owner)
             ->getJson('/v1/messaging/announcements/audience?channels[]=email')->json();
@@ -115,9 +118,10 @@ class AnnouncementTest extends TestCase
         $fixture = $this->makeSellableEvent(rows: 6, perRow: 10);
         $owner = $this->makeUser($fixture['tenant']);
 
-        // More buyers than one batch sends inline.
+        // More buyers than one batch sends inline, all of whom agreed to hear from this venue.
         for ($i = 0; $i < 30; $i++) {
             $this->sell($fixture, ['name' => 'Buyer '.$i, 'email' => 'buyer'.$i.'@example.test'], [$i]);
+            $this->agreed($fixture, 'buyer'.$i.'@example.test');
         }
 
         $this->actingAs($owner)->postJson('/v1/messaging/announcements', [
@@ -176,6 +180,22 @@ class AnnouncementTest extends TestCase
     private array $clients = [];
 
     /** @param  list<int>  $seats */
+    /**
+     * These people agreed to hear about things they have not bought.
+     *
+     * Said explicitly in every test that broadcasts, because that is now the difference between a
+     * message being sent and not: an announcement to everybody is marketing, and silence is not
+     * consent. A test that did not have to say it would be a test of the old behaviour.
+     */
+    private function agreed(array $fixture, string ...$emails): void
+    {
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($emails) {
+            foreach ($emails as $email) {
+                app(\App\Domain\Privacy\Consents::class)->record($email, 'in', 'checkout');
+            }
+        });
+    }
+
     private function sell(array $fixture, array $buyer, array $seats, bool $confirm = true): void
     {
         $event = $fixture['event'];

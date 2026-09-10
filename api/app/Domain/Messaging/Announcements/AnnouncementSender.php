@@ -3,6 +3,7 @@
 namespace App\Domain\Messaging\Announcements;
 
 use App\Domain\Audience\Segments;
+use App\Domain\Privacy\Consents;
 use App\Domain\Messaging\ChannelRegistry;
 use App\Domain\Messaging\MessageDispatcher;
 use App\Domain\Messaging\MessageRenderer;
@@ -45,22 +46,32 @@ class AnnouncementSender
         private readonly Notifier $notifier,
         private readonly TenantContext $tenants,
         private readonly Segments $segments,
+        private readonly Consents $consents,
     ) {}
 
     /**
      * Who this announcement would reach, per channel, without sending anything.
      *
      * @param  array<string, mixed>|null  $rules  a saved audience's rules, where one was chosen
-     * @return array{people:int, messages:int}
+     * @return array{people:int, messages:int, unreachable:int}
      */
     public function preview(?string $eventId, array $channels, ?array $rules = null): array
     {
         $people = 0;
         $messages = 0;
+        $unreachable = 0;
         $seen = [];
+        // News or service — see `isNews`, and the class note above it.
+        $news = self::isNews($eventId, $rules);
 
         foreach ($this->audience($eventId, $rules) as $person) {
             $counted = false;
+
+            if ($news && ! $this->consents->allows($person->email)) {
+                $unreachable++;
+
+                continue;
+            }
 
             foreach ($channels as $channelKey) {
                 $address = $this->addressFor($person, $channelKey);
@@ -77,7 +88,26 @@ class AnnouncementSender
             $people += $counted ? 1 : 0;
         }
 
-        return ['people' => $people, 'messages' => $messages];
+        return [
+            'people' => $people,
+            'messages' => $messages,
+            // Counted and shown rather than quietly dropped: "this reaches 900 of your 4,000
+            // buyers" is the sentence that makes an organiser go and ask the other 3,100.
+            'unreachable' => $unreachable,
+        ];
+    }
+
+    /**
+     * Whether this is news, which needs a yes, or service, which does not.
+     *
+     * An announcement to the buyers of one event is about a booking they hold — the doors have
+     * moved, bring a coat, the interval is longer tonight — and is part of having sold them the
+     * ticket. An announcement to everybody, or to a saved audience, is about something they have
+     * not bought. That is the line, it is drawn here, and it is the only place it is drawn.
+     */
+    public static function isNews(?string $eventId, ?array $rules = null): bool
+    {
+        return null !== $rules || ! $eventId;
     }
 
     /**
@@ -93,8 +123,22 @@ class AnnouncementSender
         $now = now();
         $people = 0;
 
+        $news = self::isNews($announcement->event_id, $announcement->segment?->rules);
+
         foreach ($this->audience($announcement->event_id, $announcement->segment?->rules) as $person) {
             $reached = false;
+
+            /*
+             * Silence is not consent.
+             *
+             * Checked here, as the queue is written, rather than at send time: the queue is what
+             * the delivery log shows an organiser, and a row for somebody who was never going to
+             * be written to would be a record of a message that was never sent to a person who
+             * never agreed to it.
+             */
+            if ($news && ! $this->consents->allows($person->email)) {
+                continue;
+            }
 
             foreach ($announcement->channels ?? [] as $channelKey) {
                 $address = $this->addressFor($person, $channelKey);
@@ -158,6 +202,8 @@ class AnnouncementSender
             ->limit($limit)
             ->get();
 
+        $news = self::isNews($announcement->event_id, $announcement->segment?->rules);
+
         foreach ($queued as $delivery) {
             $variables = [
                 'buyer' => $this->nameFor($delivery->recipient),
@@ -165,16 +211,49 @@ class AnnouncementSender
                 'site' => (string) ($this->tenants->get()?->name ?? ''),
             ];
 
+            $body = MessageRenderer::render((string) $announcement->body, $variables);
+
+            /*
+             * A way out, at the bottom of anything that is marketing.
+             *
+             * On news only: a footer offering to stop sending confirmations of bookings somebody
+             * has made would be an offer this platform cannot honour. The link is signed rather
+             * than stored, so no token per recipient has to be kept and guessing one is guessing
+             * a signature.
+             */
+            if ($news) {
+                $body .= "\n\n".$this->wayOut($delivery->recipient);
+            }
+
             $this->dispatcher->sendComposed(
                 $delivery,
                 MessageRenderer::render((string) $announcement->subject, $variables),
-                MessageRenderer::render((string) $announcement->body, $variables),
+                $body,
             );
         }
 
         $this->settle($announcement);
 
         return $queued->count();
+    }
+
+    /**
+     * "Tell us to stop" — one line, in the reader's language, with a link that needs no sign-in.
+     *
+     * A person who wants out at eleven at night must not have to remember a password to get out,
+     * and an organiser must not be the only route to it: the commonest way a mailing list becomes
+     * a complaint is that leaving it was harder than reporting it.
+     */
+    private function wayOut(string $address): string
+    {
+        $site = \App\Models\Site::query()->orderBy('created_at')->first();
+        $link = $this->consents->linkFor(
+            (string) $this->tenants->idOrFail(),
+            $address,
+            $site?->url('/') ?? '',
+        );
+
+        return __('messaging.unsubscribeLine', ['link' => $link]);
     }
 
     /** Mark an announcement finished once nothing of it is still queued, and say so. */
