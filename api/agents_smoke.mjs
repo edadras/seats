@@ -133,6 +133,42 @@ await theirs.fill( 'input[name=email]', 'bureau12@example.test' );
 await theirs.fill( 'input[name=password]', password );
 await theirs.click( '#login button[type=submit]' );
 await theirs.waitForSelector( '.sidebar' );
+
+/*
+ * What an outside agency is shown on their first morning.
+ *
+ * The nav is the whole list of doors somebody believes they have, so a row they cannot open is a
+ * refusal they meet by clicking. The organiser's screens — the customer directory, the vouchers,
+ * the seat map designer, the agency list itself — are not hidden *instead* of being refused: the
+ * server refuses them too, and this only stops the panel from offering them.
+ */
+const theirNav = await theirs.locator( 'nav button' ).evaluateAll(
+	( buttons ) => buttons.map( ( button ) => button.dataset.view )
+);
+
+check( 'the agency is offered the counter and their own book',
+	theirNav.includes( 'counter' ) && theirNav.includes( 'orders' ) && theirNav.includes( 'events' ),
+	theirNav.join( ', ' ) );
+
+/*
+ * The seat map and the venue stay: an agency cannot sell a seat it cannot see on a plan, and
+ * `maps.view` is reading one rather than drawing it. What goes is the organiser's own business —
+ * their audience, their money, their account, and the agency list this agency is *on*.
+ */
+check( 'and not one screen of the organiser\u2019s own',
+	! [ 'customers', 'vouchers', 'agents', 'team', 'audit', 'overview', 'settlement', 'waitlist',
+		'discounts', 'messaging', 'reports', 'promoters', 'baskets', 'sites', 'modules', 'connections' ]
+		.some( ( view ) => theirNav.includes( view ) ),
+	theirNav.join( ', ' ) );
+
+// And the screen the panel chooses for them is one of theirs, not the overview they never see.
+const landed = await theirs.locator( 'nav button.is-active' ).first().getAttribute( 'data-view' );
+
+check( 'so the screen they land on is one they may use',
+	'overview' !== landed && theirNav.includes( landed ), landed );
+
+await theirs.screenshot( { path: `${ SHOTS }/04-their-whole-panel.png` } );
+
 await theirs.click( 'nav button[data-view=counter]' );
 await theirs.waitForSelector( '#counter-event', { timeout: 20000 } );
 await theirs.waitForTimeout( 1200 );

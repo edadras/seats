@@ -24,53 +24,60 @@
 	/*
 	 * Navigation, in the order the work happens: events are the daily screen, so they come first.
 	 *
-	 * Only the key and the icon are here. The label is looked up when the nav is painted, because
-	 * this array is built while the file loads — before the catalogue has been fetched — and a
-	 * label captured then would be English for the rest of the session.
+	 * The key, the icon, and what the screen needs. The label is looked up when the nav is painted,
+	 * because this array is built while the file loads — before the catalogue has been fetched — and
+	 * a label captured then would be English for the rest of the session.
+	 *
+	 * `needs` is the permission the screen's *landing* call already checks on the server, named here
+	 * so somebody is not offered a door that refuses them when they reach it. It hides, it does not
+	 * protect: the refusal is the server's, and this list only keeps the nav honest about it. An
+	 * entry with no `needs` is one everybody holds — the account's own sign-in security is nobody
+	 * else's to grant — and a list of them is any-of, for the screens that answer a narrow question
+	 * to one caller and a wide one to another.
 	 */
 	var NAV = [
-		{ group: null, items: [ { key: 'overview', icon: 'grid' } ] },
+		{ group: null, items: [ { key: 'overview', icon: 'grid', needs: 'reports.attendance.view' } ] },
 		{ group: 'programme', items: [
-			{ key: 'events', icon: 'calendar' },
-			{ key: 'productions', icon: 'map' },
-			{ key: 'counter', icon: 'ticket' },
-			{ key: 'tills', icon: 'wallet' },
-			{ key: 'agents', icon: 'users' },
-			{ key: 'orders', icon: 'file' },
-			{ key: 'plans', icon: 'clock' },
-			{ key: 'tickets', icon: 'ticket' },
-			{ key: 'doorlist', icon: 'check' },
-			{ key: 'questions', icon: 'file' },
-			{ key: 'entryslots', icon: 'clock' },
-			{ key: 'discounts', icon: 'tag' },
-			{ key: 'seasons', icon: 'calendar' },
-			{ key: 'access', icon: 'lock' },
-			{ key: 'vouchers', icon: 'wallet' },
+			{ key: 'events', icon: 'calendar', needs: 'events.view' },
+			{ key: 'productions', icon: 'map', needs: 'events.view' },
+			{ key: 'counter', icon: 'ticket', needs: 'orders.sell' },
+			{ key: 'tills', icon: 'wallet', needs: 'orders.sell' },
+			{ key: 'agents', icon: 'users', needs: 'agents.manage' },
+			{ key: 'orders', icon: 'file', needs: [ 'orders.view', 'orders.view.own' ] },
+			{ key: 'plans', icon: 'clock', needs: 'orders.view' },
+			{ key: 'tickets', icon: 'ticket', needs: 'tickets.view' },
+			{ key: 'doorlist', icon: 'check', needs: 'checkins.view' },
+			{ key: 'questions', icon: 'file', needs: 'events.view' },
+			{ key: 'entryslots', icon: 'clock', needs: 'events.view' },
+			{ key: 'discounts', icon: 'tag', needs: 'discounts.manage' },
+			{ key: 'seasons', icon: 'calendar', needs: 'discounts.manage' },
+			{ key: 'access', icon: 'lock', needs: 'discounts.manage' },
+			{ key: 'vouchers', icon: 'wallet', needs: 'vouchers.manage' },
 		] },
 		{ group: 'venue', items: [
-			{ key: 'maps', icon: 'map' },
-			{ key: 'venues', icon: 'building' },
+			{ key: 'maps', icon: 'map', needs: 'maps.view' },
+			{ key: 'venues', icon: 'building', needs: 'venues.view' },
 		] },
 		{ group: 'audience', items: [
-			{ key: 'customers', icon: 'users' },
-			{ key: 'waitlist', icon: 'clock' },
-			{ key: 'sites', icon: 'globe' },
-			{ key: 'themes', icon: 'palette' },
-			{ key: 'messaging', icon: 'mail' },
+			{ key: 'customers', icon: 'users', needs: 'orders.view' },
+			{ key: 'waitlist', icon: 'clock', needs: 'orders.view' },
+			{ key: 'sites', icon: 'globe', needs: 'sites.view' },
+			{ key: 'themes', icon: 'palette', needs: 'sites.view' },
+			{ key: 'messaging', icon: 'mail', needs: 'messages.send' },
 		] },
 		{ group: 'insight', items: [
-			{ key: 'promoters', icon: 'users' },
-			{ key: 'baskets', icon: 'list' },
-			{ key: 'reports', icon: 'chart' },
-			{ key: 'settlement', icon: 'wallet' },
+			{ key: 'promoters', icon: 'users', needs: 'reports.orders.view' },
+			{ key: 'baskets', icon: 'list', needs: 'orders.view' },
+			{ key: 'reports', icon: 'chart', needs: 'reports.attendance.view' },
+			{ key: 'settlement', icon: 'wallet', needs: 'reports.orders.view' },
 		] },
 		{ group: 'account', items: [
-			{ key: 'connections', icon: 'plug' },
-			{ key: 'modules', icon: 'puzzle' },
-			{ key: 'team', icon: 'users' },
+			{ key: 'connections', icon: 'plug', needs: 'connections.manage' },
+			{ key: 'modules', icon: 'puzzle', needs: 'modules.manage' },
+			{ key: 'team', icon: 'users', needs: 'team.view' },
 			{ key: 'security', icon: 'lock' },
-			{ key: 'wallet', icon: 'ticket' },
-			{ key: 'audit', icon: 'history' },
+			{ key: 'wallet', icon: 'ticket', needs: 'account.manage' },
+			{ key: 'audit', icon: 'history', needs: 'audit.view' },
 		] },
 	];
 
@@ -91,6 +98,7 @@
 		editor: null,
 		inspector: null,
 		readOnly: false,
+		permissions: null,
 	};
 
 	/* ---------------------------------------------------------------------------- theme */
@@ -158,7 +166,36 @@
 		// It resolves either way — a missing catalogue opens the panel in English rather than
 		// leaving somebody at a blank page.
 		i18n.load( this.api ).then( function () {
-			self.token ? self.showWorkspace() : self.showLogin();
+			if ( ! self.token ) {
+				self.showLogin();
+
+				return;
+			}
+
+			/*
+			 * A token in hand is not the same as knowing what it may do. The stored profile is a
+			 * tab's memory of a sign-in that may be a day old and a role that may since have been
+			 * narrowed, so the truth is asked for before a single screen is offered — and a token
+			 * the server no longer honours puts somebody back at the sign-in form instead of into
+			 * a workspace where everything refuses.
+			 */
+			self.request( 'GET', '/auth/me' )
+				.then( function ( me ) {
+					self.remember( me, me.email || ( self.profile || {} ).email || '' );
+					self.showWorkspace();
+				} )
+				.catch( function () {
+					/*
+					 * A token the server no longer honours has already put them back at the sign-in
+					 * form — `request` does that on a 401. So anything landing here is the network
+					 * having a bad moment, and the honest response is the tab's own memory of the
+					 * last sign-in rather than throwing somebody out over one failed call.
+					 */
+					if ( self.token && self.profile ) {
+						self.permissions = self.profile.permissions || null;
+						self.showWorkspace();
+					}
+				} );
 		} );
 	};
 
@@ -318,16 +355,8 @@
 	 */
 	App.finishSignIn = function ( response, email ) {
 		this.token = response.token;
-		this.profile = {
-			email: email,
-			tenant: response.tenant ? response.tenant.name : '',
-			role: response.role || '',
-			email_verified: false !== response.email_verified,
-			must_set_up_two_factor: !! response.must_set_up_two_factor,
-		};
-
 		window.sessionStorage.setItem( STORE.token, response.token );
-		window.sessionStorage.setItem( STORE.profile, JSON.stringify( this.profile ) );
+		this.remember( response, email );
 
 		this.showWorkspace();
 
@@ -337,6 +366,79 @@
 			this.toast( this.t( 'panel.security.mustSetUp' ), true );
 			this.route( 'security' );
 		}
+	};
+
+	/**
+	 * Keep what the server said about whoever is holding this token.
+	 *
+	 * Both halves of a sign-in and every boot land here, so there is one shape of profile rather
+	 * than three that drifted. Permissions are part of it: a nav built from anything else is a nav
+	 * that offers screens the server refuses.
+	 */
+	App.remember = function ( response, email ) {
+		this.permissions = Array.isArray( response.permissions ) ? response.permissions : null;
+		this.profile = {
+			email: email,
+			tenant: response.tenant ? response.tenant.name : '',
+			role: response.role || '',
+			email_verified: false !== response.email_verified,
+			must_set_up_two_factor: !! response.must_set_up_two_factor,
+			permissions: this.permissions,
+		};
+
+		window.sessionStorage.setItem( STORE.profile, JSON.stringify( this.profile ) );
+	};
+
+	/**
+	 * Whether this person holds a permission.
+	 *
+	 * An unknown answer is a yes, not a no: the server is the one that refuses, and a panel that
+	 * hid everything because it had not been told yet would be a panel that broke the moment this
+	 * list was not in hand. Hiding is a courtesy; the refusal is the rule.
+	 */
+	App.may = function ( permission ) {
+		var held = this.permissions;
+
+		if ( ! permission || ! Array.isArray( held ) ) {
+			return true;
+		}
+
+		if ( Array.isArray( permission ) ) {
+			return permission.some( function ( one ) { return -1 !== held.indexOf( one ); } );
+		}
+
+		return -1 !== held.indexOf( permission );
+	};
+
+	/** Whether a view is one this person may open. An unlisted view is the panel's own business. */
+	App.mayOpen = function ( view ) {
+		var found = null;
+
+		NAV.forEach( function ( section ) {
+			section.items.forEach( function ( entry ) {
+				if ( entry.key === view ) {
+					found = entry;
+				}
+			} );
+		} );
+
+		return found ? this.may( found.needs ) : true;
+	};
+
+	/** The views this person may open, in nav order. */
+	App.allowed = function () {
+		var self = this;
+		var keys = [];
+
+		NAV.forEach( function ( section ) {
+			section.items.forEach( function ( entry ) {
+				if ( self.may( entry.needs ) ) {
+					keys.push( entry.key );
+				}
+			} );
+		} );
+
+		return keys;
 	};
 
 	/**
@@ -382,6 +484,7 @@
 		window.sessionStorage.removeItem( STORE.profile );
 		this.token = null;
 		this.profile = null;
+		this.permissions = null;
 		this.editor = null;
 		this.inspector = null;
 		this.showLogin();
@@ -573,6 +676,14 @@
 		 * whether that is a chart or the building it is in.
 		 */
 		NAV.forEach( function ( section ) {
+			var items = section.items.filter( function ( entry ) { return self.may( entry.needs ); } );
+
+			// A heading over nothing is worse than no heading: an external agency's nav is four rows
+			// and a group label with an empty space under it would read as a screen that failed.
+			if ( ! items.length ) {
+				return;
+			}
+
 			var group = node( 'div', 'nav-group' );
 
 			if ( section.group ) {
@@ -581,7 +692,7 @@
 				group.appendChild( heading );
 			}
 
-			section.items.forEach( function ( entry ) {
+			items.forEach( function ( entry ) {
 				var button = node( 'button', 'nav-item' );
 				button.type = 'button';
 				button.dataset.view = entry.key;
@@ -602,6 +713,15 @@
 	};
 
 	App.route = function ( view ) {
+		/*
+		 * A view nobody offered them, reached by a stale deep link or by landing on the default.
+		 * Sending them to the first screen they *may* open is the honest answer: the alternative is
+		 * a page of refusals on a panel that chose the page itself.
+		 */
+		if ( ! this.mayOpen( view ) ) {
+			view = this.allowed()[ 0 ] || 'security';
+		}
+
 		this.current = view;
 		this.renderNav();
 
@@ -687,6 +807,22 @@
 	};
 
 	/* --------------------------------------------------------------------------- pieces */
+
+	/**
+	 * Markup, but only for somebody who may use what it opens.
+	 *
+	 * `permission` is a name, or a list — any-of by default, all-of when `every` is set, which is
+	 * what an action needing two authorities wants: cancelling a night is an event change *and*
+	 * money back.
+	 */
+	function only( permission, markup, every ) {
+		var names = Array.isArray( permission ) ? permission : [ permission ];
+		var held = every
+			? names.every( function ( name ) { return App.may( name ); } )
+			: App.may( names );
+
+		return held ? markup : '';
+	}
 
 	function emptyState( iconName, title, body ) {
 		return '<div class="empty"><span class="empty__icon">' + icon( iconName, { size: 22 } ) + '</span>' +
@@ -1264,34 +1400,50 @@
 						esc( self.t( 'panel.events.copyPublicId' ) ) + '">' + icon( 'copy', { size: 14 } ) +
 						'</button></td>' +
 						'<td class="table__actions">' +
-						actionButton( 'event-edit', event.id, self.t( 'panel.events.edit' ), 'settings' ) +
-						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
-						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
+						/*
+						 * Each of these opens something the server checks on arrival, so each is
+						 * offered only to somebody who would get through. An agency reading the
+						 * nights it may sell should not be shown eight buttons that refuse — the
+						 * row is the same row, with fewer things to do in it.
+						 */
+						only( 'events.manage',
+							actionButton( 'event-edit', event.id, self.t( 'panel.events.edit' ), 'settings' ) ) +
+						only( 'pricing.manage',
+							actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) ) +
+						only( 'reports.attendance.view',
+							actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) ) +
 						// Only where there is a door to watch. On every other night the button
 						// would open a screen reading "nobody is queueing", for ever.
 						( event.waiting_room
 							? actionButton( 'queue', event.id, self.t( 'panel.room.title' ), 'users' )
 							: '' ) +
 						actionButton( 'pace', event.id, self.t( 'panel.pace.title' ), 'chart' ) +
-						actionButton( 'quotas', event.id, self.t( 'panel.quotas.title' ), 'plug' ) +
+						only( 'pricing.manage',
+							actionButton( 'quotas', event.id, self.t( 'panel.quotas.title' ), 'plug' ) ) +
 						// Only where the organiser takes tickets back. Elsewhere the screen would
 						// read "nobody has offered anything", for ever.
 						( event.resale
-							? actionButton( 'resale', event.id, self.t( 'panel.resale.title' ), 'tag' )
+							? only( 'orders.view',
+								actionButton( 'resale', event.id, self.t( 'panel.resale.title' ), 'tag' ) )
 							: '' ) +
 						// Only on a night whose chart has been republished since. Everywhere else the
 						// button would say "use the latest chart" about the chart already in use.
 						( event.chart_outdated
-							? actionButton( 'rechart', event.id, self.t( 'panel.events.useLatestChart' ), 'map' )
+							? only( 'events.manage',
+								actionButton( 'rechart', event.id, self.t( 'panel.events.useLatestChart' ), 'map' ) )
 							: '' ) +
-						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
-						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
-						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
+						only( 'events.manage',
+							actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
+							actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
+							actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) ) +
 						// Not offered on a night that is already off: there is nothing left to
-						// cancel, and the button would only invite somebody to try.
+						// cancel, and the button would only invite somebody to try. Cancelling also
+						// puts money back, so it takes both permissions.
 						( 'cancelled' === event.status
 							? ''
-							: actionButton( 'call-off', event.id, self.t( 'panel.events.cancel' ), 'close' ) ) +
+							: only( [ 'events.manage', 'orders.refund' ],
+								actionButton( 'call-off', event.id, self.t( 'panel.events.cancel' ), 'close' ),
+								true ) ) +
 						'</td></tr>';
 				} ).join( '' );
 
@@ -1301,8 +1453,8 @@
 					title: self.t( 'panel.nav.events' ),
 					description: self.t( 'panel.events.description' ),
 					actions: sellable.length
-						? '<button class="btn btn--primary" id="add-event">' +
-							icon( 'plus', { size: 15 } ) + esc( self.t( 'panel.events.new' ) ) + '</button>'
+						? only( 'events.manage', '<button class="btn btn--primary" id="add-event">' +
+							icon( 'plus', { size: 15 } ) + esc( self.t( 'panel.events.new' ) ) + '</button>' )
 						: '',
 					body: table(
 						[

@@ -6,7 +6,9 @@ use App\Domain\Auth\TwoFactor;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Models\TenantUser;
 use App\Models\User;
+use App\Support\Access\Gate;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,7 +18,10 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly TenantContext $tenantContext) {}
+    public function __construct(
+        private readonly TenantContext $tenantContext,
+        private readonly Gate $gate,
+    ) {}
 
     public function login(Request $request)
     {
@@ -113,6 +118,7 @@ class AuthController extends Controller
                 'locale' => $tenant->locale,
             ],
             'role' => $membership->role,
+            'permissions' => $this->permissionsFor($membership, $tenant),
             // So the panel can put the verification bar back for somebody who signed up, closed
             // the tab, and came back a day later without typing the code.
             'email_verified' => null !== $user->email_verified_at,
@@ -174,10 +180,57 @@ class AuthController extends Controller
                 'locale' => $tenant?->locale,
             ],
             'role' => $membership?->role,
+            'permissions' => $membership ? $this->permissionsFor($membership, $tenant) : [],
             'email_verified' => null !== $user->email_verified_at,
             'two_factor' => true,
             'must_set_up_two_factor' => false,
         ]);
+    }
+
+    /**
+     * Who is holding this token, and what they may do with it.
+     *
+     * The panel asks on every boot rather than trusting what it stored at sign-in, because a role
+     * can be narrowed while somebody has the tab open and a screen offered after that is a screen
+     * that refuses when they reach it.
+     */
+    public function me(Request $request)
+    {
+        $user = $request->user();
+        $membership = $request->attributes->get('membership');
+        $tenant = $this->tenantContext->get();
+
+        return response()->json([
+            'email' => $user->email,
+            'name' => $user->name,
+            'tenant' => [
+                'id' => $tenant?->id,
+                'name' => $tenant?->name,
+                'slug' => $tenant?->slug,
+                'status' => $tenant?->status,
+                'timezone' => $tenant?->timezone,
+                'locale' => $tenant?->locale,
+            ],
+            'role' => $membership?->role,
+            'permissions' => $this->gate->permissions($request),
+            'email_verified' => null !== $user->email_verified_at,
+            'two_factor' => $user->hasTwoFactor(),
+            'must_set_up_two_factor' => (bool) ($tenant?->require_two_factor) && ! $user->hasTwoFactor(),
+        ]);
+    }
+
+    /**
+     * What this membership may do, resolved the same way every request resolves it.
+     *
+     * Inside the tenant, because a role the organiser invented is a row in their own table and a
+     * lookup outside the scope would find nothing — which would quietly hand a custom role an
+     * empty panel instead of their own.
+     *
+     * @return list<string>
+     */
+    private function permissionsFor(TenantUser $membership, ?Tenant $tenant): array
+    {
+        return $this->tenantContext->runAs($tenant, fn () => $this->gate->forMembership($membership));
     }
 
     public function logout(Request $request)

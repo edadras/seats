@@ -38,6 +38,28 @@ class Gate
         return in_array($permission, $this->permissions($request), true);
     }
 
+    /**
+     * What one membership holds, without a request to hang it on.
+     *
+     * Sign-in needs this: the answer is wanted before there is an authenticated request to resolve
+     * it from, and working it out a second way there is how the panel and the server end up
+     * disagreeing about what somebody may do.
+     *
+     * @return list<string>
+     */
+    public function forMembership(TenantUser $membership): array
+    {
+        if (Permissions::isBuiltIn($membership->role)) {
+            return Permissions::forRole($membership->role);
+        }
+
+        // A role the organiser made. Unknown means nothing, not everything: a role deleted while
+        // somebody held it must lock them out, never let them in.
+        $role = TenantRole::where('key', $membership->role)->first();
+
+        return $role ? Permissions::sanitise((array) $role->permissions) : [];
+    }
+
     /** @return list<string> */
     private function resolve(Request $request): array
     {
@@ -52,14 +74,6 @@ class Gate
             return [];
         }
 
-        if (Permissions::isBuiltIn($membership->role)) {
-            return Permissions::forRole($membership->role);
-        }
-
-        // A role the organiser made. Unknown means nothing, not everything: a role deleted while
-        // somebody held it must lock them out, never let them in.
-        $role = TenantRole::where('key', $membership->role)->first();
-
-        return $role ? Permissions::sanitise((array) $role->permissions) : [];
+        return $this->forMembership($membership);
     }
 }

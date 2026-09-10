@@ -102,6 +102,9 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware(['auth:sanctum', 'tenant', 'throttle:240,1,panel'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
+        // Who this token belongs to and what it may do: the panel asks on every boot so the screens
+        // it offers are the screens the server will still open.
+        Route::get('auth/me', [AuthController::class, 'me']);
 
         Route::middleware('idempotency')->group(function () {
             Route::post('venues', [VenueController::class, 'store']);

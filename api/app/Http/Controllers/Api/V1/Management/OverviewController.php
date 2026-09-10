@@ -27,7 +27,15 @@ class OverviewController extends Controller
 
     public function index(Request $request)
     {
-        $this->authorize($request, 'events.view');
+        /*
+         * `reports.attendance.view`, not `events.view`.
+         *
+         * Every part of this answer is a house-wide figure — how many nights are on sale, how many
+         * seats the month has taken, how full each of the next five is. Every staff role holds it,
+         * down to a door volunteer. A sales agent does not, and should not: they sell the organiser's
+         * nights without being shown how the organiser's season is going.
+         */
+        $this->authorize($request, 'reports.attendance.view');
 
         $gate = app(Gate::class);
         $maySeeMoney = $gate->allows($request, 'reports.orders.view');

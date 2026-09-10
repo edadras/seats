@@ -30,6 +30,33 @@ abstract class Controller
         }
     }
 
+    /**
+     * Refuse unless the caller holds at least one of these.
+     *
+     * For the handful of screens that answer a narrow question to one caller and a wide one to
+     * another — a list of bookings is the same endpoint whether it is the box office looking at the
+     * house or an agency looking at its own. The *narrowing* is not done here: holding only the
+     * narrow permission gets you past this line and then scoped, which is the controller's own job
+     * and written down where it happens.
+     *
+     * @param  list<string>  $permissions
+     */
+    protected function authorizeAny(Request $request, array $permissions): void
+    {
+        $gate = app(Gate::class);
+
+        foreach ($permissions as $permission) {
+            if ($gate->allows($request, $permission)) {
+                return;
+            }
+        }
+
+        throw ApiException::forbidden(
+            'Your role does not permit that.',
+            'forbidden_permission',
+        );
+    }
+
     protected function paginated(LengthAwarePaginator $paginator, ?callable $map = null): \Illuminate\Http\JsonResponse
     {
         $items = $paginator->getCollection();

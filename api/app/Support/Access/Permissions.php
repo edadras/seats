@@ -40,6 +40,16 @@ final class Permissions
         'tickets.view' => 'boxoffice',
         'tickets.release' => 'boxoffice',
         'orders.view' => 'boxoffice',
+        /*
+         * The same lookup, narrowed to what the holder sold themselves.
+         *
+         * Its own permission rather than a filter inside `orders.view`, because the two are
+         * different authorities and a filter applied *after* a permission check is a filter
+         * somebody eventually forgets. `orders.view` reads the house — and the house includes the
+         * customer directory, the waiting list and every abandoned basket, all of which are screens
+         * an outside agency must never be handed. This one reads their own book and nothing else.
+         */
+        'orders.view.own' => 'boxoffice',
         'orders.refund' => 'boxoffice',
         // Selling at the window, and giving a seat away. Separate from refunding because they are
         // separate jobs: a volunteer on the door can be trusted to hand out comps for tonight
@@ -151,17 +161,20 @@ final class Permissions
         /*
          * Somebody who sells for the organiser without working for them.
          *
-         * Deliberately thin, and thinner than the box office in the two places that matter: no
-         * refunds, because money back is the organiser's decision, and no vouchers, because that
-         * is the organiser's money. What an agent may sell is not in this list at all — it is the
-         * list of events they were given, checked at the moment of sale.
+         * Deliberately thin, and thinner than the box office in the places that matter: no refunds,
+         * because money back is the organiser's decision; no vouchers, because that is the
+         * organiser's money; and `orders.view.own` rather than `orders.view`, because the wide one
+         * also opens the customer directory, the waiting list and the abandoned baskets — the
+         * organiser's audience, which is not what they sold an agency. No `tickets.view` either:
+         * the house's attendee list is the organiser's, and an agency reprints from its own
+         * bookings. What an agent may sell is not in this list at all — it is the list of events
+         * they were given, checked at the moment of sale.
          */
         'agent' => [
             'events.view',
             'venues.view',
             'maps.view',
-            'tickets.view',
-            'orders.view',
+            'orders.view.own',
             'orders.sell',
         ],
 

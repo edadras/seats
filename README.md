@@ -99,7 +99,12 @@ A seat is the start of it, not the end. Around the map:
   each booking, so agreeing a new percentage next season leaves last season alone. An agent gets a
   sign-in of their own, sees only their own bookings and only the nights they were given, and has
   their remaining credit in front of them all afternoon; the organiser gets the account, the ledger
-  and a statement per period.
+  and a statement per period. **An agency is not a member of staff**, so they hold `orders.view.own`
+  rather than `orders.view`: the wide one also opens the customer directory, the waiting list and
+  every abandoned basket, and none of those were sold along with the tickets. The panel is told what
+  the caller holds at sign-in and leaves out what they cannot open — hiding a screen is a courtesy,
+  the refusal is still the server's — so a bureau signs in to ten rows rather than thirty-eight, and
+  the nights they may sell carry no buttons that turn them away.
 - **The hall in three dimensions** — a seating plan is a drawing of the floor, and a floor is not
   what anybody is buying. Four numbers turn one into a room: the height of the stage, the rake of
   each block, the height each block starts at and how deep its platform is. The designer has a
@@ -282,14 +287,20 @@ browser check in `api/smoke.sh`.
 
 ## Who may do what
 
-Six built-in roles — owner, administrator, manager, box office, door staff, viewer — over a closed
-catalogue of named permissions, and an organiser can invent their own for a job their venue
-actually has.
+Seven built-in roles — owner, administrator, manager, box office, door staff, sales agent, viewer —
+over a closed catalogue of named permissions, and an organiser can invent their own for a job their
+venue actually has.
 
 The separation that matters most is money from operations. A door volunteer sees the head count and
 not the takings; the same `/events/{id}/stats` endpoint answers both questions and only answers the
 second to somebody who may hear it. A box office finds a booking, refunds it and puts a seat back on
-sale, and cannot republish the map that seat is on.
+sale, and cannot republish the map that seat is on. A sales agent is not staff at all, so their
+lookup is narrowed to their own book by a permission of its own.
+
+The panel is told what the caller holds — at sign-in, and again from `GET /v1/auth/me` on every boot,
+because a role can be narrowed while somebody has the tab open — and leaves out the screens and the
+buttons they cannot use. That is a courtesy rather than a control: every endpoint refuses on its own,
+and the panel only stops offering doors that would close in somebody's face.
 
 Two rules stop an account destroying itself: nobody changes their own membership — without that,
 every permission check is advice — and an account always keeps at least one owner who is not
@@ -660,6 +671,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The statement bounds the sales and never the balance | `SalesAgentTest`, `agents_smoke` |
 | An agent who has sold something is switched off rather than deleted | `SalesAgentTest` |
 | A comp costs an agent nothing and is still theirs | `SalesAgentTest` |
+| An agency is never handed the organiser's audience | `SalesAgentTest`, `agents_smoke` |
+| The narrow permission shows nothing to somebody who sells for nobody | `SalesAgentTest` |
+| Signing in says what this person may do | `AccessControlTest` |
+| A role narrowed mid-session is the role the panel is told about | `AccessControlTest` |
+| Every permission and every role has a sentence in every language | `AccessControlTest` |
 
 ## Installing the plugin
 

@@ -36,7 +36,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $this->authorize($request, 'orders.view');
+        $this->authorizeAny($request, ['orders.view', 'orders.view.own']);
 
         $data = $request->validate([
             'event_id' => ['nullable', 'uuid'],
@@ -45,17 +45,8 @@ class OrderController extends Controller
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
         ]);
 
-        /*
-         * An agent sees their own bookings and nobody else's.
-         *
-         * `orders.view` is what lets somebody look up a booking they took; it is not a licence to
-         * read the customers of the bureau across town. Applied to the query rather than to the
-         * screen, because a filter that lives in a panel is a filter an API call goes around.
-         */
-        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
-
         $orders = ExternalOrder::query()
-            ->when($agent, fn ($query) => $query->where('sales_agent_id', $agent->id))
+            ->tap($this->onlyWhatTheyMaySee($request))
             ->with(['event:id,name,starts_at,timezone'])
             // One query for the seat counts rather than one per row: a list of fifty orders was
             // fifty extra queries, and with lazy loading off it was fifty errors.
@@ -79,13 +70,11 @@ class OrderController extends Controller
 
     public function show(Request $request, ExternalOrder $order)
     {
-        $this->authorize($request, 'orders.view');
-
-        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+        $this->authorizeAny($request, ['orders.view', 'orders.view.own']);
 
         // Not found rather than forbidden: whether a booking exists is not an agent's business
         // either, and a refusal that distinguishes the two is a way of asking.
-        if ($agent && $order->sales_agent_id !== $agent->id) {
+        if (! $this->maySee($request, $order)) {
             throw ApiException::notFound('That booking cannot be found.', 'unknown_order');
         }
 
@@ -323,6 +312,46 @@ class OrderController extends Controller
     }
 
     /* --------------------------------------------------------------------------- helpers */
+
+    /**
+     * Whose bookings this caller may look at.
+     *
+     * Applied to the query rather than to the screen, because a filter that lives in a panel is a
+     * filter an API call goes around. Two callers come through here: somebody with `orders.view`,
+     * who reads the house, and an agency with `orders.view.own`, which is their own book and
+     * nothing else.
+     *
+     * An agency is scoped even when it somehow holds the wide permission as well — a reseller's
+     * own list is never the house's — and a caller holding only the narrow one while belonging to
+     * no agency sees nothing at all. That last case is the one worth being deliberate about: the
+     * narrow permission must fail closed, or a custom role built out of it becomes the wide one.
+     */
+    private function onlyWhatTheyMaySee(Request $request): \Closure
+    {
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+
+        if ($agent) {
+            return fn ($query) => $query->where('sales_agent_id', $agent->id);
+        }
+
+        if (app(\App\Support\Access\Gate::class)->allows($request, 'orders.view')) {
+            return fn ($query) => $query;
+        }
+
+        return fn ($query) => $query->whereRaw('1 = 0');
+    }
+
+    /** The same question about one booking. */
+    private function maySee(Request $request, ExternalOrder $order): bool
+    {
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+
+        if ($agent) {
+            return $order->sales_agent_id === $agent->id;
+        }
+
+        return app(\App\Support\Access\Gate::class)->allows($request, 'orders.view');
+    }
 
     private function row(ExternalOrder $order): array
     {

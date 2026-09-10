@@ -23,7 +23,18 @@ class PaymentPlanController extends Controller
     /** Where one booking stands. */
     public function show(Request $request, ExternalOrder $order)
     {
-        $this->authorize($request, 'orders.view');
+        $this->authorizeAny($request, ['orders.view', 'orders.view.own']);
+
+        /*
+         * An agency can agree a plan at its own window, so it can read the one it agreed — and no
+         * other. Not found rather than forbidden, for the same reason the orders screen answers
+         * that way: whether somebody else's booking exists is not their business either.
+         */
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+
+        if ($agent && $order->sales_agent_id !== $agent->id) {
+            throw \App\Exceptions\ApiException::notFound('That booking cannot be found.', 'unknown_order');
+        }
 
         return response()->json($this->plans->state($order));
     }

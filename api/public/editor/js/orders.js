@@ -320,20 +320,28 @@
 					? '<button class="btn" id="order-print">' + icon( 'printer', { size: 15 } ) +
 						esc( App.t( 'panel.printing.tickets' ) ) + '</button>'
 					: '' ) +
-				( open.length && ( 'confirmed' === order.status || 'partially_refunded' === order.status )
-					? '<button class="btn btn--danger" id="order-refund">' +
-						esc( App.t( 'panel.orders.refund' ) ) + '</button>'
-					: '' ) +
-				( 'pending' === order.status
-					? '<button class="btn btn--danger" id="order-cancel">' +
-						esc( App.t( 'panel.orders.cancel' ) ) + '</button>'
-					: '' ) +
-				// The bank taking the money back, which is not a refund and must not be recorded
-				// as one: the settlement has to be able to tell what was given from what was taken.
-				( 'confirmed' === order.status || 'partially_refunded' === order.status
-					? '<button class="btn btn--danger" id="order-chargeback">' +
-						esc( App.t( 'panel.orders.chargeback' ) ) + '</button>'
-					: '' ),
+				/*
+				 * The three that move money back all take `orders.refund`, which an agency selling
+				 * over its own counter does not hold: money back is the organiser's decision. So
+				 * they are not offered rather than offered and refused — the booking is still
+				 * theirs to look at.
+				 */
+				( App.may( 'orders.refund' ) ? (
+					( open.length && ( 'confirmed' === order.status || 'partially_refunded' === order.status )
+						? '<button class="btn btn--danger" id="order-refund">' +
+							esc( App.t( 'panel.orders.refund' ) ) + '</button>'
+						: '' ) +
+					( 'pending' === order.status
+						? '<button class="btn btn--danger" id="order-cancel">' +
+							esc( App.t( 'panel.orders.cancel' ) ) + '</button>'
+						: '' ) +
+					// The bank taking the money back, which is not a refund and must not be recorded
+					// as one: the settlement has to be able to tell what was given from what was taken.
+					( 'confirmed' === order.status || 'partially_refunded' === order.status
+						? '<button class="btn btn--danger" id="order-chargeback">' +
+							esc( App.t( 'panel.orders.chargeback' ) ) + '</button>'
+						: '' )
+				) : '' ),
 			body:
 				'<div class="stat-strip">' +
 					tile( App.t( 'panel.orders.total' ), App.money( order.total_amount, order.currency ),

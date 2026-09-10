@@ -284,6 +284,115 @@ class AccessControlTest extends TestCase
     }
 
     #[Test]
+    public function every_permission_and_every_role_has_a_sentence_in_every_language(): void
+    {
+        /*
+         * The role editor lists permissions by label and falls back to the key when there is none,
+         * so a permission added without one does not break anything — it just turns up in front of
+         * an organiser as `orders.view.own`, which is not English, let alone Persian. Six locales
+         * and one closed list, so this is checkable rather than noticeable.
+         */
+        foreach (['en', 'fa', 'ar', 'de', 'fr', 'it'] as $locale) {
+            $labels = (array) trans('team.permissions', [], $locale);
+            $roles = (array) trans('team.roles', [], $locale);
+            $descriptions = (array) trans('team.roleDescriptions', [], $locale);
+
+            foreach (Permissions::keys() as $permission) {
+                $this->assertArrayHasKey(
+                    $permission,
+                    $labels,
+                    "{$locale} has no label for the permission {$permission}",
+                );
+            }
+
+            foreach (array_merge(['owner'], array_keys(Permissions::ROLES)) as $role) {
+                $this->assertArrayHasKey($role, $roles, "{$locale} has no name for the role {$role}");
+                $this->assertArrayHasKey(
+                    $role,
+                    $descriptions,
+                    "{$locale} does not say what the role {$role} is for",
+                );
+            }
+        }
+    }
+
+    #[Test]
+    public function signing_in_says_what_this_person_may_do(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $staff = $this->makeUser($fixture['tenant'], 'box_office');
+        $staff->forceFill(['password' => bcrypt('correct-horse-battery')])->save();
+
+        $signedIn = $this->postJson('/v1/auth/login', [
+            'email' => $staff->email,
+            'password' => 'correct-horse-battery',
+        ])->assertOk();
+
+        /*
+         * The panel builds its nav from this. It is not the check — the check is on every endpoint
+         * — but a nav built from anything else is a nav that offers screens the server refuses, and
+         * that is what an external agency meets on their first morning.
+         */
+        $permissions = $signedIn->json('permissions');
+
+        $this->assertContains('orders.refund', $permissions);
+        $this->assertNotContains('agents.manage', $permissions);
+        $this->assertNotContains('maps.publish', $permissions);
+        $this->assertSame(Permissions::forRole('box_office'), $permissions);
+    }
+
+    #[Test]
+    public function a_role_narrowed_mid_session_is_the_role_the_panel_is_told_about(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $member = $this->makeUser($fixture['tenant'], 'manager');
+
+        $first = $this->asMember($member)->getJson('/v1/auth/me')->assertOk();
+        $this->assertContains('agents.manage', $first->json('permissions'));
+        $this->assertSame('manager', $first->json('role'));
+
+        // The same token, after somebody downstairs was moved off the management of agents. The
+        // panel asks again on every boot for exactly this: a tab open since yesterday must not keep
+        // offering a screen that has since been taken away.
+        app(TenantContext::class)->runAs(
+            $fixture['tenant'],
+            fn () => TenantUser::where('user_id', $member->id)->update(['role' => 'door'])
+        );
+
+        $again = $this->asMember($member)->getJson('/v1/auth/me')->assertOk();
+
+        $this->assertSame('door', $again->json('role'));
+        $this->assertNotContains('agents.manage', $again->json('permissions'));
+        $this->assertContains('checkins.view', $again->json('permissions'));
+    }
+
+    #[Test]
+    public function an_agent_is_not_shown_how_the_organisers_season_is_going(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $agent = $this->makeUser($fixture['tenant'], 'agent');
+
+        $permissions = $this->asMember($agent)->getJson('/v1/auth/me')->assertOk()->json('permissions');
+
+        $this->assertSame(Permissions::forRole('agent'), $permissions);
+        $this->assertContains('orders.sell', $permissions);
+        $this->assertNotContains('reports.attendance.view', $permissions);
+        $this->assertNotContains('orders.refund', $permissions);
+        $this->assertNotContains('vouchers.manage', $permissions);
+
+        /*
+         * The first screen is every house-wide figure there is: nights on sale, seats the month has
+         * taken, how full each of the next five is. A shop selling the organiser's tickets has no
+         * business with any of it, and the screen they are never offered is also the screen they
+         * cannot reach by typing its name.
+         */
+        $this->asMember($agent)->getJson('/v1/overview')->assertForbidden();
+
+        // What they are there for still answers.
+        $this->asMember($agent)->getJson('/v1/events')->assertOk();
+    }
+
+    #[Test]
     public function the_audit_log_records_what_changed_and_not_only_that_something_did(): void
     {
         $fixture = $this->makeSellableEvent();

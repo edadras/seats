@@ -191,6 +191,14 @@ class SalesAgentController extends Controller
             'password' => \Illuminate\Support\Facades\Hash::make($password),
         ]);
 
+        /*
+         * Verified as it is made, because the organiser is the one who typed the address and the
+         * password goes to them to pass on. Left unverified, the panel would greet the agency with
+         * a bar saying a six-digit code had been sent — and none had, because this account was
+         * never signed up for. A promise nobody kept is worse than no bar.
+         */
+        $user->forceFill(['email_verified_at' => now()])->save();
+
         \App\Models\TenantUser::create([
             'tenant_id' => $agent->tenant_id,
             'user_id' => $user->id,

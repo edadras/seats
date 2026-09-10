@@ -246,6 +246,55 @@ class SalesAgentTest extends TestCase
     }
 
     #[Test]
+    public function an_agency_is_not_handed_the_organisers_audience(): void
+    {
+        $night = $this->makeSellableEvent(rows: 3, perRow: 6, amount: 2500);
+        $mine = $this->agentFor($night, ['credit_limit' => 100000]);
+
+        $this->sale($night, $mine)->assertCreated();
+
+        /*
+         * The reason `orders.view.own` exists at all.
+         *
+         * `orders.view` is not only the bookings screen: the customer directory, the waiting list
+         * and every abandoned basket are behind the same permission, because for the organiser's own
+         * box office they are all the same authority. For a shop across town they are not — that is
+         * the organiser's audience, and selling an agency tickets is not selling them the list of
+         * who bought.
+         */
+        $this->asMember($mine['user'])->getJson('/v1/customers')->assertForbidden();
+        $this->asMember($mine['user'])->getJson('/v1/events/'.$night['event']->id.'/waiting-list')->assertForbidden();
+        $this->asMember($mine['user'])->getJson('/v1/baskets')->assertForbidden();
+        $this->asMember($mine['user'])->getJson('/v1/instalments')->assertForbidden();
+
+        // Nor the house's attendee list, which is what `tickets.view` is.
+        $this->asMember($mine['user'])->getJson('/v1/tickets?event_id='.$night['event']->id)->assertForbidden();
+
+        // What they sold is theirs, and still answers.
+        $this->asMember($mine['user'])->getJson('/v1/orders')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    #[Test]
+    public function the_narrow_permission_shows_nothing_to_somebody_who_sells_for_nobody(): void
+    {
+        $night = $this->makeSellableEvent(rows: 3, perRow: 6, amount: 2500);
+        $mine = $this->agentFor($night, ['credit_limit' => 100000]);
+
+        $sold = $this->sale($night, $mine)->assertCreated()->json();
+
+        // A role built out of the narrow permission, held by somebody who is not an agency at all.
+        $stranger = $this->makeUser($night['tenant'], 'agent');
+
+        /*
+         * Nothing, rather than everything. `orders.view.own` answers "what did *you* sell", and for
+         * somebody who sells for nobody the honest answer is an empty list — a permission that fails
+         * open is how a narrow role quietly becomes the wide one.
+         */
+        $this->asMember($stranger)->getJson('/v1/orders')->assertOk()->assertJsonCount(0, 'data');
+        $this->asMember($stranger)->getJson('/v1/orders/'.$sold['id'])->assertNotFound();
+    }
+
+    #[Test]
     public function the_owner_grants_credit_and_the_agent_reads_their_own_account(): void
     {
         $night = $this->makeSellableEvent(rows: 3, perRow: 6, amount: 2500);

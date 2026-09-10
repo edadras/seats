@@ -101,6 +101,16 @@ paths:
                 properties:
                   token: { type: string }
                   tenant: { $ref: "#/components/schemas/Tenant" }
+                  role: { type: [string, "null"] }
+                  permissions:
+                    type: array
+                    description: >
+                      What this membership may do. The panel uses it to leave out the screens that
+                      would refuse; it is a copy of what the server checks, never the check itself.
+                    items: { type: string }
+                  email_verified: { type: boolean }
+                  two_factor: { type: boolean }
+                  must_set_up_two_factor: { type: boolean }
         "422": { $ref: "#/components/responses/ValidationError" }
         "429": { $ref: "#/components/responses/RateLimited" }
 
@@ -111,6 +121,34 @@ paths:
       summary: Revoke the current token
       responses:
         "204": { description: Revoked }
+
+  /auth/me:
+    get:
+      operationId: me
+      tags: [Auth]
+      summary: Who is holding this token, and what it may do
+      description: >
+        Asked on every panel boot rather than trusting what was stored at sign-in: a role can be
+        narrowed while somebody has the tab open, and a screen offered after that is a screen that
+        refuses when they reach it.
+      responses:
+        "200":
+          description: The caller
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string, format: email }
+                  name: { type: [string, "null"] }
+                  tenant: { $ref: "#/components/schemas/Tenant" }
+                  role: { type: [string, "null"] }
+                  permissions:
+                    type: array
+                    items: { type: string }
+                  email_verified: { type: boolean }
+                  two_factor: { type: boolean }
+                  must_set_up_two_factor: { type: boolean }
 
   /venues:
     get:
@@ -1782,6 +1820,9 @@ paths:
                 properties:
                   token: { type: string }
                   role: { type: [string, "null"] }
+                  permissions:
+                    type: array
+                    items: { type: string }
                   two_factor: { type: boolean }
         "401":
           description: Wrong code, or a challenge that has been spent or has expired
