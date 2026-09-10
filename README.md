@@ -85,6 +85,17 @@ A seat is the start of it, not the end. Around the map:
   has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
   carry a date that lifts it without anybody acting, and is checked where a booking is registered so
   the refusal arrives before the money — with a sentence, not a silent failure.
+- **Productions: one show across many venues** — a run in one building was always a list of dates; a
+  tour is a list of places. The production carries what an audience recognises — the name, the
+  poster and the sentence that says what this is — and every night that says nothing of its own
+  shows it, so twelve towns are not twelve copies of one paragraph; a night with something of its
+  own to say still wins. Adding a date somewhere else is a copy that knows it is going somewhere
+  else: the concessions, the fee and the tax travel, the prices travel only for the categories the
+  new chart actually has, and nothing about a room does — the two seats behind the pillar are the
+  pillar in the other building. It arrives as a draft in the venue's own clock, because going on
+  sale is a decision about a town. The run adds itself up across its cities on every read, with the
+  takings withheld as null rather than nought from anybody who may not see money, and the public
+  page lists the other dates with the town beside them.
 - **Group bookings, deposits and payment plans** — a school, a coach party or a company night out
   asks for forty seats now and pays for them by a date somebody agreed on the telephone. The plan is
   rows rather than a formula, because what gets chased is a date and an amount, and a date moved
@@ -599,6 +610,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A date can be moved and an amount cannot quietly change the total | `PaymentPlanTest` |
 | Reading a plan is not being able to take money for one | `PaymentPlanTest` |
 | The party's name reaches the door, not just the person who signed | `PaymentPlanTest`, `plans_smoke` |
+| A tour date copies the show and nothing about the room | `ProductionTest`, `productions_smoke` |
+| A price for a category the new hall has never heard of is left behind | `ProductionTest`, `productions_smoke` |
+| A chart from another building, or one never published, is refused | `ProductionTest` |
+| A night shows the production's words until it has its own | `ProductionTest` |
+| The run adds up across its towns, and the takings are withheld from who may not see them | `ProductionTest` |
+| A production with dates is not deleted by accident | `ProductionTest` |
+| The other dates of a tour say which town they are in | `ProductionTest`, `productions_smoke` |
 
 ## Installing the plugin
 

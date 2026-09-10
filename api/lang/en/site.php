@@ -114,6 +114,7 @@ return [
     'soldOut' => 'Sold out',
     'otherDates' => 'Other dates',
     'moreDates' => 'One more date|:count more dates',
+    'inTowns' => 'in one town|in :count towns',
     'doorsOpen' => 'Doors open at :time',
     'eventDate' => ':date at :time',
 

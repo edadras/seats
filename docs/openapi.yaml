@@ -482,6 +482,197 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /productions:
+    get:
+      operationId: listProductions
+      tags: [Events]
+      summary: One show, however many nights and however many towns
+      description: >
+        A production is a way of looking at events, so reading one takes what reading an event
+        takes. Money is `reports.orders.view` and is withheld as null rather than as nought: nought
+        is a figure, and a figure somebody may not see should not be guessable from a screen.
+
+
+        Every total is counted from the nights at the moment of reading. A production that stored
+        its own figures would be a second opinion about the same tickets.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The productions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Production" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createProduction
+      tags: [Events]
+      summary: Start a production
+      description: >
+        The production carries what an audience recognises — the name, the poster and the sentence
+        that says what this is — and nothing else. What a night costs and where people sit belongs
+        to the night, so one performance can be repriced or cancelled without touching the rest of
+        the run, and the hall in Glasgow can have a different chart from the one in Leeds.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 200 }
+                description:
+                  type: [string, "null"]
+                  maxLength: 4000
+                  description: Shown by any night that says nothing of its own.
+                image_url: { type: [string, "null"], maxLength: 500 }
+                category: { type: [string, "null"], maxLength: 60 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Production" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /productions/{production}:
+    parameters:
+      - { name: production, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: showProduction
+      tags: [Events]
+      summary: A production, its dates and how the run is selling
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The production
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Production"
+                  - type: object
+                    properties:
+                      dates:
+                        type: array
+                        items: { $ref: "#/components/schemas/ProductionDate" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateProduction
+      tags: [Events]
+      summary: Rename a production, or change what it says about itself
+      description: >
+        The slug is the address of the run's page and is left alone by a rename: a poster with a
+        link on it is printed once.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+                description: { type: [string, "null"], maxLength: 4000 }
+                image_url: { type: [string, "null"], maxLength: 500 }
+                category: { type: [string, "null"], maxLength: 60 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Production" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteProduction
+      tags: [Events]
+      summary: Delete a production that has no dates
+      description: >
+        Refused with `production_has_dates` while any night still belongs to it: deleting the run
+        would silently orphan a tour somebody is selling.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /productions/{production}/dates:
+    parameters:
+      - { name: production, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: addProductionDate
+      tags: [Events]
+      summary: Put the same show on somewhere else
+      description: >
+        A stop is a copy that knows it is going somewhere else. It carries what describes the show
+        — the concessions, the booking fee, the tax, and the prices whose categories exist in the
+        new chart — and nothing that describes a room: repeating a night in the same hall copies
+        the two blocked seats behind the pillar, and the pillar is somewhere else in Glasgow.
+
+
+        A price for a category the new chart has never heard of is left behind rather than copied:
+        it would be a row nobody can sell and somebody has to notice.
+
+
+        The night copied from defaults to the most recent date of the run — the one whose prices
+        somebody last thought about. The new date starts as a draft and takes the venue's own
+        timezone, because half past seven in Glasgow is half past seven in Glasgow.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [venue_id, seat_map_id, starts_at]
+              properties:
+                venue_id: { type: string, format: uuid }
+                seat_map_id:
+                  type: string
+                  format: uuid
+                  description: >
+                    Must belong to that venue and have a published version — refused with
+                    `map_not_at_venue` or `map_not_published` otherwise.
+                starts_at: { type: string, format: date-time }
+                from_event_id: { type: [string, "null"], format: uuid }
+      responses:
+        "201":
+          description: The new date, as a draft
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  public_id: { type: string }
+                  name: { type: string }
+                  status: { type: string, example: draft }
+                  starts_at: { type: string, format: date-time }
+                  venue_id: { type: string, format: uuid }
+                  seat_map_id: { type: string, format: uuid }
+                  timezone: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /orders/{order}/payment-plan:
     parameters:
       - { name: order, in: path, required: true, schema: { type: string, format: uuid } }
@@ -7667,6 +7858,49 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    Production:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: [string, "null"] }
+        image_url: { type: [string, "null"] }
+        category: { type: [string, "null"] }
+        venues: { type: integer }
+        cities: { type: integer }
+        next_date: { type: [string, "null"], format: date-time }
+        next_city: { type: [string, "null"] }
+        totals:
+          type: object
+          properties:
+            dates: { type: integer }
+            capacity: { type: integer }
+            sold: { type: integer }
+            available: { type: integer }
+            revenue:
+              type: [integer, "null"]
+              description: >
+                Null where the caller may not see money. Not nought — a figure somebody is not
+                allowed to see should not be guessable from a screen.
+    ProductionDate:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        public_id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [draft, published, closed, cancelled] }
+        starts_at: { type: [string, "null"], format: date-time }
+        timezone: { type: [string, "null"] }
+        currency: { type: [string, "null"] }
+        venue: { type: [string, "null"] }
+        city: { type: [string, "null"] }
+        country: { type: [string, "null"] }
+        capacity: { type: integer }
+        available: { type: integer }
+        sold: { type: integer }
+        revenue: { type: [integer, "null"] }
+        cancelled_at: { type: [string, "null"], format: date-time }
     PaymentPlan:
       type: object
       description: >

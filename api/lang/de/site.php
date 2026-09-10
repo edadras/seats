@@ -111,6 +111,7 @@ return [
     'soldOut' => 'Ausverkauft',
     'otherDates' => 'Weitere Termine',
     'moreDates' => 'Ein weiterer Termin|:count weitere Termine',
+    'inTowns' => 'in einer Stadt|in :count Städten',
     'doorsOpen' => 'Einlass ab :time',
     'eventDate' => ':date um :time',
 

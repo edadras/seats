@@ -110,6 +110,7 @@ return [
     'soldOut' => 'Esaurito',
     'otherDates' => 'Altre date',
     'moreDates' => 'Un’altra data|Altre :count date',
+    'inTowns' => 'in una città|in :count città',
     'doorsOpen' => 'Apertura porte alle :time',
     'eventDate' => ':date alle :time',
 

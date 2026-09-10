@@ -993,6 +993,22 @@ hr { border: none; }
 
 .dates__link:hover { border-color: var(--accent); }
 .dates__state { font-size: 0.85rem; color: var(--text-muted); }
+
+/*
+ * Where, on a run that moves.
+ *
+ * Given the middle of the row and allowed to shrink: on a run in one building it is one repeated
+ * line and should not shout, and on a tour it is the half of the row somebody is reading for.
+ */
+.dates__where {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 .dates__item--gone .dates__link { opacity: 0.55; }
 
 /* "and four more nights", on the card rather than as four more cards. */

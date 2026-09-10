@@ -110,6 +110,7 @@ return [
     'soldOut' => 'تمام شد',
     'otherDates' => 'تاریخ‌های دیگر',
     'moreDates' => 'یک تاریخ دیگر|:count تاریخ دیگر',
+    'inTowns' => 'در یک شهر|در :count شهر',
     'doorsOpen' => 'درها ساعت :time باز می‌شود',
     'eventDate' => ':date ساعت :time',
 

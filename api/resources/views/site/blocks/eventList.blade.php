@@ -86,7 +86,7 @@
                             @if (! empty($event['more_dates']))
                                 {{-- A three-week run is one thing to decide about, not twenty-one
                                      identical cards. The rest of the nights are on its own page. --}}
-                                <p class="event-card__run">{{ trans_choice('site.moreDates', $event['more_dates'], ['count' => \App\Support\Locale\Money::number($event['more_dates'])]) }}</p>
+                                <p class="event-card__run">{{ trans_choice('site.moreDates', $event['more_dates'], ['count' => \App\Support\Locale\Money::number($event['more_dates'])]) }}@if (($event['towns'] ?? 1) > 1) · {{ trans_choice('site.inTowns', $event['towns'], ['count' => \App\Support\Locale\Money::number($event['towns'])]) }}@endif</p>
                             @endif
                         </div>
 

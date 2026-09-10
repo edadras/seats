@@ -89,7 +89,7 @@ class SitePageController extends Controller
             'canonical' => $site->url('/events/'.$event->public_id),
             // What a link to this page looks like when it is pasted into a message. Without it,
             // an event with a poster shares as a grey rectangle.
-            'image' => Themes::url($event->image_url),
+            'image' => Themes::url($event->posterFor()),
             // What a search engine is told, in the vocabulary it reads. A listing that shows the
             // date and the price is the difference between being found and being scrolled past.
             'jsonld' => $this->structuredData($site, $event),
@@ -165,7 +165,7 @@ class SitePageController extends Controller
             $data['description'] = Str::limit((string) $event->descriptionFor(), 500);
         }
 
-        if ($image = Themes::url($event->image_url)) {
+        if ($image = Themes::url($event->posterFor())) {
             $data['image'] = [$image];
         }
 
@@ -306,6 +306,17 @@ class SitePageController extends Controller
          */
         $runs = $events->whereNotNull('series_id')->groupBy('series_id')->map->count();
 
+        /*
+         * And how many towns those nights are in.
+         *
+         * A run in one building is a date question — "which night can I come" — and a tour is a
+         * geography question first: somebody in Leeds wants to know it is coming to Leeds before
+         * they care which Tuesday.
+         */
+        $towns = $events->whereNotNull('series_id')->groupBy('series_id')->map(
+            fn ($run) => $run->map(fn (Event $event) => $event->venue?->city)->filter()->unique()->count()
+        );
+
         $events = $events
             ->unique(fn (Event $event) => $event->series_id ? 'series:'.$event->series_id : $event->id)
             ->take($limit)
@@ -313,7 +324,7 @@ class SitePageController extends Controller
 
         $locale = app()->getLocale();
 
-        return $events->map(function (Event $event) use ($site, $locale, $runs) {
+        return $events->map(function (Event $event) use ($site, $locale, $runs, $towns) {
             $starts = $event->starts_at?->setTimezone($event->timezone ?: $site->timezone);
             $summary = $this->availability->summaryForEvent($event);
             $cheapest = $event->priceZones->min('amount');
@@ -322,7 +333,7 @@ class SitePageController extends Controller
                 'name' => $event->nameFor(),
                 'url' => '/events/'.$event->public_id,
                 'starts_at_iso' => $event->starts_at?->toIso8601String(),
-                'image' => Themes::url($event->image_url),
+                'image' => Themes::url($event->posterFor()),
                 'category' => $event->categoryFor(),
             ] + $this->cover($event->nameFor()) + [
                 // Dates, not format(): `D j M` prints "Tue 29 Sep" in every language, which is the
@@ -336,6 +347,9 @@ class SitePageController extends Controller
                 'sold_out' => 0 === (int) ($summary['available'] ?? 0),
                 // "and four more nights", said once on the card rather than as four more cards.
                 'more_dates' => max(0, (int) ($runs[$event->series_id] ?? 1) - 1),
+                // Said only where it is true: on a run that never leaves the building this is one,
+                // and "in 1 town" is a sentence nobody needs to read.
+                'towns' => (int) ($towns[$event->series_id] ?? 1),
             ];
         })->all();
     }
@@ -400,7 +414,7 @@ class SitePageController extends Controller
             'name' => $event->nameFor(),
             'description' => $event->descriptionFor(),
             'category' => $event->categoryFor(),
-            'image' => Themes::url($event->image_url),
+            'image' => Themes::url($event->posterFor()),
             'venue' => $event->venue?->name,
             'long_when' => Dates::longWhen($starts),
             'day' => Dates::day($starts, app()->getLocale()),
@@ -508,7 +522,8 @@ class SitePageController extends Controller
 
         $locale = app()->getLocale();
 
-        return Event::where('series_id', $event->series_id)
+        return Event::with('venue')
+            ->where('series_id', $event->series_id)
             ->whereKeyNot($event->id)
             ->where('status', 'published')
             ->whereNotNull('seat_map_version_id')
@@ -526,6 +541,10 @@ class SitePageController extends Controller
                     'day' => Dates::day($starts, $locale),
                     'month' => Dates::month($starts, $locale),
                     'time' => Dates::shortWhen($starts, $locale),
+                    // Where, as well as when. A tour moves: "Sun 4 Oct" tells somebody in
+                    // Manchester nothing about whether that night is anywhere near them.
+                    'venue' => $other->venue?->name,
+                    'city' => $other->venue?->city,
                     'sold_out' => 0 === (int) ($summary['available'] ?? 0),
                 ];
             })

@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
- * A production that runs for more than one night.
+ * A production: one show, however many nights and however many towns.
  *
- * Deliberately thin: a name and a grouping. Everything that decides what a night costs and where
- * people sit belongs to the night, so one performance can be repriced or cancelled without
- * touching the rest of the run.
+ * It carries what an audience recognises — the name, the picture and the sentence that says what
+ * this is — and nothing else. Everything that decides what a night costs and where people sit
+ * belongs to the night, so one performance can be repriced, sold out or cancelled without touching
+ * the rest of the run, and a hall in Glasgow can have a different chart from the one in Leeds.
  */
 class EventSeries extends Model
 {
@@ -20,7 +21,9 @@ class EventSeries extends Model
 
     protected $table = 'event_series';
 
-    protected $fillable = ['tenant_id', 'name', 'slug'];
+    protected $fillable = [
+        'tenant_id', 'name', 'slug', 'description', 'image_url', 'category',
+    ];
 
     public function events()
     {

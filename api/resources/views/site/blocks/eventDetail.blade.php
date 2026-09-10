@@ -340,6 +340,13 @@
                     <li class="dates__item @if ($date['sold_out']) dates__item--gone @endif">
                         <a class="dates__link" href="{{ $date['url'] }}">
                             <span class="dates__when">{{ $date['when'] }}</span>
+                            {{-- Where, on a run that moves. A tour date with no town on it is a
+                                 date somebody has to click to find out about. --}}
+                            @if (! empty($date['city']) || ! empty($date['venue']))
+                                <span class="dates__where">
+                                    {{ $date['venue'] }}@if (! empty($date['city']) && $date['city'] !== $date['venue']) · {{ $date['city'] }}@endif
+                                </span>
+                            @endif
                             <span class="dates__state">
                                 {{ $date['sold_out'] ? __('site.soldOut') : __('site.book') }}
                             </span>

@@ -110,6 +110,7 @@ return [
     'soldOut' => 'نفدت التذاكر',
     'otherDates' => 'مواعيد أخرى',
     'moreDates' => 'موعد آخر|:count مواعيد أخرى',
+    'inTowns' => 'في مدينة واحدة|في :count مدن',
     'doorsOpen' => 'تُفتح الأبواب في :time',
     'eventDate' => ':date في :time',
 

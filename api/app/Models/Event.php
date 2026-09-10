@@ -133,9 +133,41 @@ class Event extends Model
         return $this->translated('name', $locale) ?: (string) $this->name;
     }
 
+    /**
+     * What this night is about, and — where it says nothing of its own — what the production is.
+     *
+     * A tour is the same show in twelve towns, and twelve copies of one paragraph is twelve places
+     * to forget to change it. A night that has something of its own to say still wins: the last
+     * performance of a run is sometimes a different evening from the first.
+     */
     public function descriptionFor(?string $locale = null): ?string
     {
-        return $this->translated('description', $locale) ?: $this->description;
+        return $this->translated('description', $locale)
+            ?: ($this->description ?: $this->production()?->description);
+    }
+
+    /** The poster: this night's, or the production's. */
+    public function posterFor(): ?string
+    {
+        return $this->image_url ?: $this->production()?->image_url;
+    }
+
+    /**
+     * The run this night belongs to, loaded rather than lazily reached for.
+     *
+     * Lazy loading is off across the platform, and an undeclared read would be a silent null here
+     * — which would show as a page that mysteriously has no poster. Eager-loaded callers pay
+     * nothing; the rest pay one query for a row they are about to render.
+     */
+    private function production(): ?EventSeries
+    {
+        if (! $this->series_id) {
+            return null;
+        }
+
+        $this->loadMissing('series');
+
+        return $this->series;
     }
 
     /**
@@ -145,7 +177,8 @@ class Event extends Model
      */
     public function categoryFor(?string $locale = null): ?string
     {
-        return $this->translated('category', $locale) ?: $this->category;
+        return $this->translated('category', $locale)
+            ?: ($this->category ?: $this->production()?->category);
     }
 
     /** Which languages this event has actually been written in, original included. */

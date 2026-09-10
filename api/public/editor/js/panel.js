@@ -32,6 +32,7 @@
 		{ group: null, items: [ { key: 'overview', icon: 'grid' } ] },
 		{ group: 'programme', items: [
 			{ key: 'events', icon: 'calendar' },
+			{ key: 'productions', icon: 'map' },
 			{ key: 'counter', icon: 'ticket' },
 			{ key: 'tills', icon: 'wallet' },
 			{ key: 'orders', icon: 'file' },
@@ -634,6 +635,7 @@
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
 			case 'seasons': return window.SeatmapSeasons.render( this );
+			case 'productions': return window.SeatmapProductions.render( this );
 			case 'events': return this.renderEvents();
 			default: return this.renderOverview();
 		}

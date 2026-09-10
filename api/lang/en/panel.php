@@ -24,6 +24,7 @@ return [
         'overview' => 'Overview',
         'sections' => 'Sections',
         'events' => 'Events',
+        'productions' => 'Productions',
         'counter' => 'The counter',
         'tills' => 'The till',
         'orders' => 'Orders',
@@ -1036,6 +1037,49 @@ return [
         'groupName' => 'Party or group',
         'groupHint' => 'A school, a coach party, a company. Shown on the door list instead of the name that signed for it.',
         'tillReason' => 'Instalment on',
+    ],
+
+    /*
+     | One show, in twelve towns.
+     |
+     | The words here lean on place rather than date, because that is what changes on a tour and
+     | what an organiser is looking for when they open this screen.
+     */
+    'productions' => [
+        'subtitle' => 'One show, however many nights and however many towns. The description and the poster live here; what a night costs and where people sit lives on the night.',
+        'add' => 'New production',
+        'added' => 'Production created.',
+        'saved' => 'Saved.',
+        'all' => 'All productions',
+        'open' => 'Open',
+        'name' => 'Production',
+        'category' => 'Category',
+        'image' => 'Poster',
+        'imageHint' => 'Used by any night that has no picture of its own.',
+        'description' => 'About the show',
+        'descriptionHint' => 'Shown on every night that says nothing of its own, so twelve towns are not twelve copies of one paragraph.',
+        'noDescription' => 'No description yet.',
+        'dates' => 'Dates',
+        'towns' => 'Towns',
+        'inTowns' => 'in :count towns',
+        'next' => 'Next',
+        'sold' => 'Sold',
+        'ofCapacity' => 'of :count places',
+        'available' => 'Still on sale',
+        'takings' => 'Takings',
+        'when' => 'When',
+        'where' => 'Where',
+        'venue' => 'Venue',
+        'map' => 'Seating chart',
+        'noMap' => 'No published chart in this building',
+        'addDate' => 'Add a date',
+        'addDateBody' => 'The same show somewhere else. The prices, concessions, fee and tax are copied from the most recent date; the prices are copied only for the categories this chart has. It starts as a draft — going on sale is a decision about a town.',
+        'copyFrom' => 'Copy from',
+        'copyLatest' => 'The most recent date of this run',
+        'dateAdded' => 'Date added, as a draft.',
+        'needsWhenAndWhere' => 'Say when it is, and in which chart.',
+        'noDates' => 'No dates yet.',
+        'none' => 'No productions yet. Repeating an event, or adding a date here, starts one.',
     ],
 
     'printing' => [
