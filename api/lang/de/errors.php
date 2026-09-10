@@ -1,64 +1,107 @@
 <?php
 
 /**
- * Jede Meldung, die die API ausgibt, wenn sie etwas ablehnt.
+ * Every message the API gives a person when it refuses.
  *
- * Der `code` neben diesen Meldungen wird nicht übersetzt und wird es nie: Programme lesen den Code,
- * Menschen lesen die Meldung.
+ * These were English literals at the call sites until ADR-0005. They are here now for the same
+ * reason every other string is: a buyer whose seat was taken while they were choosing should read
+ * that sentence in their own language, and that sentence is the one they are most likely to read.
+ *
+ * The `code` beside each of these is *not* translated and never will be. A client parses the code;
+ * a person reads the message. Translating a code would break every integration at once.
  */
 return [
-    // --- Anmeldung und Berechtigung ---------------------------------------------------------
+    // --- Authentication and authorisation ---------------------------------------------------
     'unauthenticated' => 'Bitte melden Sie sich an.',
     'invalid_credentials' => 'E-Mail-Adresse und Passwort passen nicht zusammen.',
     'forbidden' => 'Ihre Rolle erlaubt keine Änderungen an diesem Konto.',
     'forbidden_permission' => 'Ihnen fehlt die Berechtigung :permission.',
     'tenant_suspended' => 'Dieses Konto ist gesperrt. Bitte wenden Sie sich an uns.',
     'not_found' => 'Nicht gefunden.',
+    'challenge_expired' => 'Das hat zu lange gedauert. Bitte melden Sie sich erneut an.',
+    'invalid_code' => 'Dieser Code stimmt nicht. Versuchen Sie den nächsten.',
+    'two_factor_off' => 'Die Anmeldung in zwei Schritten ist nicht eingeschaltet.',
+    'two_factor_required' => 'Dieses Konto verlangt die Anmeldung in zwei Schritten; sie lässt sich nicht abschalten.',
+    'set_up_yours_first' => 'Richten Sie die Anmeldung in zwei Schritten erst für Ihr eigenes Konto ein, bevor Sie sie allen vorschreiben.',
+    'signin_not_configured' => 'Dieser Plattform wurden keine Google-Zugangsdaten gegeben, also können Käufer sich noch nicht anmelden.',
 
-    // --- Signatur, Wiedereinreichung und Idempotenz -----------------------------------------
+    // --- Signing, replay and idempotency ----------------------------------------------------
     'invalid_signature' => 'Die Signatur der Anfrage stimmt nicht.',
-    'signature_expired' => 'Der Zeitstempel liegt außerhalb des erlaubten Fensters. Prüfen Sie die Uhr des aufrufenden Servers.',
     'nonce_reused' => 'Diese Anfrage wurde bereits gestellt.',
     'idempotency_key_reuse' => 'Dieser Idempotenzschlüssel wurde bereits für einen anderen Anfrageinhalt verwendet.',
-    'rate_limited' => 'Zu viele Anfragen. Bitte versuchen Sie es gleich noch einmal.',
+    'missing_credentials' => 'X-Seatmap-Key, X-Seatmap-Timestamp, X-Seatmap-Nonce und X-Seatmap-Signature sind alle erforderlich.',
+    'stale_timestamp' => 'Der Zeitstempel der Anfrage liegt außerhalb des erlaubten Fensters von :seconds Sekunden. Prüfen Sie die Uhr des aufrufenden Servers.',
+    'replay_check_unavailable' => 'Der Schutz vor Wiedereinspielung ist vorübergehend nicht verfügbar. Versuchen Sie es gleich noch einmal.',
+    'invalid_idempotency_key' => 'Dieser Idempotency-Key ist zu lang.',
+    'idempotency_key_in_flight' => 'Eine Anfrage mit diesem Idempotency-Key wird gerade verarbeitet. Versuchen Sie es gleich noch einmal.',
 
-    // --- Plätze, Reservierungen und Kapazität -----------------------------------------------
+    // --- Seats, holds and capacity ----------------------------------------------------------
     'seat_unavailable' => 'Einer dieser Plätze ist nicht mehr verfügbar.',
-    'no_seats_together' => "So viele Plätze liegen nirgends nebeneinander.",
+    'no_seats_together' => 'So viele Plätze liegen nirgends nebeneinander.',
     'capacity_unavailable' => 'So viele Plätze sind nicht mehr frei.',
     'hold_expired' => 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie Ihre Plätze erneut.',
     'hold_not_found' => 'Diese Reservierung gibt es nicht mehr.',
     'too_many_seats' => 'Sie können höchstens :max Plätze auf einmal wählen.',
-    'too_many_holds' => 'Sie haben bereits so viele Reservierungen, wie eine Sitzung halten darf.',
-    'seat_not_in_event' => 'Dieser Platz gehört nicht zu dieser Veranstaltung.',
-    'event_not_on_sale' => 'Diese Veranstaltung ist nicht im Verkauf.',
+    'no_seats' => 'Wählen Sie mindestens einen Platz.',
+    'unknown_seats' => 'Einer oder mehrere dieser Plätze gehören nicht zu dieser Veranstaltung.',
+    'unknown_capacity_objects' => 'Einer oder mehrere dieser Bereiche gehören nicht zu dieser Veranstaltung.',
+    'seat_not_priced' => 'Einer oder mehrere dieser Plätze haben für diese Veranstaltung keinen Preis und können nicht verkauft werden.',
+    'area_not_priced' => 'Einer oder mehrere dieser Bereiche haben für diese Veranstaltung keinen Preis und können nicht verkauft werden.',
+    'seats_not_named' => 'Diese Plätze lassen sich nicht einzeln zurückgeben.',
+    'event_not_sellable' => 'Diese Veranstaltung ist nicht im Verkauf.',
+    'map_not_published' => 'Veröffentlichen Sie den Sitzplan, bevor Sie diese Veranstaltung in den Verkauf geben.',
+    'too_many_active_holds' => 'Diese Sitzung hält bereits Plätze in :count Warenkörben. Schließen Sie einen ab oder geben Sie ihn frei.',
+    'extend_limit_reached' => 'Diese Reservierung wurde bereits :count Mal verlängert.',
+    'hold_empty' => 'Auf dieser Reservierung sind keine Plätze mehr.',
+    'hold_missing' => 'An dieser Bestellung hängt keine Reservierung.',
 
-    // --- Bestellungen -----------------------------------------------------------------------
+    // --- Orders -----------------------------------------------------------------------------
     'order_not_found' => 'Diese Bestellung gibt es nicht.',
-    'order_already_confirmed' => 'Diese Bestellung wurde bereits bestätigt.',
-    'order_cancelled' => 'Diese Bestellung wurde storniert.',
-    'refund_exceeds_order' => 'Sie können nicht mehr erstatten, als die Bestellung wert ist.',
     'payment_failed' => 'Die Zahlung ist nicht zustande gekommen. Es wurde nichts abgebucht.',
     'discount_used_up' => 'Dieser Code wurde soeben zum letzten Mal eingelöst. Es wurde nichts abgebucht.',
-    'entry_slot_required' => "Wählen Sie eine Einlasszeit, bevor Sie buchen.",
-    'entry_slot_full' => "Diese Einlasszeit ist voll. Bitte wählen Sie eine andere.",
-    'entry_slot_closed' => "Diese Einlasszeit wird nicht mehr angeboten.",
-    'payment_verification_failed' => 'Wir konnten diese Zahlung beim Anbieter nicht bestätigen. Falls Geld abgebucht wurde, melden Sie sich – wir finden es.',
+    'entry_slot_required' => 'Wählen Sie eine Einlasszeit, bevor Sie buchen.',
+    'entry_slot_full' => 'Diese Einlasszeit ist voll. Bitte wählen Sie eine andere.',
+    'entry_slot_closed' => 'Diese Einlasszeit wird nicht mehr angeboten.',
+    'invalid_transition' => 'Eine Bestellung im Zustand :status kann nicht bestätigt werden.',
+    'order_not_confirmed' => 'Es gibt noch keine Tickets zum Versenden.',
+    'order_not_refundable' => 'Nur eine bestätigte Bestellung kann erstattet werden.',
+    'nothing_to_refund' => 'Auf dieser Buchung gibt es nichts zurückzugeben.',
+    'nothing_to_send' => 'Jedes Ticket dieser Buchung wurde benutzt oder storniert.',
+    'no_address' => 'Auf dieser Buchung steht keine E-Mail-Adresse.',
+    'no_site' => 'Tickets werden von einer Website aus verschickt, und dieses Konto hat keine live.',
+    'no_live_site' => 'Die Nachricht verlinkt auf eine Seite einer Live-Website, und dieses Konto hat noch keine.',
+    'email_required' => 'Zum Versenden der Tickets wird eine E-Mail-Adresse gebraucht.',
+    'channel_required' => 'Einem Käufer muss gesagt werden, dass seine Buchung bestätigt ist. Wählen Sie mindestens einen Weg.',
+    'entry_slot_not_offered' => 'Diese Veranstaltung verkauft keinen Einlass nach Zeitfenstern.',
+    'unknown_entry_slot' => 'Ein solches Einlassfenster gibt es nicht.',
+    'unknown_ticket_type' => 'Diese Veranstaltung verkauft keine Ticketarten.',
+    'ticket_type_not_on_sale' => 'Eine der gewählten Ticketarten ist nicht im Verkauf.',
+    'ticket_type_min' => 'Mindestens :count :type-Tickets müssen zusammen gekauft werden.',
+    'ticket_type_max' => 'Höchstens :count :type-Tickets dürfen auf einmal gekauft werden.',
+    'discount_code_taken' => 'Sie haben bereits einen Code mit diesem Namen.',
+    'discount_in_use' => 'Dieser Code wurde benutzt. Pausieren Sie ihn lieber — löschen ließe jene Buchungen unerklärt.',
 
-    // --- Saalpläne --------------------------------------------------------------------------
-    'map_invalid' => 'Der Saalplan kann erst veröffentlicht werden, wenn seine Fehler behoben sind.',
-    'map_published' => 'Ein veröffentlichter Plan wird nicht bearbeitet. Speichern Sie stattdessen eine neue Fassung.',
-    'map_in_use' => 'Dieser Plan wird von einer Veranstaltung genutzt, die bereits Plätze verkauft hat.',
-    'map_too_large' => 'Dieser Plan ist größer, als Ihr Tarif erlaubt.',
+    // --- Seat maps --------------------------------------------------------------------------
+    'invalid_geometry' => 'Der Saalplan kann erst veröffentlicht werden, wenn seine Fehler behoben sind.',
+    'no_draft' => 'Es gibt keine Entwurfsfassung zum Veröffentlichen.',
+    'already_published' => 'Diese Fassung ist bereits veröffentlicht.',
+    'unknown_zone' => 'Ein Platz wurde einer Preiszone zugeordnet, die diese Veranstaltung nicht hat.',
+    'venue_in_use' => 'Dieser Veranstaltungsort hat noch Veranstaltungen. Löschen oder verschieben Sie sie zuerst.',
 
-    // --- Tickets und Einlass ----------------------------------------------------------------
+    // --- Tickets and check-in ---------------------------------------------------------------
     'ticket_already_used' => 'Mit diesem Ticket ist bereits jemand hereingekommen. Den Platz jetzt freizugeben hieße, einen besetzten Platz zu verkaufen.',
-    'ticket_no_allocation' => 'Dieses Ticket hängt an keinem Platz.',
-    'ticket_no_order' => 'Dieses Ticket hängt an keiner Bestellung.',
-    'pairing_code_expired' => 'Dieser Kopplungscode ist abgelaufen. Fordern Sie einen neuen an.',
+    'no_allocation' => 'Dieses Ticket hängt an keinem Platz.',
+    'no_order' => 'Dieses Ticket hängt an keiner Bestellung.',
     'device_revoked' => 'Dieses Gerät ist nicht mehr gekoppelt.',
+    'already_used' => 'Jemand ist mit diesem Ticket bereits eingelassen worden. Den Platz jetzt freizugeben hieße, einen besetzten Platz zu verkaufen.',
+    'no_tickets_to_add' => 'Auf dieser Buchung gibt es keine gültigen Tickets zum Hinzufügen.',
+    'same_person' => 'An diese Adresse geht das Ticket ohnehin schon.',
+    'ticket_type_sold' => 'Eine bereits verkaufte Ticketart lässt sich nicht löschen. Blenden Sie sie stattdessen aus.',
+    'entry_slot_sold' => 'Ein Einlassfenster, das jemandem verkauft wurde, lässt sich nicht entfernen. Schließen Sie es stattdessen.',
+    'window_too_short' => 'Dieser Zeitraum ist kürzer als ein Einlassfenster.',
+    'question_answered' => 'Eine Frage, die jemand beantwortet hat, lässt sich nicht löschen. Blenden Sie sie stattdessen aus.',
 
-    // --- Websites und Domains ---------------------------------------------------------------
+    // --- Sites and domains ------------------------------------------------------------------
     'unknown_theme' => 'Dieses Design gibt es nicht.',
     'no_verified_domain' => 'Fügen Sie eine Domain hinzu und bestätigen Sie sie, bevor Sie die Website live schalten – sonst gibt es keine Adresse zu besuchen.',
     'slug_taken' => 'Eine Seite benutzt diese Adresse bereits.',
@@ -70,19 +113,25 @@ return [
     'invalid_hostname' => 'Das ist kein Hostname, den wir ausliefern können.',
     'domain_unverified' => 'Bestätigen Sie die Adresse, bevor Sie sie zur Hauptadresse machen.',
     'primary_domain' => 'Machen Sie zuerst eine andere Adresse zur Hauptadresse.',
-    'site_unavailable' => 'Diese Website ist nicht verfügbar.',
-    'no_site_here' => 'Unter dieser Adresse ist keine Website veröffentlicht.',
+    'email_unverified' => 'Bestätigen Sie Ihre E-Mail-Adresse, bevor Sie eine Website ins Internet stellen.',
+    'wrong_theme' => 'Diese Fassung gehört zu einem anderen Thema.',
+    'theme_in_use' => 'Einige Websites tragen dieses Thema noch.',
 
-    // --- Tarife und Grenzen -----------------------------------------------------------------
-    'tenant_limit_reached' => 'Ihr Tarif erlaubt :limit :resource. Für mehr wechseln Sie den Tarif.',
-    'subscription_inactive' => 'Für dieses Konto besteht kein aktives Abonnement.',
+    // --- Plans and limits -------------------------------------------------------------------
+    'plan_limit_reached' => 'Ihr Tarif erlaubt :limit Plätze je Plan; dieser hat :count.',
+    'no_plans' => 'Die Registrierung ist im Moment geschlossen.',
+    'email_taken' => 'Zu dieser E-Mail-Adresse gibt es schon ein Konto. Melden Sie sich stattdessen an.',
+    'code_expired' => 'Dieser Code ist abgelaufen. Fordern Sie einen neuen an.',
+    'code_wrong' => 'Dieser Code stimmt nicht.',
+    'module_not_installed' => 'Dieses Modul ist auf diesem Server nicht installiert.',
+    'module_not_configured' => 'Füllen Sie aus, was dieses Modul braucht, bevor Sie es einschalten.',
 
-    // --- Allgemein --------------------------------------------------------------------------
+    // --- Generic ----------------------------------------------------------------------------
     'validation_failed' => 'Der Inhalt der Anfrage ist ungültig.',
     'server_error' => 'Es ist ein unerwarteter Fehler aufgetreten.',
     'http_error' => 'Die Anfrage ist fehlgeschlagen.',
 
-    // --- Nach ihrem Fehlercode benannt: der Code ist der Schlüssel, kein Aufrufer nennt einen -
+    // --- Named by their error code, so the code is the key and no call site names one -------
     'client_disabled' => 'Dieser API-Client ist nicht aktiv.',
     'invalid_key' => 'Der API-Schlüssel ist unbekannt, abgelaufen oder widerrufen.',
     'invalid_nonce' => 'Das Format der Nonce ist nicht zulässig.',
@@ -94,20 +143,45 @@ return [
     'unknown_event' => 'Unbekannte Veranstaltung.',
     'unknown_tenant' => 'Unbekannter Veranstalter.',
 
-// --- Team, Rollen und Einladungen -------------------------------------------------------
+    // --- Team, roles and invitations --------------------------------------------------------
     'member_suspended' => 'Ihr Zugang zu diesem Konto wurde gesperrt.',
     'reserved_role' => 'Dieser Name gehört zu einer eingebauten Rolle. Wählen Sie einen anderen.',
     'role_in_use' => 'Jemand hat diese Rolle noch. Weisen Sie ihr zuerst eine andere zu.',
     'last_owner' => 'Ein Konto muss mindestens eine Inhaberin oder einen Inhaber behalten.',
     'cannot_change_own_role' => 'Sie können Ihre eigene Rolle nicht ändern.',
-    'invitation_invalid' => 'Diese Einladung ist ungültig oder wurde bereits benutzt.',
-    'invitation_expired' => 'Diese Einladung ist abgelaufen. Fordern Sie eine neue an.',
     'already_a_member' => 'Diese Person gehört bereits zu diesem Konto.',
+    'role_exists' => 'Eine Rolle trägt diesen Namen bereits.',
+    'unknown_role' => 'Diese Rolle gibt es nicht.',
 
-    // --- Die Plattform-Konsole --------------------------------------------------------------
+    // --- The platform console ---------------------------------------------------------------
     'too_many_attempts' => 'Zu viele Versuche. Versuchen Sie es in :seconds Sekunden erneut.',
     'unknown_plan' => 'Diesen Tarif gibt es nicht.',
     'no_owner' => 'Für dieses Konto gibt es niemanden, in dessen Namen gehandelt werden könnte.',
     'support_may_not_change' => 'Support-Konten dürfen sehen, nicht ändern.',
     'plan_in_use' => 'Auf diesem Tarif sind Veranstalter. Deaktivieren Sie ihn stattdessen — das nimmt ihn von der Anmeldeseite und lässt die Bestehenden, wo sie sind.',
+
+    // --- Events that are called off or moved -------------------------------------------------
+    'event_cancelled' => 'Eine abgesagte Veranstaltung lässt sich nicht verschieben. Geben Sie sie erst wieder in den Verkauf.',
+    'event_has_no_date' => 'Diese Veranstaltung hat kein Datum, das sich verschieben ließe.',
+    'confirm_with_the_name' => 'Tippen Sie den Namen der Veranstaltung genau so, wie er geschrieben steht, um zu bestätigen.',
+
+    // --- Reports -----------------------------------------------------------------------------
+    'unknown_source' => 'Eine solche Berichtsquelle gibt es nicht.',
+    'unknown_filter_value' => 'Das ist keine der Auswahlmöglichkeiten dieses Filters.',
+    'report_needs_a_measure' => 'Ein Bericht muss etwas zählen oder summieren.',
+    'report_too_slow' => 'Dieser Bericht hat länger als :seconds Sekunden gebraucht. Grenzen Sie ihn mit einem Filter ein oder exportieren Sie ihn.',
+
+    // --- Messages ----------------------------------------------------------------------------
+    'unknown_message_kind' => 'Eine solche Nachricht gibt es nicht.',
+    'unknown_channel' => 'Dieser Kanal ist nicht verfügbar.',
+
+    // --- Wallet passes -----------------------------------------------------------------------
+    'apple_wallet_not_set_up' => 'Dieses Konto hat kein Apple-Wallet-Zertifikat.',
+    'apple_certificate_unreadable' => 'Dieses Zertifikat war nicht lesbar.',
+    'apple_key_unreadable' => 'Dieser private Schlüssel war nicht lesbar — prüfen Sie das Passwort.',
+    'apple_signing_failed' => 'Der Pass ließ sich mit diesem Zertifikat nicht signieren.',
+    'pass_not_written' => 'Der Pass konnte nicht zusammengestellt werden.',
+    'google_wallet_not_set_up' => 'Dieses Konto hat keinen Google-Wallet-Herausgeber.',
+    'google_service_account_unreadable' => 'Diese Dienstkonto-Datei war nicht lesbar.',
+    'google_signing_failed' => 'Der Pass ließ sich mit diesem Dienstkonto nicht signieren.',
 ];

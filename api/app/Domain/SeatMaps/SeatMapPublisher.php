@@ -465,9 +465,12 @@ class SeatMapPublisher
         $limit = $plan?->limit('max_seats_per_map');
 
         if ($limit !== null && $seatCount > $limit) {
-            throw ApiException::unprocessable('plan_limit_reached', sprintf(
-                'Your plan allows %d seats per map; this map has %d.', $limit, $seatCount
-            ), ['limit' => $limit, 'seat_count' => $seatCount]);
+            throw ApiException::unprocessable(
+                'plan_limit_reached',
+                sprintf('Your plan allows %d seats per map; this map has %d.', $limit, $seatCount),
+                ['limit' => $limit, 'seat_count' => $seatCount],
+                ['limit' => $limit, 'count' => $seatCount],
+            );
         }
     }
 }

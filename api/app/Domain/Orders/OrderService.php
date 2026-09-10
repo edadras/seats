@@ -117,9 +117,12 @@ class OrderService
         }
 
         if (! $order->canTransitionTo('confirmed')) {
-            throw ApiException::conflict('invalid_transition', sprintf(
-                'An order in state "%s" cannot be confirmed.', $order->status
-            ));
+            throw ApiException::conflict(
+                'invalid_transition',
+                sprintf('An order in state "%s" cannot be confirmed.', $order->status),
+                [],
+                ['status' => $order->status],
+            );
         }
 
         $hold = $order->hold;

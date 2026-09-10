@@ -41,9 +41,13 @@ class AuthenticateApiClient
         $window = (int) config('seatmap.hmac_window_seconds');
 
         if (! ctype_digit((string) $timestamp) || abs(time() - (int) $timestamp) > $window) {
-            throw ApiException::unauthorized(
+            throw new ApiException(
                 'stale_timestamp',
-                "Request timestamp is outside the permitted ±{$window}s window."
+                "Request timestamp is outside the permitted ±{$window}s window.",
+                401,
+                [],
+                null,
+                ['seconds' => $window],
             );
         }
 

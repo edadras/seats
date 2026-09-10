@@ -311,6 +311,7 @@ class ReportRunner
                     'report_too_slow',
                     'That report took longer than '.self::TIMEOUT_SECONDS.' seconds. Narrow it with a filter, or export it.',
                     ['timeout_seconds' => self::TIMEOUT_SECONDS],
+                    ['seconds' => self::TIMEOUT_SECONDS],
                 );
             }
 

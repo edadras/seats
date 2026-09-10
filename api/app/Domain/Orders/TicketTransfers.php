@@ -45,11 +45,16 @@ class TicketTransfers
         if (! $ticket || 'issued' !== $ticket->status) {
             // A used ticket cannot be given away — somebody is already inside on it — and a voided
             // one is not a ticket. Both are refusals with a reason rather than a silent no-op.
-            throw ApiException::conflict(
+            // One code, two sentences: a client branches on the code, and a person needs to be
+            // told which of the two happened. So the message key is named rather than inferred.
+            throw new ApiException(
                 'ticket_not_transferable',
                 'used' === $ticket?->status
                     ? 'That ticket has already been used to come in.'
-                    : 'That ticket is no longer valid.'
+                    : 'That ticket is no longer valid.',
+                409,
+                [],
+                'used' === $ticket?->status ? 'ticket_already_used' : 'ticket_not_transferable',
             );
         }
 

@@ -293,15 +293,21 @@ class HoldService
             // "At least two" and "at most four" are the organiser's rules about their own house.
             // Refused here rather than at the checkout, so nobody holds seats they cannot buy.
             if ($type->min_per_order && $count < $type->min_per_order) {
-                throw ApiException::unprocessable('ticket_type_min', sprintf(
-                    'At least %d "%s" tickets must be bought together.', $type->min_per_order, $type->name
-                ), ['ticket_type_id' => $type->id, 'min_per_order' => $type->min_per_order]);
+                throw ApiException::unprocessable(
+                    'ticket_type_min',
+                    sprintf('At least %d "%s" tickets must be bought together.', $type->min_per_order, $type->name),
+                    ['ticket_type_id' => $type->id, 'min_per_order' => $type->min_per_order],
+                    ['count' => $type->min_per_order, 'type' => $type->name],
+                );
             }
 
             if ($type->max_per_order && $count > $type->max_per_order) {
-                throw ApiException::unprocessable('ticket_type_max', sprintf(
-                    'At most %d "%s" tickets may be bought at once.', $type->max_per_order, $type->name
-                ), ['ticket_type_id' => $type->id, 'max_per_order' => $type->max_per_order]);
+                throw ApiException::unprocessable(
+                    'ticket_type_max',
+                    sprintf('At most %d "%s" tickets may be bought at once.', $type->max_per_order, $type->name),
+                    ['ticket_type_id' => $type->id, 'max_per_order' => $type->max_per_order],
+                    ['count' => $type->max_per_order, 'type' => $type->name],
+                );
             }
         }
 
@@ -323,9 +329,12 @@ class HoldService
             $event = $fresh->event;
 
             if ($fresh->extends_used >= $event->max_extends) {
-                throw ApiException::conflict('extend_limit_reached', sprintf(
-                    'This hold has already been extended %d times.', $fresh->extends_used
-                ));
+                throw ApiException::conflict(
+                    'extend_limit_reached',
+                    sprintf('This hold has already been extended %d times.', $fresh->extends_used),
+                    [],
+                    ['count' => $fresh->extends_used],
+                );
             }
 
             $fresh->forceFill([
@@ -866,9 +875,12 @@ class HoldService
             ->count();
 
         if ($active >= $limit) {
-            throw ApiException::conflict('too_many_active_holds', sprintf(
-                'This session already holds seats in %d carts. Complete or release one first.', $active
-            ));
+            throw ApiException::conflict(
+                'too_many_active_holds',
+                sprintf('This session already holds seats in %d carts. Complete or release one first.', $active),
+                [],
+                ['count' => $active],
+            );
         }
     }
 }

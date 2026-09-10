@@ -132,6 +132,40 @@ class LocalisationTest extends TestCase
     }
 
     #[Test]
+    public function a_refusal_from_deep_in_the_domain_is_translated_too(): void
+    {
+        $site = $this->hostedSite(['locale' => 'fa']);
+        $event = app(TenantContext::class)->runUnscoped(
+            fn () => \App\Models\Event::withoutGlobalScope('tenant')->orderBy('created_at')->firstOrFail()
+        );
+
+        // Not a sign-in refusal, which is the one everybody remembers to translate: this one is
+        // thrown four layers down, in HoldService, and read by a buyer mid-checkout.
+        $response = $this->postJson('http://northgate.localhost/_store/hold', [
+            'event_public_id' => $event->public_id,
+            'seat_ids' => [],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('error.code', 'no_seats');
+        $response->assertJsonPath('error.message', __('errors.no_seats', [], 'fa'));
+        // And it is really Persian, not the English literal the call site wrote.
+        $this->assertStringNotContainsString('seat', $response->json('error.message'));
+    }
+
+    #[Test]
+    public function a_translated_refusal_still_carries_its_numbers(): void
+    {
+        // A translation that drops :count says "at most tickets may be bought at once", which is
+        // worse than English. tools/i18n-check.mjs guards the placeholder; this guards the filling.
+        $filled = __('errors.ticket_type_max', ['count' => 4, 'type' => 'Child'], 'fa');
+
+        $this->assertStringContainsString('4', $filled);
+        $this->assertStringContainsString('Child', $filled);
+        $this->assertStringNotContainsString(':count', $filled);
+    }
+
+    #[Test]
     public function a_language_we_do_not_speak_still_gets_a_readable_refusal(): void
     {
         $response = $this->withHeaders(['X-Seatmap-Locale' => 'zz'])

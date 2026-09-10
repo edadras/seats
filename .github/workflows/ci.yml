@@ -206,6 +206,14 @@ jobs:
           # Neither shows up in the check above, because both locales agree with each other.
           node tools/panel-strings-check.mjs
 
+      - name: Every refusal the API can give has a sentence in the catalogue
+        run: |
+          # ApiException falls back to the English literal the call site wrote when a code has no
+          # entry, which is a safety net for the minute between writing a refusal and translating
+          # it. Eighty-four codes once lived in that net, and nothing noticed, because a fallback
+          # looks exactly like a translation to anybody reading English.
+          php tools/error-strings-check.php
+
   plugin:
     name: WordPress plugin
     runs-on: ubuntu-latest
