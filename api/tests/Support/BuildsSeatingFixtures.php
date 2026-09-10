@@ -253,7 +253,10 @@ trait BuildsSeatingFixtures
                 'tenant' => $tenant,
                 'venue' => $venue,
                 'map' => $map,
-                'event' => $event,
+                // Re-read: a model straight out of create() carries only what was written, so the
+                // column defaults — the per-order seat cap among them — are still null on it, and
+                // a test that holds two seats is refused for holding more than nought.
+                'event' => $event->fresh(),
                 'seats' => \App\Models\Seat::where('seat_map_id', $map->id)->orderBy('key')->get(),
                 'areas' => \App\Models\CapacityObject::where('seat_map_id', $map->id)->orderBy('key')->get(),
             ];

@@ -78,6 +78,12 @@ A seat is the start of it, not the end. Around the map:
   what they are paying and an organiser can reconcile it. **Invoices** carry a VAT number.
 - **Discount codes**, percentage or fixed, per event or account-wide, with a cap on uses and a
   record of who spent them.
+- **Sales attribution and promoter links** — a promoter is a person an organiser created on purpose,
+  with a name, a link of their own and a percentage, which is what makes it safe to pay against; a
+  `utm_source` is a string anybody can type. What was clicked is stamped on the booking once, name
+  and rate included, so renaming somebody or agreeing a new percentage next season cannot rewrite
+  what was owed for this one. What is owed is worked out from the tickets on every read, so a refund
+  takes it back without anything having to remember to.
 - **Accessible bookings** — a wheelchair space and the chair beside it are a pair, and the chair is
   never sold on its own. Spaces can be held off general sale until a stated number of hours before
   doors (or for good) while the box office keeps selling them throughout; they are released because
@@ -548,6 +554,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |
 | What a buyer needs reaches the door and leaves with them | `AccessibleBookingTest` |
+| Renaming a promoter does not rewrite what was owed last month | `PromoterAttributionTest` |
+| A refund takes the commission back with it | `PromoterAttributionTest` |
+| A link older than the window has stopped selling | `PromoterAttributionTest` |
+| A promoter who has sold something is switched off rather than deleted | `PromoterAttributionTest` |
 
 ## Installing the plugin
 

@@ -29,12 +29,13 @@ class ExternalOrder extends Model
     protected $fillable = [
         'tenant_id', 'event_id', 'api_client_id', 'hold_id', 'external_order_id', 'status',
         'currency', 'total_amount', 'donation', 'voucher_amount', 'buyer', 'metadata',
-        'confirmed_at', 'cancelled_at', 'refunded_at', 'access_needs',
+        'confirmed_at', 'cancelled_at', 'refunded_at', 'access_needs', 'promoter_id', 'attribution',
     ];
 
     protected $casts = [
         'buyer' => 'array',
         'metadata' => 'array',
+        'attribution' => 'array',
         'total_amount' => 'integer',
         'donation' => 'integer',
         'voucher_amount' => 'integer',

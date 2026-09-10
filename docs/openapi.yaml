@@ -482,6 +482,142 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /promoters:
+    get:
+      operationId: listPromoters
+      tags: [Promoters]
+      summary: Who sells on this organiser's behalf
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The promoters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Promoter" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createPromoter
+      tags: [Promoters]
+      summary: Add a promoter
+      description: >
+        A promoter is a person an organiser created deliberately, which is what makes it safe to pay
+        against — unlike a `utm_source`, which anybody can type into a URL. The code goes in their
+        link and is unique to the account rather than to the platform: two theatres may both have a
+        Maria.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Promoter" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Promoter" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /promoters/performance:
+    get:
+      operationId: promoterPerformance
+      tags: [Promoters]
+      summary: What each of them has sold, and what is owed
+      description: >
+        Worked out from the bookings on every read rather than kept in a column: commission follows
+        the tickets, so a refund takes it back without anything having to remember to. The name and
+        the rate come off the booking, not off the promoter — an invoice for March is for whoever
+        they were, and at whatever percentage they had agreed, in March.
+
+
+        `campaigns` is the other half of the question: what arrived on a link that names nobody to
+        pay — a newsletter, a listing site, a poster with a code on it.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { name: event_id, in: query, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: The figures
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        promoter_id: { type: string, format: uuid }
+                        name: { type: [string, "null"] }
+                        code: { type: [string, "null"] }
+                        orders: { type: integer }
+                        tickets: { type: integer }
+                        gross:
+                          type: integer
+                          description: What the tickets came to, in the event's minor unit.
+                        commission: { type: integer }
+                        currency: { type: string }
+                  campaigns:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        source: { type: string }
+                        campaign: { type: [string, "null"] }
+                        orders: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /promoters/{promoter}:
+    parameters:
+      - { name: promoter, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updatePromoter
+      tags: [Promoters]
+      summary: Change a promoter
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Promoter" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Promoter" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deletePromoter
+      tags: [Promoters]
+      summary: Remove a promoter
+      description: >
+        A promoter who has sold nothing is deleted. One who has sold something is switched off
+        instead and answered with their row: the bookings keep their own copy of what happened
+        either way, but a link that quietly starts working again because somebody recreated the code
+        is worse than a promoter who is simply inactive.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: Deactivated, because they have sold tickets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Promoter" }
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /events/{event}/price-tiers:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -7250,6 +7386,34 @@ components:
             Whether the checkout asks what a buyer needs in order to get in and sit down. The
             answer is free text, reaches the door list, never reaches a segment, and is erased with
             the buyer.
+
+    Promoter:
+      type: object
+      required: [name, code]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        name: { type: string, maxLength: 160, example: Maria Ruiz }
+        code:
+          type: string
+          maxLength: 40
+          pattern: "^[A-Za-z0-9-]+$"
+          description: Goes in their link and is read out over a telephone, so letters, digits and dashes only.
+          example: maria
+        contact_email: { type: [string, "null"], format: email }
+        commission_rate:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          description: Basis points — 750 is 7.5%. A percentage with a half in it is one somebody will round wrongly.
+        commission_percent: { type: number, readOnly: true }
+        active: { type: boolean }
+        note: { type: [string, "null"], maxLength: 2000 }
+        link_query:
+          type: string
+          readOnly: true
+          description: >
+            The query a link carries, e.g. `p=maria`. The host is the organiser's own site, which
+            this endpoint deliberately does not choose: an account may have several.
 
     PriceTier:
       type: object

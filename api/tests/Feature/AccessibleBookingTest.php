@@ -44,8 +44,6 @@ class AccessibleBookingTest extends TestCase
             $night['event']->forceFill($event)->save();
         }
 
-        // Always re-read: a model straight out of create() carries only what was written, so the
-        // column defaults — the per-order seat cap among them — are still null on it.
         $night['event']->refresh();
 
         return $night;

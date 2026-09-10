@@ -41,6 +41,20 @@ class ResolveSiteFromHost
         $this->tenantContext->set($tenant);
         $request->attributes->set('site', $site);
 
+        /*
+         * Which link they arrived on, remembered here rather than at the checkout.
+         *
+         * Here because it is the only place every page of a hosted site goes through, and a
+         * promoter's link points at whichever page they chose to share — a programme, a single
+         * night, the front door. Last touch inside a window: a newer link replaces an older one,
+         * because the newer one is the thing that finally worked.
+         */
+        $landing = app(\App\Domain\Attribution\Attribution::class)->fromRequest($request);
+
+        if ($landing && $request->hasSession()) {
+            $request->session()->put(\App\Domain\Attribution\Attribution::SESSION_KEY, $landing);
+        }
+
         return $next($request);
     }
 }

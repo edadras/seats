@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Management\RenewalController as ManagementRenewa
 use App\Http\Controllers\Api\V1\Management\ResaleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
+use App\Http\Controllers\Api\V1\Management\PromoterController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
@@ -154,6 +155,12 @@ Route::prefix('v1')->group(function () {
         Route::put('events/{event}/addons', [AddonController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty
         // thousand seats and a repricing usually touches eight.
+        Route::get('promoters', [PromoterController::class, 'index']);
+        Route::post('promoters', [PromoterController::class, 'store']);
+        Route::patch('promoters/{promoter}', [PromoterController::class, 'update']);
+        Route::delete('promoters/{promoter}', [PromoterController::class, 'destroy']);
+        Route::get('promoters/performance', [PromoterController::class, 'performance']);
+
         Route::get('events/{event}/price-tiers', [PriceTierController::class, 'index']);
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);

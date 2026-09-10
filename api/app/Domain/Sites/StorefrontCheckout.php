@@ -84,6 +84,7 @@ class StorefrontCheckout
         int $donation = 0,
         ?VoucherOffer $voucher = null,
         ?string $accessNeeds = null,
+        ?array $landing = null,
     ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
@@ -148,6 +149,17 @@ class StorefrontCheckout
          */
         if ($registered && null !== $accessNeeds && '' !== trim($accessNeeds)) {
             $order->forceFill(['access_needs' => trim($accessNeeds)])->save();
+        }
+
+        /*
+         * Where this sale came from, stamped once.
+         *
+         * The promoter's name and their rate are copied onto the booking rather than joined to,
+         * so that renaming somebody, deactivating them, or agreeing a new percentage next season
+         * cannot rewrite what was owed for this one.
+         */
+        if ($registered) {
+            app(\App\Domain\Attribution\Attribution::class)->stamp($order, $landing);
         }
 
         /*

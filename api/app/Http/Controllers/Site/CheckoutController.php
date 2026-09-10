@@ -535,6 +535,7 @@ class CheckoutController extends Controller
                 $donation,
                 $voucher,
                 $hold->event->ask_access_needs ? ($data['access_needs'] ?? null) : null,
+                $request->session()->get(\App\Domain\Attribution\Attribution::SESSION_KEY),
             );
         } catch (ApiException $e) {
             if (in_array($e->errorCode(), ['addon_sold_out', 'addon_too_many', 'unknown_addon'], true)) {

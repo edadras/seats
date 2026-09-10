@@ -111,6 +111,16 @@ return [
         'failure_window_hours' => (int) env('SEATMAP_MODULE_FAILURE_WINDOW', 24),
     ],
 
+    /*
+     | How long a link keeps the credit for a sale.
+     |
+     | Thirty days is the convention rather than a fact, which is why it is here: a house that
+     | sells a season six months out will want longer, and one selling a club night will want less.
+     */
+    'attribution' => [
+        'window_days' => (int) env('SEATMAP_ATTRIBUTION_WINDOW_DAYS', 30),
+    ],
+
     'checkin' => [
         'pairing_code_ttl_minutes' => 30,
         'max_batch_scans' => 500,

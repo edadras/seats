@@ -210,6 +210,24 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
+             * Somebody selling on the organiser's behalf.
+             *
+             * In the demo because the promoters screen without one looks like a screen that cannot
+             * do this, and because the link is the part people want to see: a code, a percentage,
+             * and a number that goes up.
+             */
+            \App\Models\Promoter::firstOrCreate(
+                ['tenant_id' => $tenant->id, 'code' => 'maria'],
+                [
+                    'name' => 'Maria Ruiz',
+                    'contact_email' => 'maria@example.test',
+                    'commission_rate' => 1000,
+                    'active' => true,
+                    'note' => 'Sells the Friday nights to her own list.',
+                ],
+            );
+
+            /*
              * An early price with a date on it.
              *
              * The demo needs one because the pricing screen without a tier looks like a screen that
