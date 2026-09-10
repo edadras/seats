@@ -95,6 +95,25 @@ hr { border: none; }
 	border-radius: 3px;
 }
 
+/*
+ * Out of sight, still read aloud.
+ *
+ * Used where a control's label would be noise on the screen and is essential to a screen reader —
+ * the number picker beside an add-on already sits under its name, but a bare select announced as
+ * "combo box" tells somebody nothing about which one.
+ */
+.visually-hidden {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
 .skip {
 	position: absolute;
 	inset-inline-start: -9999px;
@@ -989,6 +1008,92 @@ hr { border: none; }
 .waitlist__fields .field--narrow { max-inline-size: 8rem; }
 
 .waitlist__note { margin-block-start: 0.9rem; font-size: 0.85rem; color: var(--text-muted); }
+
+/*
+ * What else is on the counter.
+ *
+ * One row per thing, the number picked on the right. Deliberately quiet: a buyer came for tickets,
+ * and a programme shouted at is a programme nobody buys twice.
+ */
+.addons {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius);
+	overflow: hidden;
+}
+
+.addon {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1rem;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.9rem 1rem;
+	border-block-start: 1px solid var(--hairline);
+}
+
+.addon:first-child { border-block-start: none; }
+.addon--gone { opacity: 0.55; }
+
+.addon__what {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	flex: 1 1 14rem;
+	min-inline-size: 0;
+}
+
+.addon__price { font-size: 0.9rem; }
+.addon__price .muted { margin-inline-start: 0.35rem; }
+
+.addon__gone,
+.addon__fixed {
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.addon__pick select {
+	min-block-size: 2.5rem;
+	padding-inline: 0.7rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+}
+
+/* A donation box is a number, and a short one: nobody types eight figures on purpose. */
+.field--narrow input { max-inline-size: 10rem; }
+
+/*
+ * The receipt for what was not a ticket.
+ *
+ * Below the tickets and visibly apart from them, because nobody is admitted on a programme and a
+ * list that mixed the two would invite somebody to try.
+ */
+.also {
+	margin-block-start: clamp(1.5rem, 4vw, 2.5rem);
+	padding: clamp(1rem, 3vw, 1.5rem);
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+}
+
+.also__title { margin: 0 0 0.75rem; font-family: var(--font-heading); font-size: 1.05rem; }
+
+.also__list { margin: 0; padding: 0; list-style: none; }
+
+.also__list li {
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+	padding-block: 0.4rem;
+	border-block-start: 1px solid var(--hairline);
+}
+
+.also__list li:first-child { border-block-start: none; }
 
 /*
  * "I have a code" — the box that stands where the seat plan will be.

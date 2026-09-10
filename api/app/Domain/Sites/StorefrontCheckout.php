@@ -14,6 +14,7 @@ use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\Site;
 use App\Support\Tenancy\TenantContext;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -35,6 +36,7 @@ class StorefrontCheckout
         private readonly GatewayRegistry $gateways,
         private readonly TenantContext $tenantContext,
         private readonly Discounts $discounts,
+        private readonly \App\Domain\Addons\Addons $addons,
     ) {}
 
     /** The client a site sells through, created on first use so an older site does not need a backfill. */
@@ -75,6 +77,8 @@ class StorefrontCheckout
         string $returnUrl,
         ?DiscountOffer $offer = null,
         array $billing = [],
+        array $addons = [],
+        int $donation = 0,
     ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
@@ -122,7 +126,28 @@ class StorefrontCheckout
          * neither can drift from what was charged.
          */
         if ($registered) {
-            $totals = self::totalsFor($hold, (int) (($order->metadata['discount']['amount'] ?? 0)));
+            /*
+             * The programmes and the gift, written before the gateway is told an amount.
+             *
+             * `attach` takes the advisory lock on anything with a stock and refuses if the last
+             * one went while this buyer was choosing — which is a refusal they can act on, since
+             * their seats are still theirs. Priced from the organiser's own rows, never from the
+             * request: a price the browser could name is a price the browser could argue with.
+             */
+            $lines = $this->addons->price($hold->event, $addons, self::placesIn($hold));
+
+            DB::transaction(function () use ($order, $lines, $donation) {
+                $this->addons->attach($order, $lines);
+
+                $order->forceFill(['donation' => $donation])->save();
+            });
+
+            $totals = self::totalsFor(
+                $hold,
+                (int) (($order->metadata['discount']['amount'] ?? 0)),
+                $this->addons->total($lines),
+                $donation,
+            );
 
             $order->forceFill([
                 'total_amount' => $totals->total,
@@ -196,7 +221,30 @@ class StorefrontCheckout
      * to read it from — and it must be the same answer, computed by the same code, or the summary
      * promises a number the payment does not honour.
      */
-    public static function totalsFor(Hold $hold, int $discount = 0): OrderTotals
+    public static function totalsFor(
+        Hold $hold,
+        int $discount = 0,
+        int $addons = 0,
+        int $donation = 0,
+    ): OrderTotals {
+        return OrderTotals::for(
+            $hold->event ?? $hold->loadMissing('event')->event,
+            (int) $hold->total_amount,
+            $discount,
+            self::placesIn($hold),
+            $addons,
+            $donation,
+        );
+    }
+
+    /**
+     * How many tickets this hold is for.
+     *
+     * Read off the signed snapshot rather than counted from the database: it is what was reserved,
+     * and a per-ticket fee or a per-ticket add-on has to be charged on that and not on whatever a
+     * later query happens to find.
+     */
+    public static function placesIn(Hold $hold): int
     {
         $snapshot = $hold->price_snapshot['decoded'] ?? [];
         $places = count($snapshot['seats'] ?? []);
@@ -205,12 +253,7 @@ class StorefrontCheckout
             $places += max(1, (int) ($area['quantity'] ?? 1));
         }
 
-        return OrderTotals::for(
-            $hold->event ?? $hold->loadMissing('event')->event,
-            (int) $hold->total_amount,
-            $discount,
-            $places,
-        );
+        return $places;
     }
 
     /**

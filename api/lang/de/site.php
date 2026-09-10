@@ -170,6 +170,8 @@ return [
     ],
 
     'totals' => [
+        'addons' => 'Extras',
+        'donation' => 'Spende',
         'fee' => 'Buchungsgebühr',
         'tax' => ':name zu :rate %',
         'taxIncluded' => 'inkl. :name zu :rate %',
@@ -309,5 +311,18 @@ return [
         'presale_not_open' => 'Der Vorverkauf hat noch nicht begonnen.',
         'event_not_sellable' => 'Diese Vorstellung ist nicht im Verkauf.',
         'tryAgain' => 'Etwas ist schiefgegangen. Versuchen Sie es noch einmal.',
+    ],
+
+    'addons' => [
+        'bought' => 'Außerdem gekauft',
+        'title' => 'Sonst noch etwas?',
+        'perTicket' => 'je Ticket',
+        'left' => 'nur noch :count',
+        'soldOut' => 'Vergriffen',
+    ],
+    'donation' => [
+        'title' => 'Möchten Sie etwas geben?',
+        'label' => 'Betrag in :currency',
+        'hint' => 'Auf eine Spende kommt keine Buchungsgebühr und keine Steuer.',
     ],
 ];

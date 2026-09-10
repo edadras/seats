@@ -194,4 +194,12 @@ return [
     'access_code_seat_limit' => 'Dieser Code gilt für :count Plätze auf einmal.',
     'access_code_taken' => 'Sie haben bereits einen Code mit diesem Namen.',
     'access_code_in_use' => 'Dieser Code hat jemanden hereingelassen. Pausieren Sie ihn lieber — löschen ließe jene Buchungen unerklärt.',
+
+    // --- Add-ons and donations ----------------------------------------------------------------
+    'unknown_addon' => 'Das verkauft diese Veranstaltung nicht.',
+    'addon_too_many' => 'Höchstens :count von „:name“ dürfen auf einmal gekauft werden.',
+    'addon_sold_out' => 'So viele von „:name“ gibt es nicht mehr.',
+    'addon_sold' => 'Was verkauft wurde, lässt sich nicht entfernen. Blenden Sie es stattdessen aus.',
+    'donation_negative' => 'Eine Spende kann nicht weniger als nichts sein.',
+    'donation_too_large' => 'Das ist mehr, als diese Kasse annimmt. Bitte sprechen Sie mit dem Veranstalter.',
 ];

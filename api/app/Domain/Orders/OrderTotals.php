@@ -5,7 +5,8 @@ namespace App\Domain\Orders;
 use App\Models\Event;
 
 /**
- * What a booking adds up to: tickets, less any discount, plus a fee, plus tax.
+ * What a booking adds up to: tickets, less any discount, plus add-ons, plus a fee, plus tax, plus
+ * whatever was given.
  *
  * One place computes this, and it is read from the same place by the summary the buyer looks at,
  * the amount the gateway is told to charge, the confirmation, and the invoice. Two implementations
@@ -14,14 +15,23 @@ use App\Models\Event;
  * Everything is minor units and every division rounds half up, once, at the point it happens —
  * accumulating fractions and rounding at the end produces totals that are a penny out and cannot
  * be reconciled against a bank statement.
+ *
+ * Two things are deliberately on different sides of the fee and the tax. Add-ons are inside them:
+ * a programme is a sale like any other, and an organiser who charges a booking fee charges it on
+ * the whole booking. A **donation is outside both** — a fee on a donation is charging somebody for
+ * the privilege of giving you money, and whether a gift is taxable is a question for the
+ * organiser's accountant, not for a checkout. So it is added last, after the tax has been worked
+ * out from everything else.
  */
 final class OrderTotals
 {
     private function __construct(
         public readonly int $tickets,
         public readonly int $discount,
+        public readonly int $addons,
         public readonly int $fee,
         public readonly int $tax,
+        public readonly int $donation,
         public readonly int $total,
         public readonly int $taxRate,
         public readonly bool $taxIncluded,
@@ -31,17 +41,30 @@ final class OrderTotals
 
     /**
      * @param  int  $tickets   what the seats themselves came to
-     * @param  int  $discount  taken off the tickets, never off the tax or the fee
+     * @param  int  $discount  taken off the tickets, never off the tax, the fee or the add-ons
      * @param  int  $places    how many tickets, for a per-ticket fee
+     * @param  int  $addons    programmes, drinks, parking — inside the fee and the tax
+     * @param  int  $donation  given, and outside both
      */
-    public static function for(Event $event, int $tickets, int $discount = 0, int $places = 0): self
-    {
+    public static function for(
+        Event $event,
+        int $tickets,
+        int $discount = 0,
+        int $places = 0,
+        int $addons = 0,
+        int $donation = 0,
+    ): self {
         $tickets = max(0, $tickets);
         $discount = max(0, min($tickets, $discount));
+        $addons = max(0, $addons);
+        $donation = max(0, $donation);
         $net = $tickets - $discount;
 
-        $fee = self::fee($event, $net, $places);
-        $taxable = $net + $fee;
+        // A discount is on the tickets. Half price on the seats is not half price on the wine, and
+        // a code that quietly took money off a programme would be a code the bar cannot reconcile.
+        $goods = $net + $addons;
+        $fee = self::fee($event, $goods, $places);
+        $taxable = $goods + $fee;
         $rate = (int) $event->tax_rate;
         $included = (bool) $event->tax_included;
 
@@ -60,9 +83,12 @@ final class OrderTotals
         return new self(
             tickets: $tickets,
             discount: $discount,
+            addons: $addons,
             fee: $fee,
             tax: $tax,
-            total: $included ? $taxable : $taxable + $tax,
+            donation: $donation,
+            // The gift goes on last, after the tax has been worked out from everything else.
+            total: ($included ? $taxable : $taxable + $tax) + $donation,
             taxRate: $rate,
             taxIncluded: $included,
             feeLabel: $event->booking_fee_label ?: null,
@@ -70,7 +96,7 @@ final class OrderTotals
         );
     }
 
-    private static function fee(Event $event, int $net, int $places): int
+    private static function fee(Event $event, int $goods, int $places): int
     {
         $fixed = match ($event->booking_fee_kind) {
             'per_order' => (int) $event->booking_fee_amount,
@@ -80,11 +106,12 @@ final class OrderTotals
 
         $percent = 0 === (int) $event->booking_fee_percent
             ? 0
-            : intdiv($net * (int) $event->booking_fee_percent + 50, 100);
+            : intdiv($goods * (int) $event->booking_fee_percent + 50, 100);
 
         // A fee on nothing is nothing: an order discounted to zero is a comp, and charging a
-        // booking fee on a free ticket is the kind of surprise that ends up in a complaint.
-        return 0 === $net ? 0 : $fixed + $percent;
+        // booking fee on a free ticket is the kind of surprise that ends up in a complaint. A
+        // booking that is nothing but a donation is the same case — the fee is on the goods.
+        return 0 === $goods ? 0 : $fixed + $percent;
     }
 
     /** Written onto the order so the confirmation and the invoice read the same arithmetic back. */
@@ -93,8 +120,10 @@ final class OrderTotals
         return [
             'tickets' => $this->tickets,
             'discount' => $this->discount,
+            'addons' => $this->addons,
             'fee' => $this->fee,
             'tax' => $this->tax,
+            'donation' => $this->donation,
             'total' => $this->total,
             'tax_rate' => $this->taxRate,
             'tax_included' => $this->taxIncluded,
@@ -107,6 +136,14 @@ final class OrderTotals
     public function extraLines(): array
     {
         $lines = [];
+
+        if ($this->addons > 0) {
+            $lines[] = [
+                'key' => 'addons',
+                'label' => __('site.totals.addons'),
+                'amount' => $this->addons,
+            ];
+        }
 
         if ($this->fee > 0) {
             $lines[] = [
@@ -128,6 +165,16 @@ final class OrderTotals
                 // An inclusive tax is already inside the total; showing it as a line to be added
                 // would make the summary add up to more than the buyer pays.
                 'informational' => $this->taxIncluded,
+            ];
+        }
+
+        // Last, and after the tax, because that is where it sits in the arithmetic as well as on
+        // the page: nothing above it was computed from it.
+        if ($this->donation > 0) {
+            $lines[] = [
+                'key' => 'donation',
+                'label' => __('site.totals.donation'),
+                'amount' => $this->donation,
             ];
         }
 

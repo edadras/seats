@@ -169,6 +169,8 @@ return [
     ],
 
     'totals' => [
+        'addons' => 'إضافات',
+        'donation' => 'تبرع',
         'fee' => 'رسوم الحجز',
         'tax' => ':name بنسبة :rate٪',
         'taxIncluded' => 'يشمل :name بنسبة :rate٪',
@@ -308,5 +310,18 @@ return [
         'presale_not_open' => 'لم يُفتَح البيع المسبق بعد.',
         'event_not_sellable' => 'هذا العرض ليس معروضًا للبيع.',
         'tryAgain' => 'حدث خطأ ما. أعِد المحاولة.',
+    ],
+
+    'addons' => [
+        'bought' => 'اشتريتَ أيضًا',
+        'title' => 'أشيء آخر؟',
+        'perTicket' => 'لكل تذكرة',
+        'left' => 'بقي :count فقط',
+        'soldOut' => 'نفد',
+    ],
+    'donation' => [
+        'title' => 'أتودّ أن تتبرّع بشيء؟',
+        'label' => 'المبلغ بـ :currency',
+        'hint' => 'لا يُضاف إلى التبرع رسم حجز ولا ضريبة.',
     ],
 ];

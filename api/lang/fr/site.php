@@ -169,6 +169,8 @@ return [
     ],
 
     'totals' => [
+        'addons' => 'Extras',
+        'donation' => 'Don',
         'fee' => 'Frais de réservation',
         'tax' => ':name à :rate %',
         'taxIncluded' => 'dont :name à :rate %',
@@ -308,5 +310,18 @@ return [
         'presale_not_open' => "La prévente n'est pas encore ouverte.",
         'event_not_sellable' => "Cette représentation n'est pas en vente.",
         'tryAgain' => "Quelque chose s'est mal passé. Réessayez.",
+    ],
+
+    'addons' => [
+        'bought' => 'Vous avez aussi acheté',
+        'title' => 'Autre chose ?',
+        'perTicket' => 'par billet',
+        'left' => 'il n\'en reste que :count',
+        'soldOut' => 'Épuisé',
+    ],
+    'donation' => [
+        'title' => 'Souhaitez-vous donner quelque chose ?',
+        'label' => 'Montant en :currency',
+        'hint' => "Aucun frais de réservation ni taxe n'est ajouté à un don.",
     ],
 ];

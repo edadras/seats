@@ -28,7 +28,7 @@ class ExternalOrder extends Model
 
     protected $fillable = [
         'tenant_id', 'event_id', 'api_client_id', 'hold_id', 'external_order_id', 'status',
-        'currency', 'total_amount', 'buyer', 'metadata',
+        'currency', 'total_amount', 'donation', 'buyer', 'metadata',
         'confirmed_at', 'cancelled_at', 'refunded_at',
     ];
 
@@ -36,6 +36,7 @@ class ExternalOrder extends Model
         'buyer' => 'array',
         'metadata' => 'array',
         'total_amount' => 'integer',
+        'donation' => 'integer',
         'confirmed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'refunded_at' => 'datetime',
@@ -67,6 +68,17 @@ class ExternalOrder extends Model
             ->orderBy('section_name')
             ->orderBy('row_name')
             ->orderByRaw('LPAD(seat_label, 12, \'0\')');
+    }
+
+    /**
+     * The programmes, drinks and parking spaces bought beside the seats.
+     *
+     * Not allocations and not tickets: an add-on is not an admission, so nothing here reaches the
+     * door list or the check-in path.
+     */
+    public function addonLines()
+    {
+        return $this->hasMany(OrderAddon::class, 'external_order_row_id');
     }
 
     public function canTransitionTo(string $status): bool

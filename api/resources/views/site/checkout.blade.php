@@ -112,6 +112,81 @@
                     </details>
                 @endif
 
+                @if (count($addons))
+                    {{-- What else is for sale. Offered here rather than after paying, because
+                         "would you like a programme" asked once the money has gone is a question
+                         nobody comes back to answer. --}}
+                    <div class="checkout__step">
+                        <h2>{{ __('site.addons.title') }}</h2>
+
+                        @if ($addonError)
+                            <p class="field__error">{{ $addonError }}</p>
+                        @endif
+
+                        <div class="addons">
+                            @foreach ($addons as $addon)
+                                <div class="addon @if ($addon['sold_out']) addon--gone @endif">
+                                    <div class="addon__what">
+                                        <strong>{{ $addon['name'] }}</strong>
+                                        @if ($addon['description'])
+                                            <span class="muted">{{ $addon['description'] }}</span>
+                                        @endif
+                                        <span class="addon__price">
+                                            {{ $money($addon['price']) }}
+                                            @if ('ticket' === $addon['per'])
+                                                <span class="muted">{{ __('site.addons.perTicket') }}</span>
+                                            @endif
+                                            @if (null !== $addon['remaining'] && ! $addon['sold_out'] && $addon['remaining'] <= 10)
+                                                <span class="muted">{{ __('site.addons.left', ['count' => $addon['remaining']]) }}</span>
+                                            @endif
+                                        </span>
+                                    </div>
+
+                                    @if ($addon['sold_out'])
+                                        <span class="addon__gone">{{ __('site.addons.soldOut') }}</span>
+                                    @elseif ('ticket' === $addon['per'])
+                                        {{-- One each, and not a choice: the number follows the
+                                             tickets, so it is stated rather than asked for. --}}
+                                        <span class="addon__fixed">×{{ $addon['quantity'] }}</span>
+                                    @else
+                                        <label class="addon__pick">
+                                            <span class="visually-hidden">{{ $addon['name'] }}</span>
+                                            <select name="addons[{{ $addon['id'] }}]">
+                                                @for ($n = 0; $n <= $addon['max']; $n++)
+                                                    <option value="{{ $n }}"
+                                                        @selected((int) old('addons.'.$addon['id']) === $n)>{{ $n }}</option>
+                                                @endfor
+                                            </select>
+                                        </label>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if ($donation)
+                    {{-- A gift, which is why it carries no booking fee and no tax: charging
+                         somebody for the privilege of giving you money is not a fee. --}}
+                    <div class="checkout__step">
+                        <h2>{{ __('site.donation.title') }}</h2>
+
+                        @if ($donation['prompt'])
+                            <p class="field__hint">{{ $donation['prompt'] }}</p>
+                        @endif
+
+                        <div class="field field--narrow">
+                            <label for="donation">{{ __('site.donation.label', ['currency' => $currency]) }}</label>
+                            {{-- In the currency the label names, not in its minor units: somebody
+                                 typing 3 into a box marked EUR means three euros. --}}
+                            <input id="donation" name="donation" type="number" min="0"
+                                   step="{{ $donation['step'] }}" inputmode="decimal"
+                                   value="{{ old('donation', $donation['typed']) }}">
+                            <p class="field__hint">{{ __('site.donation.hint') }}</p>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="checkout__step">
                     <h2>{{ __('site.howToPay') }}</h2>
 
@@ -147,7 +222,7 @@
                     </p>
                 @endif
 
-                <ul class="summary-lines">
+                <ul class="summary-lines" id="summary-lines">
                     @foreach ($lines as $line)
                         <li>
                             <span>{{ $line['label'] }}
@@ -167,7 +242,9 @@
                     @endif
 
                     {{-- A booking fee is added to the total; an inclusive tax is already inside it
-                         and is shown as a note, not as another thing to add up. --}}
+                         and is shown as a note, not as another thing to add up. Re-rendered by the
+                         quote below when extras change — from the server's own arithmetic, never
+                         from a second copy of it in the browser. --}}
                     @foreach ($extras as $extra)
                         <li class="summary-lines__extra">
                             <span>{{ $extra['label'] }}</span>
@@ -176,7 +253,7 @@
                     @endforeach
                 </ul>
 
-                <p class="summary-total"><span>{{ __('site.total') }}</span><span>{{ $money($total) }}</span></p>
+                <p class="summary-total"><span>{{ __('site.total') }}</span><span id="summary-total">{{ $money($total) }}</span></p>
 
                 {{-- Its own form, outside the one that pays: pressing enter in a discount box must
                      try the code, never buy the tickets. --}}
@@ -212,4 +289,104 @@
             </aside>
         </div>
     </section>
+
+    @if (count($addons) || $donation)
+        @push('scripts')
+            <script>
+                /*
+                 * Keep the summary honest while extras are chosen.
+                 *
+                 * The arithmetic is not repeated here: the page asks the server what the booking
+                 * would come to and prints the answer. A total worked out in the browser would be
+                 * a second implementation of fees, tax and the rule that a donation sits outside
+                 * both — and the one bug a checkout must not have is a summary that disagrees with
+                 * the charge.
+                 *
+                 * Failing quietly is deliberate. Nothing here is load-bearing: the total already
+                 * on the page is the server's, the buyer's choices go with the form regardless,
+                 * and the price they are charged is worked out again when they press pay.
+                 */
+                ( function () {
+                    var form = document.querySelector( '.checkout__form' );
+                    var list = document.getElementById( 'summary-lines' );
+                    var totalEl = document.getElementById( 'summary-total' );
+
+                    if ( ! form || ! list || ! totalEl ) {
+                        return;
+                    }
+
+                    var pending = null;
+
+                    function ask() {
+                        var chosen = {};
+
+                        form.querySelectorAll( '[name^="addons["]' ).forEach( function ( field ) {
+                            var id = field.name.slice( 'addons['.length, -1 );
+
+                            chosen[ id ] = parseInt( field.value, 10 ) || 0;
+                        } );
+
+                        var donation = form.querySelector( '[name="donation"]' );
+
+                        fetch( '/checkout/quote', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': @json(csrf_token()),
+                            },
+                            body: JSON.stringify( {
+                                addons: chosen,
+                                donation: donation ? donation.value || 0 : 0,
+                            } ),
+                        } )
+                            .then( function ( response ) {
+                                return response.ok ? response.json() : null;
+                            } )
+                            .then( function ( quote ) {
+                                if ( ! quote ) {
+                                    return;
+                                }
+
+                                list.querySelectorAll( '.summary-lines__extra' )
+                                    .forEach( function ( row ) { row.remove(); } );
+
+                                ( quote.extras || [] ).forEach( function ( extra ) {
+                                    var row = document.createElement( 'li' );
+                                    var label = document.createElement( 'span' );
+                                    var amount = document.createElement( 'span' );
+
+                                    row.className = 'summary-lines__extra';
+                                    label.textContent = extra.label;
+                                    // An inclusive tax is already inside the total; bracketed, so
+                                    // the column does not read as another thing to add up.
+                                    amount.textContent = extra.informational
+                                        ? '(' + extra.formatted + ')'
+                                        : extra.formatted;
+
+                                    row.appendChild( label );
+                                    row.appendChild( amount );
+                                    list.appendChild( row );
+                                } );
+
+                                totalEl.textContent = quote.total_formatted;
+                            } )
+                            .catch( function () {} );
+                    }
+
+                    function soon() {
+                        window.clearTimeout( pending );
+                        pending = window.setTimeout( ask, 250 );
+                    }
+
+                    form.querySelectorAll( '[name^="addons["], [name="donation"]' )
+                        .forEach( function ( field ) {
+                            field.addEventListener( 'change', soon );
+                            field.addEventListener( 'input', soon );
+                        } );
+                }() );
+            </script>
+        @endpush
+    @endif
 @endsection

@@ -173,6 +173,8 @@ return [
     ],
 
     'totals' => [
+        'addons' => 'Extras',
+        'donation' => 'Donation',
         'fee' => 'Booking fee',
         'tax' => ':name at :rate%',
         'taxIncluded' => 'includes :name at :rate%',
@@ -312,5 +314,18 @@ return [
         'presale_not_open' => 'The presale has not opened yet.',
         'event_not_sellable' => 'This performance is not on sale.',
         'tryAgain' => 'Something went wrong. Try again.',
+    ],
+
+    'addons' => [
+        'bought' => 'You also bought',
+        'title' => 'Anything else?',
+        'perTicket' => 'each',
+        'left' => 'only :count left',
+        'soldOut' => 'All gone',
+    ],
+    'donation' => [
+        'title' => 'Would you like to give something?',
+        'label' => 'Amount in :currency',
+        'hint' => 'No booking fee and no tax is added to a donation.',
     ],
 ];

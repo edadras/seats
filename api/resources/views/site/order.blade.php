@@ -94,6 +94,32 @@
                     </article>
                 @endforeach
             </div>
+
+            @if (count($order->addonLines) || $order->donation)
+                {{-- What was bought that is not a ticket. Nobody is admitted on one of these, so
+                     they are listed apart from the tickets rather than among them — the organiser
+                     hands them over at the counter, and this is the buyer's receipt for that. --}}
+                <div class="also">
+                    <h2 class="also__title">{{ __('site.addons.bought') }}</h2>
+                    <ul class="also__list">
+                        @foreach ($order->addonLines as $line)
+                            <li>
+                                <span dir="auto">{{ $line->name }}
+                                    <span class="muted">× {{ \App\Support\Locale\Money::number($line->quantity) }}</span>
+                                </span>
+                                <span>{{ \App\Support\Locale\Money::format($line->amount, $line->currency, app()->getLocale()) }}</span>
+                            </li>
+                        @endforeach
+
+                        @if ($order->donation)
+                            <li>
+                                <span>{{ __('site.totals.donation') }}</span>
+                                <span>{{ \App\Support\Locale\Money::format($order->donation, $order->currency, app()->getLocale()) }}</span>
+                            </li>
+                        @endif
+                    </ul>
+                </div>
+            @endif
         @else
             <h1 class="section__title">{{ __('site.bookedHeading') }}</h1>
 

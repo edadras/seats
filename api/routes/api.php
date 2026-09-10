@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Management\BoxOfficeController;
 use App\Http\Controllers\Api\V1\Management\AuthController;
 use App\Http\Controllers\Api\V1\Management\CustomerController;
 use App\Http\Controllers\Api\V1\Management\AccessCodeController;
+use App\Http\Controllers\Api\V1\Management\AddonController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\DoorListController;
 use App\Http\Controllers\Api\V1\Management\EntrySlotController;
@@ -122,6 +123,10 @@ Route::prefix('v1')->group(function () {
         Route::post('events/{event}/entry-slots/generate', [EntrySlotController::class, 'generate']);
         Route::get('events/{event}/ticket-types', [TicketTypeController::class, 'index']);
         Route::put('events/{event}/ticket-types', [TicketTypeController::class, 'replace']);
+        // What is sold beside the tickets, and whether this night asks for a donation. One screen,
+        // because "what else can somebody give you money for" is one question to an organiser.
+        Route::get('events/{event}/addons', [AddonController::class, 'index']);
+        Route::put('events/{event}/addons', [AddonController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty
         // thousand seats and a repricing usually touches eight.
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);

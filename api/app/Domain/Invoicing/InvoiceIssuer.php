@@ -42,7 +42,7 @@ class InvoiceIssuer
             return $existing;
         }
 
-        $order->loadMissing(['allocations', 'event']);
+        $order->loadMissing(['allocations', 'event', 'addonLines']);
 
         $payload = [
             'tenant_id' => $order->tenant_id,
@@ -157,6 +157,27 @@ class InvoiceIssuer
 
             $lines[$key]['quantity'] += $quantity;
             $lines[$key]['amount'] += (int) $allocation->amount;
+        }
+
+        /*
+         * The programmes and the parking, under the seats.
+         *
+         * On the invoice because they are part of what was sold, and an accounts department
+         * reconciling a booking against a bank statement needs every line of it. A donation is
+         * not here: it is not a sale, and it sits outside the fee and the tax the totals below
+         * are computed from.
+         */
+        foreach ($order->addonLines as $addon) {
+            if ($addon->refunded_at) {
+                continue;
+            }
+
+            $lines[] = [
+                'description' => $addon->name,
+                'unit_amount' => (int) $addon->unit_price,
+                'quantity' => (int) $addon->quantity,
+                'amount' => (int) $addon->amount,
+            ];
         }
 
         return array_values($lines);

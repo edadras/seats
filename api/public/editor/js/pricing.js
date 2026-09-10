@@ -26,7 +26,17 @@
 	 */
 	var COMMON = [ 'IRR', 'EUR', 'GBP', 'USD', 'AED', 'TRY', 'CHF', 'SEK', 'CAD', 'AUD' ];
 
-	var Pricing = { eventId: null, event: null, zones: [], types: [], CURRENCIES: COMMON };
+	var Pricing = {
+		eventId: null,
+		event: null,
+		zones: [],
+		types: [],
+		addons: [],
+		// What this night asks for beside a price, which is a different question from what it
+		// charges — so it is edited here and stored on the event.
+		donations: { offered: false, prompt: '', suggested: null },
+		CURRENCIES: COMMON,
+	};
 
 	/** The four ways a ticket type can relate to the seat's own price. */
 	var KINDS = [ 'standard', 'percent_off', 'amount_off', 'fixed' ];
@@ -42,10 +52,15 @@
 			// screen has to open on an account that has never touched concessions.
 			App.request( 'GET', '/events/' + eventId + '/ticket-types' )
 				.catch( function () { return { data: [] }; } ),
+			// Same reasoning: an account that has never sold a programme opens this screen too.
+			App.request( 'GET', '/events/' + eventId + '/addons' )
+				.catch( function () { return { data: [], donations: {} }; } ),
 		] ).then( function ( answers ) {
 			Pricing.event = answers[ 0 ];
 			Pricing.zones = Pricing.seed( answers[ 0 ] );
 			Pricing.types = answers[ 1 ].data || [];
+			Pricing.addons = answers[ 2 ].data || [];
+			Pricing.donations = answers[ 2 ].donations || { offered: false, prompt: '', suggested: null };
 			Pricing.paint( App );
 		} ).catch( function ( error ) { App.toast( error.message, true ); } );
 	};
@@ -141,7 +156,7 @@
 					'<div class="field"><label class="field__label" for="fee-amount">' +
 						esc( App.t( 'pricing.extras.feeAmount' ) ) + '</label>' +
 						'<input class="input tnum" id="fee-amount" type="number" min="0" ' +
-							'step="' + ( Pricing.decimals( currency ) ? Math.pow( 10, -Pricing.decimals( currency ) ).toFixed( Pricing.decimals( currency ) ) : '1' ) + '" ' +
+							'step="' + Pricing.step( currency ) + '" ' +
 							'value="' + esc( Pricing.asMajor( event.booking_fee_amount, currency ) ) + '"></div>' +
 					'<div class="field"><label class="field__label" for="fee-percent">' +
 						esc( App.t( 'pricing.extras.feePercent' ) ) + '</label>' +
@@ -188,7 +203,49 @@
 				'<p class="spaced">' +
 					'<button class="btn" id="pricing-type-add">' + icon( 'plus', { size: 15 } ) +
 						esc( App.t( 'pricing.types.add' ) ) + '</button>' +
-				'</p>',
+				'</p>' +
+
+				'<h3 class="subhead">' + esc( App.t( 'pricing.addons.title' ) ) + '</h3>' +
+				'<p class="hint">' + esc( App.t( 'pricing.addons.subtitle' ) ) + '</p>' +
+				( Pricing.addons.length
+					? App.table(
+						[
+							App.t( 'pricing.addons.name' ),
+							App.t( 'pricing.addons.price' ),
+							App.t( 'pricing.addons.stock' ),
+							App.t( 'pricing.addons.sold' ),
+							'',
+						],
+						Pricing.addons.map( function ( addon, index ) {
+							return Pricing.addonRow( App, addon, index, currency );
+						} ).join( '' )
+					)
+					: '<p class="hint">' + esc( App.t( 'pricing.addons.none' ) ) + '</p>' ) +
+				'<p class="spaced">' +
+					'<button class="btn" id="pricing-addon-add">' + icon( 'plus', { size: 15 } ) +
+						esc( App.t( 'pricing.addons.add' ) ) + '</button>' +
+				'</p>' +
+
+				'<h3 class="subhead">' + esc( App.t( 'pricing.donations.title' ) ) + '</h3>' +
+				'<p class="hint">' + esc( App.t( 'pricing.donations.subtitle' ) ) + '</p>' +
+				'<label class="perms__row"><input type="checkbox" class="checkbox" id="donations-on"' +
+					( Pricing.donations.offered ? ' checked' : '' ) + '>' +
+					'<span>' + esc( App.t( 'pricing.donations.ask' ) ) + '</span></label>' +
+				'<div class="field-duo spaced">' +
+					'<div class="field"><label class="field__label" for="donation-prompt">' +
+						esc( App.t( 'pricing.donations.prompt' ) ) + '</label>' +
+						'<input class="input" id="donation-prompt" maxlength="200" value="' +
+							esc( Pricing.donations.prompt || '' ) + '">' +
+						'<span class="field__hint">' + esc( App.t( 'pricing.donations.promptHint' ) ) +
+						'</span></div>' +
+					'<div class="field"><label class="field__label" for="donation-suggested">' +
+						esc( App.t( 'pricing.donations.suggested' ) ) + '</label>' +
+						'<input class="input tnum" id="donation-suggested" type="number" min="0" ' +
+							'step="' + Pricing.step( currency ) + '" value="' +
+							esc( Pricing.asMajor( Pricing.donations.suggested, currency ) ) + '">' +
+						'<span class="field__hint">' + esc( App.t( 'pricing.donations.suggestedHint' ) ) +
+						'</span></div>' +
+				'</div>',
 		} );
 
 		Pricing.bind( App );
@@ -395,6 +452,182 @@
 		shape();
 	};
 
+	/* ------------------------------------------------------------------------- add-ons */
+
+	Pricing.addonRow = function ( App, addon, index, currency ) {
+		var stock = null === addon.stock
+			? App.t( 'pricing.addons.unlimited' )
+			: App.t( 'pricing.addons.ofStock', {
+				left: App.number( addon.remaining ),
+				stock: App.number( addon.stock ),
+			} );
+
+		return '<tr' + ( addon.visible ? '' : ' class="is-muted"' ) + '>' +
+			'<td class="table__primary">' + esc( addon.name ) +
+				( addon.visible
+					? ''
+					: ' <span class="badge badge--neutral">' +
+						esc( App.t( 'pricing.addons.hidden' ) ) + '</span>' ) +
+				( 'ticket' === addon.per
+					? ' <span class="badge badge--neutral">' +
+						esc( App.t( 'pricing.addons.perTicket' ) ) + '</span>'
+					: '' ) +
+				( addon.description
+					? '<span class="muted on-own-line">' + esc( addon.description ) + '</span>'
+					: '' ) +
+			'</td>' +
+			'<td class="tnum">' + esc( App.money( addon.price, addon.currency || currency ) ) + '</td>' +
+			'<td class="muted">' + esc( stock ) + '</td>' +
+			'<td class="tnum">' + esc( App.number( addon.sold || 0 ) ) + '</td>' +
+			'<td class="table__actions">' +
+				'<button class="btn btn--sm" data-addon-edit="' + index + '">' +
+					esc( App.t( 'pricing.addons.edit' ) ) + '</button>' +
+				( addon.sold
+					? ''
+					: '<button class="btn btn--sm" data-addon-drop="' + index + '">' +
+						esc( App.t( 'pricing.addons.remove' ) ) + '</button>' ) +
+			'</td>' +
+		'</tr>';
+	};
+
+	/**
+	 * The form for one thing on the counter.
+	 *
+	 * The price is asked for in the currency's own minor unit, the same trick the zone rows use:
+	 * two boxes for a euro, none for a rial.
+	 */
+	Pricing.addonForm = function ( App, index ) {
+		var currency = normaliseCode( document.getElementById( 'pricing-currency' ).value );
+		var decimals = Pricing.decimals( currency );
+		var addon = null === index ? {
+			name: '', description: '', price: 0, stock: null, max_per_order: 10,
+			per: 'order', visible: true,
+		} : Pricing.addons[ index ];
+
+		App.modal( {
+			title: App.t( null === index ? 'pricing.addons.add' : 'pricing.addons.edit' ),
+			submitLabel: App.t( 'panel.common.save' ),
+			body:
+				'<div class="stack">' +
+					'<div class="field"><label class="field__label" for="x-name">' +
+						esc( App.t( 'pricing.addons.name' ) ) + '</label>' +
+						'<input class="input" id="x-name" maxlength="120" required value="' +
+							esc( addon.name || '' ) + '"></div>' +
+
+					'<div class="field"><label class="field__label" for="x-description">' +
+						esc( App.t( 'pricing.addons.description' ) ) + '</label>' +
+						'<input class="input" id="x-description" maxlength="400" value="' +
+							esc( addon.description || '' ) + '"></div>' +
+
+					'<div class="field-duo">' +
+						'<div class="field"><label class="field__label" for="x-price">' +
+							esc( App.t( 'pricing.addons.price' ) ) + '</label>' +
+							'<input class="input tnum" id="x-price" type="number" min="0" step="' +
+								Pricing.step( currency ) + '" value="' +
+								esc( Pricing.asMajor( addon.price, currency ) ) + '"></div>' +
+						'<div class="field"><label class="field__label" for="x-per">' +
+							esc( App.t( 'pricing.addons.per' ) ) + '</label>' +
+							'<select class="select" id="x-per">' +
+								[ 'order', 'ticket' ].map( function ( kind ) {
+									return '<option value="' + kind + '"' +
+										( kind === ( addon.per || 'order' ) ? ' selected' : '' ) + '>' +
+										esc( App.t( 'pricing.addons.pers.' + kind ) ) + '</option>';
+								} ).join( '' ) +
+							'</select>' +
+							'<span class="field__hint" id="x-per-hint"></span></div>' +
+					'</div>' +
+
+					'<div class="field-duo">' +
+						'<div class="field"><label class="field__label" for="x-stock">' +
+							esc( App.t( 'pricing.addons.stock' ) ) + '</label>' +
+							'<input class="input tnum" id="x-stock" type="number" min="0" value="' +
+								esc( null === addon.stock ? '' : addon.stock ) + '">' +
+							'<span class="field__hint">' + esc( App.t( 'pricing.addons.stockHint' ) ) +
+							'</span></div>' +
+						'<div class="field" id="x-max-field"><label class="field__label" for="x-max">' +
+							esc( App.t( 'pricing.addons.maxPerOrder' ) ) + '</label>' +
+							'<input class="input tnum" id="x-max" type="number" min="1" max="999" value="' +
+								esc( addon.max_per_order || 10 ) + '"></div>' +
+					'</div>' +
+
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="x-visible"' +
+						( false === addon.visible ? '' : ' checked' ) + '>' +
+						'<span>' + esc( App.t( 'pricing.addons.visible' ) ) + '</span></label>' +
+				'</div>',
+			onSubmit: function () {
+				var typed = document.getElementById( 'x-price' ).value;
+				var stock = document.getElementById( 'x-stock' ).value;
+				var row = {
+					id: addon.id || null,
+					name: document.getElementById( 'x-name' ).value.trim(),
+					description: document.getElementById( 'x-description' ).value.trim() || null,
+					price: Math.round( Number( typed || 0 ) * Math.pow( 10, decimals ) ),
+					stock: '' === stock ? null : Math.max( 0, parseInt( stock, 10 ) || 0 ),
+					max_per_order: parseInt( document.getElementById( 'x-max' ).value, 10 ) || 10,
+					per: document.getElementById( 'x-per' ).value,
+					visible: document.getElementById( 'x-visible' ).checked,
+				};
+
+				if ( '' === row.name ) {
+					return Promise.reject( new Error( App.t( 'pricing.addons.needsName' ) ) );
+				}
+
+				if ( null === index ) {
+					Pricing.addons.push( row );
+				} else {
+					Pricing.addons[ index ] = row;
+				}
+
+				return Pricing.saveAddons( App );
+			},
+		} );
+
+		var per = document.getElementById( 'x-per' );
+
+		// One per ticket is not a choice the buyer makes, so the "how many at once" box has
+		// nothing to say about it.
+		function shape() {
+			document.getElementById( 'x-max-field' ).hidden = 'ticket' === per.value;
+			document.getElementById( 'x-per-hint' ).textContent =
+				App.t( 'pricing.addons.perHints.' + per.value );
+		}
+
+		per.addEventListener( 'change', shape );
+		shape();
+	};
+
+	/** The whole list, every time — the same contract the zone prices and the types are saved under. */
+	Pricing.saveAddons = function ( App ) {
+		var suggested = document.getElementById( 'donation-suggested' );
+		var currency = normaliseCode( document.getElementById( 'pricing-currency' ).value );
+		var decimals = Pricing.decimals( currency );
+
+		return App.request( 'PUT', '/events/' + Pricing.eventId + '/addons', {
+			addons: Pricing.addons.map( function ( addon ) {
+				return {
+					id: addon.id || null,
+					name: addon.name,
+					description: addon.description || null,
+					price: addon.price,
+					stock: null === addon.stock || undefined === addon.stock ? null : addon.stock,
+					max_per_order: addon.max_per_order || 10,
+					per: addon.per || 'order',
+					visible: false !== addon.visible,
+				};
+			} ),
+			donations: document.getElementById( 'donations-on' ).checked,
+			donation_prompt: document.getElementById( 'donation-prompt' ).value.trim() || null,
+			donation_suggested: '' === suggested.value
+				? null
+				: Math.round( Number( suggested.value ) * Math.pow( 10, decimals ) ),
+		} ).then( function ( response ) {
+			Pricing.addons = response.data || [];
+			Pricing.donations = response.donations || Pricing.donations;
+			App.toast( App.t( 'pricing.addons.saved' ) );
+			Pricing.paint( App );
+		} );
+	};
+
 	/** The whole list, every time — the same contract the zone prices are saved under. */
 	Pricing.saveTypes = function ( App ) {
 		return App.request( 'PUT', '/events/' + Pricing.eventId + '/ticket-types', {
@@ -478,6 +711,31 @@
 				Pricing.saveTypes( App ).catch( function ( error ) { App.toast( error.message, true ); } );
 			} );
 		} );
+
+		document.getElementById( 'pricing-addon-add' ).addEventListener( 'click', function () {
+			Pricing.addonForm( App, null );
+		} );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-addon-edit]' ), function ( button ) {
+			button.addEventListener( 'click', function () {
+				Pricing.addonForm( App, Number( button.dataset.addonEdit ) );
+			} );
+		} );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-addon-drop]' ), function ( button ) {
+			button.addEventListener( 'click', function () {
+				Pricing.addons.splice( Number( button.dataset.addonDrop ), 1 );
+				Pricing.saveAddons( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
+
+		// The donation settings ride with the add-ons, because they are saved by the same endpoint
+		// and an organiser who ticks the box expects it to stick without hunting for a button.
+		[ 'donations-on', 'donation-prompt', 'donation-suggested' ].forEach( function ( id ) {
+			document.getElementById( id ).addEventListener( 'change', function () {
+				Pricing.saveAddons( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
 	};
 
 	/** Take whatever is in the boxes right now, in the currency they were typed under. */
@@ -546,6 +804,18 @@
 		return decimals
 			? ( ( minor || 0 ) / Math.pow( 10, decimals ) ).toFixed( decimals )
 			: String( minor || 0 );
+	};
+
+	/**
+	 * The step a number input should take in this currency.
+	 *
+	 * 0.01 for a euro, 1 for a rial. A rial box that steps in hundredths invites somebody to type
+	 * a hundredth of a rial, which does not exist.
+	 */
+	Pricing.step = function ( currency ) {
+		var decimals = Pricing.decimals( currency );
+
+		return decimals ? Math.pow( 10, -decimals ).toFixed( decimals ) : '1';
 	};
 
 	/**

@@ -194,4 +194,12 @@ return [
     'access_code_seat_limit' => 'Quel codice vale per :count posti alla volta.',
     'access_code_taken' => 'Hai già un codice con quel nome.',
     'access_code_in_use' => "Questo codice ha fatto entrare qualcuno. Mettilo in pausa invece di cancellarlo — cancellarlo lascerebbe quelle prenotazioni senza spiegazione.",
+
+    // --- Add-ons and donations ----------------------------------------------------------------
+    'unknown_addon' => 'Non è una cosa che questo evento vende.',
+    'addon_too_many' => 'Al massimo :count di ":name" si possono comprare in una volta.',
+    'addon_sold_out' => 'Non ne restano così tanti di ":name".',
+    'addon_sold' => 'Ciò che è stato venduto non si può rimuovere. Nascondilo invece.',
+    'donation_negative' => 'Una donazione non può essere meno di niente.',
+    'donation_too_large' => "È più di quanto questa cassa accetti. Parlane con l'organizzatore.",
 ];

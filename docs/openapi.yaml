@@ -948,6 +948,91 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/addons:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: listAddons
+      tags: [Pricing]
+      summary: What this event sells beside its tickets
+      description: |
+        Requires `events.view`. A programme, a glass of wine, a parking space — bought alongside the
+        tickets and not a ticket itself: nothing here creates an allocation, a ticket, or a row on a
+        door list, and the organiser hands it over at the counter.
+
+        `remaining` is counted, not decremented. A cancelled booking gave its programmes back,
+        because the organiser never handed one over.
+
+        The donation prompt is returned beside them because it is edited on the same screen: "what
+        else can somebody give you money for" is one question to an organiser, even though the two
+        answers sit on different sides of the booking fee.
+      responses:
+        "200":
+          description: What is on the counter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Addon" }
+                  donations: { $ref: "#/components/schemas/DonationPrompt" }
+                  currency: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    put:
+      operationId: replaceAddons
+      tags: [Pricing]
+      summary: Save the whole counter at once
+      description: |
+        Requires `pricing.manage`. The whole list, every time — the same contract the price zones
+        and the ticket types are saved under, and for the same reason: what is on the counter is one
+        decision, and editing a row at a time is how a venue ends up offering last season's
+        programme next to this season's.
+
+        Anything left out is removed. Something that has been bought cannot be removed — the
+        booking still points at it — so the whole save is refused with `addon_sold` naming which,
+        rather than half-applied. Hiding it is the way to take it off the counter.
+
+        Every price is stored in the event's own currency whatever is sent: a euro programme against
+        a rial event is a line nobody can add up.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [addons]
+              properties:
+                addons:
+                  type: array
+                  maxItems: 30
+                  items: { $ref: "#/components/schemas/AddonInput" }
+                donations: { type: boolean }
+                donation_prompt: { type: [string, "null"], maxLength: 200 }
+                donation_suggested:
+                  type: [integer, "null"]
+                  description: "Minor units. A number the buyer may overwrite, not a price."
+      responses:
+        "200":
+          description: The counter as it now stands
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Addon" }
+                  donations: { $ref: "#/components/schemas/DonationPrompt" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Something on the list has been bought and cannot be removed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /access-codes:
     get:
       operationId: listAccessCodes
@@ -5628,6 +5713,65 @@ components:
                 description: "The last few characters, so a person can tell two keys apart."
               last_used_at: { type: [string, "null"], format: date-time }
               expires_at: { type: [string, "null"], format: date-time }
+
+    Addon:
+      type: object
+      description: >-
+        Something sold beside a ticket. Not an admission: nothing here produces an allocation, a
+        ticket or a row on a door list.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        price: { type: integer, description: "Minor units, in the event's currency." }
+        currency: { type: string }
+        stock:
+          type: [integer, "null"]
+          description: "How many exist at all. Null means no limit."
+        max_per_order: { type: integer }
+        per:
+          type: string
+          enum: [order, ticket]
+          description: >-
+            `order` — the buyer picks a number. `ticket` — one each, priced per ticket and not
+            chosen, which is a compulsory charge that is a thing rather than a fee.
+        visible: { type: boolean }
+        sold: { type: integer, description: "On live bookings only." }
+        remaining:
+          type: [integer, "null"]
+          description: "Counted, never decremented — a cancelled booking gave its share back."
+        shared:
+          type: boolean
+          description: "True where the whole account offers this, rather than this night alone."
+
+    AddonInput:
+      type: object
+      required: [name, price]
+      properties:
+        id:
+          type: [string, "null"]
+          format: uuid
+          description: "Present to keep an existing row; absent to create one."
+        name: { type: string, maxLength: 120 }
+        description: { type: [string, "null"], maxLength: 400 }
+        price: { type: integer, minimum: 0 }
+        stock: { type: [integer, "null"], minimum: 0 }
+        max_per_order: { type: [integer, "null"], minimum: 1, maximum: 999 }
+        per: { type: string, enum: [order, ticket] }
+        visible: { type: boolean }
+
+    DonationPrompt:
+      type: object
+      description: >-
+        Whether this event asks for a gift, and what it suggests. A donation carries no booking fee
+        and no tax — charging somebody for the privilege of giving you money is not a fee — so it is
+        carried outside the subtotal both are computed from.
+      properties:
+        offered: { type: boolean }
+        prompt: { type: [string, "null"] }
+        suggested:
+          type: [integer, "null"]
+          description: "Minor units. Zero is a real choice: ask, but suggest nothing."
 
     AccessCode:
       type: object

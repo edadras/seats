@@ -44,6 +44,9 @@ Route::middleware('site')->group(function () {
         ->middleware('throttle:10,1');
     Route::post('checkout/discount/remove', [CheckoutController::class, 'removeDiscount'])
         ->middleware('throttle:20,1');
+    // What the booking would come to with these extras. A keystroke, so it is throttled loosely
+    // and it writes nothing.
+    Route::post('checkout/quote', [CheckoutController::class, 'quote'])->middleware('throttle:60,1');
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
     // The same tickets, laid out for paper and for the browser's own "Save as PDF".
     Route::get('order/{reference}/tickets', [CheckoutController::class, 'tickets']);

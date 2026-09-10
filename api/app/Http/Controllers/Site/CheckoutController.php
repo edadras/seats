@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Addons\Addons;
+use App\Domain\Addons\Donations;
 use App\Domain\Discounts\DiscountOffer;
 use App\Domain\Discounts\Discounts;
 use App\Domain\Invoicing\InvoiceIssuer;
@@ -86,6 +88,11 @@ class CheckoutController extends Controller
             'discountError' => $error,
             'extras' => $totals->extraLines(),
             'total' => $totals->total,
+            // What else is for sale, and what is left of it. Offered before the money moves, so a
+            // buyer chooses a programme in the same breath as their seats.
+            'addons' => app(Addons::class)->offer($hold->event, count($this->places($hold))),
+            'addonError' => $request->session()->get('seatmap_addon_error'),
+            'donation' => app(Donations::class)->prompt($hold->event),
             'currency' => $hold->currency,
             'expires_at' => $hold->expires_at,
             'gateways' => $this->gateways->enabledFor($site),
@@ -233,6 +240,56 @@ class CheckoutController extends Controller
         return redirect('/checkout');
     }
 
+    /**
+     * What the booking would come to, with these extras chosen.
+     *
+     * The summary on the page is server-rendered, and add-ons are picked after it is rendered. A
+     * total worked out in the browser would be a second implementation of the arithmetic, and the
+     * one bug a checkout must not have is a summary that disagrees with the charge — so the page
+     * asks, and the answer comes from the same `totalsFor` the payment uses.
+     */
+    public function quote(Request $request)
+    {
+        $hold = $this->heldSeats($request);
+
+        if (! $hold) {
+            return response()->json(['error' => 'hold_gone'], 410);
+        }
+
+        $data = $request->validate([
+            'addons' => ['sometimes', 'array', 'max:40'],
+            'addons.*' => ['integer', 'min:0', 'max:999'],
+            'donation' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+        ]);
+
+        $offer = $this->offerFor($request, $hold);
+        $places = count($this->places($hold));
+
+        try {
+            $lines = app(Addons::class)->price($hold->event, $data['addons'] ?? [], $places);
+        } catch (ApiException $e) {
+            // A quantity the organiser does not allow. Answered rather than thrown, because this
+            // is a keystroke and not a purchase.
+            return response()->json(['error' => $e->errorCode(), 'message' => $e->localisedMessage()], 422);
+        }
+
+        $totals = StorefrontCheckout::totalsFor(
+            $hold,
+            $offer?->isAllowed() ? $offer->amount : 0,
+            app(Addons::class)->total($lines),
+            app(Donations::class)->amount($hold->event, $data['donation'] ?? 0),
+        );
+
+        $money = fn (int $minor) => Money::format($minor, (string) $hold->currency, app()->getLocale());
+
+        return response()->json([
+            'extras' => array_map(fn (array $line) => $line + ['formatted' => $money($line['amount'])],
+                $totals->extraLines()),
+            'total' => $totals->total,
+            'total_formatted' => $money($totals->total),
+        ]);
+    }
+
     public function place(Request $request)
     {
         $site = $request->attributes->get('site');
@@ -252,6 +309,11 @@ class CheckoutController extends Controller
             'company' => ['nullable', 'string', 'max:160'],
             'tax_number' => ['nullable', 'string', 'max:60'],
             'billing_address' => ['nullable', 'string', 'max:400'],
+            // What they want beside the tickets, and what they want to give. Both quantities and
+            // amounts only — every price comes from the organiser's own rows.
+            'addons' => ['sometimes', 'array', 'max:40'],
+            'addons.*' => ['integer', 'min:0', 'max:999'],
+            'donation' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ]);
 
         $allowed = array_map(fn ($g) => $g->key(), $this->gateways->enabledFor($site));
@@ -284,6 +346,10 @@ class CheckoutController extends Controller
             'address' => $data['billing_address'] ?? null,
         ]) : [];
 
+        // A donation that is not offered is zero, whatever arrived in the request: an event that
+        // does not ask for one must not be able to be given one by a hand-written form.
+        $donation = app(Donations::class)->amount($hold->event, $data['donation'] ?? 0);
+
         try {
             [$order, $intent] = $this->checkout->place(
                 $site,
@@ -293,8 +359,17 @@ class CheckoutController extends Controller
                 $site->url('/order/'.$reference),
                 $offer?->isAllowed() ? $offer : null,
                 $billing,
+                $data['addons'] ?? [],
+                $donation,
             );
         } catch (ApiException $e) {
+            if (in_array($e->errorCode(), ['addon_sold_out', 'addon_too_many', 'unknown_addon'], true)) {
+                // The last programme went while this buyer was paying. Nothing has been charged
+                // and their seats are still theirs, so they are sent back to choose again rather
+                // than losing a booking over a five-euro extra.
+                return redirect('/checkout')->with('seatmap_addon_error', $e->localisedMessage());
+            }
+
             if ('discount_used_up' !== $e->errorCode()) {
                 throw $e;
             }
@@ -473,7 +548,7 @@ class CheckoutController extends Controller
             throw new NotFoundHttpException('No such order.');
         }
 
-        $order = ExternalOrder::with(['allocations.ticket', 'event.venue'])
+        $order = ExternalOrder::with(['allocations.ticket', 'event.venue', 'addonLines'])
             ->where('external_order_id', $reference)
             ->first();
 
