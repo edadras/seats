@@ -55,12 +55,17 @@
 			// Same reasoning: an account that has never sold a programme opens this screen too.
 			App.request( 'GET', '/events/' + eventId + '/addons' )
 				.catch( function () { return { data: [], donations: {} }; } ),
+			// And one that has never dated a price change.
+			App.request( 'GET', '/events/' + eventId + '/price-tiers' )
+				.catch( function () { return { data: [], active: null }; } ),
 		] ).then( function ( answers ) {
 			Pricing.event = answers[ 0 ];
 			Pricing.zones = Pricing.seed( answers[ 0 ] );
 			Pricing.types = answers[ 1 ].data || [];
 			Pricing.addons = answers[ 2 ].data || [];
 			Pricing.donations = answers[ 2 ].donations || { offered: false, prompt: '', suggested: null };
+			Pricing.tiers = answers[ 3 ].data || [];
+			Pricing.activeTier = answers[ 3 ].active || null;
 			Pricing.paint( App );
 		} ).catch( function ( error ) { App.toast( error.message, true ); } );
 	};
@@ -140,6 +145,8 @@
 						} ).join( '' )
 					)
 					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ) ) ) +
+
+				Pricing.tiersSection( App, currency ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'pricing.extras.title' ) ) + '</h3>' +
 				'<p class="hint">' + esc( App.t( 'pricing.extras.subtitle' ) ) + '</p>' +
@@ -712,6 +719,54 @@
 			} );
 		} );
 
+		document.getElementById( 'tier-add' ).addEventListener( 'click', function () {
+			Pricing.readTiers( document.getElementById( 'pricing-currency' ).value );
+
+			/*
+			 * A new tier begins where the last one ended.
+			 *
+			 * Anything else is an overlap the moment it appears — two windows both claiming today —
+			 * and an organiser would meet a refusal for a row they have not finished typing. Where
+			 * the last tier ran on for ever, adding another one is *saying* when it stops, so it
+			 * is given that end rather than being left to argue with its successor.
+			 */
+			var last = Pricing.tiers[ Pricing.tiers.length - 1 ];
+			var week = new Date();
+
+			week.setDate( week.getDate() + 7 );
+
+			var from = last && last.ends_at ? last.ends_at : week.toISOString();
+
+			if ( last && ! last.ends_at ) {
+				last.ends_at = from;
+			}
+
+			Pricing.tiers.push( {
+				name: App.t( 'pricing.tiers.newName' ), starts_at: from, ends_at: null,
+				kind: 'percent', value: 0, active: false,
+			} );
+			Pricing.paint( App );
+		} );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-tier-drop]' ), function ( button ) {
+			button.addEventListener( 'click', function () {
+				Pricing.readTiers( document.getElementById( 'pricing-currency' ).value );
+				Pricing.tiers.splice( Number( button.dataset.tierDrop ), 1 );
+				Pricing.saveTiers( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
+
+		Array.prototype.forEach.call(
+			document.querySelectorAll( '[data-tier-name], [data-tier-from], [data-tier-until], [data-tier-kind], [data-tier-value]' ),
+			function ( input ) {
+				// Saved when the box is left rather than on every keystroke: a half-typed date is
+				// an overlap the server would have to refuse, loudly, for no reason.
+				input.addEventListener( 'change', function () {
+					Pricing.saveTiers( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+				} );
+			}
+		);
+
 		document.getElementById( 'pricing-addon-add' ).addEventListener( 'click', function () {
 			Pricing.addonForm( App, null );
 		} );
@@ -735,6 +790,131 @@
 			document.getElementById( id ).addEventListener( 'change', function () {
 				Pricing.saveAddons( App ).catch( function ( error ) { App.toast( error.message, true ); } );
 			} );
+		} );
+	};
+
+	/** An ISO instant as the local wall-clock string a datetime-local input wants. */
+	function localInput( iso ) {
+		if ( ! iso ) {
+			return '';
+		}
+
+		var when = new Date( iso );
+		var pad = function ( n ) { return ( n < 10 ? '0' : '' ) + n; };
+
+		return when.getFullYear() + '-' + pad( when.getMonth() + 1 ) + '-' + pad( when.getDate() ) +
+			'T' + pad( when.getHours() ) + ':' + pad( when.getMinutes() );
+	}
+
+	/** And back again — the input is local time, the API is told an instant. */
+	function isoOrNull( local ) {
+		return local ? new Date( local ).toISOString() : null;
+	}
+
+	/** A deadline, written the way the reader's own language writes one. */
+	function localWhen( iso ) {
+		return iso ? new Date( iso ).toLocaleString() : '';
+	}
+
+	/**
+	 * When the prices above change, and by how much.
+	 *
+	 * Deliberately underneath the zone table and not a screen of its own: a tier is a sentence
+	 * about the numbers directly above it, and an organiser who cannot see both at once is
+	 * guessing what "minus twenty per cent" will actually charge.
+	 */
+	Pricing.tiersSection = function ( App, currency ) {
+		var live = Pricing.activeTier;
+
+		return '<h3 class="subhead">' + esc( App.t( 'pricing.tiers.title' ) ) + '</h3>' +
+			'<p class="hint">' + esc( App.t( 'pricing.tiers.subtitle' ) ) + '</p>' +
+			( live
+				? '<p class="notice notice--info" id="tier-live">' +
+					esc( live.ends_at
+						? App.t( 'pricing.tiers.liveUntil', { name: live.name, until: localWhen( live.ends_at ) } )
+						: App.t( 'pricing.tiers.live', { name: live.name } ) ) + '</p>'
+				: '' ) +
+			( Pricing.tiers.length
+				? App.table(
+					[
+						App.t( 'pricing.tiers.name' ), App.t( 'pricing.tiers.from' ),
+						App.t( 'pricing.tiers.until' ), App.t( 'pricing.tiers.change' ), '',
+					],
+					Pricing.tiers.map( function ( tier, index ) {
+						return Pricing.tierRow( App, tier, index, currency );
+					} ).join( '' )
+				)
+				: App.emptyState( 'clock', App.t( 'pricing.tiers.none' ), App.t( 'pricing.tiers.noneHint' ) ) ) +
+			'<button class="btn" id="tier-add">' + esc( App.t( 'pricing.tiers.add' ) ) + '</button>';
+	};
+
+	Pricing.tierRow = function ( App, tier, index, currency ) {
+		var isAmount = 'amount' === tier.kind;
+
+		return '<tr' + ( tier.active ? ' class="is-live"' : '' ) + '>' +
+			'<td><input class="input" data-tier-name="' + index + '" maxlength="120" value="' +
+				esc( tier.name || '' ) + '"></td>' +
+			'<td><input class="input" type="datetime-local" data-tier-from="' + index + '" value="' +
+				esc( localInput( tier.starts_at ) ) + '"></td>' +
+			'<td><input class="input" type="datetime-local" data-tier-until="' + index + '" value="' +
+				esc( localInput( tier.ends_at ) ) + '"></td>' +
+			'<td class="row row--wrap">' +
+				'<select class="select" data-tier-kind="' + index + '">' +
+					[ 'percent', 'amount' ].map( function ( kind ) {
+						return '<option value="' + kind + '"' + ( kind === tier.kind ? ' selected' : '' ) + '>' +
+							esc( App.t( 'pricing.tiers.kinds.' + kind ) ) + '</option>';
+					} ).join( '' ) +
+				'</select>' +
+				'<input class="input tnum" type="number" data-tier-value="' + index + '" ' +
+					( isAmount ? 'step="' + Pricing.step( currency ) + '" ' : 'step="1" ' ) +
+					'value="' + esc( isAmount ? Pricing.asMajor( tier.value, currency ) : ( tier.value || 0 ) ) + '">' +
+			'</td>' +
+			'<td class="row row--end"><button class="btn btn--quiet" data-tier-drop="' + index + '">' +
+				esc( App.t( 'pricing.tiers.remove' ) ) + '</button></td></tr>';
+	};
+
+	/** Read the tier boxes back, in the currency an amount tier was typed under. */
+	Pricing.readTiers = function ( currency ) {
+		var decimals = Pricing.decimals( normaliseCode( currency ) );
+
+		Pricing.tiers.forEach( function ( tier, index ) {
+			var value = document.querySelector( '[data-tier-value="' + index + '"]' );
+			var kind = document.querySelector( '[data-tier-kind="' + index + '"]' );
+			var name = document.querySelector( '[data-tier-name="' + index + '"]' );
+			var from = document.querySelector( '[data-tier-from="' + index + '"]' );
+			var until = document.querySelector( '[data-tier-until="' + index + '"]' );
+
+			if ( ! value ) {
+				return;
+			}
+
+			tier.name = name.value;
+			tier.kind = kind.value;
+			tier.starts_at = isoOrNull( from.value );
+			tier.ends_at = isoOrNull( until.value );
+			tier.value = 'amount' === tier.kind
+				? Math.round( Number( value.value || 0 ) * Math.pow( 10, decimals ) )
+				: Math.round( Number( value.value || 0 ) );
+		} );
+	};
+
+	Pricing.saveTiers = function ( App ) {
+		var currency = normaliseCode( document.getElementById( 'pricing-currency' ).value );
+
+		Pricing.readTiers( currency );
+
+		return App.request( 'PUT', '/events/' + Pricing.eventId + '/price-tiers', {
+			tiers: Pricing.tiers.map( function ( tier ) {
+				return {
+					name: tier.name, starts_at: tier.starts_at || null, ends_at: tier.ends_at || null,
+					kind: tier.kind, value: tier.value,
+				};
+			} ),
+		} ).then( function ( answer ) {
+			Pricing.tiers = answer.data || [];
+			Pricing.activeTier = answer.active || null;
+			Pricing.paint( App );
+			App.toast( App.t( 'pricing.tiers.saved' ) );
 		} );
 	};
 

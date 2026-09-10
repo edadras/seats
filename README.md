@@ -78,6 +78,10 @@ A seat is the start of it, not the end. Around the map:
   what they are paying and an organiser can reconcile it. **Invoices** carry a VAT number.
 - **Discount codes**, percentage or fixed, per event or account-wide, with a cap on uses and a
   record of who spent them.
+- **Timed price tiers** — cheaper early, dearer late, decided once and dated. A tier moves the zone
+  prices for as long as its window lasts; which one is in force is worked out from the clock every
+  time a price is read, so there is no job to miss at midnight and no column to go stale. Two tiers
+  may not cover one moment, because a ticket cannot have two prices.
 - **Best available** — "four together" without a buyer hunting for them, scored by price, by how
   central the run is, and by how many orphan seats it would leave behind.
 - **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
@@ -532,6 +536,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Inside one block, the blocks either side of it are drawn too, and can be bought from | `import_smoke` |
 | A block is the shape its own seats make, and its name fits inside it | `import_smoke` |
 | The plan fills the screen with the summary still on it | `picker_smoke` |
+| Today's price is today's, with nothing running at midnight to make it so | `PriceTierTest` |
+| The number on the plan and the number in the basket are the same number | `PriceTierTest`, `tiers_smoke` |
+| Two price tiers cannot cover one moment | `PriceTierTest` |
 
 ## Installing the plugin
 

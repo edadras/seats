@@ -241,6 +241,8 @@ return [
     'resale_over' => 'Cette soirée a déjà eu lieu.',
     'resale_settled' => 'Cette mise en vente est déjà close.',
     'resale_being_bought' => 'Quelqu’un est en train d’acheter cette place. Elle pourra être retirée de la vente s’il ne va pas au bout.',
+    'tier_window_backwards' => 'Un palier tarifaire ne peut pas se terminer avant de commencer.',
+    'tier_windows_overlap' => 'Deux paliers couvrent le même moment : un billet aurait donc deux prix.',
     'renewal_same_run' => 'Une saison ne peut pas être renouvelée en elle-même.',
     'renewal_pass_elsewhere' => 'Cet abonnement appartient à une autre saison.',
     'renewal_deadline_past' => 'Un renouvellement doit se clore dans le futur, sinon ce n’est pas une offre.',

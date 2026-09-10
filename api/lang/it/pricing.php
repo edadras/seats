@@ -25,6 +25,27 @@ return [
     'prices' => 'Prezzi',
     'unpriced' => 'Senza prezzo',
 
+    'tiers' => [
+        'title' => 'Fasce di prezzo',
+        'subtitle' => 'Quando questi prezzi cambiano, deciso ora invece che ricordato dopo. Tutto quanto sopra si sposta della misura impostata, per tutta la durata della finestra.',
+        'name' => 'Fascia',
+        'from' => 'Dal',
+        'until' => 'Fino al',
+        'change' => 'Variazione',
+        'remove' => 'Rimuovi',
+        'add' => 'Aggiungi una fascia',
+        'newName' => 'Nuova fascia',
+        'none' => "Il prezzo resta lo stesso fino all'apertura",
+        'noneHint' => 'Aggiungi una fascia per vendere a meno in anticipo, o a più in ritardo, senza che nessuno debba ricordarsene.',
+        'live' => ':name è in vigore adesso.',
+        'liveUntil' => ':name è in vigore adesso, fino al :until.',
+        'saved' => 'Fasce di prezzo salvate.',
+        'kinds' => [
+            'percent' => 'Percentuale',
+            'amount' => 'Importo',
+        ],
+    ],
+
     'seats' => [
         'open' => 'Posti singoli',
         'title' => 'Posti singoli',

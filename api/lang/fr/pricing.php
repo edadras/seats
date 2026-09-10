@@ -25,6 +25,27 @@ return [
     'prices' => 'Tarifs',
     'unpriced' => 'Sans tarif',
 
+    'tiers' => [
+        'title' => 'Paliers tarifaires',
+        'subtitle' => 'Quand ces prix changent, décidé maintenant plutôt que retenu pour plus tard. Tout ce qui précède bouge du montant choisi, tant que la fenêtre dure.',
+        'name' => 'Palier',
+        'from' => 'À partir du',
+        'until' => "Jusqu'au",
+        'change' => 'Écart',
+        'remove' => 'Retirer',
+        'add' => 'Ajouter un palier',
+        'newName' => 'Nouveau palier',
+        'none' => "Le prix ne change pas avant l'ouverture des portes",
+        'noneHint' => 'Ajoutez un palier pour vendre moins cher tôt, ou plus cher tard, sans que personne ait à y penser.',
+        'live' => ':name s\'applique en ce moment.',
+        'liveUntil' => ':name s\'applique en ce moment, jusqu\'au :until.',
+        'saved' => 'Paliers tarifaires enregistrés.',
+        'kinds' => [
+            'percent' => 'Pourcentage',
+            'amount' => 'Montant',
+        ],
+    ],
+
     'seats' => [
         'open' => 'Places individuelles',
         'title' => 'Places individuelles',

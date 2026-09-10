@@ -25,6 +25,27 @@ return [
     'prices' => 'Prices',
     'unpriced' => 'Not priced',
 
+    'tiers' => [
+        'title' => 'Price tiers',
+        'subtitle' => 'When these prices change, decided now rather than remembered later. Everything above moves by the amount you set, for as long as the window lasts.',
+        'name' => 'Tier',
+        'from' => 'From',
+        'until' => 'Until',
+        'change' => 'Change',
+        'remove' => 'Remove',
+        'add' => 'Add a tier',
+        'newName' => 'New tier',
+        'none' => 'The price is the same until the doors open',
+        'noneHint' => 'Add a tier to charge less early, or more late, without anybody having to remember to do it.',
+        'live' => ':name is charging now.',
+        'liveUntil' => ':name is charging now, until :until.',
+        'saved' => 'Price tiers saved.',
+        'kinds' => [
+            'percent' => 'Per cent',
+            'amount' => 'Amount',
+        ],
+    ],
+
     'seats' => [
         'open' => 'Individual seats',
         'title' => 'Individual seats',

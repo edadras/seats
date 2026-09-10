@@ -482,6 +482,80 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/price-tiers:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: listEventPriceTiers
+      tags: [Events]
+      summary: When this event's prices change
+      description: >
+        The windows in order, and which of them is charging money at this moment. `active` is
+        derived from the clock on every read — there is no stored "current tier" and nothing runs
+        at midnight to move one.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The schedule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/PriceTier" }
+                  active:
+                    oneOf:
+                      - { $ref: "#/components/schemas/PriceTier" }
+                      - { type: "null" }
+                    description: The tier in force now, or null when the zone prices stand as written.
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: replaceEventPriceTiers
+      tags: [Events]
+      summary: Replace the price tiers
+      description: >
+        Wholesale, like the price list itself: an organiser moving a deadline expects the tier
+        after it to have moved too, and three separate edits are three chances to leave a gap.
+
+
+        A tier adjusts the **zone** prices, not a price typed against an individual seat — that
+        number was a decision about that seat. Windows may not overlap, because two prices for one
+        moment is two answers to what a ticket costs; the request is refused with
+        `tier_windows_overlap` rather than one of them being picked by sort order.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tiers]
+              properties:
+                tiers:
+                  type: array
+                  maxItems: 20
+                  items: { $ref: "#/components/schemas/PriceTier" }
+      responses:
+        "200":
+          description: The saved schedule
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/PriceTier" }
+                  active:
+                    oneOf:
+                      - { $ref: "#/components/schemas/PriceTier" }
+                      - { type: "null" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/pricing:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     put:
@@ -7142,6 +7216,36 @@ components:
         suggested:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
+
+    PriceTier:
+      type: object
+      required: [name, kind, value]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        name: { type: string, maxLength: 120, example: Early bird }
+        starts_at:
+          type: [string, "null"]
+          format: date-time
+          description: Null means "from the beginning", which is what an early-bird tier means.
+        ends_at:
+          type: [string, "null"]
+          format: date-time
+          description: >
+            Null means "until the doors open". Exclusive: a tier ending at nine and one starting
+            at nine do not both claim nine o'clock — the second one has it.
+        kind:
+          type: string
+          enum: [percent, amount]
+          description: >
+            `percent` is a signed whole percentage of the zone price; `amount` is signed minor
+            units. Either way the result is never below zero.
+        value:
+          type: integer
+          example: -20
+        active:
+          type: boolean
+          readOnly: true
+          description: Whether this window contains the moment the request was answered.
 
     RenewalRound:
       type: object

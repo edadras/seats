@@ -25,6 +25,27 @@ return [
     'prices' => 'Preise',
     'unpriced' => 'Ohne Preis',
 
+    'tiers' => [
+        'title' => 'Preisstufen',
+        'subtitle' => 'Wann sich diese Preise ändern — jetzt entschieden statt später erinnert. Alles oben verschiebt sich um den eingestellten Betrag, solange das Fenster gilt.',
+        'name' => 'Stufe',
+        'from' => 'Ab',
+        'until' => 'Bis',
+        'change' => 'Änderung',
+        'remove' => 'Entfernen',
+        'add' => 'Stufe hinzufügen',
+        'newName' => 'Neue Stufe',
+        'none' => 'Der Preis bleibt bis zum Einlass gleich',
+        'noneHint' => 'Fügen Sie eine Stufe hinzu, um früh günstiger oder spät teurer zu verkaufen, ohne dass jemand daran denken muss.',
+        'live' => ':name gilt gerade.',
+        'liveUntil' => ':name gilt gerade, bis :until.',
+        'saved' => 'Preisstufen gespeichert.',
+        'kinds' => [
+            'percent' => 'Prozent',
+            'amount' => 'Betrag',
+        ],
+    ],
+
     'seats' => [
         'open' => 'Einzelne Plätze',
         'title' => 'Einzelne Plätze',

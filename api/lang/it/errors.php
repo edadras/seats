@@ -241,6 +241,8 @@ return [
     'resale_over' => 'Quella serata è già passata.',
     'resale_settled' => 'Questa inserzione è già conclusa.',
     'resale_being_bought' => 'In questo momento qualcuno sta comprando quel posto. Si potrà togliere dalla vendita se non conclude l’acquisto.',
+    'tier_window_backwards' => 'Una fascia di prezzo non può finire prima di iniziare.',
+    'tier_windows_overlap' => 'Due fasce coprono lo stesso momento, quindi un biglietto avrebbe due prezzi.',
     'renewal_same_run' => 'Una stagione non può essere rinnovata in se stessa.',
     'renewal_pass_elsewhere' => 'Quell’abbonamento appartiene a un’altra stagione.',
     'renewal_deadline_past' => 'Un rinnovo deve chiudersi nel futuro, altrimenti non è un’offerta.',

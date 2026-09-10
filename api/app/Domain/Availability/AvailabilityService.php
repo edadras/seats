@@ -54,7 +54,7 @@ class AvailabilityService
             return [];
         }
 
-        $rows = DB::select($this->sql(), [
+        $rows = DB::select($this->sql($this->tierFor($event)), [
             'version_id' => $event->seat_map_version_id,
             'event_id' => $event->id,
             'tenant_id' => $event->tenant_id,
@@ -102,7 +102,7 @@ class AvailabilityService
             return [];
         }
 
-        $rows = DB::select($this->capacitySql(), [
+        $rows = DB::select($this->capacitySql($this->tierFor($event)), [
             'version_id' => $event->seat_map_version_id,
             'event_id' => $event->id,
             'tenant_id' => $event->tenant_id,
@@ -180,9 +180,24 @@ class AvailabilityService
      * Taken is holds plus allocations. Held and sold are reported separately as well, because an
      * organiser watching a fast on-sale needs to tell "in carts" from "paid for".
      */
-    private function capacitySql(): string
+    /**
+     * Today's price, as SQL.
+     *
+     * Looked up once per query rather than joined per row: which tier is in force is a property of
+     * the moment, not of the seat, and asking it three thousand times would be asking it three
+     * thousand times.
+     */
+    private function tierFor(Event $event): string
     {
-        return <<<'SQL'
+        return app(\App\Domain\Pricing\PriceTiers::class)->express(
+            app(\App\Domain\Pricing\PriceTiers::class)->active($event),
+            'COALESCE(zone_override.amount, zone_placement.amount)',
+        );
+    }
+
+    private function capacitySql(string $tiered): string
+    {
+        return <<<SQL
             SELECT
                 cp.capacity_object_id,
                 c.label,
@@ -190,7 +205,7 @@ class AvailabilityService
                 c.capacity_type,
                 COALESCE(o.places, c.places) AS places,
                 COALESCE(o.blocked, false) AS blocked,
-                COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
+                COALESCE(o.amount, {$tiered}) AS amount,
                 COALESCE(o.zone_key, (cp.geometry->>'zone_key')) AS zone_key,
                 COALESCE(h.held, 0) + COALESCE(a.allocated, 0) AS taken,
                 COALESCE(h.held, 0) AS held,
@@ -228,9 +243,9 @@ class AvailabilityService
         SQL;
     }
 
-    private function sql(): string
+    private function sql(string $tiered): string
     {
-        return <<<'SQL'
+        return <<<SQL
             SELECT
                 sp.seat_id,
                 CASE
@@ -240,7 +255,7 @@ class AvailabilityService
                     WHEN h.id IS NOT NULL THEN 'held'
                     ELSE 'available'
                 END AS state,
-                COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
+                COALESCE(o.amount, {$tiered}) AS amount,
                 COALESCE(o.zone_key, sp.zone_key) AS zone_key,
                 sp.x, sp.y, sp.floor_key,
                 s.label, s.accessible,

@@ -606,11 +606,13 @@ class HoldService
      */
     private function capacityState(Event $event, CapacityObject $object): array
     {
-        $row = DB::selectOne(<<<'SQL'
+        $tiered = $this->tierFor($event);
+
+        $row = DB::selectOne(<<<SQL
             SELECT
                 COALESCE(o.places, c.places) AS places,
                 COALESCE(o.blocked, false) AS blocked,
-                COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
+                COALESCE(o.amount, {$tiered}) AS amount,
                 COALESCE(o.zone_key, (cp.geometry->>'zone_key')) AS zone_key,
                 COALESCE((
                     SELECT SUM(hi.quantity) FROM hold_items hi
@@ -653,13 +655,29 @@ class HoldService
         ];
     }
 
+    /**
+     * Today's price, as SQL.
+     *
+     * The same expression the buyer's availability used a moment ago, from the same place, because
+     * the number quoted on the plan and the number written into the hold have to be the one number.
+     * A price snapshot taken with a different arithmetic is a buyer arguing at the door.
+     */
+    private function tierFor(Event $event): string
+    {
+        $tiers = app(\App\Domain\Pricing\PriceTiers::class);
+
+        return $tiers->express($tiers->active($event), 'COALESCE(zone_override.amount, zone_placement.amount)');
+    }
+
     /** @return array<string, array{amount: int, zone_key: ?string, state: string}> */
     private function priceSeats(Event $event, array $seatIds): array
     {
-        $rows = DB::select(<<<'SQL'
+        $tiered = $this->tierFor($event);
+
+        $rows = DB::select(<<<SQL
             SELECT
                 sp.seat_id,
-                COALESCE(o.amount, zone_override.amount, zone_placement.amount) AS amount,
+                COALESCE(o.amount, {$tiered}) AS amount,
                 COALESCE(o.zone_key, sp.zone_key) AS zone_key,
                 COALESCE(o.blocked, false) AS blocked,
                 -- Who a blocked seat is being kept for, where it is being kept for somebody. A

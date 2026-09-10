@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\RenewalController as ManagementRenewals;
 use App\Http\Controllers\Api\V1\Management\ResaleController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
+use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
@@ -131,6 +132,7 @@ Route::prefix('v1')->group(function () {
         Route::post('events/{event}/cancel', [EventController::class, 'cancel']);
         Route::post('events/{event}/reschedule', [EventController::class, 'reschedule']);
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
+        Route::put('events/{event}/price-tiers', [PriceTierController::class, 'replace']);
         // Who the tickets are for. Beside pricing because that is what a concession is: an
         // adjustment to the price the seat already has.
         // What the checkout asks. Beside the ticket types because both are decisions about what a
@@ -152,6 +154,7 @@ Route::prefix('v1')->group(function () {
         Route::put('events/{event}/addons', [AddonController::class, 'replace']);
         // Prices for individual seats. Not part of the wholesale PUT above: a hall has twenty
         // thousand seats and a repricing usually touches eight.
+        Route::get('events/{event}/price-tiers', [PriceTierController::class, 'index']);
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);

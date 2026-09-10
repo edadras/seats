@@ -135,6 +135,10 @@ class EmbedController extends Controller
             'areas' => $this->availability->capacityForEvent($event),
             // Empty on an event that is not timed entry, which is how the picker knows not to ask.
             'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event, openOnly: true),
+            // What today's prices are called, and until when. The prices above already have the
+            // tier in them; this is so a site can say *why* they are what they are, with a date a
+            // buyer can act on rather than a badge that means nothing.
+            'price_tier' => app(\App\Domain\Pricing\PriceTiers::class)->describe($event),
         ]);
     }
 

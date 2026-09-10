@@ -241,6 +241,8 @@ return [
     'resale_over' => 'Dieser Abend ist bereits vorbei.',
     'resale_settled' => 'Dieses Angebot ist bereits erledigt.',
     'resale_being_bought' => 'Gerade kauft jemand diesen Platz. Er lässt sich wieder vom Verkauf nehmen, wenn der Kauf nicht zustande kommt.',
+    'tier_window_backwards' => 'Eine Preisstufe kann nicht enden, bevor sie beginnt.',
+    'tier_windows_overlap' => 'Zwei Preisstufen decken denselben Moment ab, damit gäbe es zwei Preise für ein Ticket.',
     'renewal_same_run' => 'Eine Spielzeit kann nicht in sich selbst verlängert werden.',
     'renewal_pass_elsewhere' => 'Dieses Abonnement gehört zu einer anderen Spielzeit.',
     'renewal_deadline_past' => 'Eine Verlängerung muss in der Zukunft enden, sonst ist sie kein Angebot.',

@@ -210,6 +210,24 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
+             * An early price with a date on it.
+             *
+             * The demo needs one because the pricing screen without a tier looks like a screen that
+             * cannot do this, and because it is the shape almost every organiser asks for first:
+             * cheaper now, ordinary later, decided once.
+             */
+            \App\Models\EventPriceTier::firstOrCreate(
+                ['event_id' => $event->id, 'name' => 'Early bird'],
+                [
+                    'starts_at' => null,
+                    'ends_at' => now()->addDays(10),
+                    'kind' => 'percent',
+                    'value' => -15,
+                    'sort_order' => 0,
+                ],
+            );
+
+            /*
              * A second night, sold without a single named seat.
              *
              * Half the events on this platform are like this — a warehouse, a festival tent, a
