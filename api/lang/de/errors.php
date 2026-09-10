@@ -215,4 +215,11 @@ return [
     'season_needs_nights' => 'Ein Abonnement, für das der Käufer Abende wählt, muss sagen wie viele.',
     'season_not_payable' => 'Für dieses Abonnement gibt es keine Zahlung zu bestätigen.',
     'discount_over_100' => 'Ein Prozentsatz kann nicht über 100 liegen.',
+    'basket_already_settled' => 'Dieser Korb ist bereits erledigt.',
+    'basket_gone' => 'Von diesem Korb ist nichts mehr übrig.',
+    'basket_event_closed' => '„:name“ ist nicht mehr im Verkauf.',
+    'basket_seats_gone' => 'Diese Plätze hat inzwischen jemand anderes genommen. Wählen Sie neu — der Rest des Saals ist noch da.',
+    'basket_already_written' => 'Diesem Käufer wurde zu diesem Korb bereits geschrieben.',
+    'basket_has_no_site' => 'Es gibt keinen Ort, an den dieser Käufer zurückgeschickt werden könnte.',
+    'basket_message_off' => 'Schalten Sie „Nicht beendete Buchung“ zuerst unter Nachrichten ein — vorher wird nichts gesendet.',
 ];

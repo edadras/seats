@@ -215,4 +215,11 @@ return [
     'season_needs_nights' => 'Un abonnement dont l’acheteur choisit les soirées doit dire combien.',
     'season_not_payable' => 'Cet abonnement n’a aucun paiement à régler.',
     'discount_over_100' => 'Un pourcentage ne peut pas dépasser 100.',
+    'basket_already_settled' => 'Ce panier a déjà été traité.',
+    'basket_gone' => 'Il ne reste rien de ce panier.',
+    'basket_event_closed' => '« :name » n’est plus en vente.',
+    'basket_seats_gone' => 'Quelqu’un d’autre a pris ces places depuis. Choisissez de nouveau — le reste de la salle est toujours là.',
+    'basket_already_written' => 'Cet acheteur a déjà été relancé au sujet de ce panier.',
+    'basket_has_no_site' => 'Il n’y a nulle part où renvoyer cet acheteur.',
+    'basket_message_off' => 'Activez d’abord « Réservation inachevée » dans Messages — rien n’est envoyé tant que ce n’est pas fait.',
 ];

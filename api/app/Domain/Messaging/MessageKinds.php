@@ -65,6 +65,21 @@ class MessageKinds
             'optional' => false,
         ],
         /*
+         * A purchase that was started and never finished.
+         *
+         * Optional, and that switch is the whole of an organiser's control over this: a message
+         * about somebody's own unfinished booking is a service message, but it is still a message
+         * they did not ask for, and an account that would rather not send one must be able to say
+         * so. `link` takes them back to a checkout with the same seats if the seats are still
+         * there; `decline` is how they say no thank you, which is not optional either.
+         */
+        'order.unfinished' => [
+            'placeholders' => [
+                'buyer', 'event', 'venue', 'starts', 'seats', 'total', 'site', 'link', 'decline',
+            ],
+            'optional' => true,
+        ],
+        /*
          * An announcement carries the organiser's own words rather than a template's, so there is
          * nothing here to write wording for — but it is a kind, because everything it sends is a
          * delivery, and a delivery has to say what it was. Its channels are chosen per

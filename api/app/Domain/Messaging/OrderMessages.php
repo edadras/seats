@@ -36,6 +36,17 @@ class OrderMessages
     }
 
     /**
+     * "You left something." Sent once, an hour later, about their own unfinished purchase.
+     *
+     * The two links are what make it a service message rather than a nudge: one takes them back to
+     * the same seats if the seats are still there, and the other says no thank you for good.
+     */
+    public function unfinished(ExternalOrder $order, string $link, string $decline): void
+    {
+        $this->announce('order.unfinished', $order, ['link' => $link, 'decline' => $decline]);
+    }
+
+    /**
      * The night is off, and here is why.
      *
      * The organiser's own sentence rather than a template's: "cancelled" on its own is the start

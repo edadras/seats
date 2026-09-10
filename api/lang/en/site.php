@@ -181,6 +181,10 @@ return [
         'taxIncluded' => 'includes :name at :rate%',
         'taxName' => 'Tax',
     ],
+    'basket' => [
+        'backAgain' => 'Your seats are back in your basket. They are held for a few minutes.',
+        'declined' => 'We will not write to you about that booking again.',
+    ],
     'season' => [
         'title' => 'Season tickets',
         'see' => 'See the season',

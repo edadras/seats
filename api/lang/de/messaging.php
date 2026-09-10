@@ -22,6 +22,10 @@ return [
             'name' => 'Bestellung storniert',
             'description' => 'Bei Stornierung oder Rückerstattung.',
         ],
+        'order_unfinished' => [
+            'name' => 'Nicht beendete Buchung',
+            'description' => 'Einmal, eine Stunde später, an jemanden, dessen Zahlung nie abgeschlossen wurde. Es geht um seine eigene Buchung und enthält eine Möglichkeit abzulehnen. Aus, bis Sie es einschalten.',
+        ],
         'event_reminder' => [
             'name' => 'Erinnerung',
             'description' => 'Am Vortag, an alle mit Ticket. Aus, bis Sie sie einschalten.',
@@ -54,6 +58,10 @@ return [
         'order_cancelled' => [
             'subject' => 'Ihre Buchung {reference} wurde storniert',
             'body' => "{buyer}, Ihre Buchung für {event} wurde storniert.\n\nBuchungsnummer {reference}.",
+        ],
+        'order_unfinished' => [
+            'subject' => 'Ihre Buchung für {event} ist nicht abgeschlossen',
+            'body' => "{buyer}, Ihre Zahlung für {event} ist nicht durchgegangen, die Buchung wurde also nie abgeschlossen.\n\n{venue}\n{starts}\nPlätze: {seats}\nSumme: {total}\n\nWenn Sie sie noch möchten, machen Sie hier weiter — wir versuchen, Ihnen dieselben Plätze zu geben:\n{link}\n\nWenn Sie es sich anders überlegt haben, ist keine Antwort nötig. Um zu dieser Buchung nichts mehr zu hören: {decline}",
         ],
         'event_reminder' => [
             'subject' => '{event} ist morgen',

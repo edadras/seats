@@ -22,6 +22,10 @@ return [
             'name' => 'إلغاء الطلب',
             'description' => 'تُرسل عند إلغاء طلب أو ردّه.',
         ],
+        'order_unfinished' => [
+            'name' => 'حجز لم يكتمل',
+            'description' => 'يُرسل مرة واحدة بعد ساعة لمن لم يكتمل دفعه. يتعلق بحجزه هو ويحمل طريقة للاعتذار. مطفأ حتى تشغّله.',
+        ],
         'event_reminder' => [
             'name' => 'تذكير بالفعالية',
             'description' => 'قبل يوم، لكل حامل تذكرة. مطفأة حتى تشغّلها.',
@@ -54,6 +58,10 @@ return [
         'order_cancelled' => [
             'subject' => 'أُلغي حجزك {reference}',
             'body' => "{buyer}، أُلغي حجزك لـ {event}.\n\nرقم الحجز {reference}.",
+        ],
+        'order_unfinished' => [
+            'subject' => 'حجزك لـ {event} لم يكتمل',
+            'body' => "{buyer}، لم تتم عملية الدفع لـ {event}، فلم يكتمل حجزك.\n\n{venue}\n{starts}\nالمقاعد: {seats}\nالمجموع: {total}\n\nإن كنت ما زلت تريدها، أكمل من حيث توقفت — وسنحاول أن نعطيك المقاعد نفسها:\n{link}\n\nإن غيّرت رأيك فلا داعي للرد. ولئلا يصلك شيء آخر عن هذا الحجز: {decline}",
         ],
         'event_reminder' => [
             'subject' => '{event} غدًا',

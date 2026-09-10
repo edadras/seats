@@ -22,6 +22,10 @@ return [
             'name' => 'Ordine annullato',
             'description' => 'Parte quando un ordine viene annullato o rimborsato.',
         ],
+        'order_unfinished' => [
+            'name' => 'Prenotazione a metà',
+            'description' => 'Inviato una volta, un’ora dopo, a chi non ha mai concluso il pagamento. Riguarda la sua prenotazione e offre un modo per dire di no. Spento finché non lo accendete.',
+        ],
         'event_reminder' => [
             'name' => 'Promemoria',
             'description' => 'Il giorno prima, a chi ha un biglietto. Spento finché non lo accendi.',
@@ -54,6 +58,10 @@ return [
         'order_cancelled' => [
             'subject' => 'La prenotazione {reference} è annullata',
             'body' => "{buyer}, la tua prenotazione per {event} è stata annullata.\n\nRiferimento {reference}.",
+        ],
+        'order_unfinished' => [
+            'subject' => 'La vostra prenotazione per {event} non è conclusa',
+            'body' => "{buyer}, il pagamento per {event} non è andato a buon fine, quindi la prenotazione non si è mai conclusa.\n\n{venue}\n{starts}\nPosti: {seats}\nTotale: {total}\n\nSe li volete ancora, riprendete da qui — proveremo a darvi gli stessi posti:\n{link}\n\nSe avete cambiato idea non serve rispondere. Per non ricevere altro su questa prenotazione: {decline}",
         ],
         'event_reminder' => [
             'subject' => '{event} è domani',

@@ -55,6 +55,7 @@ tags:
   - name: Access
   - name: Vouchers
   - name: Seasons
+  - name: Baskets
   - name: Box office
   - name: Door
   - name: Waiting list
@@ -1191,6 +1192,77 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  /baskets:
+    get:
+      operationId: listUnfinishedBaskets
+      tags: [Baskets]
+      summary: Purchases somebody started and did not finish
+      description: |
+        Requires `orders.view` — this is what it is: bookings that did not happen, listed by buyer.
+
+        A row exists here only for somebody who **submitted the checkout**: who gave their address
+        in order to buy tickets and whose payment then never came back. Nothing is ever recorded
+        for an address that was merely typed into a box, and nothing for an order registered over
+        the integration API, where the shop owns its own basket and its own emails.
+
+        `summary.rate` counts only the people actually written to. Counting the baskets nobody has
+        been written to yet would make the recovery rate look worse the better an organiser's
+        checkout got, which is exactly backwards.
+      parameters:
+        - name: event_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [waiting, sent, recovered, declined, expired] }
+        - name: q
+          in: query
+          description: Part of a name or an email address.
+          schema: { type: string }
+        - { $ref: "#/components/parameters/PerPage" }
+      responses:
+        "200":
+          description: The unfinished baskets, and what came of writing to them
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/BasketRecovery" }
+                  summary: { $ref: "#/components/schemas/BasketSummary" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /baskets/{basketRecovery}/send:
+    parameters:
+      - name: basketRecovery
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: sendBasketRecovery
+      tags: [Baskets]
+      summary: Write to one buyer now, rather than waiting for the hourly pass
+      description: >-
+        Requires `messages.send` as well as `orders.view`: the list is a report, and writing to
+        somebody is not. Refused for a basket that has already been written to — this is a way of
+        not waiting an hour, not a way of writing twice, and being written to twice about the same
+        abandoned cart is how a buyer unsubscribes.
+      responses:
+        "200":
+          description: The recovery as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BasketRecovery" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: This buyer has already been written to about this basket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /season-passes:
     get:
@@ -6103,6 +6175,64 @@ components:
         suggested:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
+
+    BasketRecovery:
+      type: object
+      description: >-
+        One attempt to bring a buyer back to a purchase they started and did not finish. It holds
+        no basket: the basket is on the order it points at, and a copy here would be a second cart
+        to drift from the first.
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        name: { type: [string, "null"] }
+        event_id: { type: [string, "null"], format: uuid }
+        event_name: { type: [string, "null"] }
+        seats: { type: integer }
+        total: { type: integer, description: "What the unfinished booking was worth, in minor units." }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        status:
+          type: string
+          enum: [waiting, sent, recovered, declined, expired]
+          description: >-
+            `waiting` has been noticed and not yet written to. `declined` is somebody who said no
+            thank you and is never written to about this basket again. `expired` is a night that
+            has been, or a payment that came back refused.
+        reference: { type: [string, "null"], description: "The unfinished order." }
+        recovered_reference:
+          type: [string, "null"]
+          description: "The booking they made when they came back, where they came back."
+        sent_at: { type: [string, "null"], format: date-time }
+        recovered_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    BasketSummary:
+      type: object
+      description: "Four numbers, and the one that matters: of the people written to, how many came back."
+      properties:
+        baskets: { type: integer }
+        waiting: { type: integer, description: "Noticed, not yet written to." }
+        written: { type: integer }
+        recovered: { type: integer }
+        declined: { type: integer }
+        rate:
+          type: integer
+          description: "Percent of those written to who came back. Zero when nobody has been written to."
+        won:
+          type: array
+          description: "Recovered value, per currency — an account selling in two has two answers."
+          items:
+            type: object
+            properties:
+              currency: { type: string }
+              amount: { type: integer }
+        lost:
+          type: array
+          items:
+            type: object
+            properties:
+              currency: { type: string }
+              amount: { type: integer }
 
     SeasonPass:
       type: object

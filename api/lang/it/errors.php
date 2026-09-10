@@ -215,4 +215,11 @@ return [
     'season_needs_nights' => 'Un abbonamento di cui l’acquirente sceglie le serate deve dire quante.',
     'season_not_payable' => 'Questo abbonamento non ha pagamenti da saldare.',
     'discount_over_100' => 'Una percentuale non può superare 100.',
+    'basket_already_settled' => 'Quel carrello è già stato sistemato.',
+    'basket_gone' => 'Di quel carrello non resta nulla.',
+    'basket_event_closed' => '«:name» non è più in vendita.',
+    'basket_seats_gone' => 'Nel frattempo qualcun altro ha preso quei posti. Scegliete di nuovo — il resto della sala è ancora lì.',
+    'basket_already_written' => 'A questo acquirente è già stato scritto per questo carrello.',
+    'basket_has_no_site' => 'Non c’è nessun posto a cui rimandare questo acquirente.',
+    'basket_message_off' => 'Accendete prima «Prenotazione a metà» in Messaggi — finché non lo fate non parte nulla.',
 ];

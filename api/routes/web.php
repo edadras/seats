@@ -4,6 +4,7 @@ use App\Http\Controllers\CheckinAppController;
 use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\GoogleSignInController;
 use App\Http\Controllers\Site\BuyerAccountController;
+use App\Http\Controllers\Site\BasketController;
 use App\Http\Controllers\Site\CheckoutController;
 use App\Http\Controllers\Site\SeasonController;
 use App\Http\Controllers\Site\SiteFilesController;
@@ -107,6 +108,18 @@ Route::middleware('site')->group(function () {
     Route::match(['get', 'post'], 'pay/{gateway}/return/{reference}', [CheckoutController::class, 'paymentReturn'])
         ->middleware('throttle:60,1,gateway-return')
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
+    /*
+     * The two links at the bottom of "you left something".
+     *
+     * GETs, because a mail client follows them and neither can do harm by being followed twice.
+     * Throttled all the same: the token is long and random, and a box that says whether a guess
+     * was a real basket is a box worth guessing at.
+     */
+    Route::get('basket/{token}', [BasketController::class, 'resume'])
+        ->middleware('throttle:20,1,basket');
+    Route::get('basket/{token}/no-thanks', [BasketController::class, 'decline'])
+        ->middleware('throttle:20,1,basket-no');
 
     Route::get('events/{event}', [SitePageController::class, 'event']);
     // A file a calendar will take, because a ticket bought in September is for a night in November.

@@ -22,6 +22,10 @@ return [
             'name' => 'Order cancelled',
             'description' => 'Sent when an order is cancelled or refunded.',
         ],
+        'order_unfinished' => [
+            'name' => 'Unfinished booking',
+            'description' => 'Sent once, an hour later, to somebody whose payment never finished. It is about their own booking and carries a way to say no thanks. Off unless you turn it on.',
+        ],
         'event_reminder' => [
             'name' => 'Event reminder',
             'description' => 'Sent the day before, to everyone holding a ticket. Off unless you turn it on.',
@@ -54,6 +58,10 @@ return [
         'order_cancelled' => [
             'subject' => 'Your booking {reference} has been cancelled',
             'body' => "{buyer}, your booking for {event} has been cancelled.\n\nBooking reference {reference}.",
+        ],
+        'order_unfinished' => [
+            'subject' => 'Your booking for {event} is not finished',
+            'body' => "{buyer}, your payment for {event} did not go through, so your booking was never completed.\n\n{venue}\n{starts}\nSeats: {seats}\nTotal: {total}\n\nIf you still want them, pick up where you left off here — we will try to give you the same seats:\n{link}\n\nIf you have changed your mind, no reply is needed. To hear nothing further about this booking: {decline}",
         ],
         'event_reminder' => [
             'subject' => '{event} is tomorrow',

@@ -177,6 +177,10 @@ return [
         'taxIncluded' => 'dont :name à :rate %',
         'taxName' => 'Taxe',
     ],
+    'basket' => [
+        'backAgain' => 'Vos places sont de nouveau dans votre panier. Elles sont retenues quelques minutes.',
+        'declined' => 'Nous ne vous écrirons plus au sujet de cette réservation.',
+    ],
     'season' => [
         'title' => 'Abonnements',
         'see' => 'Voir l’abonnement',

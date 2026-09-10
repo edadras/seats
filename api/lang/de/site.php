@@ -178,6 +178,10 @@ return [
         'taxIncluded' => 'inkl. :name zu :rate %',
         'taxName' => 'Steuer',
     ],
+    'basket' => [
+        'backAgain' => 'Ihre Plätze liegen wieder im Korb. Sie sind ein paar Minuten reserviert.',
+        'declined' => 'Wir schreiben Ihnen zu dieser Buchung nicht wieder.',
+    ],
     'season' => [
         'title' => 'Abonnements',
         'see' => 'Abonnement ansehen',

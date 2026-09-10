@@ -31,6 +31,7 @@
     <script src="{{ asset('editor/js/access.js') }}"></script>
     <script src="{{ asset('editor/js/vouchers.js') }}"></script>
     <script src="{{ asset('editor/js/seasons.js') }}"></script>
+    <script src="{{ asset('editor/js/baskets.js') }}"></script>
     <script src="{{ asset('editor/js/modules.js') }}"></script>
     <script src="{{ asset('editor/js/team.js') }}"></script>
     <script src="{{ asset('editor/js/pricing.js') }}"></script>

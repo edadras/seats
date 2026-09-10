@@ -51,3 +51,12 @@ Schedule::command('events:watch-capacity')->hourly()->withoutOverlapping()->runI
  * send the same person six emails in a minute.
  */
 Schedule::command('waitlist:notify')->everyFiveMinutes()->withoutOverlapping()->runInBackground();
+
+/*
+ * Buyers whose payment never finished, written to once.
+ *
+ * Hourly, and never sooner: this runs behind `payments:reconcile`, which has by then asked the
+ * gateway several times. Telling somebody their booking is unfinished when their card has already
+ * been charged is the worst message this platform could send, and the delay is what prevents it.
+ */
+Schedule::command('baskets:recover')->hourly()->withoutOverlapping()->runInBackground();

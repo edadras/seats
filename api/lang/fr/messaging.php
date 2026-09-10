@@ -22,6 +22,10 @@ return [
             'name' => 'Commande annulée',
             'description' => 'Part à l’annulation ou au remboursement.',
         ],
+        'order_unfinished' => [
+            'name' => 'Réservation inachevée',
+            'description' => 'Envoyé une fois, une heure plus tard, à qui n’a jamais terminé son paiement. Il porte sur sa propre réservation et offre un moyen de refuser. Éteint tant que vous ne l’allumez pas.',
+        ],
         'event_reminder' => [
             'name' => 'Rappel',
             'description' => 'La veille, à tous les détenteurs de billets. Désactivé tant que vous ne l’activez pas.',
@@ -54,6 +58,10 @@ return [
         'order_cancelled' => [
             'subject' => 'Votre réservation {reference} est annulée',
             'body' => "{buyer}, votre réservation pour {event} a été annulée.\n\nRéférence {reference}.",
+        ],
+        'order_unfinished' => [
+            'subject' => 'Votre réservation pour {event} n’est pas terminée',
+            'body' => "{buyer}, votre paiement pour {event} n’a pas abouti : la réservation n’a jamais été finalisée.\n\n{venue}\n{starts}\nPlaces : {seats}\nTotal : {total}\n\nSi vous les voulez toujours, reprenez ici — nous essaierons de vous rendre les mêmes places :\n{link}\n\nSi vous avez changé d’avis, nul besoin de répondre. Pour ne plus rien recevoir au sujet de cette réservation : {decline}",
         ],
         'event_reminder' => [
             'subject' => '{event}, c’est demain',

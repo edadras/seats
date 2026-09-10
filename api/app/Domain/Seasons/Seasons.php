@@ -2,6 +2,7 @@
 
 namespace App\Domain\Seasons;
 
+use App\Domain\Inventory\Basket;
 use App\Domain\Inventory\HoldService;
 use App\Exceptions\ApiException;
 use App\Models\Event;
@@ -67,47 +68,16 @@ class Seasons
     }
 
     /**
-     * What a basket is made of, read off the signed snapshot rather than re-queried.
+     * What a basket is made of.
      *
-     * The snapshot is what the buyer chose and what the server priced; a second query could find
-     * something else. Ticket types travel with it, so a concession chosen on the first night is a
-     * concession on every night of the run.
-     *
-     * @return array{seats: list<string>, capacity: array<string, int>, seatTypes: array<string, string>, areaTypes: array<string, array<string, int>>}
+     * Read off the signed snapshot, by the one class that knows how — the recovery link reads a
+     * basket the same way, and two readings of the same snapshot would be one too many. Ticket
+     * types travel with it, so a concession chosen on the first night is a concession on every
+     * night of the run.
      */
-    public function basketFrom(Hold $hold): array
+    public function basketFrom(Hold $hold): Basket
     {
-        $snapshot = $hold->price_snapshot['decoded'] ?? [];
-        $seats = [];
-        $seatTypes = [];
-        $capacity = [];
-        $areaTypes = [];
-
-        foreach ($snapshot['seats'] ?? [] as $seat) {
-            $seats[] = (string) $seat['seat_id'];
-
-            if (! empty($seat['ticket_type_id'])) {
-                $seatTypes[(string) $seat['seat_id']] = (string) $seat['ticket_type_id'];
-            }
-        }
-
-        foreach ($snapshot['areas'] ?? [] as $area) {
-            $id = (string) $area['capacity_object_id'];
-            $quantity = max(1, (int) ($area['quantity'] ?? 1));
-            $capacity[$id] = ($capacity[$id] ?? 0) + $quantity;
-
-            if (! empty($area['ticket_type_id'])) {
-                $type = (string) $area['ticket_type_id'];
-                $areaTypes[$id][$type] = ($areaTypes[$id][$type] ?? 0) + $quantity;
-            }
-        }
-
-        return [
-            'seats' => $seats,
-            'capacity' => $capacity,
-            'seatTypes' => $seatTypes,
-            'areaTypes' => $areaTypes,
-        ];
+        return Basket::of($hold);
     }
 
     /**
@@ -115,9 +85,7 @@ class Seasons
      */
     public function placesIn(Hold $hold): int
     {
-        $basket = $this->basketFrom($hold);
-
-        return count($basket['seats']) + array_sum($basket['capacity']);
+        return Basket::of($hold)->places();
     }
 
     /**
@@ -167,13 +135,13 @@ class Seasons
             try {
                 $made[] = $this->holds->create(
                     $night,
-                    $basket['seats'],
+                    $basket->seats,
                     $sessionId,
                     null,
                     $ip,
-                    $basket['capacity'],
-                    $basket['seatTypes'],
-                    $basket['areaTypes'],
+                    $basket->capacity,
+                    $basket->seatTypes,
+                    $basket->areaTypes,
                 );
             } catch (ApiException $e) {
                 $this->releaseAll($made);

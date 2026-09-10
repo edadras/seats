@@ -215,4 +215,11 @@ return [
     'season_needs_nights' => 'A pass the buyer chooses nights for has to say how many.',
     'season_not_payable' => 'This season ticket has no payment to settle.',
     'discount_over_100' => 'A percentage cannot be more than 100.',
+    'basket_already_settled' => 'That basket has already been dealt with.',
+    'basket_gone' => 'There is nothing left of that basket.',
+    'basket_event_closed' => '":name" is no longer on sale.',
+    'basket_seats_gone' => 'Somebody else has taken those seats since. Choose again — the rest of the hall is still there.',
+    'basket_already_written' => 'This buyer has already been written to about this basket.',
+    'basket_has_no_site' => 'There is nowhere to send this buyer back to.',
+    'basket_message_off' => 'Switch "Unfinished booking" on under Messages first — nothing is sent until you do.',
 ];

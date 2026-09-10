@@ -466,6 +466,21 @@ class CheckoutController extends Controller
         $request->session()->forget('seatmap_discount');
         $request->session()->forget('seatmap_voucher');
 
+        /*
+         * A buyer who came back through a recovery link, having now bought.
+         *
+         * Recorded here rather than inferred later, because "did writing to them work" is the only
+         * question the organiser will ask about that feature, and reconstructing it afterwards
+         * from two orders that happen to share an address would be a guess.
+         */
+        if ($id = $request->session()->pull('seatmap_recovery')) {
+            $recovery = \App\Models\BasketRecovery::find($id);
+
+            if ($recovery) {
+                app(\App\Domain\Baskets\Baskets::class)->recovered($recovery, $order);
+            }
+        }
+
         // Written once the allocations exist: an answer about a seat, with no seat to point at, is
         // an answer nobody can find again.
         $questions->store($hold->event, $order, $answers, $this->placeAllocations($hold, $order));

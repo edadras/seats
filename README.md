@@ -77,6 +77,9 @@ A seat is the start of it, not the end. Around the map:
 - **Add-ons and donations** at the checkout — a programme, a glass of wine, a parking space, and a
   box to give something. Add-ons are a sale and sit inside the fee and the VAT; a donation is a
   gift and sits outside both, because a booking fee on somebody's charity is a complaint.
+- **Unfinished baskets** — a buyer whose payment never came back is written to once, about their
+  own booking, with a link that tries to take the same seats again and a way to say no thank you.
+  Never for an address somebody merely typed into a box, and off until the organiser turns it on.
 - **Season tickets** — the same seats, every night of a run, bought once. A subscriber picks their
   seats in the ordinary picker on the first night and the rest of the run is held for them, all or
   nothing; what comes out is one ordinary order per night, so the door, the door list and per-event
@@ -264,7 +267,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 586 unit, feature and module tests
+./vendor/bin/phpunit                        # 603 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -290,7 +293,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all twenty-eight, in order
+./smoke.sh                    # all twenty-nine, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -376,6 +379,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A season saving splits across the nights and sums to exactly itself | `SeasonTest` |
 | A night that cannot be matched takes the whole subscription with it, and frees the rest | `SeasonTest` |
 | A subscription is an ordinary order, allocation and ticket per night | `SeasonTest` |
+| Only a submitted checkout becomes an abandoned basket, and only once | `BasketRecoveryTest` |
+| A recovery link takes the same seats again, or says plainly that it cannot | `BasketRecoveryTest` |
+| Nothing is written to a buyer until the organiser switches the message on | `BasketRecoveryTest` |
 
 ## Installing the plugin
 
