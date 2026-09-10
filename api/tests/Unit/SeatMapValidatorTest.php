@@ -277,6 +277,55 @@ class SeatMapValidatorTest extends TestCase
         $this->assertContains('too_many_seats', array_column($report['errors'], 'code'));
     }
 
+    /**
+     * The scenery ceilings, which were written into the configuration when the validator was built
+     * and then never read by it. An imported plan is what finds this: tracing a floor drawing turns
+     * every wall into its own line object, and a thousand of them arrive at once.
+     */
+    #[Test]
+    public function it_enforces_the_ceiling_on_scenery(): void
+    {
+        $scenery = [];
+
+        for ($i = 0; $i < 11; $i++) {
+            $scenery[] = ['type' => 'shape', 'key' => 'wall-'.$i, 'kind' => 'line', 'x' => $i, 'y' => 0];
+        }
+
+        $report = $this->validator()->validate($this->chart(array_merge([$this->row('A', 3)], $scenery)));
+
+        $this->assertFalse($report['valid']);
+        $this->assertContains('too_many_shapes', array_column($report['errors'], 'code'));
+    }
+
+    #[Test]
+    public function it_enforces_the_ceiling_on_text_labels(): void
+    {
+        $labels = [];
+
+        for ($i = 0; $i < 11; $i++) {
+            $labels[] = ['type' => 'text', 'key' => 'text-'.$i, 'text' => 'Exit', 'x' => $i, 'y' => 0];
+        }
+
+        $report = $this->validator()->validate($this->chart(array_merge([$this->row('A', 3)], $labels)));
+
+        $this->assertFalse($report['valid']);
+        $this->assertContains('too_many_texts', array_column($report['errors'], 'code'));
+    }
+
+    #[Test]
+    public function scenery_under_the_ceiling_passes(): void
+    {
+        $report = $this->validator()->validate($this->chart([
+            $this->row('A', 3),
+            ['type' => 'shape', 'key' => 'stage', 'kind' => 'rect', 'x' => 10, 'y' => 10, 'width' => 100, 'height' => 40],
+            ['type' => 'text', 'key' => 'text-exit', 'text' => 'Exit', 'x' => 10, 'y' => 10],
+        ]));
+
+        $this->assertTrue($report['valid']);
+        // Scenery is not a place, and counting it as one would oversell the room.
+        $this->assertSame(3, $report['places']);
+    }
+
     #[Test]
     public function oversized_geometry_is_rejected_without_being_walked(): void
     {

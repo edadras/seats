@@ -1576,52 +1576,106 @@
 		ctx.restore();
 	};
 
+	/**
+	 * The outline of a shape, in the coordinates the chart stores.
+	 *
+	 * `points` is a list of [ x, y ] pairs, the same as the designer writes and the same as a
+	 * section's polygon — a shape drawn by tracing a floor plan has to come back looking like what
+	 * was traced, and the two surfaces reading the same field two different ways is how it stops.
+	 */
+	function shapePoints( shape ) {
+		if ( ! shape.points || ! shape.points.length ) {
+			return null;
+		}
+
+		if ( Array.isArray( shape.points[ 0 ] ) ) {
+			return shape.points;
+		}
+
+		var pairs = [];
+
+		for ( var i = 0; i + 1 < shape.points.length; i += 2 ) {
+			pairs.push( [ shape.points[ i ], shape.points[ i + 1 ] ] );
+		}
+
+		return pairs;
+	}
+
+	/** Turn the canvas about a shape's own middle, so a rotated stage is drawn rotated. */
+	function turn( ctx, object, box ) {
+		var angle = ( ( object.rotation || 0 ) * Math.PI ) / 180;
+
+		if ( ! angle ) {
+			return;
+		}
+
+		var cx = box.x + box.width / 2;
+		var cy = box.y + box.height / 2;
+
+		ctx.translate( cx, cy );
+		ctx.rotate( angle );
+		ctx.translate( -cx, -cy );
+	}
+
 	SeatmapWidget.prototype.paintShape = function ( ctx, shape ) {
 		var self = this;
 		var colours = this.colours();
 
 		[ shape ].forEach( function ( shape ) {
+			var points = shapePoints( shape );
+			var width = shape.width || 0;
+			var height = shape.height || 0;
+
 			ctx.save();
 			ctx.fillStyle = shape.fill || self.shapeColour( shape.kind );
 			ctx.strokeStyle = colours.shapeEdge;
+			turn( ctx, shape, { x: shape.x, y: shape.y, width: width, height: height } );
 
-			if ( 'polygon' === shape.kind && shape.points ) {
+			if ( 'line' === shape.kind && points ) {
+				// An open path: walls, aisles and the outline of a traced floor plan. Filling it
+				// would paint the room in, which is what a missing branch here used to do — and
+				// with no width or height on a line, what it actually did was draw nothing at all.
 				ctx.beginPath();
-				for ( var i = 0; i < shape.points.length; i += 2 ) {
-					if ( 0 === i ) {
-						ctx.moveTo( shape.points[ i ], shape.points[ i + 1 ] );
-					} else {
-						ctx.lineTo( shape.points[ i ], shape.points[ i + 1 ] );
-					}
-				}
+				points.forEach( function ( point, index ) {
+					index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+				} );
+				ctx.strokeStyle = shape.fill || colours.shapeEdge;
+				ctx.lineWidth = shape.strokeWidth || 3;
+				ctx.stroke();
+				ctx.restore();
+
+				return;
+			}
+
+			if ( points ) {
+				ctx.beginPath();
+				points.forEach( function ( point, index ) {
+					index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
+				} );
 				ctx.closePath();
 				ctx.fill();
 			} else if ( 'ellipse' === shape.kind ) {
 				ctx.beginPath();
 				ctx.ellipse(
-					shape.x + ( shape.width || 0 ) / 2,
-					shape.y + ( shape.height || 0 ) / 2,
-					( shape.width || 0 ) / 2,
-					( shape.height || 0 ) / 2,
+					shape.x + width / 2,
+					shape.y + height / 2,
+					width / 2,
+					height / 2,
 					0, 0, Math.PI * 2
 				);
 				ctx.fill();
 			} else {
-				ctx.fillRect( shape.x, shape.y, shape.width || 0, shape.height || 0 );
+				ctx.fillRect( shape.x, shape.y, width, height );
 			}
 
 			var label = shape.label || ( 'stage' === shape.kind ? self.i18n.stage : '' );
 
 			if ( label ) {
 				ctx.fillStyle = colours.shapeLabel;
-				ctx.font = '600 16px system-ui, sans-serif';
+				ctx.font = '600 ' + ( shape.fontSize || 16 ) + 'px system-ui, sans-serif';
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'middle';
-				ctx.fillText(
-					label,
-					shape.x + ( shape.width || 0 ) / 2,
-					shape.y + ( shape.height || 0 ) / 2
-				);
+				ctx.fillText( label, shape.x + width / 2, shape.y + height / 2 );
 			}
 
 			ctx.restore();
@@ -1645,6 +1699,7 @@
 			var box = areaBox( area );
 
 			ctx.save();
+			turn( ctx, ( area.shape || area ), box );
 			ctx.beginPath();
 
 			if ( 'ellipse' === ( area.shape && area.shape.kind ) ) {

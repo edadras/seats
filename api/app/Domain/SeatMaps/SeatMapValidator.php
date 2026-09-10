@@ -54,6 +54,8 @@ class SeatMapValidator
         $warnings = [];
         $seatCount = 0;
         $places = 0;
+        $shapes = 0;
+        $texts = 0;
         $duplicates = [];
         $unlabeled = 0;
         $uncategorized = 0;
@@ -77,9 +79,21 @@ class SeatMapValidator
 
             $this->walk($floor['objects'] ?? [], null, function (array $object, ?array $container) use (
                 &$errors, &$warnings, &$seatCount, &$places, &$duplicates, &$unlabeled,
-                &$uncategorized, &$typesPerCategory, &$positions, &$seenLabels, &$objectCount, $canvas
+                &$uncategorized, &$typesPerCategory, &$positions, &$seenLabels, &$objectCount,
+                &$shapes, &$texts, $canvas
             ) {
                 $objectCount++;
+
+                // Scenery. It carries nothing bookable, but it is not free: a plan traced from a
+                // floor drawing arrives with a thousand wall segments, and the ceilings on those
+                // are the difference between a slow map and a browser that gives up (threat T11).
+                if (in_array($object['type'] ?? '', ['shape', 'image', 'icon'], true)) {
+                    $shapes++;
+                }
+
+                if (($object['type'] ?? '') === 'text') {
+                    $texts++;
+                }
 
                 if (! in_array($object['type'] ?? '', self::BOOKABLE, true)) {
                     return;
@@ -174,6 +188,18 @@ class SeatMapValidator
                         break;
                 }
             });
+        }
+
+        if ($shapes > $this->limits['max_shapes']) {
+            $errors[] = $this->issue('too_many_shapes', sprintf(
+                '%d shapes exceeds the limit of %d.', $shapes, $this->limits['max_shapes']
+            ));
+        }
+
+        if ($texts > $this->limits['max_texts']) {
+            $errors[] = $this->issue('too_many_texts', sprintf(
+                '%d text labels exceeds the limit of %d.', $texts, $this->limits['max_texts']
+            ));
         }
 
         if ($objectCount > $this->limits['max_sections_per_map'] * 200) {

@@ -44,6 +44,24 @@ Rows (straight or curved), enterable polygon sections, general admission areas, 
 the chair or as a whole, booths, shapes, text, images to trace over, and icons — across multiple
 floors, on four selection layers, with categories, a focal point and a validation checklist.
 
+A plan that already exists somewhere else does not have to be drawn again:
+
+```bash
+php artisan chart:import plan.json --tenant=northgate --publish
+```
+
+Most export formats — seats.io's among them — write one coordinate pair per seat, so a plan arrives
+as thousands of loose dots. Our rows are an anchor, a rotation, a curve and a seat pitch, because
+that is what lets an organiser type "17" into a row rather than redraw it. So the import *fits*: for
+every row of dots it recovers the line they were sitting on, leaves empty places where the aisles
+are, turns each colour into a price category and each traced wall into scenery, and then re-runs our
+own geometry over the result and tells you the furthest any chair moved. On the Palais des Congrès
+de Paris Grand Amphithéâtre — 3,723 seats in twelve fan-shaped blocks, with 944 traced wall
+segments — the answer is 0.05 units, on a chair 18 units across.
+
+Sales are not imported. Which seats were sold, and which the house was holding back, belong to a
+performance rather than to a plan of the room; the same room is sold many times.
+
 ## What it sells
 
 A seat is the start of it, not the end. Around the map:
@@ -500,6 +518,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The old seats are still theirs until the new ones are paid for | `ExchangeTest` |
 | An exchange fee comes out of what the old seats were worth | `ExchangeTest` |
 | Somebody else's reference is not a way to spend their exchange | `ExchangeTest` |
+| Last season's seats are held for the people who sat in them, and freed the moment the deadline passes | `RenewalTest` |
+| A renewal invitation is signed, needs no password, and cannot be guessed | `RenewalTest` |
+| Rows fitted from a foreign export put every chair back where it was | `ChartImporterTest`, `ChartImportTest` |
+| An aisle in an imported row becomes empty places, not a shorter row | `ChartImporterTest` |
+| Scenery has a ceiling, and it is enforced rather than merely configured | `SeatMapValidatorTest` |
 
 ## Installing the plugin
 

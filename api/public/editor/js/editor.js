@@ -675,6 +675,7 @@
 		var shape = area.shape;
 
 		ctx.save();
+		turn( ctx, shape, Ops.bounds( area ) );
 		ctx.globalAlpha *= area.translucent ? 0.45 : 1;
 		ctx.fillStyle = withAlpha( color, 0.28 );
 		ctx.strokeStyle = selected ? this.colors().ink : color;
@@ -767,13 +768,17 @@
 		ctx.strokeStyle = selected ? colors.ink : colors.shapeEdge;
 		ctx.lineWidth = ( selected ? 3 : 1 ) / this.view.scale;
 
+		turn( ctx, shape, Ops.bounds( shape ) );
+
 		if ( 'line' === shape.kind && shape.points ) {
 			ctx.beginPath();
 			shape.points.forEach( function ( point, index ) {
 				index === 0 ? ctx.moveTo( point[ 0 ], point[ 1 ] ) : ctx.lineTo( point[ 0 ], point[ 1 ] );
 			} );
 			ctx.strokeStyle = shape.fill || colors.shapes.wall;
-			ctx.lineWidth = 3 / this.view.scale;
+			// Its own weight, still measured on screen rather than on the plan: a floor drawing
+			// says which walls are thick, and a hairline at 15% zoom says nothing at all.
+			ctx.lineWidth = ( shape.strokeWidth || 3 ) / this.view.scale;
 			ctx.stroke();
 			ctx.restore();
 
@@ -797,6 +802,28 @@
 
 		ctx.restore();
 	};
+
+	/**
+	 * Turn the canvas about an object's own middle.
+	 *
+	 * The inspector has offered a rotation on shapes and areas since the designer was built, and
+	 * nothing drew it — a stage set at 30 degrees stayed square on both the designer's canvas and
+	 * the buyer's. The rotation was being stored, published and ignored.
+	 */
+	function turn( ctx, object, box ) {
+		var angle = ( ( ( object && object.rotation ) || 0 ) * Math.PI ) / 180;
+
+		if ( ! angle ) {
+			return;
+		}
+
+		var cx = box.x + box.width / 2;
+		var cy = box.y + box.height / 2;
+
+		ctx.translate( cx, cy );
+		ctx.rotate( angle );
+		ctx.translate( -cx, -cy );
+	}
 
 	Editor.prototype.tracePath = function ( ctx, shape ) {
 		ctx.beginPath();
