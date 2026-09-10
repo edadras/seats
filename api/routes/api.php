@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Management\AccessCodeController;
 use App\Http\Controllers\Api\V1\Management\BasketRecoveryController;
 use App\Http\Controllers\Api\V1\Management\SeasonPassController;
 use App\Http\Controllers\Api\V1\Management\VoucherController;
+use App\Http\Controllers\Api\V1\Management\WaitingRoomController;
 use App\Http\Controllers\Api\V1\Management\AddonController;
 use App\Http\Controllers\Api\V1\Management\DiscountController;
 use App\Http\Controllers\Api\V1\Management\DoorListController;
@@ -194,6 +195,10 @@ Route::prefix('v1')->group(function () {
         Route::get('discounts/{discount}', [DiscountController::class, 'show']);
         Route::patch('discounts/{discount}', [DiscountController::class, 'update']);
         Route::delete('discounts/{discount}', [DiscountController::class, 'destroy']);
+
+        // The door on a big sale, live. A read that also turns the handle — see the controller.
+        Route::get('events/{event}/queue', [WaitingRoomController::class, 'show'])
+            ->middleware('throttle:120,1,queue-watch');
 
         // ---- Unfinished baskets -----------------------------------------------------------------
         // Purchases somebody started and did not finish, and what came of writing to them.

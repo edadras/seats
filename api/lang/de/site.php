@@ -178,6 +178,18 @@ return [
         'taxIncluded' => 'inkl. :name zu :rate %',
         'taxName' => 'Steuer',
     ],
+    'room' => [
+        'holdOn' => 'Sie stehen in der Schlange',
+        'joining' => 'Ihr Platz wird gesucht …',
+        'beforeDoors' => 'Der Verkauf hat noch nicht begonnen. Bleiben Sie auf dieser Seite — bei Öffnung werden alle Wartenden zufällig eingereiht, Neuladen bringt also nichts.',
+        'place' => 'Sie sind Nummer :place',
+        'ahead' => 'Vor Ihnen sind :count Personen.',
+        'nextUp' => 'Sie sind als Nächste dran.',
+        'letIn' => 'Sie sind dran.',
+        'gone' => 'Ihr Platz ist verfallen. Laden Sie die Seite neu, um sich wieder anzustellen.',
+        'hint' => 'Lassen Sie diese Seite offen. Sie bewegt sich von selbst, und Schließen gibt Ihren Platz auf.',
+        'leave' => 'Schlange verlassen',
+    ],
     'basket' => [
         'backAgain' => 'Ihre Plätze liegen wieder im Korb. Sie sind ein paar Minuten reserviert.',
         'declined' => 'Wir schreiben Ihnen zu dieser Buchung nicht wieder.',

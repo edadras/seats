@@ -488,6 +488,10 @@ class CheckoutController extends Controller
         $request->session()->forget('seatmap_hold');
         $request->session()->put('seatmap_order', $order->external_order_id);
 
+        // Out of the queue. This buyer has what they came for, and holding their slot open
+        // afterwards keeps somebody else standing outside for nothing.
+        app(\App\Http\Controllers\Site\QueueController::class)->done($request, $hold->event);
+
         /*
          * A ticket's QR token exists in plaintext exactly once, on the models that just issued it:
          * the database keeps only a hash, and nothing can recover the code afterwards.

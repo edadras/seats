@@ -6,6 +6,7 @@ use App\Http\Controllers\GoogleSignInController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\BasketController;
 use App\Http\Controllers\Site\CheckoutController;
+use App\Http\Controllers\Site\QueueController;
 use App\Http\Controllers\Site\SeasonController;
 use App\Http\Controllers\Site\SiteFilesController;
 use App\Http\Controllers\Site\SitePageController;
@@ -108,6 +109,19 @@ Route::middleware('site')->group(function () {
     Route::match(['get', 'post'], 'pay/{gateway}/return/{reference}', [CheckoutController::class, 'paymentReturn'])
         ->middleware('throttle:60,1,gateway-return')
         ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
+    /*
+     * The door on a big sale.
+     *
+     * The poll is throttled loosely and deliberately: everybody outside is asking every five
+     * seconds, that is the design, and a limit that cut them off would leave people staring at a
+     * page that had stopped moving. It is also where the queue actually turns — sweeping lapsed
+     * leases and letting the next people in — so asking often is asking usefully.
+     */
+    Route::get('queue/{event}', [QueueController::class, 'show'])
+        ->middleware('throttle:120,1,queue');
+    Route::post('queue/{event}/leave', [QueueController::class, 'leave'])
+        ->middleware('throttle:20,1,queue-leave');
 
     /*
      * The two links at the bottom of "you left something".

@@ -1272,6 +1272,47 @@ hr { border: none; }
 	color: var(--text);
 }
 
+/* ============================================================================= the queue */
+
+/*
+ * The door on a big sale. Deliberately plain and deliberately large: the person reading it is
+ * anxious, on a phone, and wants one number.
+ */
+.room {
+	padding: 2rem 1.5rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	text-align: center;
+}
+
+.room__title { margin: 0 0 0.5rem; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+
+.room__line { margin: 0 0 1.2rem; font-size: 1.05rem; }
+
+/* Honest decoration: the width is the share of the queue now behind this person. */
+.room__meter {
+	block-size: 0.5rem;
+	inline-size: min(28rem, 100%);
+	margin: 0 auto 1.2rem;
+	border-radius: 999px;
+	background: var(--surface-sunken);
+	overflow: hidden;
+}
+
+.room__meter > span {
+	display: block;
+	block-size: 100%;
+	inline-size: 8%;
+	border-radius: 999px;
+	background: var(--accent);
+	transition: inline-size 0.6s ease;
+}
+
+.room__hint { margin: 0 0 1.2rem; color: var(--text-muted); font-size: 0.9rem; }
+
+.room__out { margin: 0; }
+
 /* ============================================================================= seasons */
 
 /*

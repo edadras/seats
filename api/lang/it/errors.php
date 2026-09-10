@@ -222,4 +222,5 @@ return [
     'basket_already_written' => 'A questo acquirente è già stato scritto per questo carrello.',
     'basket_has_no_site' => 'Non c’è nessun posto a cui rimandare questo acquirente.',
     'basket_message_off' => 'Accendete prima «Prenotazione a metà» in Messaggi — finché non lo fate non parte nulla.',
+    'waiting_your_turn' => 'Non è ancora il vostro turno. Il posto in coda resta vostro.',
 ];

@@ -222,4 +222,5 @@ return [
     'basket_already_written' => 'Diesem Käufer wurde zu diesem Korb bereits geschrieben.',
     'basket_has_no_site' => 'Es gibt keinen Ort, an den dieser Käufer zurückgeschickt werden könnte.',
     'basket_message_off' => 'Schalten Sie „Nicht beendete Buchung“ zuerst unter Nachrichten ein — vorher wird nichts gesendet.',
+    'waiting_your_turn' => 'Sie sind noch nicht dran. Ihr Platz in der Schlange bleibt Ihnen.',
 ];

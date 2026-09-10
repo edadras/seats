@@ -181,6 +181,18 @@ return [
         'taxIncluded' => 'includes :name at :rate%',
         'taxName' => 'Tax',
     ],
+    'room' => [
+        'holdOn' => 'You are in the queue',
+        'joining' => 'Finding your place…',
+        'beforeDoors' => 'The sale has not opened yet. Stay on this page — when it opens, everybody waiting is given a place at random, so there is nothing to be gained by refreshing.',
+        'place' => 'You are number :place',
+        'ahead' => ':count people are ahead of you.',
+        'nextUp' => 'You are next.',
+        'letIn' => 'It is your turn.',
+        'gone' => 'Your place has lapsed. Reload the page to join the queue again.',
+        'hint' => 'Keep this page open. It moves on its own, and closing it gives up your place.',
+        'leave' => 'Leave the queue',
+    ],
     'basket' => [
         'backAgain' => 'Your seats are back in your basket. They are held for a few minutes.',
         'declined' => 'We will not write to you about that booking again.',

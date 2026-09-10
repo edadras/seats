@@ -359,6 +359,27 @@ class SitePageController extends Controller
         );
         $onSale = SaleWindow::CLOSED !== $sale && $unlocked;
 
+        /*
+         * The door, where this night has one.
+         *
+         * A visitor who is not inside gets the room instead of the picker — and gets it *instead*
+         * rather than on top of it, because a seat map that draws behind a queue is a seat map
+         * being polled by everybody the queue exists to hold back.
+         *
+         * The room guards the **general** sale, in two stretches. Before it opens the page is the
+         * lobby: people gather, nobody has a place, and the order is drawn when the doors open —
+         * which is the whole reason arriving early is worth nothing. After it opens the room is the
+         * queue proper. A presale is left alone: it is small, its code box is the page a code
+         * holder came for, and putting a queue in front of a hundred people with codes would be
+         * ceremony rather than protection.
+         */
+        $room = app(\App\Domain\Queue\WaitingRoom::class);
+        $lobby = SaleWindow::WAITING === $sale && null === $event->presale_starts_at;
+        $queued = $room->guards($event)
+            && (SaleWindow::OPEN === $sale || $lobby)
+            && ! app(\App\Http\Controllers\Site\QueueController::class)
+                ->place(request(), $event);
+
         // One id, used by both the container and the boot payload: the picker finds its element
         // by that id, so two random values would leave the page with a div and nothing in it.
         $containerId = 'seatmap-'.Str::lower(Str::random(8));
@@ -404,7 +425,18 @@ class SitePageController extends Controller
                 : null,
             'container_id' => $containerId,
             'calendar_url' => '/events/'.$event->public_id.'/calendar.ics',
-            'boot' => $onSale ? $this->boot($site, $event, $containerId) : null,
+            'boot' => ($onSale && ! $queued) ? $this->boot($site, $event, $containerId) : null,
+            /*
+             * What the waiting-room block needs to draw itself and to keep asking.
+             *
+             * Null on every ordinary night, which is almost all of them: a room in front of a sale
+             * nobody is queueing for is a page between a buyer and their ticket for no reason.
+             */
+            'queue' => $queued ? [
+                'poll' => '/queue/'.$event->public_id,
+                'leave' => '/queue/'.$event->public_id.'/leave',
+                'opens_at' => $event->on_sale_at?->toIso8601String(),
+            ] : null,
             /*
              * The queue, offered only where there is one to join.
              *

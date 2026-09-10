@@ -3387,6 +3387,51 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /events/{event}/queue:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getEventQueue
+      tags: [Events]
+      summary: The door on a big sale, live
+      description: |
+        Requires `events.view`. The room itself is switched on and sized on the event, beside the
+        sale times it belongs with; this is the number an organiser watches at ten o'clock on the
+        morning of an onsale.
+
+        Reading it **turns the handle**: lapsed admissions are swept and the next people are let in.
+        That is deliberate. The alternative is a cron job that leaves the room half empty for
+        fifty-nine seconds out of every minute of the busiest hour of the year, and an organiser
+        refreshing this is another pair of hands on the door.
+
+        `inside` and `waiting` are counted, never read off a column — the same shape as a seat's
+        availability. `guarded` is false on a night with no room, and every other number is zero.
+      responses:
+        "200":
+          description: How the queue stands
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  guarded: { type: boolean, description: "Whether this night has a door at all." }
+                  open:
+                    type: boolean
+                    description: >-
+                      Whether the doors have opened. Before they do, everybody waiting is in a
+                      lobby with no place — the order is drawn when the sale starts, so arriving
+                      early is worth nothing.
+                  waiting: { type: integer }
+                  inside: { type: integer }
+                  capacity:
+                    type: integer
+                    description: "How many buyers may be choosing at once. Not how many seats there are."
+                  minutes:
+                    type: integer
+                    description: "How long an admission lasts before the place is given away."
+                  opens_at: { type: [string, "null"], format: date-time }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /events/{event}/stats:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -7414,6 +7459,20 @@ components:
             somewhere nobody is looking.
         venue_id: { type: string, format: uuid }
         seat_map_version_id: { type: [string, "null"], format: uuid }
+        waiting_room:
+          type: boolean
+          description: >-
+            Whether a queue stands in front of this sale. Off on almost every night, and rightly: a
+            room in front of a sale nobody is queueing for is a page between a buyer and their
+            ticket for no reason. It guards the general sale — a presale is left alone.
+        waiting_room_capacity:
+          type: integer
+          description: >-
+            How many buyers may be choosing at once. Not how many seats there are: the room exists
+            to keep a shop usable, and the two numbers have nothing to do with each other.
+        waiting_room_minutes:
+          type: integer
+          description: "How long an admission lasts before the place is given away."
         hold_ttl_seconds: { type: integer }
         max_extends: { type: integer }
         refund_policy:

@@ -177,6 +177,18 @@ return [
         'taxIncluded' => 'dont :name à :rate %',
         'taxName' => 'Taxe',
     ],
+    'room' => [
+        'holdOn' => 'Vous êtes dans la file',
+        'joining' => 'Recherche de votre place…',
+        'beforeDoors' => 'La vente n’a pas encore ouvert. Restez sur cette page — à l’ouverture, tous ceux qui attendent reçoivent une place au hasard : rafraîchir n’apporte rien.',
+        'place' => 'Vous êtes le numéro :place',
+        'ahead' => ':count personnes sont devant vous.',
+        'nextUp' => 'Vous êtes le prochain.',
+        'letIn' => 'C’est à vous.',
+        'gone' => 'Votre place est perdue. Rechargez la page pour vous remettre dans la file.',
+        'hint' => 'Laissez cette page ouverte. Elle avance toute seule, et la fermer abandonne votre place.',
+        'leave' => 'Quitter la file',
+    ],
     'basket' => [
         'backAgain' => 'Vos places sont de nouveau dans votre panier. Elles sont retenues quelques minutes.',
         'declined' => 'Nous ne vous écrirons plus au sujet de cette réservation.',

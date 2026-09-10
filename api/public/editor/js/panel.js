@@ -1257,6 +1257,11 @@
 						actionButton( 'event-edit', event.id, self.t( 'panel.events.edit' ), 'settings' ) +
 						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
 						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
+						// Only where there is a door to watch. On every other night the button
+						// would open a screen reading "nobody is queueing", for ever.
+						( event.waiting_room
+							? actionButton( 'queue', event.id, self.t( 'panel.room.title' ), 'users' )
+							: '' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
 						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
 						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
@@ -1354,6 +1359,13 @@
 								self[ pair[ 1 ] ]( event );
 							}
 						} );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-queue]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						self.showQueue( button.dataset.queue,
+							button.closest( 'tr' ).querySelector( '.table__primary' ).textContent );
 					} );
 				} );
 
@@ -1527,6 +1539,33 @@
 			'<span class="field__hint">' + esc( App.t( 'panel.events.onSaleFromHint' ) ) + '</span></div>' +
 			'</div>' +
 
+			/*
+			 * The door, for a sale that needs one.
+			 *
+			 * Off for almost every night, and rightly: a queue in front of a sale nobody is
+			 * queueing for is a page between a buyer and their ticket for no reason at all.
+			 */
+			'<label class="switch switch--row"><input type="checkbox" id="e-room" name="waiting_room"' +
+			( event && event.waiting_room ? ' checked' : '' ) + '>' +
+			'<span class="switch__track"><span class="switch__thumb"></span></span>' +
+			'<span>' + esc( App.t( 'panel.events.waitingRoom' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( App.t( 'panel.events.waitingRoomHint' ) ) + '</p>' +
+
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-room-capacity">' +
+			esc( App.t( 'panel.events.roomCapacity' ) ) + '</label>' +
+			'<input class="input tnum" id="e-room-capacity" name="waiting_room_capacity" ' +
+			'type="number" min="1" max="100000" value="' +
+			esc( ( event && event.waiting_room_capacity ) || 100 ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.roomCapacityHint' ) ) + '</span></div>' +
+			'<div class="field"><label class="field__label" for="e-room-minutes">' +
+			esc( App.t( 'panel.events.roomMinutes' ) ) + '</label>' +
+			'<input class="input tnum" id="e-room-minutes" name="waiting_room_minutes" ' +
+			'type="number" min="1" max="120" value="' +
+			esc( ( event && event.waiting_room_minutes ) || 10 ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.roomMinutesHint' ) ) + '</span></div>' +
+			'</div>' +
+
 			// The refund terms. Written here rather than in a settings screen because they belong
 			// to this night: a matinee for schools and a sold-out final are not the same promise.
 			'<div class="field-duo">' +
@@ -1592,6 +1631,10 @@
 			// An empty box is "no presale", not the epoch.
 			presale_starts_at: instantOrNull( data.get( 'presale_starts_at' ) ),
 			on_sale_at: instantOrNull( data.get( 'on_sale_at' ) ),
+			// An unticked checkbox is absent from a form, which is not the same as false.
+			waiting_room: null !== data.get( 'waiting_room' ),
+			waiting_room_capacity: Number( data.get( 'waiting_room_capacity' ) ) || 100,
+			waiting_room_minutes: Number( data.get( 'waiting_room_minutes' ) ) || 10,
 		};
 	}
 
@@ -1960,6 +2003,66 @@
 					'<p class="hint">' + esc( self.t( 'panel.inventory.hint' ) ) + '</p>',
 			} );
 		} ).catch( function ( error ) { self.toast( error.message, true ); } );
+	};
+
+	/**
+	 * The door, live, while a sale is running.
+	 *
+	 * It keeps asking, which is what an organiser wants at ten o'clock on the morning of a big
+	 * onsale — and it stops asking on its own the moment the modal is gone, because the element it
+	 * writes into is gone with it. No listener to remember to remove, and no timer left running
+	 * behind a screen nobody is looking at.
+	 */
+	App.showQueue = function ( eventId, name ) {
+		var self = this;
+
+		function tiles( state ) {
+			return [
+				[ 'waiting', state.waiting ],
+				[ 'inside', state.inside ],
+				[ 'capacity', state.capacity ],
+				[ 'minutes', state.minutes ],
+			].map( function ( pair ) {
+				return '<div class="stat stat--block"><span class="stat__value tnum">' +
+					esc( self.number( pair[ 1 ] ) ) + '</span><span class="stat__label">' +
+					esc( self.t( 'panel.room.' + pair[ 0 ] ) ) + '</span></div>';
+			} ).join( '' );
+		}
+
+		function ask() {
+			var host = document.getElementById( 'queue-tiles' );
+
+			if ( ! host ) {
+				return;
+			}
+
+			self.request( 'GET', '/events/' + eventId + '/queue' )
+				.then( function ( state ) {
+					var into = document.getElementById( 'queue-tiles' );
+
+					if ( ! into ) {
+						return;
+					}
+
+					into.innerHTML = tiles( state );
+					document.getElementById( 'queue-state' ).textContent =
+						self.t( state.open ? 'panel.room.doorsOpen' : 'panel.room.doorsShut' );
+
+					window.setTimeout( ask, 5000 );
+				} )
+				.catch( function () {} );
+		}
+
+		this.modal( {
+			title: name || this.t( 'panel.room.title' ),
+			cancelLabel: null,
+			doneLabel: this.t( 'panel.common.close' ),
+			body: '<div class="stat-grid" id="queue-tiles"></div>' +
+				'<p class="hint" id="queue-state"></p>' +
+				'<p class="hint">' + esc( this.t( 'panel.room.hint' ) ) + '</p>',
+		} );
+
+		ask();
 	};
 
 	App.renderConnections = function () {

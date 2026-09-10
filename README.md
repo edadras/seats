@@ -77,6 +77,11 @@ A seat is the start of it, not the end. Around the map:
 - **Add-ons and donations** at the checkout — a programme, a glass of wine, a parking space, and a
   box to give something. Add-ons are a sale and sit inside the fee and the VAT; a donation is a
   gift and sits outside both, because a booking fee on somebody's charity is a complaint.
+- **A waiting room** for a sale where thousands arrive at once. Everybody waiting when the doors
+  open is given a place *by a draw*, so arriving early buys nothing and refreshing is not a skill;
+  people who arrive afterwards join the back in order. An admission is a lease, not a right, and
+  the queue moves because people are looking at it — every visitor who checks their place also
+  sweeps the leases that lapsed and lets the next people in.
 - **Unfinished baskets** — a buyer whose payment never came back is written to once, about their
   own booking, with a link that tries to take the same seats again and a way to say no thank you.
   Never for an address somebody merely typed into a box, and off until the organiser turns it on.
@@ -267,7 +272,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 603 unit, feature and module tests
+./vendor/bin/phpunit                        # 614 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -293,7 +298,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all twenty-nine, in order
+./smoke.sh                    # all thirty, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -382,6 +387,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Only a submitted checkout becomes an abandoned basket, and only once | `BasketRecoveryTest` |
 | A recovery link takes the same seats again, or says plainly that it cannot | `BasketRecoveryTest` |
 | Nothing is written to a buyer until the organiser switches the message on | `BasketRecoveryTest` |
+| Arriving early at a queue buys nothing: the waiting are drawn, not sorted | `WaitingRoomTest` |
+| The door is on the hold, not only on the page | `WaitingRoomTest` |
+| A lapsed admission gives its place away | `WaitingRoomTest` |
 
 ## Installing the plugin
 

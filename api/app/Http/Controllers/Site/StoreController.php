@@ -77,6 +77,21 @@ class StoreController extends Controller
         ]);
 
         $event = $this->event($data['event_public_id']);
+
+        /*
+         * The door, where this night has one.
+         *
+         * Checked here and not only on the page, because a page is a suggestion and this is the
+         * moment inventory moves. A waiting room that only hid the picker would be a waiting room
+         * anybody could walk past with a browser console open.
+         */
+        if (! app(\App\Http\Controllers\Site\QueueController::class)->isAdmitted($request, $event)) {
+            throw \App\Exceptions\ApiException::conflict(
+                'waiting_your_turn',
+                'It is not your turn yet. Your place in the queue is being held.'
+            );
+        }
+
         $accessCode = $data['access_code'] ?? $request->session()->get('seatmap_access_code');
 
         $hold = ($data['best_available'] ?? null)

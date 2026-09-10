@@ -222,4 +222,5 @@ return [
     'basket_already_written' => 'This buyer has already been written to about this basket.',
     'basket_has_no_site' => 'There is nowhere to send this buyer back to.',
     'basket_message_off' => 'Switch "Unfinished booking" on under Messages first — nothing is sent until you do.',
+    'waiting_your_turn' => 'It is not your turn yet. Your place in the queue is being held.',
 ];

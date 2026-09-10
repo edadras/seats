@@ -76,7 +76,125 @@
         </section>
     @endif
 
-    @if ($event['on_sale'])
+    @if (! empty($event['queue']))
+        @php
+            /*
+             * Every sentence the room can show, handed to the script as one object.
+             *
+             * Built here rather than inline in the `@json` call because a Blade directive parses
+             * its own argument, and a multi-line array with translation calls in it is not
+             * something it can be asked to read.
+             */
+            $roomWords = [
+                'admitted' => __('site.room.letIn'),
+                'lobby' => __('site.room.beforeDoors'),
+                'queued' => __('site.room.place'),
+                'ahead' => __('site.room.ahead'),
+                'alone' => __('site.room.nextUp'),
+                'gone' => __('site.room.gone'),
+            ];
+        @endphp
+
+        {{-- The door. Rendered instead of the picker, not in front of it: a seat map drawing behind
+             a queue is a seat map being polled by everybody the queue exists to hold back. --}}
+        <section class="shell section section--tight">
+            <div class="room" id="room"
+                 data-poll="{{ $event['queue']['poll'] }}"
+                 data-opens="{{ $event['queue']['opens_at'] }}">
+                <h2 class="room__title" id="room-title">{{ __('site.room.holdOn') }}</h2>
+                <p class="room__line" id="room-line">{{ __('site.room.joining') }}</p>
+
+                <div class="room__meter" aria-hidden="true"><span id="room-bar"></span></div>
+
+                <p class="room__hint">{{ __('site.room.hint') }}</p>
+
+                <form class="room__out" method="POST" action="{{ $event['queue']['leave'] }}">
+                    @csrf
+                    <button class="button button--quiet" type="submit">{{ __('site.room.leave') }}</button>
+                </form>
+            </div>
+        </section>
+
+        @push('scripts')
+            <script>
+                /*
+                 * Ask where we stand, and come in when we are let in.
+                 *
+                 * Nothing is worked out here: the server says the place, the number ahead and
+                 * whether the doors are open, and this prints it. A queue position computed in the
+                 * browser would be a second answer to the one question this page exists to answer.
+                 */
+                ( function () {
+                    var room = document.getElementById( 'room' );
+                    var title = document.getElementById( 'room-title' );
+                    var line = document.getElementById( 'room-line' );
+                    var bar = document.getElementById( 'room-bar' );
+
+                    if ( ! room ) {
+                        return;
+                    }
+
+                    var words = @json($roomWords);
+
+                    function ask() {
+                        fetch( room.dataset.poll, {
+                            credentials: 'same-origin',
+                            headers: { Accept: 'application/json' },
+                        } )
+                            .then( function ( response ) {
+                                return response.ok ? response.json() : null;
+                            } )
+                            .then( function ( state ) {
+                                if ( ! state ) {
+                                    return;
+                                }
+
+                                if ( 'admitted' === state.state ) {
+                                    // In. Reload rather than draw the picker here: the page the
+                                    // server renders for somebody inside is a different page.
+                                    window.location.reload();
+
+                                    return;
+                                }
+
+                                if ( 'expired' === state.state || 'left' === state.state ) {
+                                    title.textContent = words.gone;
+                                    line.textContent = '';
+
+                                    return;
+                                }
+
+                                if ( 'lobby' === state.state ) {
+                                    line.textContent = words.lobby;
+                                    bar.style.inlineSize = '8%';
+                                    window.setTimeout( ask, 5000 );
+
+                                    return;
+                                }
+
+                                line.textContent = state.ahead
+                                    ? words.ahead.replace( ':count', state.ahead )
+                                    : words.alone;
+                                title.textContent = words.queued.replace( ':place', state.place );
+
+                                // How far along, roughly. Decoration, and honest decoration: it is
+                                // the share of the queue that is now behind this person.
+                                var total = state.ahead + ( state.inside || 0 ) + 1;
+                                bar.style.inlineSize =
+                                    Math.max( 8, Math.round( 100 * ( state.inside || 0 ) / total ) ) + '%';
+
+                                window.setTimeout( ask, 5000 );
+                            } )
+                            .catch( function () {
+                                window.setTimeout( ask, 10000 );
+                            } );
+                    }
+
+                    ask();
+                }() );
+            </script>
+        @endpush
+    @elseif ($event['on_sale'])
         <section class="shell section section--tight">
             <div class="booking">
                 {{-- The same picker the WordPress plugin ships; see tools/sync-seat-picker.sh. --}}

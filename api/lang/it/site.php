@@ -177,6 +177,18 @@ return [
         'taxIncluded' => 'incluso :name al :rate%',
         'taxName' => 'Imposta',
     ],
+    'room' => [
+        'holdOn' => 'Siete in coda',
+        'joining' => 'Cerchiamo il vostro posto…',
+        'beforeDoors' => 'La vendita non è ancora aperta. Restate su questa pagina — all’apertura chi sta aspettando riceve un posto a sorte, quindi ricaricare non serve.',
+        'place' => 'Siete il numero :place',
+        'ahead' => 'Davanti a voi ci sono :count persone.',
+        'nextUp' => 'Tocca a voi dopo.',
+        'letIn' => 'È il vostro turno.',
+        'gone' => 'Il vostro posto è scaduto. Ricaricate la pagina per rimettervi in coda.',
+        'hint' => 'Tenete aperta questa pagina. Avanza da sola, e chiuderla vuol dire rinunciare al posto.',
+        'leave' => 'Esci dalla coda',
+    ],
     'basket' => [
         'backAgain' => 'I vostri posti sono di nuovo nel carrello. Restano tenuti per qualche minuto.',
         'declined' => 'Non vi scriveremo più a proposito di quella prenotazione.',

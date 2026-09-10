@@ -15,6 +15,7 @@ class Event extends Model
 
     protected $fillable = [
         'tenant_id', 'venue_id', 'series_id', 'seat_map_id', 'seat_map_version_id', 'public_id',
+        'waiting_room', 'waiting_room_capacity', 'waiting_room_minutes',
         'name', 'description', 'image_url', 'category', 'status', 'starts_at', 'ends_at', 'timezone', 'currency',
         'hold_ttl_seconds', 'max_extends', 'max_seats_per_order', 'refund_policy', 'settings',
         'booking_fee_kind', 'booking_fee_amount', 'booking_fee_percent', 'booking_fee_label',
@@ -45,6 +46,9 @@ class Event extends Model
         'refund_keeps_fee' => 'boolean',
         'presale_starts_at' => 'datetime',
         'on_sale_at' => 'datetime',
+        'waiting_room' => 'boolean',
+        'waiting_room_capacity' => 'integer',
+        'waiting_room_minutes' => 'integer',
     ];
 
     public function getRouteKeyName(): string

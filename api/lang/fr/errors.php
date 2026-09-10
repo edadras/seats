@@ -222,4 +222,5 @@ return [
     'basket_already_written' => 'Cet acheteur a déjà été relancé au sujet de ce panier.',
     'basket_has_no_site' => 'Il n’y a nulle part où renvoyer cet acheteur.',
     'basket_message_off' => 'Activez d’abord « Réservation inachevée » dans Messages — rien n’est envoyé tant que ce n’est pas fait.',
+    'waiting_your_turn' => 'Ce n’est pas encore votre tour. Votre place dans la file est conservée.',
 ];

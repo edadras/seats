@@ -444,6 +444,16 @@ class EventController extends Controller
             'refund_keeps_fee' => ['sometimes', 'boolean'],
             'presale_starts_at' => ['sometimes', 'nullable', 'date'],
             'on_sale_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:presale_starts_at'],
+            /*
+             * The door on a big sale.
+             *
+             * Capacity is how many people this venue wants *choosing at once*, not how many seats
+             * there are: the room exists to keep a shop usable, and the two numbers have nothing to
+             * do with each other.
+             */
+            'waiting_room' => ['sometimes', 'boolean'],
+            'waiting_room_capacity' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+            'waiting_room_minutes' => ['sometimes', 'integer', 'min:1', 'max:120'],
         ]);
     }
 
@@ -518,6 +528,9 @@ class EventController extends Controller
             'refunds' => $event->refunds,
             'refund_window_hours' => (int) $event->refund_window_hours,
             'refund_keeps_fee' => (bool) $event->refund_keeps_fee,
+            'waiting_room' => (bool) $event->waiting_room,
+            'waiting_room_capacity' => (int) $event->waiting_room_capacity,
+            'waiting_room_minutes' => (int) $event->waiting_room_minutes,
             'presale_starts_at' => $event->presale_starts_at?->toIso8601String(),
             'on_sale_at' => $event->on_sale_at?->toIso8601String(),
             // What the sale is doing right now, so a screen does not have to work it out from
