@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\NotificationController;
 use App\Http\Controllers\Api\V1\Management\OrderController;
 use App\Http\Controllers\Api\V1\Management\PaceController;
+use App\Http\Controllers\Api\V1\Management\SegmentController;
 use App\Http\Controllers\Api\V1\Management\RefundRequestController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
@@ -349,6 +350,22 @@ Route::prefix('v1')->group(function () {
         // kind is governed by, on the way out.
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::post('notifications/read', [NotificationController::class, 'read']);
+
+        /*
+         * Saved audiences.
+         *
+         * With messaging rather than with the customer directory, because a segment is what a
+         * message is addressed to and there is nothing else to do with one. It never returns the
+         * people it describes — only how many — which is the difference between a mailing list and
+         * a way to walk out of the building with one.
+         */
+        Route::get('segments', [SegmentController::class, 'index']);
+        Route::post('segments', [SegmentController::class, 'store']);
+        Route::post('segments/preview', [SegmentController::class, 'preview'])
+            ->middleware('throttle:60,1,segment-preview');
+        Route::get('segments/{segment}', [SegmentController::class, 'show']);
+        Route::put('segments/{segment}', [SegmentController::class, 'update']);
+        Route::delete('segments/{segment}', [SegmentController::class, 'destroy']);
 
         Route::get('messaging', [MessagingController::class, 'index']);
         // Ahead of the {kind} routes below, which would otherwise match the word "announcements".

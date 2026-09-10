@@ -225,4 +225,6 @@ return [
     'waiting_your_turn' => 'Ce n’est pas encore votre tour. Votre place dans la file est conservée.',
     'channel_quota_reached' => 'Il reste :count places à ce canal de vente pour cet événement.',
     'channel_quota_gone' => 'Ce canal de vente a vendu tout son quota pour cet événement.',
+    'unknown_segment' => 'Ce public enregistré n’existe pas.',
+    'spend_needs_currency' => 'Précisez la devise de ce montant — un compte qui vend dans deux devises a deux réponses.',
 ];

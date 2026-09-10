@@ -17,7 +17,7 @@ class Announcement extends Model
     use BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'event_id', 'audience', 'channels', 'locale', 'subject', 'body',
+        'tenant_id', 'event_id', 'segment_id', 'audience', 'channels', 'locale', 'subject', 'body',
         'status', 'recipients', 'created_by', 'started_at', 'finished_at',
     ];
 
@@ -31,6 +31,11 @@ class Announcement extends Model
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function segment()
+    {
+        return $this->belongsTo(Segment::class);
     }
 
     public function deliveries()

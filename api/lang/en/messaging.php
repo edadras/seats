@@ -148,4 +148,45 @@ return [
     'announceFailed' => ':count could not be delivered',
     'announceWhen' => 'Written',
     'announceOnlyPaid' => 'Only people whose order was paid for are written to.',
+    'audienceOneEvent' => 'People who bought for one event',
+    'audienceSegmentGone' => 'A saved audience, since deleted',
+
+    /*
+     * Saved audiences.
+     *
+     * The audience an organiser wants is almost never "everybody": it is "the people who came last
+     * season and have not booked this one". These words are for a screen that has to say what a
+     * saved list means without listing the people in it.
+     */
+    'segmentsHeading' => 'Saved audiences',
+    'segmentsIntro' => 'Who to write to, saved and named: the people who came last season and have not booked this one, the regulars, the ones who actually turned up.',
+    'segmentNew' => 'New audience',
+    'segmentMeans' => 'What it means',
+    'segmentsNone' => 'No saved audiences yet',
+    'segmentsNoneHint' => 'A saved audience holds rules, never a list of people — it is worked out again every time you use it.',
+    'segmentDescription' => 'A note to yourself',
+    'segmentBoughtLabel' => 'Bought for any of these',
+    'segmentNotBoughtLabel' => 'And none of these',
+    'segmentNotBoughtHint' => 'The second half of "came last season and has not booked this one".',
+    'segmentCategoriesLabel' => 'Bought anything in these categories',
+    'segmentSinceLabel' => 'Bought since',
+    'segmentUntilLabel' => 'Bought until',
+    'segmentMinOrdersLabel' => 'Bought at least this many times',
+    'segmentMinSpendLabel' => 'Spent at least',
+    'segmentCurrencyLabel' => 'In currency',
+    'segmentAttendedLabel' => 'Actually turned up and was scanned in',
+    'segmentReach' => 'This reaches :count people.',
+    'segmentSaved' => 'Audience saved.',
+    'segmentDelete' => 'Delete this audience?',
+    'segmentDeleteBody' => 'The list goes; what was already sent to it stays, with its own record of what it reached.',
+    'segmentDeleted' => 'Audience deleted.',
+    'segmentBought' => 'bought for :events',
+    'segmentNotBought' => 'and not :events',
+    'segmentCategories' => 'in :list',
+    'segmentSince' => 'since :when',
+    'segmentUntil' => 'until :when',
+    'segmentMinOrders' => 'bought :count times or more',
+    'segmentMinSpend' => 'spent :amount or more',
+    'segmentAttended' => 'turned up',
+    'segmentEverybody' => 'everybody who has bought',
 ];

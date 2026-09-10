@@ -105,6 +105,14 @@ A seat is the start of it, not the end. Around the map:
   looked → basket → checkout → bought. Everything but the looking is derived from rows that already
   exist; the looking is counted per event, per day, per source, and never per visitor, so there is
   no cookie, no identifier and nothing to erase under a subject access request.
+- **Saved audiences** — "everybody who came last season and has not booked this one", which is the
+  audience an organiser actually wants and is two clauses rather than one. Named and saved, so it
+  can be asked again next season: bought any of these nights and none of those, in these categories,
+  between these dates, at least this many times, at least this much spent in one named currency, or
+  actually turned up and was scanned in. The vocabulary is closed on purpose — a saved query
+  language over buyer data is a way to write, by accident, both the query that takes an hour and the
+  one that reaches somewhere nobody meant to expose. A segment holds rules and never people: it is
+  resolved every time it is used, and no endpoint anywhere returns the addresses it describes.
 - **Gift vouchers and account credit**, which are not discount codes either: a discount changes
   what a booking cost and so changes the tax on it, while a voucher changes how an unchanged cost
   was settled. Applied last, to the amount payable, and a booking a voucher covers outright
@@ -287,7 +295,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 645 unit, feature and module tests
+./vendor/bin/phpunit                        # 658 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -313,7 +321,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-two, in order
+./smoke.sh                    # all thirty-three, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -413,6 +421,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A curve keeps its quiet days, and its running total predates the window | `SalesPaceTest` |
 | A night selling nothing sells out on no date, and a rate past the doors is not one | `SalesPaceTest` |
 | A funnel step with nothing above it has no rate at all | `SalesPaceTest` |
+| "Came last season and has not booked this one" is two clauses and one answer | `SegmentTest` |
+| A saved audience says how many and never who | `SegmentTest` |
+| A clause this version cannot read is dropped rather than obeyed | `SegmentTest` |
+| An unknown audience is refused rather than widened to everybody | `SegmentTest` |
+| Deleting a list does not delete what was already said to it | `SegmentTest` |
 
 ## Installing the plugin
 

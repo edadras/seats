@@ -225,4 +225,6 @@ return [
     'waiting_your_turn' => 'Non è ancora il vostro turno. Il posto in coda resta vostro.',
     'channel_quota_reached' => 'A questo canale di vendita restano :count posti per questo evento.',
     'channel_quota_gone' => 'Questo canale di vendita ha venduto tutta la sua quota per questo evento.',
+    'unknown_segment' => 'Non esiste un pubblico salvato con quel nome.',
+    'spend_needs_currency' => 'Indica in quale valuta è quell’importo — un account che vende in due valute ha due risposte.',
 ];

@@ -2520,6 +2520,146 @@ paths:
                 properties:
                   sent: { type: boolean }
 
+  /segments:
+    get:
+      operationId: listSegments
+      tags: [Messaging]
+      summary: Saved audiences
+      description: |
+        Requires `messages.send`. A segment is what a message is addressed to, and there is nothing
+        else on this platform you can do with one — which is why it lives with messaging rather than
+        with the customer directory.
+
+        It says how many people it reaches and never who they are. A segment is not a second
+        customer directory: the addresses it resolves to are used in exactly one place, the delivery
+        log of a send in progress, and an endpoint that listed them would be a way to walk out of
+        the building with an account's mailing list.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Segment" }
+                  clauses:
+                    type: array
+                    description: The vocabulary this version understands, so a screen builds its controls from it rather than from a copy that drifts.
+                    items: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createSegment
+      tags: [Messaging]
+      summary: Save an audience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                description: { type: [string, "null"], maxLength: 300 }
+                rules: { $ref: "#/components/schemas/SegmentRules" }
+      responses:
+        "201":
+          description: Saved, with how many people it reaches
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Segment" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /segments/preview:
+    post:
+      operationId: previewSegment
+      tags: [Messaging]
+      summary: How many people a set of rules describes
+      description: >
+        Counted without saving anything, so a set of clauses can be a number before it is a list.
+        A count only — see `GET /segments` for why there is no endpoint that returns the people.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rules]
+              properties:
+                rules: { $ref: "#/components/schemas/SegmentRules" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  people: { type: integer }
+                  rules:
+                    type: object
+                    description: The rules read back in names rather than identifiers.
+                    additionalProperties: true
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /segments/{segment}:
+    parameters:
+      - name: segment
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getSegment
+      tags: [Messaging]
+      summary: One saved audience, with how many people it reaches
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Segment" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: updateSegment
+      tags: [Messaging]
+      summary: Change a saved audience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                description: { type: [string, "null"], maxLength: 300 }
+                rules: { $ref: "#/components/schemas/SegmentRules" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Segment" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteSegment
+      tags: [Messaging]
+      summary: Delete a saved audience
+      description: >
+        The list goes; the announcements sent to it stay, with their own record of what they
+        reached. Their reference is nulled rather than the history being deleted with the list.
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /messaging/announcements:
     get:
       operationId: listAnnouncements
@@ -2575,6 +2715,15 @@ paths:
                   type: [string, "null"]
                   format: uuid
                   description: Buyers of one event. Omit for everybody who has bought.
+                segment_id:
+                  type: [string, "null"]
+                  format: uuid
+                  description: >-
+                    A saved audience, which answers the whole question and is therefore used
+                    *instead of* `event_id` rather than beside it: "came last season and has not
+                    booked this one" narrowed to "bought this one" is the empty set. An id that
+                    does not resolve is refused with `unknown_segment` rather than falling back to
+                    everybody — that is the one wrong answer that cannot be unsent.
                 channels:
                   type: array
                   minItems: 1
@@ -2603,6 +2752,10 @@ paths:
       parameters:
         - name: event_id
           in: query
+          schema: { type: string, format: uuid }
+        - name: segment_id
+          in: query
+          description: A saved audience, used instead of `event_id` rather than beside it.
           schema: { type: string, format: uuid }
         - name: channels
           in: query
@@ -7226,8 +7379,15 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        audience: { type: string, enum: [event, everyone] }
+        audience: { type: string, enum: [event, everyone, segment] }
         event: { type: [string, "null"] }
+        segment:
+          type: [string, "null"]
+          description: >-
+            The saved audience it was addressed to, by name. Null on the two simple audiences, and
+            null as well when that list has since been deleted — an announcement is a thing that
+            happened, and what it reached is written down as its deliveries either way.
+
         channels:
           type: array
           items: { type: string }
@@ -7239,6 +7399,75 @@ components:
         failed: { type: integer }
         total: { type: integer, description: Messages queued for it in all. }
         created_at: { type: string, format: date-time }
+
+    Segment:
+      type: object
+      description: >-
+        A named question about buyers — "came last season, has not booked this one". It holds rules
+        and never people: the audience is worked out again every time it is used, because a stored
+        list goes stale the moment somebody buys and a stale audience is a mailing about a show the
+        reader already has tickets for. Nothing here, or anywhere else in the API, returns the
+        addresses a segment describes.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 120 }
+        description: { type: [string, "null"], maxLength: 300 }
+        rules: { $ref: "#/components/schemas/SegmentRules" }
+        explained:
+          type: object
+          description: >-
+            The same rules with event ids resolved to names, so a screen can say what a saved
+            audience means without fetching every event to find out.
+          additionalProperties: true
+        people:
+          type: integer
+          description: How many people it currently reaches. Present on a single segment, not in the list.
+        created_at: { type: string, format: date-time }
+
+    SegmentRules:
+      type: object
+      description: >-
+        A closed vocabulary, not a query language. Adding a clause means adding a case to the
+        resolver, a rule to the validator, a sentence to six catalogues and a control to the
+        screen — which is friction on purpose: a saved query over buyer data is a way to write, by
+        accident, both the query that takes an hour and the one that reaches somewhere nobody meant
+        to expose. A clause this version does not recognise is dropped on the way in rather than
+        stored, so a rule nothing applies cannot quietly widen an audience.
+      properties:
+        bought_events:
+          type: array
+          maxItems: 200
+          items: { type: string, format: uuid }
+          description: Bought a ticket for any of these nights.
+        not_bought_events:
+          type: array
+          maxItems: 200
+          items: { type: string, format: uuid }
+          description: And none of these — the second half of "has not booked this season".
+        categories:
+          type: array
+          maxItems: 40
+          items: { type: string, maxLength: 60 }
+        since:
+          type: [string, "null"]
+          format: date
+          description: Bought since this day, counted by when the booking was paid for rather than started.
+        until:
+          type: [string, "null"]
+          format: date
+          description: Bought up to and including this whole day.
+        min_orders: { type: [integer, "null"], minimum: 1, maximum: 1000 }
+        min_spend:
+          type: [integer, "null"]
+          minimum: 0
+          description: >-
+            Minor units, and refused without `currency`: an account selling in euros and rials has
+            no single number for "spent more than a hundred", and adding the two would produce a
+            segment whose whole membership is an arithmetic mistake.
+        currency: { type: [string, "null"], minLength: 3, maxLength: 3 }
+        attended:
+          type: boolean
+          description: Actually turned up and was scanned in, which is not the same as having bought.
 
     MessageChannel:
       type: object

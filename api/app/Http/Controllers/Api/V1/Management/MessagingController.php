@@ -221,7 +221,7 @@ class MessagingController extends Controller
         $this->authorize($request, 'messages.send');
 
         return response()->json([
-            'data' => Announcement::with('event:id,name')
+            'data' => Announcement::with(['event:id,name', 'segment:id,name'])
                 ->orderByDesc('created_at')
                 ->limit(50)
                 ->get()
@@ -238,6 +238,7 @@ class MessagingController extends Controller
 
         $data = $request->validate([
             'event_id' => ['nullable', 'uuid'],
+            'segment_id' => ['nullable', 'uuid'],
             'channels' => ['required', 'array', 'min:1'],
             'channels.*' => ['string', 'max:40'],
         ]);
@@ -245,6 +246,7 @@ class MessagingController extends Controller
         return response()->json($this->announcements->preview(
             $data['event_id'] ?? null,
             $this->assertChannels($data['channels']),
+            $this->segmentRules($data['segment_id'] ?? null),
         ));
     }
 
@@ -262,6 +264,10 @@ class MessagingController extends Controller
 
         $data = $request->validate([
             'event_id' => ['nullable', 'uuid'],
+            // A saved audience, where the organiser picked one. It answers the whole question, so
+            // it is not combined with an event: "came last season and has not booked this one"
+            // narrowed to "bought this one" is the empty set.
+            'segment_id' => ['nullable', 'uuid'],
             'channels' => ['required', 'array', 'min:1'],
             'channels.*' => ['string', 'max:40'],
             'subject' => ['nullable', 'string', 'max:200'],
@@ -270,15 +276,23 @@ class MessagingController extends Controller
         ]);
 
         $channels = $this->assertChannels($data['channels']);
-        $event = ! empty($data['event_id']) ? Event::whereKey($data['event_id'])->first() : null;
+        $segment = $this->segment($data['segment_id'] ?? null);
+        $event = ! $segment && ! empty($data['event_id'])
+            ? Event::whereKey($data['event_id'])->first()
+            : null;
 
-        if (! empty($data['event_id']) && ! $event) {
+        if (! $segment && ! empty($data['event_id']) && ! $event) {
             throw ApiException::unprocessable('unknown_event', 'There is no such event.');
         }
 
         $announcement = Announcement::create([
             'event_id' => $event?->id,
-            'audience' => $event ? 'event' : 'everyone',
+            'segment_id' => $segment?->id,
+            'audience' => match (true) {
+                null !== $segment => 'segment',
+                null !== $event => 'event',
+                default => 'everyone',
+            },
             'channels' => $channels,
             'locale' => Locales::normalise($data['locale'] ?? app()->getLocale()),
             'subject' => $data['subject'] ?? null,
@@ -292,16 +306,44 @@ class MessagingController extends Controller
         $this->audit->record('announcement.sent', $announcement, [
             'audience' => $announcement->audience,
             'event' => $event?->name,
+            'segment' => $segment?->name,
             'channels' => $channels,
             'messages' => $queued,
         ]);
 
         $this->announcements->sendBatch($announcement);
 
-        return response()->json($this->presentAnnouncement($announcement->fresh('event')), 201);
+        return response()->json($this->presentAnnouncement($announcement->fresh(['event', 'segment'])), 201);
     }
 
     /* --------------------------------------------------------------------------- helpers */
+
+    /**
+     * The saved audience an organiser chose, or null where they chose none.
+     *
+     * Refused rather than ignored when the id is unknown: silently falling back to "everybody who
+     * ever bought" is the one wrong answer that cannot be taken back once it has been sent.
+     */
+    private function segment(?string $id): ?\App\Models\Segment
+    {
+        if (! $id) {
+            return null;
+        }
+
+        $segment = \App\Models\Segment::whereKey($id)->first();
+
+        if (! $segment) {
+            throw ApiException::unprocessable('unknown_segment', 'There is no such saved audience.');
+        }
+
+        return $segment;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function segmentRules(?string $id): ?array
+    {
+        return $this->segment($id)?->rules ?? null;
+    }
 
     private function presentAnnouncement(Announcement $announcement): array
     {
@@ -314,6 +356,10 @@ class MessagingController extends Controller
             'id' => $announcement->id,
             'audience' => $announcement->audience,
             'event' => $announcement->event?->name,
+            // The saved audience it went to, by name. Null on the two simple audiences, and null
+            // as well on one whose list was deleted afterwards — the announcement is a thing that
+            // happened, and what it reached is written down as its deliveries either way.
+            'segment' => $announcement->segment?->name,
             'channels' => $announcement->channels ?? [],
             'subject' => $announcement->subject,
             'body' => $announcement->body,

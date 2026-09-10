@@ -23,6 +23,9 @@
 		filter: '',
 		announcements: [],
 		events: [],
+		// Saved audiences. Refused for anybody who may not write to buyers, like the
+		// announcements beside them, so an empty list and a forbidden one look the same here.
+		segments: [],
 		// The last "who this reaches" answer, so the confirmation can say how many.
 		reach: 0,
 		mayAnnounce: false,
@@ -46,6 +49,7 @@
 			// different permissions, and somebody may hold one without the other.
 			App.request( 'GET', '/messaging/announcements' ).catch( function () { return null; } ),
 			App.request( 'GET', '/events?per_page=100' ).catch( function () { return { data: [] }; } ),
+			App.request( 'GET', '/segments' ).catch( function () { return { data: [] }; } ),
 		] ).then( function ( results ) {
 			Messaging.kinds = results[ 0 ].kinds || [];
 			Messaging.channels = results[ 0 ].channels || [];
@@ -54,6 +58,7 @@
 			Messaging.mayAnnounce = !! results[ 2 ];
 			Messaging.announcements = results[ 2 ] ? ( results[ 2 ].data || [] ) : [];
 			Messaging.events = results[ 3 ].data || [];
+			Messaging.segments = results[ 4 ].data || [];
 			Messaging.kind = Messaging.kind || ( Messaging.kinds[ 0 ] || {} ).key;
 			Messaging.locale = global.SeatmapI18n.locale || 'en';
 			Messaging.paint();
@@ -73,6 +78,7 @@
 					'<div class="theme-editor__preview">' + Messaging.editorMarkup() + '</div>' +
 				'</div>' +
 				Messaging.announcementsMarkup() +
+				Messaging.segmentsMarkup() +
 				'<h3 class="subhead">' + esc( App.t( 'messaging.log' ) ) + '</h3>' +
 				Messaging.logMarkup(),
 		} );
@@ -214,9 +220,17 @@
 						return '<tr>' +
 							'<td class="table__primary">' +
 								esc( note.subject || note.body.slice( 0, 60 ) ) + '</td>' +
-							'<td>' + esc( 'event' === note.audience
-								? ( note.event || App.t( 'messaging.audienceEvent' ) )
-								: App.t( 'messaging.audienceEveryone' ) ) + '</td>' +
+							'<td>' + esc( ( function () {
+								if ( 'segment' === note.audience ) {
+									// A list deleted since is still an announcement that happened;
+									// what it reached is written down as its deliveries.
+									return note.segment || App.t( 'messaging.audienceSegmentGone' );
+								}
+
+								return 'event' === note.audience
+									? ( note.event || App.t( 'messaging.audienceEvent' ) )
+									: App.t( 'messaging.audienceEveryone' );
+							}() ) ) + '</td>' +
 							'<td>' + Messaging.announceStatus( note ) + '</td>' +
 							'<td class="muted nowrap">' + esc( App.date( note.created_at ) ) + '</td>' +
 						'</tr>';
@@ -224,6 +238,298 @@
 				)
 				: App.emptyState( 'mail', App.t( 'messaging.announceNone' ),
 					esc( App.t( 'messaging.announceNoneHint' ) ) ) );
+	};
+
+	/**
+	 * Saved audiences.
+	 *
+	 * "Everybody who came last season and has not booked this one" is the audience an organiser
+	 * actually wants, and it is two clauses rather than one. Saved here so it can be asked again
+	 * next season instead of rebuilt from memory each time.
+	 *
+	 * The list shows how many people each one reaches and never who they are: a segment is not a
+	 * second customer directory, and a screen that listed its addresses would be a way to walk out
+	 * of the building with an account's mailing list.
+	 */
+	Messaging.segmentsMarkup = function () {
+		var App = Messaging.App;
+
+		if ( ! Messaging.mayAnnounce ) {
+			return '';
+		}
+
+		return '<div class="row spaced">' +
+				'<div>' +
+					'<h3 class="subhead spaced-none">' + esc( App.t( 'messaging.segmentsHeading' ) ) + '</h3>' +
+					'<p class="hint">' + esc( App.t( 'messaging.segmentsIntro' ) ) + '</p>' +
+				'</div>' +
+				'<div class="page-head__actions">' +
+					'<button class="btn" id="segment-new">' + icon( 'users', { size: 15 } ) +
+						esc( App.t( 'messaging.segmentNew' ) ) + '</button>' +
+				'</div>' +
+			'</div>' +
+			( Messaging.segments.length
+				? App.table(
+					[
+						App.t( 'panel.common.name' ),
+						App.t( 'messaging.segmentMeans' ),
+						'',
+					],
+					Messaging.segments.map( function ( segment ) {
+						return '<tr>' +
+							'<td class="table__primary">' + esc( segment.name ) +
+								( segment.description
+									? '<span class="muted on-own-line">' + esc( segment.description ) + '</span>'
+									: '' ) + '</td>' +
+							'<td>' + esc( Messaging.segmentWords( segment ) ) + '</td>' +
+							'<td class="table__actions">' +
+								'<button class="icon-btn icon-btn--sm" data-segment-edit="' + esc( segment.id ) +
+									'" aria-label="' + esc( App.t( 'panel.common.edit' ) ) + '" data-tip="' +
+									esc( App.t( 'panel.common.edit' ) ) + '">' + icon( 'settings', { size: 14 } ) +
+								'</button>' +
+								'<button class="icon-btn icon-btn--sm" data-segment-delete="' + esc( segment.id ) +
+									'" aria-label="' + esc( App.t( 'panel.common.delete' ) ) + '" data-tip="' +
+									esc( App.t( 'panel.common.delete' ) ) + '">' + icon( 'trash', { size: 14 } ) +
+								'</button>' +
+							'</td>' +
+						'</tr>';
+					} ).join( '' )
+				)
+				: App.emptyState( 'users', App.t( 'messaging.segmentsNone' ),
+					esc( App.t( 'messaging.segmentsNoneHint' ) ) ) );
+	};
+
+	/**
+	 * What a saved audience means, in words.
+	 *
+	 * Built from the server's own reading of the rules rather than from the rules themselves: the
+	 * server already turned event ids into names, and a second implementation of that in the
+	 * browser is a second place for it to disagree.
+	 */
+	Messaging.segmentWords = function ( segment ) {
+		var App = Messaging.App;
+		var said = segment.explained || {};
+		var parts = [];
+
+		if ( said.bought_events ) {
+			parts.push( App.t( 'messaging.segmentBought', { events: said.bought_events.join( ', ' ) } ) );
+		}
+
+		if ( said.not_bought_events ) {
+			parts.push( App.t( 'messaging.segmentNotBought', { events: said.not_bought_events.join( ', ' ) } ) );
+		}
+
+		if ( said.categories ) {
+			parts.push( App.t( 'messaging.segmentCategories', { list: said.categories.join( ', ' ) } ) );
+		}
+
+		if ( said.since ) {
+			parts.push( App.t( 'messaging.segmentSince', { when: App.date( said.since, { dateStyle: 'medium' } ) } ) );
+		}
+
+		if ( said.until ) {
+			parts.push( App.t( 'messaging.segmentUntil', { when: App.date( said.until, { dateStyle: 'medium' } ) } ) );
+		}
+
+		if ( said.min_orders ) {
+			parts.push( App.t( 'messaging.segmentMinOrders', { count: App.number( said.min_orders ) } ) );
+		}
+
+		if ( said.min_spend ) {
+			parts.push( App.t( 'messaging.segmentMinSpend', {
+				amount: App.money( said.min_spend, said.currency || 'EUR' ),
+			} ) );
+		}
+
+		if ( said.attended ) {
+			parts.push( App.t( 'messaging.segmentAttended' ) );
+		}
+
+		return parts.length ? parts.join( ' · ' ) : App.t( 'messaging.segmentEverybody' );
+	};
+
+	/** The builder: the closed vocabulary, one control per clause. */
+	Messaging.editSegment = function ( segment ) {
+		var App = Messaging.App;
+		var rules = ( segment && segment.rules ) || {};
+		var categories = Messaging.categories();
+
+		var picker = function ( id, chosen ) {
+			return '<select class="select" id="' + id + '" multiple size="4">' +
+				Messaging.events.map( function ( event ) {
+					return '<option value="' + esc( event.id ) + '"' +
+						( ( chosen || [] ).indexOf( event.id ) > -1 ? ' selected' : '' ) + '>' +
+						esc( event.name ) + '</option>';
+				} ).join( '' ) +
+			'</select>';
+		};
+
+		App.modal( {
+			title: segment ? segment.name : App.t( 'messaging.segmentNew' ),
+			submitLabel: App.t( 'panel.common.save' ),
+			body:
+				'<div class="stack">' +
+					'<div class="field"><label class="field__label" for="s-name">' +
+						esc( App.t( 'panel.common.name' ) ) + '</label>' +
+					'<input class="input" id="s-name" maxlength="120" required value="' +
+						esc( segment ? segment.name : '' ) + '"></div>' +
+
+					'<div class="field"><label class="field__label" for="s-desc">' +
+						esc( App.t( 'messaging.segmentDescription' ) ) + '</label>' +
+					'<input class="input" id="s-desc" maxlength="300" value="' +
+						esc( segment && segment.description ? segment.description : '' ) + '"></div>' +
+
+					'<div class="field"><label class="field__label" for="s-bought">' +
+						esc( App.t( 'messaging.segmentBoughtLabel' ) ) + '</label>' +
+					picker( 's-bought', rules.bought_events ) + '</div>' +
+
+					'<div class="field"><label class="field__label" for="s-not-bought">' +
+						esc( App.t( 'messaging.segmentNotBoughtLabel' ) ) + '</label>' +
+					picker( 's-not-bought', rules.not_bought_events ) +
+					'<span class="field__hint">' + esc( App.t( 'messaging.segmentNotBoughtHint' ) ) +
+					'</span></div>' +
+
+					( categories.length
+						? '<div class="field"><label class="field__label" for="s-categories">' +
+							esc( App.t( 'messaging.segmentCategoriesLabel' ) ) + '</label>' +
+						'<select class="select" id="s-categories" multiple size="3">' +
+							categories.map( function ( category ) {
+								return '<option value="' + esc( category ) + '"' +
+									( ( rules.categories || [] ).indexOf( category ) > -1 ? ' selected' : '' ) +
+									'>' + esc( category ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>'
+						: '' ) +
+
+					'<div class="row">' +
+						'<div class="field grow"><label class="field__label" for="s-since">' +
+							esc( App.t( 'messaging.segmentSinceLabel' ) ) + '</label>' +
+						'<input class="input" id="s-since" type="date" value="' +
+							esc( rules.since ? String( rules.since ).slice( 0, 10 ) : '' ) + '"></div>' +
+						'<div class="field grow"><label class="field__label" for="s-until">' +
+							esc( App.t( 'messaging.segmentUntilLabel' ) ) + '</label>' +
+						'<input class="input" id="s-until" type="date" value="' +
+							esc( rules.until ? String( rules.until ).slice( 0, 10 ) : '' ) + '"></div>' +
+					'</div>' +
+
+					'<div class="row">' +
+						'<div class="field grow"><label class="field__label" for="s-orders">' +
+							esc( App.t( 'messaging.segmentMinOrdersLabel' ) ) + '</label>' +
+						'<input class="input tnum" id="s-orders" type="number" min="1" max="1000" value="' +
+							esc( rules.min_orders || '' ) + '"></div>' +
+						'<div class="field grow"><label class="field__label" for="s-spend">' +
+							esc( App.t( 'messaging.segmentMinSpendLabel' ) ) + '</label>' +
+						'<input class="input tnum" id="s-spend" type="number" min="0" value="' +
+							esc( rules.min_spend || '' ) + '"></div>' +
+						'<div class="field grow"><label class="field__label" for="s-currency">' +
+							esc( App.t( 'messaging.segmentCurrencyLabel' ) ) + '</label>' +
+						'<input class="input" id="s-currency" maxlength="3" value="' +
+							esc( rules.currency || '' ) + '"></div>' +
+					'</div>' +
+
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="s-attended"' +
+						( rules.attended ? ' checked' : '' ) + '>' +
+						'<span>' + esc( App.t( 'messaging.segmentAttendedLabel' ) ) + '</span></label>' +
+
+					'<p class="hint" id="s-reach">&nbsp;</p>' +
+				'</div>',
+			onSubmit: function () {
+				var payload = {
+					name: String( document.getElementById( 's-name' ).value ).trim(),
+					description: String( document.getElementById( 's-desc' ).value ).trim() || null,
+					rules: Messaging.segmentRules(),
+				};
+
+				return App.request(
+					segment ? 'PUT' : 'POST',
+					segment ? '/segments/' + segment.id : '/segments',
+					payload
+				).then( function () {
+					App.toast( App.t( 'messaging.segmentSaved' ) );
+					Messaging.render( App );
+				} );
+			},
+		} );
+
+		Messaging.bindSegmentReach();
+	};
+
+	/** The clauses, read off the builder. Empty ones are left out rather than sent as nothing. */
+	Messaging.segmentRules = function () {
+		var chosen = function ( id ) {
+			var field = document.getElementById( id );
+
+			return field
+				? Array.prototype.slice.call( field.selectedOptions ).map( function ( o ) { return o.value; } )
+				: [];
+		};
+
+		var value = function ( id ) {
+			var field = document.getElementById( id );
+
+			return field ? String( field.value ).trim() : '';
+		};
+
+		var rules = {};
+
+		if ( chosen( 's-bought' ).length ) { rules.bought_events = chosen( 's-bought' ); }
+		if ( chosen( 's-not-bought' ).length ) { rules.not_bought_events = chosen( 's-not-bought' ); }
+		if ( chosen( 's-categories' ).length ) { rules.categories = chosen( 's-categories' ); }
+		if ( value( 's-since' ) ) { rules.since = value( 's-since' ); }
+		if ( value( 's-until' ) ) { rules.until = value( 's-until' ); }
+		if ( Number( value( 's-orders' ) ) > 1 ) { rules.min_orders = Number( value( 's-orders' ) ); }
+		if ( Number( value( 's-spend' ) ) > 0 ) { rules.min_spend = Number( value( 's-spend' ) ); }
+		if ( value( 's-currency' ) ) { rules.currency = value( 's-currency' ).toUpperCase(); }
+		if ( document.getElementById( 's-attended' ).checked ) { rules.attended = true; }
+
+		return rules;
+	};
+
+	/**
+	 * "This reaches 412 people", kept honest while the clauses are being chosen.
+	 *
+	 * The count is the part that matters: a set of rules nobody can picture the size of is a set
+	 * of rules somebody sends to by mistake.
+	 */
+	Messaging.bindSegmentReach = function () {
+		var App = Messaging.App;
+		var host = document.getElementById( 's-reach' );
+
+		var count = function () {
+			if ( ! host ) {
+				return;
+			}
+
+			App.request( 'POST', '/segments/preview', { rules: Messaging.segmentRules() } )
+				.then( function ( answer ) {
+					host.textContent = App.t( 'messaging.segmentReach', {
+						count: App.number( answer.people ),
+					} );
+				} )
+				.catch( function () { host.textContent = ''; } );
+		};
+
+		[ 's-bought', 's-not-bought', 's-categories', 's-since', 's-until', 's-orders',
+			's-spend', 's-currency', 's-attended' ].forEach( function ( id ) {
+			var field = document.getElementById( id );
+
+			field && field.addEventListener( 'change', count );
+		} );
+
+		count();
+	};
+
+	/** The categories this account actually uses. A list of every category there could be is noise. */
+	Messaging.categories = function () {
+		var seen = {};
+
+		Messaging.events.forEach( function ( event ) {
+			if ( event.category ) {
+				seen[ event.category ] = true;
+			}
+		} );
+
+		return Object.keys( seen ).sort();
 	};
 
 	Messaging.announceStatus = function ( note ) {
@@ -263,11 +569,28 @@
 				'<div class="stack">' +
 					'<div class="field"><label class="field__label" for="a-event">' +
 						esc( App.t( 'messaging.announceAudience' ) ) + '</label>' +
-					'<select class="select" id="a-event" name="event_id">' +
+					/*
+					 * One control, three kinds of audience.
+					 *
+					 * A saved audience already says who it means, so it is offered *instead of* an
+					 * event rather than beside one: "came last season and has not booked this one"
+					 * narrowed to "bought this one" is the empty set, and a screen that let
+					 * somebody build that would be a screen that sends nothing and says nothing.
+					 */
+					'<select class="select" id="a-event" name="audience">' +
 						'<option value="">' + esc( App.t( 'messaging.audienceEveryone' ) ) + '</option>' +
-						Messaging.events.map( function ( event ) {
-							return '<option value="' + esc( event.id ) + '">' + esc( event.name ) + '</option>';
-						} ).join( '' ) +
+						( Messaging.segments.length
+							? '<optgroup label="' + esc( App.t( 'messaging.segmentsHeading' ) ) + '">' +
+								Messaging.segments.map( function ( segment ) {
+									return '<option value="seg:' + esc( segment.id ) + '">' +
+										esc( segment.name ) + '</option>';
+								} ).join( '' ) + '</optgroup>'
+							: '' ) +
+						'<optgroup label="' + esc( App.t( 'messaging.audienceOneEvent' ) ) + '">' +
+							Messaging.events.map( function ( event ) {
+								return '<option value="' + esc( event.id ) + '">' + esc( event.name ) + '</option>';
+							} ).join( '' ) +
+						'</optgroup>' +
 					'</select>' +
 					'<span class="field__hint">' + esc( App.t( 'messaging.announceOnlyPaid' ) ) + '</span></div>' +
 
@@ -320,6 +643,9 @@
 	 */
 	Messaging.confirmThenSend = function ( data, channels ) {
 		var App = Messaging.App;
+		// Read before the confirmation opens: the first modal is gone by the time this is sent,
+		// and with it the control the audience was chosen in.
+		var audience = Messaging.chosenAudience();
 
 		return new Promise( function ( resolve, reject ) {
 			App.modal( {
@@ -331,7 +657,8 @@
 				danger: true,
 				onSubmit: function () {
 					return App.request( 'POST', '/messaging/announcements', {
-						event_id: data.get( 'event_id' ) || null,
+						event_id: audience.event_id,
+						segment_id: audience.segment_id,
 						channels: channels,
 						subject: data.get( 'subject' ) || null,
 						body: data.get( 'body' ),
@@ -349,6 +676,23 @@
 				onClose: function () { resolve( true ); },
 			} );
 		} );
+	};
+
+	/**
+	 * The audience control's value, as the two fields the API takes.
+	 *
+	 * A saved audience is marked with a prefix rather than by a second control, so there is exactly
+	 * one place on the screen that says who this is going to.
+	 */
+	Messaging.chosenAudience = function () {
+		var field = document.getElementById( 'a-event' );
+		var value = field ? String( field.value ) : '';
+
+		if ( 0 === value.indexOf( 'seg:' ) ) {
+			return { event_id: null, segment_id: value.slice( 4 ) };
+		}
+
+		return { event_id: value || null, segment_id: null };
 	};
 
 	Messaging.chosenChannels = function () {
@@ -377,9 +721,12 @@
 				return;
 			}
 
+			var audience = Messaging.chosenAudience();
 			var query = channels.map( function ( key ) {
 				return 'channels[]=' + encodeURIComponent( key );
-			} ).join( '&' ) + ( event.value ? '&event_id=' + encodeURIComponent( event.value ) : '' );
+			} ).join( '&' ) +
+				( audience.event_id ? '&event_id=' + encodeURIComponent( audience.event_id ) : '' ) +
+				( audience.segment_id ? '&segment_id=' + encodeURIComponent( audience.segment_id ) : '' );
 
 			App.request( 'GET', '/messaging/announcements/audience?' + query )
 				.then( function ( reach ) {
@@ -482,6 +829,38 @@
 		if ( announce ) {
 			announce.addEventListener( 'click', function () { Messaging.compose(); } );
 		}
+
+		var newSegment = document.getElementById( 'segment-new' );
+
+		if ( newSegment ) {
+			newSegment.addEventListener( 'click', function () { Messaging.editSegment( null ); } );
+		}
+
+		each( '[data-segment-edit]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				Messaging.editSegment( Messaging.segments.filter( function ( segment ) {
+					return segment.id === button.dataset.segmentEdit;
+				} )[ 0 ] );
+			} );
+		} );
+
+		each( '[data-segment-delete]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				App.modal( {
+					title: App.t( 'messaging.segmentDelete' ),
+					body: '<p>' + esc( App.t( 'messaging.segmentDeleteBody' ) ) + '</p>',
+					submitLabel: App.t( 'panel.common.delete' ),
+					danger: true,
+					onSubmit: function () {
+						return App.request( 'DELETE', '/segments/' + button.dataset.segmentDelete )
+							.then( function () {
+								App.toast( App.t( 'messaging.segmentDeleted' ) );
+								Messaging.render( App );
+							} );
+					},
+				} );
+			} );
+		} );
 
 		each( '[data-kind]', function ( button ) {
 			button.addEventListener( 'click', function () {

@@ -225,4 +225,6 @@ return [
     'waiting_your_turn' => 'It is not your turn yet. Your place in the queue is being held.',
     'channel_quota_reached' => 'This sales channel has :count places left for this event.',
     'channel_quota_gone' => 'This sales channel has sold its whole allocation for this event.',
+    'unknown_segment' => 'There is no such saved audience.',
+    'spend_needs_currency' => 'Say which currency that amount is in — an account that sells in two of them has two answers.',
 ];

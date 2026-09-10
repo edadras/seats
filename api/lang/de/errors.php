@@ -225,4 +225,6 @@ return [
     'waiting_your_turn' => 'Sie sind noch nicht dran. Ihr Platz in der Schlange bleibt Ihnen.',
     'channel_quota_reached' => 'Diesem Verkaufskanal bleiben für diese Veranstaltung :count Plätze.',
     'channel_quota_gone' => 'Dieser Verkaufskanal hat sein gesamtes Kontingent für diese Veranstaltung verkauft.',
+    'unknown_segment' => 'Ein solches gespeichertes Publikum gibt es nicht.',
+    'spend_needs_currency' => 'Sagen Sie, in welcher Währung dieser Betrag ist — ein Konto, das in zwei verkauft, hat zwei Antworten.',
 ];

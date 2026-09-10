@@ -2,6 +2,7 @@
 
 namespace App\Domain\Messaging\Announcements;
 
+use App\Domain\Audience\Segments;
 use App\Domain\Messaging\ChannelRegistry;
 use App\Domain\Messaging\MessageDispatcher;
 use App\Domain\Messaging\MessageRenderer;
@@ -43,20 +44,22 @@ class AnnouncementSender
         private readonly MessageDispatcher $dispatcher,
         private readonly Notifier $notifier,
         private readonly TenantContext $tenants,
+        private readonly Segments $segments,
     ) {}
 
     /**
      * Who this announcement would reach, per channel, without sending anything.
      *
+     * @param  array<string, mixed>|null  $rules  a saved audience's rules, where one was chosen
      * @return array{people:int, messages:int}
      */
-    public function preview(?string $eventId, array $channels): array
+    public function preview(?string $eventId, array $channels, ?array $rules = null): array
     {
         $people = 0;
         $messages = 0;
         $seen = [];
 
-        foreach ($this->audience($eventId) as $person) {
+        foreach ($this->audience($eventId, $rules) as $person) {
             $counted = false;
 
             foreach ($channels as $channelKey) {
@@ -90,7 +93,7 @@ class AnnouncementSender
         $now = now();
         $people = 0;
 
-        foreach ($this->audience($announcement->event_id) as $person) {
+        foreach ($this->audience($announcement->event_id, $announcement->segment?->rules) as $person) {
             $reached = false;
 
             foreach ($announcement->channels ?? [] as $channelKey) {
@@ -212,8 +215,19 @@ class AnnouncementSender
      *
      * @return \Illuminate\Support\Collection<int, object>
      */
-    private function audience(?string $eventId)
+    private function audience(?string $eventId, ?array $rules = null)
     {
+        /*
+         * A saved audience answers the whole question.
+         *
+         * Not narrowed further by the event: a segment already says who it means, and "people who
+         * came last season and have not booked this one" *intersected with* "bought this one" is
+         * the empty set. The screen offers the two as one choice for the same reason.
+         */
+        if (null !== $rules) {
+            return $this->segments->resolve($rules);
+        }
+
         return ExternalOrder::query()
             ->toBase()
             ->selectRaw(
