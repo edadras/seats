@@ -345,6 +345,10 @@
 			label: label,
 			categoryKey: null,
 			accessible: false,
+			// The chair beside a wheelchair space, kept for whoever comes with the person using
+			// it. Marked here so the platform can refuse to sell it on its own, which is the thing
+			// venues currently do by blocking it and unblocking it by hand.
+			companion: false,
 			entrance: null,
 		};
 	};

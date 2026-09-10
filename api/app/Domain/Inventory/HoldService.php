@@ -212,6 +212,11 @@ class HoldService
 
                 $seats = $seatIds === [] ? collect() : $this->lockSeats($event, $seatIds);
 
+                // The chair beside a wheelchair space is not sold on its own. Checked across the
+                // whole basket rather than seat by seat, because somebody taking the space and the
+                // chair next to it does so in two clicks and must not be refused between them.
+                app(\App\Domain\Access\AccessibleSeats::class)->refuseLonelyCompanions($seats->values()->all());
+
                 if ($seatIds !== []) {
                     $this->reclaimExpiredItems($event, $seatIds);
                 }
@@ -677,6 +682,8 @@ class HoldService
         $rows = DB::select(<<<SQL
             SELECT
                 sp.seat_id,
+                s.accessible,
+                s.companion,
                 COALESCE(o.amount, {$tiered}) AS amount,
                 COALESCE(o.zone_key, sp.zone_key) AS zone_key,
                 COALESCE(o.blocked, false) AS blocked,
@@ -708,6 +715,7 @@ class HoldService
                     AND rr.to_series_id::text = :series_id
                   LIMIT 1) AS renewing
             FROM seat_placements sp
+            JOIN seats s ON s.id = sp.seat_id
             LEFT JOIN event_seat_overrides o ON o.event_id = :event_id AND o.seat_id = sp.seat_id
             LEFT JOIN event_price_zones zone_override
                 ON zone_override.event_id = :event_id AND zone_override.key = o.zone_key
@@ -735,10 +743,26 @@ class HoldService
                 // One word to everything downstream: a seat kept for a subscriber and a seat in
                 // somebody's basket are both "somebody has it at the moment".
                 'held' => (bool) $row->held || (bool) $row->renewing,
+                'accessible' => (bool) $row->accessible,
+                'companion' => (bool) $row->companion,
             ];
         }
 
         return $prices;
+    }
+
+    /**
+     * Remembered per event, because it is a property of the moment rather than of the seat — and
+     * per event rather than once, because one process sells more than one night.
+     *
+     * @var array<string, bool>
+     */
+    private array $accessHeld = [];
+
+    private function accessHeld(Event $event): bool
+    {
+        return $this->accessHeld[$event->id] ??=
+            app(\App\Domain\Access\AccessibleSeats::class)->heldFromPublic($event);
     }
 
     /**
@@ -769,6 +793,19 @@ class HoldService
             $houseSeat = $seat['blocked'] && null !== ($seat['held_for'] ?? null);
 
             if ($seat['allocated'] || $seat['held'] || ($seat['blocked'] && ! ($houseSeat && $counter))) {
+                $unavailable[] = $seatId;
+                continue;
+            }
+
+            /*
+             * A wheelchair space still being kept for the people who need it.
+             *
+             * Not a state on the seat: it is a deadline, read here from the event exactly as the
+             * public plan reads it, so the two cannot disagree about the hour. The counter sells
+             * them throughout — a house that keeps seats back and then cannot sell them to the
+             * person on the telephone has held them back for nobody.
+             */
+            if (($seat['accessible'] || $seat['companion']) && ! $counter && $this->accessHeld($event)) {
                 $unavailable[] = $seatId;
                 continue;
             }

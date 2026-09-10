@@ -114,6 +114,9 @@ class CheckoutController extends Controller
         return $this->view($site, 'site.checkout', [
             'title' => 'Checkout · '.$site->name,
             'hold' => $hold,
+            // The night itself, for the one question that is a property of the event rather than
+            // of the basket: whether this venue asks what a buyer needs to get in and sit down.
+            'event' => $hold->event,
             'lines' => $this->lines($snapshot),
             // The window they chose, read back from the signed snapshot rather than looked up
             // again: it is part of what was reserved, and the page must show what was reserved.
@@ -427,6 +430,9 @@ class CheckoutController extends Controller
             'addons' => ['sometimes', 'array', 'max:40'],
             'addons.*' => ['integer', 'min:0', 'max:999'],
             'donation' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            // What this buyer needs in order to get in and sit down, on an event that asks. Free
+            // text on purpose: a list of tick boxes is a list of the needs somebody thought of.
+            'access_needs' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
         if ($refusal = $this->smellsLikeAScript($request, $hold->event)) {
@@ -528,6 +534,7 @@ class CheckoutController extends Controller
                 $data['addons'] ?? [],
                 $donation,
                 $voucher,
+                $hold->event->ask_access_needs ? ($data['access_needs'] ?? null) : null,
             );
         } catch (ApiException $e) {
             if (in_array($e->errorCode(), ['addon_sold_out', 'addon_too_many', 'unknown_addon'], true)) {

@@ -391,6 +391,12 @@ return [
     'checkoutRefused' => 'That booking could not be taken. Please try again from the seat map.',
     'checkoutTooQuick' => 'That was sent before the form was filled in. Please check your details and confirm again.',
     'limitPerBuyer' => 'There is a limit of one ticket per person for this event.|There is a limit of :count tickets per person for this event.',
+    'access' => [
+        'label' => 'What do you need to get in and sit down?',
+        'placeholder' => 'A hearing loop, a guide dog, step-free access…',
+        'hint' => 'Optional. It goes to the people on the door, not to a mailing list.',
+    ],
+
     'consent' => [
         'title' => 'What we send you',
         'about' => 'This is about :email.',

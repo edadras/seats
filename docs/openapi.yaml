@@ -7217,6 +7217,40 @@ components:
           type: [integer, "null"]
           description: "Minor units. Zero is a real choice: ask, but suggest nothing."
 
+    AccessibleSeating:
+      type: object
+      description: >
+        How this event handles the wheelchair spaces and the chairs beside them. Read on the event,
+        set on the event; there is no separate endpoint because it is not a separate decision.
+      properties:
+        accessible_sale:
+          type: string
+          enum: [always, until, counter]
+          description: >
+            `always` sells them like any other seat. `until` keeps them off the public plan until
+            `accessible_release_hours` before doors, after which they go on general sale because
+            the hour arrived — nothing runs to release them. `counter` keeps them off it for good.
+
+
+            Under `until` and `counter` the box office can sell them throughout: a house that holds
+            seats back and then cannot sell them to the person on the telephone has held them back
+            for nobody.
+        accessible_release_hours:
+          type: integer
+          minimum: 0
+          maximum: 8760
+        accessible_releases_at:
+          type: [string, "null"]
+          format: date-time
+          readOnly: true
+          description: When they go on general sale, worked out rather than stored.
+        ask_access_needs:
+          type: boolean
+          description: >
+            Whether the checkout asks what a buyer needs in order to get in and sit down. The
+            answer is free text, reaches the door list, never reaches a segment, and is erased with
+            the buyer.
+
     PriceTier:
       type: object
       required: [name, kind, value]

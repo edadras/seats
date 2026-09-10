@@ -20,10 +20,10 @@ class Seat extends Model
 
     protected $fillable = [
         'tenant_id', 'seat_map_id', 'section_id', 'seat_row_id',
-        'key', 'label', 'accessible', 'attributes',
+        'key', 'label', 'accessible', 'companion', 'attributes',
     ];
 
-    protected $casts = ['accessible' => 'boolean', 'attributes' => 'array'];
+    protected $casts = ['accessible' => 'boolean', 'companion' => 'boolean', 'attributes' => 'array'];
 
     public function section()
     {

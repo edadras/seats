@@ -63,7 +63,12 @@ trait BuildsSeatingFixtures
      * Rows carry an anchor, rotation, curve and spacing rather than per-seat coordinates — seat
      * positions are computed from those, on both the client and the server.
      */
-    protected function geometry(int $rows = 3, int $perRow = 5, string $sectionKey = 'stalls'): array
+    protected function geometry(
+        int $rows = 3,
+        int $perRow = 5,
+        string $sectionKey = 'stalls',
+        bool $accessiblePair = false,
+    ): array
     {
         $rowObjects = [];
 
@@ -77,7 +82,11 @@ trait BuildsSeatingFixtures
                     'key' => $sectionKey.'-'.$rowName.'-'.$s,
                     'label' => (string) $s,
                     'categoryKey' => null,
-                    'accessible' => false,
+                    // Off unless a test asks: the last row then ends in a wheelchair space with
+                    // the chair beside it. Every other fixture stays a plain grid, because a
+                    // fixture that quietly contains a pair changes what "three together" means.
+                    'accessible' => $accessiblePair && $r === $rows - 1 && $s === $perRow,
+                    'companion' => $accessiblePair && $r === $rows - 1 && $s === $perRow - 1,
                     'entrance' => null,
                 ];
             }

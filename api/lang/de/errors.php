@@ -241,6 +241,7 @@ return [
     'resale_over' => 'Dieser Abend ist bereits vorbei.',
     'resale_settled' => 'Dieses Angebot ist bereits erledigt.',
     'resale_being_bought' => 'Gerade kauft jemand diesen Platz. Er lässt sich wieder vom Verkauf nehmen, wenn der Kauf nicht zustande kommt.',
+    'companion_needs_accessible' => 'Dieser Platz ist für die Begleitung eines Rollstuhlnutzers reserviert und wird zusammen mit dem Platz daneben verkauft.',
     'tier_window_backwards' => 'Eine Preisstufe kann nicht enden, bevor sie beginnt.',
     'tier_windows_overlap' => 'Zwei Preisstufen decken denselben Moment ab, damit gäbe es zwei Preise für ein Ticket.',
     'renewal_same_run' => 'Eine Spielzeit kann nicht in sich selbst verlängert werden.',

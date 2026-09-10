@@ -83,6 +83,7 @@ class StorefrontCheckout
         array $addons = [],
         int $donation = 0,
         ?VoucherOffer $voucher = null,
+        ?string $accessNeeds = null,
     ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
@@ -136,6 +137,18 @@ class StorefrontCheckout
             ['source' => 'hosted_site', 'site_id' => $site->id, 'gateway' => $gateway?->key() ?? 'voucher']
                 + ($billing === [] ? [] : ['billing' => $billing]),
         );
+
+        /*
+         * What this buyer needs in order to get in and sit down.
+         *
+         * On the booking rather than in its metadata, and written on a first registration only: a
+         * retried submit must not overwrite what somebody told the venue with an empty box. It is
+         * not marketing data, never reaches a segment, and leaves with the buyer when they ask to
+         * be forgotten.
+         */
+        if ($registered && null !== $accessNeeds && '' !== trim($accessNeeds)) {
+            $order->forceFill(['access_needs' => trim($accessNeeds)])->save();
+        }
 
         /*
          * The discount is spent here, between registering the order and asking for the money.

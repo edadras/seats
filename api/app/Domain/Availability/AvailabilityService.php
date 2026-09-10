@@ -46,6 +46,7 @@ class AvailabilityService
      * @return list<array{seat_id: string, state: string, amount: int|null, zone_key: string|null,
      *                    section_id: string, section_key: string, section_name: string,
      *                    row_id: string, row_name: string, label: string, accessible: bool,
+     *                    companion: bool,
      *                    x: float, y: float, floor_key: string|null}>
      */
     public function placedSeats(Event $event, bool $counter = false): array
@@ -65,6 +66,9 @@ class AvailabilityService
             // empty for a night in no run at all: a night outside a series has no subscribers to
             // keep chairs for, and `= NULL` is not a comparison anything is ever true of.
             'series_id' => (string) ($event->series_id ?? ''),
+            // Whether the wheelchair spaces are still being kept for the people who need them.
+            // Bound as 0/1 for the same reason `counter` is.
+            'access_held' => app(\App\Domain\Access\AccessibleSeats::class)->heldFromPublic($event) ? 1 : 0,
         ]);
 
         return array_map(fn ($row) => [
@@ -79,6 +83,7 @@ class AvailabilityService
             'row_name' => $row->row_name,
             'label' => $row->label,
             'accessible' => (bool) $row->accessible,
+            'companion' => (bool) $row->companion,
             'x' => (float) $row->x,
             'y' => (float) $row->y,
             'floor_key' => $row->floor_key,
@@ -252,13 +257,16 @@ class AvailabilityService
                     WHEN a.id IS NOT NULL THEN 'allocated'
                     -- A house seat stays blocked to everybody but the counter; see the class note.
                     WHEN o.blocked AND (:counter = 0 OR o.held_for IS NULL) THEN 'blocked'
+                    -- The same idea for the wheelchair spaces and the chairs beside them while
+                    -- they are being kept back: off the public plan, still sellable at the window.
+                    WHEN (s.accessible OR s.companion) AND :access_held = 1 AND :counter = 0 THEN 'blocked'
                     WHEN h.id IS NOT NULL THEN 'held'
                     ELSE 'available'
                 END AS state,
                 COALESCE(o.amount, {$tiered}) AS amount,
                 COALESCE(o.zone_key, sp.zone_key) AS zone_key,
                 sp.x, sp.y, sp.floor_key,
-                s.label, s.accessible,
+                s.label, s.accessible, s.companion,
                 sec.id AS section_id, sec.key AS section_key, sec.name AS section_name,
                 r.id AS row_id, r.name AS row_name
             FROM seat_placements sp

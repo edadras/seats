@@ -323,6 +323,14 @@
 			} );
 		} );
 
+		// The chair beside a wheelchair space. Marked here so the platform refuses to sell it on
+		// its own, instead of a person blocking it by hand and remembering to let it go.
+		this.checkbox( body, t( 'panel.inspector.companion' ), !! first.companion, function ( value ) {
+			self.change( function () {
+				seats.forEach( function ( entry ) { entry.seat.companion = value; } );
+			} );
+		} );
+
 		// An "empty" seat holds a gap in the row — a pillar, a camera position, a wheelchair bay —
 		// without shifting every seat after it.
 		this.checkbox( body, t( 'panel.inspector.emptyPlaceholder' ), 'empty' === first.type, function ( value ) {

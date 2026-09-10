@@ -271,6 +271,14 @@ class SeatMapPublisher
                         'seat_row_id' => $rowId,
                         'label' => $seat['label'],
                         'accessible' => (bool) ($seat['accessible'] ?? false),
+                        'companion' => (bool) ($seat['companion'] ?? false),
+                        // Rewritten rather than left alone: a chair moved to another category kept
+                        // the old one here, so a seat could be published into a price zone it was
+                        // no longer drawn in.
+                        'attributes' => array_filter([
+                            'category_key' => $seat['categoryKey'] ?? null,
+                            'entrance' => $seat['entrance'] ?? null,
+                        ]),
                     ])->save();
 
                     $ids[$seat['key']] = $model->id;
@@ -289,6 +297,7 @@ class SeatMapPublisher
                     'key' => $seat['key'],
                     'label' => $seat['label'],
                     'accessible' => (bool) ($seat['accessible'] ?? false),
+                    'companion' => (bool) ($seat['companion'] ?? false),
                     'attributes' => json_encode(array_filter([
                         'category_key' => $seat['categoryKey'] ?? null,
                         'entrance' => $seat['entrance'] ?? null,

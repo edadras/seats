@@ -81,6 +81,8 @@ class PersonalData
                 // somebody asks for a copy in the first place.
                 'totals' => $order->metadata['totals'] ?? null,
                 'billing' => $order->metadata['billing'] ?? null,
+                // What they told the venue they needed. Held about them, so it is in the copy.
+                'access_needs' => $order->access_needs,
             ])->values()->all(),
             'answers' => QuestionAnswer::whereIn('external_order_row_id', $orderIds)
                 ->orderBy('created_at')
@@ -159,6 +161,9 @@ class PersonalData
                         'phone' => null,
                     ],
                     'metadata' => $metadata,
+                    // A health-adjacent sentence somebody wrote about themselves. It goes with
+                    // the name rather than being kept as anonymous colour about a booking.
+                    'access_needs' => null,
                 ])->save();
             }
 

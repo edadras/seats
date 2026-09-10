@@ -1670,6 +1670,32 @@
 			'<span>' + esc( App.t( 'panel.events.resale' ) ) + '</span></label>' +
 			'<p class="field__hint">' + esc( App.t( 'panel.events.resaleHint' ) ) + '</p>' +
 
+			// Who may buy the wheelchair spaces, and when. Held back means off the public plan and
+			// still sellable at the window, which is the only version of "held back" that helps
+			// the person it is being held for.
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-accessible-sale">' +
+			esc( App.t( 'panel.events.accessibleSale' ) ) + '</label>' +
+			'<select class="select" id="e-accessible-sale" name="accessible_sale">' +
+			[ 'always', 'until', 'counter' ].map( function ( kind ) {
+				return '<option value="' + kind + '"' +
+					( event && event.accessible_sale === kind ? ' selected' : '' ) + '>' +
+					esc( App.t( 'panel.events.accessibleSaleKinds.' + kind ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>' +
+			'<div class="field"><label class="field__label" for="e-accessible-hours">' +
+			esc( App.t( 'panel.events.accessibleHours' ) ) + '</label>' +
+			'<input class="input tnum" id="e-accessible-hours" name="accessible_release_hours" ' +
+			'type="number" min="0" max="8760" value="' +
+			esc( event && null != event.accessible_release_hours ? event.accessible_release_hours : 0 ) + '">' +
+			'</div>' +
+			'</div>' +
+			'<label class="perms__row"><input type="checkbox" class="checkbox" ' +
+			'id="e-access-needs" name="ask_access_needs"' +
+			( event && event.ask_access_needs ? ' checked' : '' ) + '>' +
+			'<span>' + esc( App.t( 'panel.events.askAccessNeeds' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( App.t( 'panel.events.askAccessNeedsHint' ) ) + '</p>' +
+
 			// The refund terms. Written here rather than in a settings screen because they belong
 			// to this night: a matinee for schools and a sold-out final are not the same promise.
 			'<div class="field-duo">' +
@@ -1748,6 +1774,9 @@
 			resale: null !== data.get( 'resale' ),
 			resale_pays: data.get( 'resale_pays' ),
 			checkout_min_seconds: Number( data.get( 'checkout_min_seconds' ) ) || 0,
+			accessible_sale: data.get( 'accessible_sale' ),
+			accessible_release_hours: Number( data.get( 'accessible_release_hours' ) ) || 0,
+			ask_access_needs: null !== data.get( 'ask_access_needs' ),
 		};
 	}
 

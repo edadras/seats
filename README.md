@@ -78,6 +78,11 @@ A seat is the start of it, not the end. Around the map:
   what they are paying and an organiser can reconcile it. **Invoices** carry a VAT number.
 - **Discount codes**, percentage or fixed, per event or account-wide, with a cap on uses and a
   record of who spent them.
+- **Accessible bookings** — a wheelchair space and the chair beside it are a pair, and the chair is
+  never sold on its own. Spaces can be held off general sale until a stated number of hours before
+  doors (or for good) while the box office keeps selling them throughout; they are released because
+  the hour arrived, not because a job ran. The checkout can ask what a buyer needs to get in and sit
+  down: free text, straight to the door list, never to a mailing list, erased with the buyer.
 - **Timed price tiers** — cheaper early, dearer late, decided once and dated. A tier moves the zone
   prices for as long as its window lasts; which one is in force is worked out from the clock every
   time a price is read, so there is no job to miss at midnight and no column to go stale. Two tiers
@@ -539,6 +544,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Today's price is today's, with nothing running at midnight to make it so | `PriceTierTest` |
 | The number on the plan and the number in the basket are the same number | `PriceTierTest`, `tiers_smoke` |
 | Two price tiers cannot cover one moment | `PriceTierTest` |
+| The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
+| Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
+| They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |
+| What a buyer needs reaches the door and leaves with them | `AccessibleBookingTest` |
 
 ## Installing the plugin
 

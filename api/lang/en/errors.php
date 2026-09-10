@@ -241,6 +241,7 @@ return [
     'resale_over' => 'That night has already happened.',
     'resale_settled' => 'That listing is already finished with.',
     'resale_being_bought' => 'Somebody is buying that seat at this moment. It can be taken off sale again if they do not finish.',
+    'companion_needs_accessible' => 'That seat is kept for whoever comes with a wheelchair user, so it is sold with the space beside it.',
     'tier_window_backwards' => 'A price tier cannot end before it begins.',
     'tier_windows_overlap' => 'Two price tiers cover the same moment, so there would be two prices for one ticket.',
     'renewal_same_run' => 'A run cannot be renewed into itself.',

@@ -51,6 +51,7 @@ class DoorList
                 'external_orders.external_order_id as reference',
                 DB::raw("coalesce(external_orders.buyer->>'name', '') as buyer_name"),
                 DB::raw("coalesce(external_orders.buyer->>'email', '') as buyer_email"),
+                'external_orders.access_needs',
             ]);
 
         if (($filters['q'] ?? '') !== '') {
@@ -159,6 +160,9 @@ class DoorList
             'buyer_name' => $row->buyer_name,
             'email' => $row->buyer_email,
             'reference' => $row->reference,
+            // What this person told the venue they need. On the door list because that is where
+            // the person who can do something about it is standing; nowhere near a segment.
+            'access_needs' => $row->access_needs ?: null,
             'seat' => $row->seat_id
                 ? trim($row->section_name.' '.$row->row_name.' '.$row->seat_label)
                 : trim($row->section_name),

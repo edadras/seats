@@ -387,6 +387,12 @@ return [
     'checkoutRefused' => 'Non è stato possibile accettare questa prenotazione. Riprova dalla mappa dei posti.',
     'checkoutTooQuick' => 'Il modulo è stato inviato prima di essere compilato. Controlla i dati e conferma di nuovo.',
     'limitPerBuyer' => 'Questo evento ha un limite di un biglietto a persona.|Questo evento ha un limite di :count biglietti a persona.',
+    'access' => [
+        'label' => 'Di cosa ha bisogno per entrare e sedersi?',
+        'placeholder' => 'Anello magnetico, cane guida, accesso senza gradini…',
+        'hint' => 'Facoltativo. Arriva a chi sta all\'ingresso, non a una lista di distribuzione.',
+    ],
+
     'consent' => [
         'title' => 'Che cosa ti mandiamo',
         'about' => 'Riguarda :email.',

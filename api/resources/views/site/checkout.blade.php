@@ -213,6 +213,20 @@
                     {{ __('site.voucher.settled') }}
                 </p>
 
+                @if ($event->ask_access_needs)
+                    {{-- What this buyer needs in order to get in and sit down.
+
+                         Free text rather than a list of tick boxes, because a list is a list of
+                         the needs whoever wrote the form happened to think of. Optional, asked
+                         once, and it goes to the door rather than to a mailing list. --}}
+                    <div class="field">
+                        <label class="field__label" for="access-needs">{{ __('site.access.label') }}</label>
+                        <textarea class="input" id="access-needs" name="access_needs" rows="2"
+                            maxlength="500" placeholder="{{ __('site.access.placeholder') }}"></textarea>
+                        <span class="field__hint">{{ __('site.access.hint') }}</span>
+                    </div>
+                @endif
+
                 {{-- The one question this checkout asks that is not about the booking.
 
                      Empty by default and never remembered from a previous visit: a tick box that

@@ -165,9 +165,15 @@ class BestAvailable
                 continue;
             }
 
-            // A wheelchair space is a need, not a preference, and is never handed out by a machine
-            // choosing on somebody's behalf.
-            if ($seat['accessible']) {
+            /*
+             * A wheelchair space is a need, not a preference, and is never handed out by a machine
+             * choosing on somebody's behalf — nor is the chair beside it.
+             *
+             * The companion half is not merely tidy: that chair cannot be held without the space
+             * next to it, so offering it here would be offering a group of seats that the hold
+             * immediately refuses, and "four together" would fail for reasons a buyer cannot see.
+             */
+            if ($seat['accessible'] || $seat['companion']) {
                 continue;
             }
 

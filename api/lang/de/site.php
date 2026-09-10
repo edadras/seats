@@ -388,6 +388,12 @@ return [
     'checkoutRefused' => 'Diese Buchung konnte nicht angenommen werden. Bitte versuchen Sie es vom Saalplan aus erneut.',
     'checkoutTooQuick' => 'Das wurde abgeschickt, bevor das Formular ausgefüllt war. Bitte prüfen Sie Ihre Angaben und bestätigen Sie erneut.',
     'limitPerBuyer' => 'Für diese Veranstaltung gilt eine Grenze von einer Karte pro Person.|Für diese Veranstaltung gilt eine Grenze von :count Karten pro Person.',
+    'access' => [
+        'label' => 'Was brauchen Sie, um hereinzukommen und Platz zu nehmen?',
+        'placeholder' => 'Induktionsschleife, Blindenhund, stufenloser Zugang …',
+        'hint' => 'Freiwillig. Es geht an den Einlass, nicht an einen Verteiler.',
+    ],
+
     'consent' => [
         'title' => 'Was wir Ihnen schicken',
         'about' => 'Dies betrifft :email.',

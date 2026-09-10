@@ -387,6 +387,12 @@ return [
     'checkoutRefused' => 'Cette réservation n’a pas pu être prise. Veuillez réessayer depuis le plan de salle.',
     'checkoutTooQuick' => 'Le formulaire a été envoyé avant d’être rempli. Vérifiez vos informations et confirmez à nouveau.',
     'limitPerBuyer' => 'Cet événement est limité à un billet par personne.|Cet événement est limité à :count billets par personne.',
+    'access' => [
+        'label' => 'De quoi avez-vous besoin pour entrer et vous installer ?',
+        'placeholder' => 'Boucle magnétique, chien guide, accès de plain-pied…',
+        'hint' => 'Facultatif. Cela va aux personnes à l\'entrée, pas à une liste de diffusion.',
+    ],
+
     'consent' => [
         'title' => 'Ce que nous vous envoyons',
         'about' => 'Il s’agit de :email.',

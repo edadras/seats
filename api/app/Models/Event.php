@@ -26,6 +26,7 @@ class Event extends Model
         'refunds', 'refund_window_hours', 'refund_keeps_fee',
         'exchanges', 'exchange_window_hours', 'exchange_fee_amount', 'resale', 'resale_pays',
         'presale_starts_at', 'on_sale_at',
+        'accessible_sale', 'accessible_release_hours', 'ask_access_needs',
     ];
 
     protected $casts = [
@@ -36,6 +37,8 @@ class Event extends Model
         'rescheduled_at' => 'datetime',
         'settings' => 'array',
         'translations' => 'array',
+        'ask_access_needs' => 'boolean',
+        'accessible_release_hours' => 'integer',
         'hold_ttl_seconds' => 'integer',
         'max_extends' => 'integer',
         'max_seats_per_order' => 'integer',

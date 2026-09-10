@@ -445,6 +445,12 @@ class EventController extends Controller
             // The two other things a buyer may do with a ticket they cannot use. Both off by
             // default: a venue that has never thought about either should not discover it has
             // been offering them.
+            // Who may buy the wheelchair spaces, and from when. `counter` keeps them off the
+            // public plan for good; `until` lets them go a stated number of hours before doors.
+            'accessible_sale' => ['sometimes', 'in:always,until,counter'],
+            'accessible_release_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
+            // Whether the checkout asks what a buyer needs in order to get in and sit down.
+            'ask_access_needs' => ['sometimes', 'boolean'],
             'exchanges' => ['sometimes', 'in:never,until,always'],
             'exchange_window_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
             'exchange_fee_amount' => ['sometimes', 'integer', 'min:0'],
@@ -540,6 +546,13 @@ class EventController extends Controller
             'max_seats_per_order' => $event->max_seats_per_order,
             'max_per_buyer' => $event->max_per_buyer,
             'checkout_min_seconds' => (int) $event->checkout_min_seconds,
+            'accessible_sale' => $event->accessible_sale,
+            'accessible_release_hours' => (int) $event->accessible_release_hours,
+            'ask_access_needs' => (bool) $event->ask_access_needs,
+            // When the wheelchair spaces go on general sale, so a screen can say so rather than
+            // making somebody work it out from an hour count and a start time.
+            'accessible_releases_at' => app(\App\Domain\Access\AccessibleSeats::class)
+                ->releasesAt($event)?->toIso8601String(),
             'exchanges' => $event->exchanges,
             'exchange_window_hours' => (int) $event->exchange_window_hours,
             'exchange_fee_amount' => (int) $event->exchange_fee_amount,
