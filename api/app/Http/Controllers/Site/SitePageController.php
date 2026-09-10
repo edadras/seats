@@ -68,6 +68,15 @@ class SitePageController extends Controller
             throw new NotFoundHttpException('No such event.');
         }
 
+        /*
+         * Somebody looked.
+         *
+         * Counted here rather than in the picker, because the question this answers is "did people
+         * hear about it" and a page that never got as far as a seat map is exactly the case that
+         * matters. A count per day, not per visitor: nothing here knows who they were.
+         */
+        app(\App\Domain\Insights\SalesPace::class)->record($event, 'site');
+
         $page = SitePage::where('site_id', $site->id)->where('kind', 'event')->first();
 
         $blocks = $page && $page->isPublished()

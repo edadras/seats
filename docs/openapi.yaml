@@ -3396,6 +3396,112 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /events/{event}/pace:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getEventPace
+      tags: [Events]
+      summary: How fast this night is selling, and what happens to the people who look at it
+      description: |
+        Requires `events.view`. The takings inside the same answer require `reports.orders.view`
+        as well, and are **left out entirely** for somebody who does not hold it: `currency` comes
+        back null, and neither the curve's days nor the funnel carry an `amount`. Absent rather
+        than zero, because a zero is a number somebody goes on to add up.
+
+        Two honesties worth repeating from the source, because a number nobody can explain is worse
+        than no number:
+
+        - The curve counts seats that are **still** sold. A refund a fortnight later quietly takes
+          a seat back out of the day it was bought on. That is the right way round for "how full is
+          this night going to be", which is what the curve is read for.
+        - `sells_out_on` and `projected_sold` are arithmetic, not a forecast: they extend the last
+          week's rate in a straight line, which is exactly wrong for a run that sells out in its
+          final three days. `sells_out_on` is null when the rate is zero and null when the line
+          lands after the doors — both of which mean "it will not", and neither of which is a date.
+
+        Every figure but one is derived from rows that already exist. The exception is how many
+        people looked, which nothing could reconstruct afterwards and which is counted as it
+        happens: per event, per day, per source — never per visitor. There is no cookie, no
+        identifier and nothing to erase under a subject access request.
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 180, default: 30 }
+          description: How many days of history to answer with, ending today.
+      responses:
+        "200":
+          description: The curve, the rate and the funnel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currency:
+                    type: [string, "null"]
+                    description: Null where the caller may not see the takings.
+                  timezone:
+                    type: string
+                    description: >-
+                      The night's own timezone, which is the frame the days are bucketed in: an
+                      organiser comparing Tuesday with Wednesday means their Tuesday.
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+                  curve:
+                    type: array
+                    description: One entry per day, with no gaps — a chart missing its quiet days reads as a busier week than it was.
+                    items:
+                      type: object
+                      properties:
+                        day: { type: string, format: date }
+                        places: { type: integer }
+                        sold_so_far:
+                          type: integer
+                          description: The night's running total, including everything sold before the window opened.
+                        views: { type: integer }
+                        views_by_source:
+                          type: object
+                          additionalProperties: { type: integer }
+                        amount:
+                          type: integer
+                          description: Only present with `reports.orders.view`.
+                  pace:
+                    type: object
+                    properties:
+                      capacity: { type: integer }
+                      sold: { type: integer }
+                      remaining: { type: integer }
+                      sold_share: { type: number }
+                      daily:
+                        type: number
+                        description: Places a day over the last week, to one decimal place.
+                      days_counted: { type: integer }
+                      days_to_doors: { type: [integer, "null"] }
+                      sells_out_on: { type: [string, "null"], format: date }
+                      projected_sold: { type: [integer, "null"] }
+                      sold_out: { type: boolean }
+                  funnel:
+                    type: object
+                    description: >-
+                      Looked → basket → checkout → bought. The steps are deliberately not the same
+                      kind of thing, and nothing follows a person from one to the next: somebody who
+                      reloads the page has looked twice.
+                    properties:
+                      looked: { type: integer }
+                      baskets: { type: integer }
+                      checkouts: { type: integer }
+                      bought: { type: integer }
+                      basket_rate: { type: [number, "null"] }
+                      checkout_rate: { type: [number, "null"] }
+                      buy_rate: { type: [number, "null"] }
+                      overall_rate:
+                        type: [number, "null"]
+                        description: Null rather than zero where the step above it saw nobody — "nobody bought" and "nobody looked" are different things to be told.
+                      amount:
+                        type: integer
+                        description: Only present with `reports.orders.view`.
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /events/{event}/quotas:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:

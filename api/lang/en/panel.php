@@ -1567,4 +1567,45 @@ return [
         'noChannels' => 'This account sells through one channel, so there is nothing to divide.',
         'saved' => 'Allocations saved.',
     ],
+    /*
+     * A rate and a funnel, because a total is not an answer.
+     *
+     * Two hundred sold out of a thousand who looked is a pricing problem; two hundred out of two
+     * hundred and twelve is a marketing one. The words below are careful to hedge the projection —
+     * it is arithmetic, and a straight line is exactly wrong about a run that sells out in its
+     * final three days.
+     */
+    'pace' => [
+        'title' => 'Pace',
+        'back' => 'All events',
+        'description' => 'How fast this night is selling, and what happens to the people who look at it.',
+        'window' => 'How far back to look',
+        'lastDays' => 'Last :count days',
+        'curveTitle' => 'Day by day',
+        'funnelTitle' => 'From looking to buying',
+        'funnelHint' => 'Each step is counted where it can be seen: a look is a page opened, a basket is seats chosen, a checkout is a booking started, and a purchase is one paid for. Somebody who reloads has looked twice — nothing here follows a person from one step to the next.',
+        'sold' => 'Sold',
+        'soldShare' => ':percent% of the house',
+        'daily' => 'A day',
+        'overDays' => 'over :count days',
+        'toDoors' => 'To the doors',
+        'daysWord' => 'days',
+        'projected' => 'At this rate',
+        'ofCapacity' => 'of :count',
+        'saysSoldOut' => 'This night is sold out.',
+        'saysNothingLately' => 'Nothing has sold in the last week, so there is no rate to go on.',
+        'saysSellsOut' => 'At this rate the last seat goes on :when — a rate is arithmetic, not a promise.',
+        'saysShortOf' => 'At this rate the doors open with :count of :capacity sold. Straight lines are wrong about runs that sell out in their last three days.',
+        'dayTip' => ':sold sold, :views looked',
+        'chartAlt' => 'Seats sold each day from :from to :to, with how many people looked.',
+        'legendSold' => 'Seats sold (busiest day: :count)',
+        'legendViews' => 'People looking (busiest day: :count)',
+        'step' => [
+            'looked' => 'Looked',
+            'baskets' => 'Chose seats',
+            'checkouts' => 'Started paying',
+            'bought' => 'Bought',
+        ],
+        'took' => 'Taken in this window: :amount',
+    ],
 ];

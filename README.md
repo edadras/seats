@@ -97,6 +97,14 @@ A seat is the start of it, not the end. Around the map:
   not *these* seats but *this many*: an agent gets four hundred, the website gets the rest, and
   what each has taken is counted rather than stored, under the same lock the seats are sold under.
   A cancelled booking gives its places back, because the channel did not sell them in the end.
+- **Sales pace and conversion** — a rate and a funnel, because "two hundred sold" is not an answer.
+  Two hundred out of a thousand people who looked is a pricing problem; two hundred out of two
+  hundred and twelve is a marketing one, and the remedies are opposite. A day-by-day chart with the
+  quiet days still in it, what the last week's rate says about the doors — hedged, because it is
+  arithmetic and a straight line is wrong about a run that fills up in its final three days — and
+  looked → basket → checkout → bought. Everything but the looking is derived from rows that already
+  exist; the looking is counted per event, per day, per source, and never per visitor, so there is
+  no cookie, no identifier and nothing to erase under a subject access request.
 - **Gift vouchers and account credit**, which are not discount codes either: a discount changes
   what a booking cost and so changes the tax on it, while a voucher changes how an unchanged cost
   was settled. Applied last, to the amount payable, and a booking a voucher covers outright
@@ -279,7 +287,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 630 unit, feature and module tests
+./vendor/bin/phpunit                        # 645 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -305,7 +313,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-one, in order
+./smoke.sh                    # all thirty-two, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -401,6 +409,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A seat blocked without a label is sellable by nobody, at any window | `ChannelQuotaTest` |
 | A channel's allowance counts live baskets, not only completed sales | `ChannelQuotaTest` |
 | One channel running out does not touch another channel's allocation | `ChannelQuotaTest` |
+| Two people looking at once are both counted, and the page outlives the counter | `SalesPaceTest` |
+| A curve keeps its quiet days, and its running total predates the window | `SalesPaceTest` |
+| A night selling nothing sells out on no date, and a rate past the doors is not one | `SalesPaceTest` |
+| A funnel step with nothing above it has no rate at all | `SalesPaceTest` |
 
 ## Installing the plugin
 

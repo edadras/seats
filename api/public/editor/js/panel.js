@@ -1262,6 +1262,7 @@
 						( event.waiting_room
 							? actionButton( 'queue', event.id, self.t( 'panel.room.title' ), 'users' )
 							: '' ) +
+						actionButton( 'pace', event.id, self.t( 'panel.pace.title' ), 'chart' ) +
 						actionButton( 'quotas', event.id, self.t( 'panel.quotas.title' ), 'plug' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
 						actionButton( 'words', event.id, self.t( 'panel.events.translations' ), 'globe' ) +
@@ -1360,6 +1361,13 @@
 								self[ pair[ 1 ] ]( event );
 							}
 						} );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-pace]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						window.SeatmapPace.open( self, button.dataset.pace,
+							button.closest( 'tr' ).querySelector( '.table__primary' ).textContent );
 					} );
 				} );
 

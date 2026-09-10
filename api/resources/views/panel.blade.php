@@ -41,6 +41,7 @@
     <script src="{{ asset('editor/js/signup.js') }}"></script>
     <script src="{{ asset('editor/js/seat-prices.js') }}"></script>
     <script src="{{ asset('editor/js/settlement.js') }}"></script>
+    <script src="{{ asset('editor/js/pace.js') }}"></script>
     <script src="{{ asset('editor/js/panel.js') }}"></script>
 </body>
 </html>

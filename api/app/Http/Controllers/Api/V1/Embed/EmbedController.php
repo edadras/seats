@@ -36,6 +36,15 @@ class EmbedController extends Controller
     {
         $event = $this->resolveEvent($publicId);
 
+        /*
+         * Somebody loaded a picker on somebody else's page.
+         *
+         * This call, and not the availability poll beside it: the picker asks for the event once
+         * per page and asks for availability every few seconds, so counting the poll would report
+         * a visitor who left the tab open as an audience of four hundred.
+         */
+        app(\App\Domain\Insights\SalesPace::class)->record($event, 'embed');
+
         return response()->json([
             'public_id' => $event->public_id,
             // A picker pasted onto somebody's own page is read in whatever language that page

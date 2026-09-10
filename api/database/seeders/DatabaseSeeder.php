@@ -27,6 +27,7 @@ use App\Models\Venue;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -303,6 +304,7 @@ class DatabaseSeeder extends Seeder
             $site->update(['status' => 'live']);
 
             $this->seedSales($tenant, $event, $client);
+            $this->seedViews($event);
 
             return [
                 'tenant' => $tenant,
@@ -322,6 +324,45 @@ class DatabaseSeeder extends Seeder
      * rather than by writing rows. Seeded numbers that could not have been produced by the
      * software are the numbers that hide the bug where the software cannot produce them.
      */
+    /**
+     * A fortnight of people looking, so the pace screen has a funnel with a top to it.
+     *
+     * Written as counts rather than by calling the recorder a thousand times: the row this leaves
+     * behind is exactly the row a thousand page renders would have left, and a seeder that took a
+     * minute to simulate them would be a seeder nobody runs. The shape is deliberate — a busy
+     * couple of days at the announcement, a quiet middle — because a demo where every day is the
+     * same height is a demo that shows nothing about what the chart is for.
+     */
+    private function seedViews(Event $event): void
+    {
+        if (DB::table('event_views')->where('event_id', $event->id)->exists()) {
+            return;
+        }
+
+        $shape = [140, 96, 72, 61, 48, 44, 39, 52, 47, 41, 38, 55, 63, 88];
+
+        foreach ($shape as $daysAgo => $views) {
+            $day = now()->subDays(13 - $daysAgo)->toDateString();
+
+            foreach (['site' => $views, 'embed' => intdiv($views, 6)] as $source => $count) {
+                if ($count < 1) {
+                    continue;
+                }
+
+                DB::table('event_views')->insert([
+                    'id' => (string) Str::uuid(),
+                    'tenant_id' => $event->tenant_id,
+                    'event_id' => $event->id,
+                    'day' => $day,
+                    'source' => $source,
+                    'views' => $count,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+    }
+
     private function seedSales(Tenant $tenant, Event $event, ApiClient $client): void
     {
         if (ExternalOrder::where('event_id', $event->id)->exists()) {

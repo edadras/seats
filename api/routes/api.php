@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\NotificationController;
 use App\Http\Controllers\Api\V1\Management\OrderController;
+use App\Http\Controllers\Api\V1\Management\PaceController;
 use App\Http\Controllers\Api\V1\Management\RefundRequestController;
 use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
@@ -205,6 +206,16 @@ Route::prefix('v1')->group(function () {
          */
         Route::get('events/{event}/quotas', [ChannelQuotaController::class, 'index']);
         Route::put('events/{event}/quotas', [ChannelQuotaController::class, 'update']);
+
+        /*
+         * How fast this night is selling, and what happens to the people who look at it.
+         *
+         * A read, and a heavy-ish one: it walks a month of allocations and a month of views. The
+         * throttle is its own so that a panel left open on this screen cannot use up the ration
+         * the rest of the panel is counting on.
+         */
+        Route::get('events/{event}/pace', [PaceController::class, 'show'])
+            ->middleware('throttle:60,1,pace');
 
         // The door on a big sale, live. A read that also turns the handle — see the controller.
         Route::get('events/{event}/queue', [WaitingRoomController::class, 'show'])

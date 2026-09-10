@@ -2746,3 +2746,91 @@
 	white-space: pre;
 	overflow-wrap: normal;
 }
+
+/* ---------------------------------------------------------------- pace: the chart and funnel */
+
+/* A small note under a stat's word, for the share or the span the number is over. */
+.stat__note {
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+}
+
+.chart {
+	border: 1px solid var(--hairline);
+	border-radius: var(--radius);
+	background: var(--surface);
+	padding: var(--s-3);
+	margin-block-end: var(--s-5);
+}
+
+.chart__svg {
+	inline-size: 100%;
+	block-size: auto;
+	display: block;
+	overflow: visible;
+}
+
+.chart__bar { fill: var(--accent); }
+
+/* People looking, on its own scale — see the legend, which says what each maximum is. Drawn as a
+   line rather than a second set of bars so the two series can be read apart at a glance. */
+.chart__line {
+	fill: none;
+	stroke: var(--warn, #b8860b);
+	stroke-width: 2;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.chart__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--s-4);
+	margin-block-start: var(--s-2);
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+}
+
+.chart__key { display: inline-flex; align-items: center; gap: var(--s-2); }
+
+.chart__key::before {
+	content: '';
+	inline-size: 0.75rem;
+	block-size: 0.75rem;
+	border-radius: 2px;
+}
+
+.chart__key--bar::before { background: var(--accent); }
+.chart__key--line::before { background: var(--warn, #b8860b); }
+
+.funnel { margin-block-end: var(--s-5); }
+
+.funnel__step {
+	display: grid;
+	grid-template-columns: minmax(6rem, 10rem) 1fr auto auto;
+	align-items: center;
+	gap: var(--s-3);
+	padding-block: var(--s-2);
+	border-block-end: 1px solid var(--hairline);
+}
+
+.funnel__bar {
+	block-size: 0.65rem;
+	border-radius: 999px;
+	background: var(--sunken, var(--hairline));
+	overflow: hidden;
+}
+
+.funnel__fill {
+	display: block;
+	block-size: 100%;
+	background: var(--accent);
+}
+
+.funnel__count { font-weight: 600; }
+.funnel__rate { color: var(--text-muted); min-inline-size: 3rem; text-align: end; }
+
+@media (max-width: 640px) {
+	.funnel__step { grid-template-columns: 1fr auto auto; }
+	.funnel__bar { grid-column: 1 / -1; order: 3; }
+}
