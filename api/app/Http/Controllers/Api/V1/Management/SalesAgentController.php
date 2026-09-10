@@ -266,6 +266,34 @@ class SalesAgentController extends Controller
         ]);
     }
 
+    /**
+     * The agent's own statement, for the agent.
+     *
+     * The same figures the organiser reads on the same agency, from the same place — a reseller
+     * arguing about a month with a different set of numbers than the person they are arguing with
+     * is how a settlement takes a fortnight. What it does not carry is the rest of the list: which
+     * agency this is, is the caller, and no route to any other.
+     */
+    public function mineStatement(Request $request)
+    {
+        $agent = $this->agents->forUser($request->user());
+
+        if (! $agent) {
+            return response()->json(['agent' => null]);
+        }
+
+        $data = $request->validate([
+            'from' => ['sometimes', 'nullable', 'date'],
+            'to' => ['sometimes', 'nullable', 'date'],
+        ]);
+
+        return response()->json($this->agents->statement(
+            $agent,
+            $data['from'] ?? null,
+            $data['to'] ?? null,
+        ));
+    }
+
     /* -------------------------------------------------------------------------- internals */
 
     /** @return array<string, mixed> */

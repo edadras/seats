@@ -98,8 +98,10 @@ A seat is the start of it, not the end. Around the map:
   means they sell what they have paid for and not a ticket more. The commission rate is stamped on
   each booking, so agreeing a new percentage next season leaves last season alone. An agent gets a
   sign-in of their own, sees only their own bookings and only the nights they were given, and has
-  their remaining credit in front of them all afternoon; the organiser gets the account, the ledger
-  and a statement per period. **An agency is not a member of staff**, so they hold `orders.view.own`
+  their remaining credit in front of them all afternoon, and **a statement of their own** — the same
+  figures the organiser reads, from the same derivation, because two sides arguing about a month
+  from two different spreadsheets is how a settlement takes a fortnight. The organiser gets the
+  account, the ledger and a statement per period. **An agency is not a member of staff**, so they hold `orders.view.own`
   rather than `orders.view`: the wide one also opens the customer directory, the waiting list and
   every abandoned basket, and none of those were sold along with the tickets. The panel is told what
   the caller holds at sign-in and leaves out what they cannot open — hiding a screen is a courtesy,
@@ -680,6 +682,8 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A comp costs an agent nothing and is still theirs | `SalesAgentTest` |
 | An agency is never handed the organiser's audience | `SalesAgentTest`, `agents_smoke` |
 | The narrow permission shows nothing to somebody who sells for nobody | `SalesAgentTest` |
+| An agency reads its own statement and reaches no others | `SalesAgentTest`, `agents_smoke` |
+| Somebody who sells for nobody is told so rather than refused | `SalesAgentTest` |
 | Signing in says what this person may do | `AccessControlTest` |
 | A role narrowed mid-session is the role the panel is told about | `AccessControlTest` |
 | Every permission and every role has a sentence in every language | `AccessControlTest` |

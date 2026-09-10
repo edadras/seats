@@ -43,6 +43,10 @@
 			{ key: 'counter', icon: 'ticket', needs: 'orders.sell' },
 			{ key: 'tills', icon: 'wallet', needs: 'orders.sell' },
 			{ key: 'agents', icon: 'users', needs: 'agents.manage' },
+			// An agency's own account, offered to the agency. `when` rather than `needs` because
+			// selling for somebody is not a permission — an owner holds every permission there is
+			// and is nobody's agency.
+			{ key: 'myagency', icon: 'wallet', when: 'agent' },
 			{ key: 'orders', icon: 'file', needs: [ 'orders.view', 'orders.view.own' ] },
 			{ key: 'plans', icon: 'clock', needs: 'orders.view' },
 			{ key: 'tickets', icon: 'ticket', needs: 'tickets.view' },
@@ -508,6 +512,7 @@
 			email_verified: false !== response.email_verified,
 			must_set_up_two_factor: !! response.must_set_up_two_factor,
 			permissions: this.permissions,
+			agent: response.agent || null,
 		};
 
 		window.sessionStorage.setItem( STORE.profile, JSON.stringify( this.profile ) );
@@ -534,6 +539,15 @@
 		return -1 !== held.indexOf( permission );
 	};
 
+	/** Whether one nav entry belongs to this person: what they hold, and who they are. */
+	App.offers = function ( entry ) {
+		if ( 'agent' === entry.when ) {
+			return !! ( this.profile || {} ).agent;
+		}
+
+		return this.may( entry.needs );
+	};
+
 	/** Whether a view is one this person may open. An unlisted view is the panel's own business. */
 	App.mayOpen = function ( view ) {
 		var found = null;
@@ -546,7 +560,7 @@
 			} );
 		} );
 
-		return found ? this.may( found.needs ) : true;
+		return found ? this.offers( found ) : true;
 	};
 
 	/** The views this person may open, in nav order. */
@@ -556,7 +570,7 @@
 
 		NAV.forEach( function ( section ) {
 			section.items.forEach( function ( entry ) {
-				if ( self.may( entry.needs ) ) {
+				if ( self.offers( entry ) ) {
 					keys.push( entry.key );
 				}
 			} );
@@ -800,7 +814,7 @@
 		 * whether that is a chart or the building it is in.
 		 */
 		NAV.forEach( function ( section ) {
-			var items = section.items.filter( function ( entry ) { return self.may( entry.needs ); } );
+			var items = section.items.filter( function ( entry ) { return self.offers( entry ); } );
 
 			// A heading over nothing is worse than no heading: an external agency's nav is four rows
 			// and a group label with an empty space under it would read as a screen that failed.
@@ -828,7 +842,18 @@
 					button.setAttribute( 'aria-current', 'page' );
 				}
 
-				button.addEventListener( 'click', function () { self.route( entry.key ); } );
+				button.addEventListener( 'click', function () {
+					/*
+					 * A message is about the thing somebody was just doing. Walking away from that
+					 * screen ends it — a refusal from the counter still sitting over an account
+					 * page reads as a refusal from the account page.
+					 *
+					 * Here rather than in `route()`, because the panel sometimes sends somebody
+					 * somewhere *and* tells them why, and that message must survive its own move.
+					 */
+					self.clearToast();
+					self.route( entry.key );
+				} );
 				group.appendChild( button );
 			} );
 
@@ -869,6 +894,7 @@
 			case 'counter': return window.SeatmapCounter.render( this );
 			case 'tills': return window.SeatmapTills.render( this );
 			case 'agents': return window.SeatmapAgents.render( this );
+			case 'myagency': return window.SeatmapAgents.mine( this );
 			case 'doorlist': return window.SeatmapDoorList.render( this );
 			case 'questions': return window.SeatmapQuestions.render( this );
 			case 'entryslots': return window.SeatmapEntrySlots.render( this );
@@ -3832,12 +3858,16 @@
 			} );
 	};
 
-	App.toast = function ( message, isError ) {
+	App.clearToast = function () {
 		var existing = document.querySelector( '.toast' );
 
 		if ( existing ) {
 			existing.remove();
 		}
+	};
+
+	App.toast = function ( message, isError ) {
+		this.clearToast();
 
 		var toast = document.createElement( 'div' );
 

@@ -631,6 +631,49 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/AgentLedgerEntry" }
 
+  /sales-agents/summary/statement:
+    get:
+      operationId: myAgentStatement
+      tags: [Orders]
+      summary: The agent's own statement, for the agent
+      description: >
+        The same figures the organiser reads on the same agency, derived the same way — a reseller
+        arguing about a month with a different set of numbers than the person they are arguing with
+        is how a settlement takes a fortnight. The period bounds what was sold; the account beside
+        it is where the agency stands today, whichever dates are asked for. Somebody who is not an
+        agent is answered with a null agent rather than refused.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: This caller's statement, or a null agent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    type: [object, "null"]
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      code: { type: string }
+                      commission_rate: { type: integer }
+                  from: { type: [string, "null"], format: date }
+                  to: { type: [string, "null"], format: date }
+                  period:
+                    type: object
+                    properties:
+                      sold: { type: integer }
+                      refunded: { type: integer }
+                      commission: { type: integer }
+                      due: { type: integer }
+                      orders: { type: integer }
+                      seats: { type: integer }
+                  account: { $ref: "#/components/schemas/AgentAccount" }
+
   /sales-agents/{agent}:
     parameters:
       - { name: agent, in: path, required: true, schema: { type: string, format: uuid } }

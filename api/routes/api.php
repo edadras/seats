@@ -199,6 +199,9 @@ Route::prefix('v1')->group(function () {
         Route::post('sales-agents', [SalesAgentController::class, 'store']);
         // Before `{agent}`: "summary" is not an agent id and would match nothing.
         Route::get('sales-agents/summary', [SalesAgentController::class, 'summary']);
+        // The agent's own statement, read by the agent. Before `{agent}` for the same reason
+        // `summary` is: "summary" is not a uuid, but the router does not know that.
+        Route::get('sales-agents/summary/statement', [SalesAgentController::class, 'mineStatement']);
         Route::get('sales-agents/{agent}', [SalesAgentController::class, 'show']);
         Route::patch('sales-agents/{agent}', [SalesAgentController::class, 'update']);
         Route::delete('sales-agents/{agent}', [SalesAgentController::class, 'destroy']);

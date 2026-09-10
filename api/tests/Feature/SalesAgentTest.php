@@ -356,6 +356,67 @@ class SalesAgentTest extends TestCase
     }
 
     #[Test]
+    public function an_agency_reads_its_own_statement_and_reaches_no_others(): void
+    {
+        $night = $this->makeSellableEvent(rows: 3, perRow: 6, amount: 2500);
+        $mine = $this->agentFor($night, ['credit_limit' => 100000, 'commission_rate' => 1000]);
+
+        $this->sale($night, $mine, seats: 2)->assertCreated();
+
+        $seen = $this->asMember($mine['user'])
+            ->getJson('/v1/sales-agents/summary/statement')
+            ->assertOk()
+            ->json();
+
+        /*
+         * The organiser's figures, read by the agency. Both sides arguing about a month from the
+         * same numbers is the whole point — the alternative is a settlement that takes a fortnight
+         * because the two spreadsheets disagree.
+         */
+        $mineAsOwner = $this->actingAs($mine['owner'] ?? $this->makeUser($night['tenant'], 'owner'))
+            ->getJson('/v1/sales-agents/'.$mine['agent']->id.'/statement')
+            ->assertOk()
+            ->json();
+
+        $this->assertSame($mineAsOwner['period'], $seen['period']);
+        $this->assertSame($mineAsOwner['account']['balance'], $seen['account']['balance']);
+        $this->assertSame(
+            $seen['period']['sold'] - $seen['period']['commission'],
+            $seen['period']['due'],
+        );
+
+        // And it is theirs and only theirs: no route from here to the bureau across town.
+        $theirs = app(TenantContext::class)->runAs($night['tenant'], function () use ($night) {
+            return SalesAgent::create([
+                'tenant_id' => $night['tenant']->id,
+                'name' => 'Bureau 34',
+                'code' => 'bureau-34',
+                'commission_rate' => 500,
+                'credit_limit' => 100000,
+            ]);
+        });
+
+        $this->asMember($mine['user'])
+            ->getJson('/v1/sales-agents/'.$theirs->id.'/statement')
+            ->assertForbidden();
+
+        $this->asMember($mine['user'])->getJson('/v1/sales-agents')->assertForbidden();
+    }
+
+    #[Test]
+    public function somebody_who_sells_for_nobody_is_told_so_rather_than_refused(): void
+    {
+        $night = $this->makeSellableEvent();
+        $staff = $this->makeUser($night['tenant'], 'box_office');
+
+        // Not a wall: there is nothing here for them, which is not the same as being kept out.
+        $this->asMember($staff)
+            ->getJson('/v1/sales-agents/summary/statement')
+            ->assertOk()
+            ->assertJsonPath('agent', null);
+    }
+
+    #[Test]
     public function an_agent_who_has_sold_something_is_switched_off_rather_than_deleted(): void
     {
         $night = $this->makeSellableEvent(rows: 3, perRow: 6, amount: 2500);

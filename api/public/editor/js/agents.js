@@ -177,6 +177,159 @@
 		bind( 'agent-signin', function () { Agents.giveSignIn(); } );
 	};
 
+	/* --------------------------------------------------------------------- the agency's own */
+
+	/**
+	 * The same account, read by the agency rather than about them.
+	 *
+	 * The figures are the organiser's figures, from the same endpoint family and the same
+	 * derivation — a reseller arguing about a month with a different set of numbers than the person
+	 * they are arguing with is how a settlement takes a fortnight. What is missing is everything
+	 * that is not theirs: no list of other agencies, no way to move their own credit, no rate to
+	 * edit. They read; the organiser writes.
+	 */
+	Agents.mine = function ( App ) {
+		Agents.App = App;
+		App.loading( App.t( 'panel.nav.myagency' ) );
+
+		Promise.all( [
+			App.request( 'GET', '/sales-agents/summary' ),
+			App.request( 'GET', '/sales-agents/summary/statement' + Agents.period() ),
+		] )
+			.then( function ( answers ) {
+				Agents.one = answers[ 0 ].agent;
+				Agents.one.events = answers[ 0 ].events || [];
+				Agents.one.ledger = answers[ 0 ].ledger || [];
+				Agents.statement = answers[ 1 ];
+				Agents.paintMine();
+			} )
+			.catch( function ( error ) { App.error( error ); } );
+	};
+
+	/** The period the screen is showing, as a query string. Empty means everything so far. */
+	Agents.period = function () {
+		var span = Agents.span || {};
+		var parts = [];
+
+		if ( span.from ) { parts.push( 'from=' + encodeURIComponent( span.from ) ); }
+		if ( span.to ) { parts.push( 'to=' + encodeURIComponent( span.to ) ); }
+
+		return parts.length ? '?' + parts.join( '&' ) : '';
+	};
+
+	Agents.paintMine = function () {
+		var App = Agents.App;
+		var agent = Agents.one;
+
+		// Somebody who is not an agency at all, opening this by its address. Told rather than
+		// refused: there is nothing here for them, and that is not the same as a wall.
+		if ( ! agent ) {
+			App.page( {
+				title: App.t( 'panel.nav.myagency' ),
+				body: App.emptyState( 'users', App.t( 'panel.agents.notAnAgent' ),
+					esc( App.t( 'panel.agents.notAnAgentBody' ) ) ),
+			} );
+
+			return;
+		}
+
+		var account = agent.account || {};
+		var period = ( Agents.statement || {} ).period || {};
+		var span = Agents.span || {};
+
+		App.page( {
+			title: agent.name,
+			description: esc( agent.code ),
+			body:
+				'<div class="stat-strip">' +
+					tile( App.t( 'panel.agents.available' ), App.money( account.available || 0, account.currency ),
+						App.t( 'panel.agents.limitIs', {
+							amount: App.money( account.credit_limit || 0, account.currency ),
+						} ) ) +
+					tile( App.t( 'panel.agents.balance' ), App.money( account.balance || 0, account.currency ),
+						( account.balance || 0 ) < 0
+							? App.t( 'panel.agents.owesUs' )
+							: App.t( 'panel.agents.inHand' ) ) +
+					tile( App.t( 'panel.agents.sold' ), App.money( account.sold || 0, account.currency ),
+						App.t( 'panel.agents.seatsSold', { count: App.number( account.seats || 0 ) } ) ) +
+					tile( App.t( 'panel.agents.commission' ),
+						App.money( account.commission || 0, account.currency ),
+						App.t( 'panel.agents.atRate', { rate: App.number( agent.commission_percent ) } ) ) +
+				'</div>' +
+
+				'<h3 class="subhead">' + esc( App.t( 'panel.agents.statement' ) ) + '</h3>' +
+				'<div class="card spaced">' +
+					'<div class="filters">' +
+						dated( 'mine-from', App.t( 'panel.agents.from' ), span.from || '' ) +
+						dated( 'mine-to', App.t( 'panel.agents.to' ), span.to || '' ) +
+						'<button class="btn" id="mine-period">' +
+							esc( App.t( 'panel.agents.showPeriod' ) ) + '</button>' +
+					'</div>' +
+					'<div class="stat-strip">' +
+						tile( App.t( 'panel.agents.periodSold' ),
+							App.money( period.sold || 0, account.currency ),
+							App.t( 'panel.agents.seatsSold', { count: App.number( period.seats || 0 ) } ) ) +
+						tile( App.t( 'panel.agents.periodCommission' ),
+							App.money( period.commission || 0, account.currency ),
+							App.t( 'panel.agents.atRate', { rate: App.number( agent.commission_percent ) } ) ) +
+						tile( App.t( 'panel.agents.periodDue' ),
+							App.money( period.due || 0, account.currency ),
+							App.t( 'panel.agents.dueHint' ) ) +
+					'</div>' +
+					// The one sentence that stops a statement being read as a bill: the period bounds
+					// what was sold, and never what is in hand.
+					'<p class="hint">' + esc( App.t( 'panel.agents.periodHint' ) ) + '</p>' +
+				'</div>' +
+
+				'<h3 class="subhead">' + esc( App.t( 'panel.agents.maySell' ) ) + '</h3>' +
+				( agent.all_events
+					? '<p class="muted">' + esc( App.t( 'panel.agents.everythingHint' ) ) + '</p>'
+					: ( agent.events || [] ).length
+						? App.table(
+							[ App.t( 'panel.agents.event' ), App.t( 'panel.agents.when' ),
+								App.t( 'panel.common.status' ) ],
+							agent.events.map( function ( event ) {
+								return '<tr><td class="table__primary">' + esc( event.name ) + '</td>' +
+									'<td class="nowrap tnum">' + esc( App.date( event.starts_at ) ) + '</td>' +
+									'<td>' + esc( App.t( 'panel.eventStatus.' + event.status ) ) + '</td></tr>';
+							} ).join( '' )
+						)
+						: '<p class="muted">' + esc( App.t( 'panel.agents.nothingAllowed' ) ) + '</p>' ) +
+
+				'<h3 class="subhead">' + esc( App.t( 'panel.agents.ledger' ) ) + '</h3>' +
+				( ( agent.ledger || [] ).length
+					? App.table(
+						[
+							App.t( 'panel.agents.when' ),
+							App.t( 'panel.agents.movement' ),
+							App.t( 'panel.agents.reference' ),
+							{ label: App.t( 'panel.orders.total' ), numeric: true },
+						],
+						agent.ledger.map( function ( entry ) {
+							return '<tr>' +
+								'<td class="nowrap tnum">' + esc( App.date( entry.at ) ) + '</td>' +
+								'<td>' + esc( App.t( 'panel.agents.kinds.' + entry.kind ) ) +
+									( entry.note
+										? '<span class="muted on-own-line">' + esc( entry.note ) + '</span>'
+										: '' ) + '</td>' +
+								'<td class="muted">' + esc( entry.reference || '—' ) + '</td>' +
+								'<td class="tnum">' + esc( App.money( entry.amount, entry.currency ) ) + '</td>' +
+							'</tr>';
+						} ).join( '' )
+					)
+					: '<p class="muted">' + esc( App.t( 'panel.agents.noMovements' ) ) + '</p>' ),
+		} );
+
+		bind( 'mine-period', function () {
+			Agents.span = {
+				from: value( 'mine-from' ),
+				to: value( 'mine-to' ),
+			};
+
+			Agents.mine( App );
+		} );
+	};
+
 	/* ------------------------------------------------------------------------------ forms */
 
 	Agents.edit = function ( agent ) {
@@ -413,6 +566,18 @@
 
 	function value( id ) {
 		return ( document.getElementById( id ).value || '' ).trim();
+	}
+
+	/*
+	 * A date is the one filter that cannot say what it is on its own: empty, it reads as
+	 * "mm/dd/yyyy" and nothing else, so the word goes beside the box rather than only in a label
+	 * the eye never reaches.
+	 */
+	function dated( id, label, current ) {
+		return '<label class="filters__dated" for="' + id + '">' +
+			'<span>' + esc( label ) + '</span>' +
+			'<input class="input" type="date" id="' + id + '" value="' + esc( current ) + '">' +
+		'</label>';
 	}
 
 	function tile( label, amount, hint ) {

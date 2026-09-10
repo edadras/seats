@@ -183,16 +183,28 @@ const strip = await theirs.locator( '.stat-strip' ).innerText();
 check( 'and shows what they have left to sell against', /50[.,]00/.test( strip ),
 	strip.replace( /\n/g, ' | ' ).slice( 0, 140 ) );
 
-await theirs.screenshot( { path: `${ SHOTS }/04-agent-counter.png` } );
+await theirs.screenshot( { path: `${ SHOTS }/05-agent-counter.png` } );
 
 await theirs.waitForSelector( '.counter__blocks', { timeout: 20000 } );
 await theirs.locator( '.counter__block:not([disabled])' ).first().click();
 await theirs.waitForSelector( '.counter__seat' );
 await theirs.locator( '.counter__seat:not([disabled])' ).first().click();
-await theirs.waitForTimeout( 300 );
+await theirs.waitForTimeout( 600 );
+
+// A sale in progress, as the agency sees it: the chair taken, the total beside it, and the credit
+// they are selling against at the top of their own screen.
+await theirs.screenshot( { path: `${ SHOTS }/06-agent-selling.png` } );
+
 await theirs.click( '#counter-sell' );
 await theirs.waitForSelector( '.modal' );
 await theirs.fill( '#c-name', 'Walk-up buyer' );
+
+// And the money asked for: a seat chosen, the money asked for, and the credit they are
+// selling against still on the screen behind the dialog. After the dialog's own fade, or the
+// picture is of a half-painted one.
+await theirs.waitForTimeout( 700 );
+await theirs.screenshot( { path: `${ SHOTS }/07-agent-taking-money.png` } );
+
 await theirs.click( '.modal button[type=submit]' );
 await theirs.waitForTimeout( 3000 );
 
@@ -231,7 +243,42 @@ const refused = await theirs.locator( '.toast' ).innerText().catch( () => '' );
 check( 'and the counter stops them when the credit runs out',
 	/more than|credit|left to sell/i.test( refused ), refused );
 
-await theirs.screenshot( { path: `${ SHOTS }/05-refused.png` } );
+await theirs.screenshot( { path: `${ SHOTS }/08-refused.png` } );
+
+console.log( 'And reads their own account' );
+
+// The refusal above leaves the sell dialog open, which is the right behaviour — the sale did not
+// happen and the seats are still chosen — so it is dismissed the way a person would.
+await theirs.keyboard.press( 'Escape' );
+await theirs.waitForSelector( '.modal', { state: 'detached', timeout: 10000 } );
+
+await theirs.click( 'nav button[data-view=myagency]' );
+await theirs.waitForSelector( '#mine-period', { timeout: 20000 } );
+await theirs.waitForTimeout( 1200 );
+
+// The refusal was about the counter, and walking away from the counter ends it.
+check( 'a message from the last screen does not follow them to this one',
+	0 === await theirs.locator( '.toast' ).count() );
+
+const mine = await theirs.locator( '#main' ).innerText();
+
+check( 'the agency has an account screen of its own',
+	/bureau-12/.test( mine ), mine.split( '\n' ).slice( 0, 3 ).join( ' | ' ) );
+
+check( 'with the statement for the period, and the ledger under it',
+	/Sold in this period/i.test( mine ) && /Paid in/i.test( mine ),
+	mine.replace( /\n/g, ' | ' ).slice( 0, 200 ) );
+
+await theirs.screenshot( { path: `${ SHOTS }/09-agent-statement.png`, fullPage: true } );
+
+// The organiser's own screens stay the organiser's: the agency's list is not on their nav, and
+// asking for it by name is still refused.
+const reachedOthers = await theirs.evaluate( () => fetch(
+	document.getElementById( 'app' ).dataset.api + '/sales-agents',
+	{ headers: { Authorization: 'Bearer ' + window.sessionStorage.getItem( 'seatmap_token' ) } }
+).then( ( response ) => response.status ) );
+
+check( 'and no route from it to anybody else’s', 403 === reachedOthers, String( reachedOthers ) );
 
 const account = ( await api( 'GET', `/v1/sales-agents/${ bureau.id }` ) ).body;
 
@@ -252,7 +299,7 @@ check( 'and the statement says what is due for the period',
  * That one is the point of the check that produced it, so it is not counted here — everything else
  * is, including any other status the agent's screen might have provoked.
  */
-const noise = ( message ) => /status of 409/.test( message );
+const noise = ( message ) => /status of 409/.test( message ) || /status of 403/.test( message );
 
 check( 'no console errors',
 	0 === errors.filter( ( message ) => ! noise( message ) ).length &&

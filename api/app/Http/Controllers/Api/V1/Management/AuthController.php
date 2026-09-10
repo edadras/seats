@@ -119,6 +119,7 @@ class AuthController extends Controller
             ],
             'role' => $membership->role,
             'permissions' => $this->permissionsFor($membership, $tenant),
+            'agent' => $this->tenantContext->runAs($tenant, fn () => $this->agencyOf($user)),
             // So the panel can put the verification bar back for somebody who signed up, closed
             // the tab, and came back a day later without typing the code.
             'email_verified' => null !== $user->email_verified_at,
@@ -181,6 +182,7 @@ class AuthController extends Controller
             ],
             'role' => $membership?->role,
             'permissions' => $membership ? $this->permissionsFor($membership, $tenant) : [],
+            'agent' => $this->tenantContext->runAs($tenant, fn () => $this->agencyOf($user)),
             'email_verified' => null !== $user->email_verified_at,
             'two_factor' => true,
             'must_set_up_two_factor' => false,
@@ -213,10 +215,34 @@ class AuthController extends Controller
             ],
             'role' => $membership?->role,
             'permissions' => $this->gate->permissions($request),
+            /*
+             * Which agency this person sells for, when they sell for one.
+             *
+             * Not a permission — it is who they are, not what they may do — so it travels beside
+             * the list rather than in it. The panel needs it to offer somebody their own account,
+             * and an owner holds every permission there is without being anybody's agency.
+             */
+            'agent' => $this->agencyOf($user),
             'email_verified' => null !== $user->email_verified_at,
             'two_factor' => $user->hasTwoFactor(),
             'must_set_up_two_factor' => (bool) ($tenant?->require_two_factor) && ! $user->hasTwoFactor(),
         ]);
+    }
+
+    /**
+     * The agency this person sells for, named rather than confirmed.
+     *
+     * Enough for the panel to offer them their own account and put their agency's name on it, and
+     * no more: what the account holds is asked for separately, by an endpoint that resolves the
+     * agency from the caller again rather than trusting anything the browser sends back.
+     *
+     * @return array{id: string, name: string, code: string}|null
+     */
+    private function agencyOf(User $user): ?array
+    {
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($user);
+
+        return $agent ? ['id' => $agent->id, 'name' => $agent->name, 'code' => $agent->code] : null;
     }
 
     /**
