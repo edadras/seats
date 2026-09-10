@@ -85,6 +85,21 @@ A seat is the start of it, not the end. Around the map:
   has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
   carry a date that lifts it without anybody acting, and is checked where a booking is registered so
   the refusal arrives before the money — with a sentence, not a silent failure.
+- **Sales agents** — the shops, bureaux and agencies that sell an organiser's tickets over their own
+  counter. Not promoters: a promoter posts a link and is paid a percentage of what it brings in; an
+  agent takes cash from the public, so they carry the two things a promoter does not. **What they
+  may sell is a list, not a level** — a bureau is handed the summer festival and not the members'
+  evening, and the refusal happens when they open the night rather than after four seats and
+  somebody's money. **Credit is money that moved, and everything else is counted**: only a payment
+  in, a settlement out and an adjustment somebody signed are written down, while what has been
+  sold, refunded and earned in commission is read from the allocations every time — so a refunded
+  ticket hands its credit straight back and no two columns can drift apart. A sale that would take
+  an agent past their limit is refused before a seat is held, and prepaid is the default: nought
+  means they sell what they have paid for and not a ticket more. The commission rate is stamped on
+  each booking, so agreeing a new percentage next season leaves last season alone. An agent gets a
+  sign-in of their own, sees only their own bookings and only the nights they were given, and has
+  their remaining credit in front of them all afternoon; the organiser gets the account, the ledger
+  and a statement per period.
 - **The hall in three dimensions** — a seating plan is a drawing of the floor, and a floor is not
   what anybody is buying. Four numbers turn one into a room: the height of the stage, the rake of
   each block, the height each block starts at and how deep its platform is. The designer has a
@@ -636,6 +651,15 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A night stays on its own chart until somebody says otherwise | `HallInThreeDimensionsTest`, `hall3d_smoke` |
 | A chart that has lost a sold seat is refused | `HallInThreeDimensionsTest` |
 | A chair clicked in the room lands in the basket | `hall3d_smoke` |
+| An agent sells what they were given and nothing else | `SalesAgentTest`, `agents_smoke` |
+| An agent cannot sell more than they have paid for | `SalesAgentTest`, `agents_smoke` |
+| What they owe is counted from the seats, so a refund returns the credit | `SalesAgentTest` |
+| The rate agreed today does not rewrite what was owed last season | `SalesAgentTest` |
+| A top-up is money in whichever way its sign was typed | `SalesAgentTest` |
+| An agent sees their own bookings and nobody else's | `SalesAgentTest` |
+| The statement bounds the sales and never the balance | `SalesAgentTest`, `agents_smoke` |
+| An agent who has sold something is switched off rather than deleted | `SalesAgentTest` |
+| A comp costs an agent nothing and is still theirs | `SalesAgentTest` |
 
 ## Installing the plugin
 

@@ -31,6 +31,7 @@ class ExternalOrder extends Model
         'currency', 'total_amount', 'donation', 'voucher_amount', 'buyer', 'metadata',
         'confirmed_at', 'cancelled_at', 'refunded_at', 'access_needs', 'promoter_id', 'attribution',
         'charged_back_at', 'chargeback_fee', 'chargeback_reason', 'group_name',
+        'sales_agent_id', 'agent_rate',
     ];
 
     protected $casts = [
@@ -45,6 +46,7 @@ class ExternalOrder extends Model
         'refunded_at' => 'datetime',
         'charged_back_at' => 'datetime',
         'chargeback_fee' => 'integer',
+        'agent_rate' => 'integer',
     ];
 
     public function event()

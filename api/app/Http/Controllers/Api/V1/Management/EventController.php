@@ -35,7 +35,20 @@ class EventController extends Controller
         // `seatMapVersion` as well: present() reads the published chart's categories, and a list of
         // events that lazy-loaded it would be one query per row — or, with lazy loading disabled,
         // a 500 on the first account that has two events.
+        /*
+         * An agent's programme is the list they were given.
+         *
+         * Not a screen decision: the counter, the availability call and every other thing that
+         * starts from "which events are there" reads this, and an agent who could see a night they
+         * may not sell would spend their morning being refused at the end of it.
+         */
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+
         $events = Event::with(['venue', 'priceZones', 'seatMapVersion'])
+            ->when($agent && ! $agent->all_events, fn ($query) => $query->whereIn(
+                'id',
+                \App\Models\SalesAgentEvent::where('sales_agent_id', $agent->id)->pluck('event_id')
+            ))
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('starts_at')
             ->paginate(min((int) $request->query('per_page', 25), 100));

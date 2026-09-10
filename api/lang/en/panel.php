@@ -27,6 +27,7 @@ return [
         'productions' => 'Productions',
         'counter' => 'The counter',
         'tills' => 'The till',
+        'agents' => 'Sales agents',
         'orders' => 'Orders',
         'plans' => 'Payment plans',
         'tickets' => 'Tickets',
@@ -1092,6 +1093,74 @@ return [
      | "centimetres" would be wrong in every venue that did not happen to draw at that scale. Rake
      | is a percentage, which is how a theatre's own drawings express it and is right at any scale.
      */
+    /*
+     | The shops and bureaux that sell an organiser's tickets over their own counter.
+     |
+     | The words keep "balance" and "available" apart on purpose: the first is what is between the
+     | two parties and the second is what is left to sell against, and an agent with a line of
+     | credit has two different numbers that a single word would collapse into a wrong one.
+     */
+    'agents' => [
+        'subtitle' => 'Shops and bureaux that sell your tickets. What each may sell, what they have paid in, and where their account stands.',
+        'add' => 'New agent',
+        'all' => 'All agents',
+        'open' => 'Open',
+        'name' => 'Agent',
+        'code' => 'Code',
+        'codeHint' => 'Short and theirs. Letters, digits, dots and dashes.',
+        'contact' => 'Who to ring',
+        'email' => 'Email',
+        'phone' => 'Telephone',
+        'rate' => 'Commission',
+        'rateHint' => 'What they keep of every ticket they sell. Stamped on each booking, so a new rate next season leaves last season alone.',
+        'creditLimit' => 'Credit limit',
+        'creditLimitHint' => 'How far past nought they may go. Nought means they sell what they have paid for and not a ticket more.',
+        'selling' => 'Selling',
+        'switchedOff' => 'switched off',
+        'maySell' => 'May sell',
+        'everything' => 'Everything',
+        'everythingHint' => 'This agent may sell every event, including nights added later.',
+        'someEvents' => ':count events',
+        'nothingAllowed' => 'Nothing yet. Until an event is given to them, there is nothing for them to sell.',
+        'chooseEvents' => 'Choose events',
+        'giveSignIn' => 'Give them a sign-in',
+        'signInHint' => 'Creates the account this agent signs in with. The password is shown once and never again — pass it on and have them change it.',
+        'signInMade' => 'Their sign-in',
+        'signInOnce' => 'Write this down now. It is not stored anywhere and cannot be shown again.',
+        'password' => 'Password',
+        'chooseEventsHint' => 'Tick the nights this agent may sell. The whole list is replaced, so what is unticked is taken away.',
+        'event' => 'Event',
+        'when' => 'When',
+        'sold' => 'Sold',
+        'seatsSold' => ':count seats',
+        'commission' => 'Commission',
+        'atRate' => 'at :rate%',
+        'balance' => 'Balance',
+        'owesUs' => 'owed to you',
+        'inHand' => 'paid in advance',
+        'available' => 'Left to sell',
+        'limitIs' => 'credit limit :amount',
+        'ledger' => 'The account',
+        'movement' => 'Movement',
+        'reference' => 'Reference',
+        'recordMovement' => 'Record money',
+        'movementHint' => 'Only money that actually moved. What they have sold, refunded and earned is counted from the tickets.',
+        'record' => 'Record',
+        'recorded' => 'Recorded.',
+        'noMovements' => 'Nothing has moved yet.',
+        'kinds' => [
+            'topup' => 'Paid in',
+            'settlement' => 'Paid out',
+            'adjustment' => 'Adjustment',
+        ],
+        'none' => 'No agents yet.',
+        'saved' => 'Saved.',
+        'needsNameAndCode' => 'An agent needs a name and a code.',
+        'needsAmount' => 'Say how much moved.',
+        'yourAccount' => 'Your account',
+        'yourCredit' => 'Left to sell against',
+    ],
+
     'hall3d' => [
         'title' => 'The hall in three dimensions',
         'lead' => 'What a plan cannot say: how high the stage is, how steeply the floor climbs, and how far above it the balcony sits.',

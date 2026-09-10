@@ -482,6 +482,365 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /sales-agents:
+    get:
+      operationId: listSalesAgents
+      tags: [Orders]
+      summary: The shops and bureaux that sell on the organiser's behalf
+      description: >
+        Not promoters. A promoter posts a link and is paid a percentage of what it brings in; an
+        agent takes money from the public over their own counter, which is why they carry the two
+        things a promoter does not — the list of what they may sell, and how far they may go before
+        they have paid for it.
+
+
+        Behind `agents.manage`, which the roles that hold the box office have and a seller does
+        not: the person who works the window is not thereby the person who extends an agency a line
+        of credit.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The agents, each with their account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SalesAgent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createSalesAgent
+      tags: [Orders]
+      summary: Take on an agent
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name: { type: string, maxLength: 160 }
+                code:
+                  type: string
+                  maxLength: 40
+                  description: Short, theirs, unique to the account. Letters, digits, dots, dashes.
+                contact_name: { type: [string, "null"], maxLength: 120 }
+                contact_email: { type: [string, "null"], format: email }
+                contact_phone: { type: [string, "null"], maxLength: 40 }
+                user_id:
+                  type: [string, "null"]
+                  format: uuid
+                  description: Who signs in as this agent, where they sell through the panel.
+                commission_rate:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000
+                  description: Basis points — 750 is 7.5%. Stamped on each booking as it is sold.
+                credit_limit:
+                  type: integer
+                  minimum: 0
+                  description: >
+                    How far past nought they may go, in the account's minor unit. Nought means
+                    prepaid: they sell what they have paid for and not a ticket more.
+                active: { type: boolean }
+                note: { type: [string, "null"], maxLength: 2000 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesAgent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /sales-agents/summary:
+    get:
+      operationId: mySalesAgentAccount
+      tags: [Orders]
+      summary: The agent's own view of their own account
+      description: >
+        No permission: it is about the caller. Somebody who is not an agent is answered with a null
+        agent rather than refused — a box-office user opening the same screen should be told they
+        are not one, not shown a wall.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: This caller's agent account, or null
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    oneOf:
+                      - $ref: "#/components/schemas/SalesAgent"
+                      - type: "null"
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        starts_at: { type: [string, "null"], format: date-time }
+                        status: { type: string }
+                        currency: { type: string }
+                  ledger:
+                    type: array
+                    items: { $ref: "#/components/schemas/AgentLedgerEntry" }
+
+  /sales-agents/{agent}:
+    parameters:
+      - { name: agent, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: showSalesAgent
+      tags: [Orders]
+      summary: One agent, what they may sell, and their account
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: The agent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SalesAgent"
+                  - type: object
+                    properties:
+                      events:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            starts_at: { type: [string, "null"], format: date-time }
+                            status: { type: string }
+                      ledger:
+                        type: array
+                        items: { $ref: "#/components/schemas/AgentLedgerEntry" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateSalesAgent
+      tags: [Orders]
+      summary: Change an agent's terms
+      description: >
+        A new commission rate applies to what is sold after it. Bookings already taken keep the
+        rate they were sold at, because agreeing a new percentage next season must not rewrite what
+        was owed for this one.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 160 }
+                code: { type: string, maxLength: 40 }
+                contact_name: { type: [string, "null"], maxLength: 120 }
+                contact_email: { type: [string, "null"], format: email }
+                contact_phone: { type: [string, "null"], maxLength: 40 }
+                user_id: { type: [string, "null"], format: uuid }
+                commission_rate: { type: integer, minimum: 0, maximum: 10000 }
+                credit_limit: { type: integer, minimum: 0 }
+                active: { type: boolean }
+                note: { type: [string, "null"], maxLength: 2000 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesAgent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteSalesAgent
+      tags: [Orders]
+      summary: Switch an agent off, or delete one who never sold anything
+      description: >
+        An agent with sales or movements against their name is deactivated rather than deleted:
+        what they sold is a fact about those bookings, and money between two parties is not settled
+        by forgetting whose it was. The response says which happened.
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: Deleted, or switched off
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+                  deactivated: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /sales-agents/{agent}/events:
+    parameters:
+      - { name: agent, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      operationId: setSalesAgentEvents
+      tags: [Orders]
+      summary: What this agent may sell
+      description: >
+        Replaced wholesale, for the same reason pricing is: partial edits across a list are where
+        "half the festival is still granted from last season" comes from. `all_events` is for the
+        house's own shops, which would otherwise need a row per night for ever.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                all_events: { type: boolean }
+                event_ids:
+                  type: array
+                  maxItems: 500
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The agent, with the list as it now stands
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /sales-agents/{agent}/credit:
+    parameters:
+      - { name: agent, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: recordAgentMovement
+      tags: [Orders]
+      summary: Money in from an agent, money out to them, or an adjustment
+      description: >
+        Only money that genuinely moved is written down. What an agent has sold, refunded and
+        earned in commission is counted from the allocations every time it is asked for — so a
+        refunded ticket returns its credit without anything having to remember to, and no two
+        columns can disagree.
+
+
+        Direction is decided by `kind`, not by the sign: a top-up is money in and a settlement is
+        money out, always, because an interface where a typo pays an agency instead of charging it
+        is one nobody can use. An adjustment keeps its sign, which is what an adjustment is.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, amount]
+              properties:
+                kind: { type: string, enum: [topup, settlement, adjustment] }
+                amount: { type: integer, description: "In the account's minor unit." }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                method: { type: [string, "null"], enum: [cash, card, transfer, null] }
+                reference: { type: [string, "null"], maxLength: 190 }
+                note: { type: [string, "null"], maxLength: 200 }
+      responses:
+        "201":
+          description: Recorded, with the account as it now stands
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /sales-agents/{agent}/sign-in:
+    parameters:
+      - { name: agent, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: createAgentSignIn
+      tags: [Orders]
+      summary: Give an agent a way in
+      description: >
+        A reseller is not a colleague being invited onto the team; they are a shop being handed a
+        key, usually over the telephone while somebody writes it down. So the account is created
+        here and the password is returned exactly once — the same bargain this API already makes
+        with a client secret, and for the same reason.
+
+
+        Takes `team.manage` as well as `agents.manage`: creating somebody who can sign in is the
+        team's business too. Refused where the address already belongs to a user, because two
+        accounts sharing an email is how a sign-in stops being evidence of who did something.
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: [string, "null"]
+                  format: email
+                  description: Defaults to the agent's contact address.
+                name: { type: [string, "null"], maxLength: 120 }
+      responses:
+        "201":
+          description: Created — the password is in this response and nowhere else
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string, format: email }
+                  password: { type: string }
+                  agent: { $ref: "#/components/schemas/SalesAgent" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /sales-agents/{agent}/statement:
+    parameters:
+      - { name: agent, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: salesAgentStatement
+      tags: [Orders]
+      summary: What an agent sold in a period, and what is outstanding now
+      description: >
+        The period bounds the sales and never the balance: a statement for March showing March's
+        balance would be a number nobody can pay.
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: The statement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agent:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      code: { type: string }
+                      commission_rate: { type: integer }
+                  from: { type: [string, "null"], format: date }
+                  to: { type: [string, "null"], format: date }
+                  period:
+                    type: object
+                    properties:
+                      sold: { type: integer }
+                      refunded: { type: integer }
+                      commission: { type: integer }
+                      due: { type: integer, description: "Sold less commission: what they owe for the period." }
+                      orders: { type: integer }
+                      seats: { type: integer }
+                  account: { $ref: "#/components/schemas/AgentAccount" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /events/{event}/chart-version:
     parameters:
       - { name: event, in: path, required: true, schema: { type: string, format: uuid } }
@@ -7889,6 +8248,61 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    SalesAgent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        code: { type: string }
+        contact_name: { type: [string, "null"] }
+        contact_email: { type: [string, "null"] }
+        contact_phone: { type: [string, "null"] }
+        user_id: { type: [string, "null"], format: uuid }
+        commission_rate: { type: integer, description: "Basis points — 750 is 7.5%." }
+        commission_percent: { type: number }
+        credit_limit: { type: integer }
+        all_events: { type: boolean }
+        active: { type: boolean }
+        note: { type: [string, "null"] }
+        event_count:
+          type: [integer, "null"]
+          description: How many nights they were given. Null where they may sell everything.
+        account: { $ref: "#/components/schemas/AgentAccount" }
+    AgentAccount:
+      type: object
+      description: >
+        Where an agent stands. Only `paid_in`, `settled_out` and `adjustments` are rows; everything
+        else is counted from the allocations at the moment of reading.
+      properties:
+        currency: { type: string }
+        paid_in: { type: integer }
+        settled_out: { type: integer, description: "Negative: money out to the agent." }
+        adjustments: { type: integer }
+        sold: { type: integer, description: "Face value of the seats they have sold that are still live." }
+        refunded: { type: integer }
+        commission: { type: integer, description: "At the rate stamped on each booking." }
+        balance:
+          type: integer
+          description: >
+            Paid in, less what they owe for what they sold, plus their commission. Negative means
+            the agent owes the organiser.
+        credit_limit: { type: integer }
+        available:
+          type: integer
+          description: The balance plus the credit limit — what the counter checks a sale against.
+        orders: { type: integer }
+        seats: { type: integer }
+    AgentLedgerEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [topup, settlement, adjustment] }
+        amount: { type: integer }
+        currency: { type: string }
+        method: { type: [string, "null"] }
+        reference: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+        at: { type: string, format: date-time }
     Production:
       type: object
       properties:

@@ -43,6 +43,7 @@ class BoxOfficeController extends Controller
         private readonly \App\Domain\Availability\BestAvailable $best,
         private readonly TicketMailer $mail,
         private readonly AuditLogger $audit,
+        private readonly \App\Domain\Agents\SalesAgents $agents,
     ) {}
 
     /**
@@ -54,6 +55,17 @@ class BoxOfficeController extends Controller
     public function counter(Request $request, Event $event)
     {
         $this->authorize($request, 'orders.sell');
+
+        // An agent opening a night they were not given is told so here, rather than after they
+        // have chosen four seats and taken somebody's money out of their hand.
+        $agent = $this->agents->forUser($request->user());
+
+        if ($agent && ! $this->agents->maySell($agent, $event)) {
+            throw ApiException::denied(
+                'agent_event_not_allowed',
+                'This agent has not been given this event to sell.',
+            );
+        }
 
         $states = [];
 
@@ -195,6 +207,25 @@ class BoxOfficeController extends Controller
             throw ApiException::conflict('event_not_sellable', 'This event is not on sale.');
         }
 
+        /*
+         * An agent sells what they were given, and only as far as they have paid.
+         *
+         * Checked here, before a single seat is held: an agent who has run out has run out, and
+         * finding that out after the hold means a queue to apologise to and an inventory lock to
+         * clean up. The price is worked out the same way the sale below does it — from the seats
+         * asked for — because a limit checked against a different number from the one charged is
+         * not a limit.
+         */
+        $agent = $this->agents->forUser($request->user());
+
+        if ($agent) {
+            $this->agents->assertCanSell(
+                $agent,
+                $event,
+                'comp' === $data['payment'] ? 0 : $this->quoteFor($event, $data),
+            );
+        }
+
         $wantsEmail = $request->boolean('send_tickets');
 
         if ($wantsEmail && empty($data['buyer']['email'])) {
@@ -264,6 +295,15 @@ class BoxOfficeController extends Controller
             $order->forceFill(['group_name' => $data['group_name']])->save();
         }
 
+        // Whose sale this is, and on what terms. The rate is copied rather than looked up later:
+        // agreeing a new percentage next season must not rewrite what was owed for this one.
+        if ($agent) {
+            $order->forceFill([
+                'sales_agent_id' => $agent->id,
+                'agent_rate' => (int) $agent->commission_rate,
+            ])->save();
+        }
+
         // A comp is worth nothing and must say so before the ticket exists: a report that counted
         // free seats as revenue would overstate the evening by exactly the generosity of the house.
         $totals = OrderTotals::for(
@@ -330,6 +370,39 @@ class BoxOfficeController extends Controller
     }
 
     /** How many places the hold is for, seats and standing together. */
+    /**
+     * What this basket comes to, before a single seat is held.
+     *
+     * Priced from the same availability the counter screen was drawn from, so the number an agent
+     * is refused against is the number they would have been charged. Approximate in one direction
+     * only — a seat that has gone in the meantime makes the hold fail, not the limit wrong.
+     */
+    private function quoteFor(Event $event, array $data): int
+    {
+        $wanted = array_flip($data['seat_ids'] ?? []);
+        $total = 0;
+
+        if ($wanted) {
+            foreach ($this->availability->forEvent($event) as $seat) {
+                if (isset($wanted[$seat['seat_id']])) {
+                    $total += (int) ($seat['amount'] ?? 0);
+                }
+            }
+        }
+
+        $areas = $this->availability->capacityForEvent($event);
+
+        foreach (($data['areas'] ?? []) as $id => $quantity) {
+            foreach ($areas as $area) {
+                if (($area['capacity_object_id'] ?? null) === $id) {
+                    $total += (int) ($area['amount'] ?? 0) * max(0, (int) $quantity);
+                }
+            }
+        }
+
+        return $total;
+    }
+
     private function places($hold): int
     {
         $snapshot = $hold->price_snapshot['decoded'] ?? [];

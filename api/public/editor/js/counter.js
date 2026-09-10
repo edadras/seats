@@ -28,8 +28,22 @@
 		Counter.App = App;
 		App.loading( App.t( 'panel.boxOffice.title' ) );
 
-		App.request( 'GET', '/events?per_page=100' )
-			.then( function ( response ) {
+		/*
+		 * The programme, and — where the person at the counter sells for somebody else — their own
+		 * account beside it.
+		 *
+		 * An agent selling on credit needs one number in front of them all afternoon: how much
+		 * they have left to sell against. Finding out at the end of a transaction that they ran out
+		 * three sales ago is a queue to apologise to.
+		 */
+		Promise.all( [
+			App.request( 'GET', '/events?per_page=100' ),
+			App.request( 'GET', '/sales-agents/summary' ).catch( function () { return { agent: null }; } ),
+		] )
+			.then( function ( answers ) {
+				var response = answers[ 0 ];
+
+				Counter.agent = answers[ 1 ].agent || null;
 				Counter.events = ( response.data || [] ).filter( function ( event ) {
 					return 'published' === event.status;
 				} );
@@ -50,6 +64,7 @@
 			title: App.t( 'panel.boxOffice.title' ),
 			description: esc( App.t( 'panel.boxOffice.description' ) ),
 			body:
+				Counter.agentStrip() +
 				( Counter.events.length
 					? '<div class="filters">' +
 						'<select class="select grow" id="counter-event" aria-label="' +
@@ -71,6 +86,42 @@
 		if ( picker ) {
 			picker.addEventListener( 'change', function () { Counter.choose( picker.value ); } );
 		}
+	};
+
+	/** What this agent has left to sell against, where the seller is one. */
+	Counter.agentStrip = function () {
+		var App = Counter.App;
+		var agent = Counter.agent;
+
+		if ( ! agent ) {
+			return '';
+		}
+
+		var account = agent.account || {};
+		var short = ( account.available || 0 ) <= 0;
+
+		return '<div class="stat-strip">' +
+			'<div class="tile tile--static">' +
+				'<span class="tile__label">' + esc( App.t( 'panel.agents.yourAccount' ) ) + '</span>' +
+				'<span class="tile__value tnum">' + esc( agent.name ) + '</span>' +
+				'<span class="tile__meta">' + esc( agent.code ) + '</span>' +
+			'</div>' +
+			'<div class="tile tile--static">' +
+				'<span class="tile__label">' + esc( App.t( 'panel.agents.yourCredit' ) ) + '</span>' +
+				'<span class="tile__value tnum' + ( short ? ' is-danger' : '' ) + '">' +
+					esc( App.money( account.available || 0, account.currency ) ) + '</span>' +
+				'<span class="tile__meta">' + esc( App.t( 'panel.agents.balance' ) ) + ' ' +
+					esc( App.money( account.balance || 0, account.currency ) ) + '</span>' +
+			'</div>' +
+			'<div class="tile tile--static">' +
+				'<span class="tile__label">' + esc( App.t( 'panel.agents.sold' ) ) + '</span>' +
+				'<span class="tile__value tnum">' +
+					esc( App.money( account.sold || 0, account.currency ) ) + '</span>' +
+				'<span class="tile__meta">' + esc( App.t( 'panel.agents.seatsSold', {
+					count: App.number( account.seats || 0 ),
+				} ) ) + '</span>' +
+			'</div>' +
+		'</div>';
 	};
 
 	Counter.choose = function ( eventId ) {
@@ -588,6 +639,20 @@
 								'/orders/' + sale.id + '/receipts',
 								sale.reference
 							);
+						}
+
+						// An agent has just spent some of their credit; the strip must not go on
+						// saying what it was before the sale.
+						if ( Counter.agent ) {
+							App.request( 'GET', '/sales-agents/summary' )
+								.then( function ( mine ) {
+									Counter.agent = mine.agent || null;
+									Counter.paint();
+									Counter.choose( Counter.eventId );
+								} )
+								.catch( function () { Counter.choose( Counter.eventId ); } );
+
+							return;
 						}
 
 						Counter.choose( Counter.eventId );

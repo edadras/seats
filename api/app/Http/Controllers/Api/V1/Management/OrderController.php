@@ -45,7 +45,17 @@ class OrderController extends Controller
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
         ]);
 
+        /*
+         * An agent sees their own bookings and nobody else's.
+         *
+         * `orders.view` is what lets somebody look up a booking they took; it is not a licence to
+         * read the customers of the bureau across town. Applied to the query rather than to the
+         * screen, because a filter that lives in a panel is a filter an API call goes around.
+         */
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+
         $orders = ExternalOrder::query()
+            ->when($agent, fn ($query) => $query->where('sales_agent_id', $agent->id))
             ->with(['event:id,name,starts_at,timezone'])
             // One query for the seat counts rather than one per row: a list of fifty orders was
             // fifty extra queries, and with lazy loading off it was fifty errors.
@@ -70,6 +80,14 @@ class OrderController extends Controller
     public function show(Request $request, ExternalOrder $order)
     {
         $this->authorize($request, 'orders.view');
+
+        $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
+
+        // Not found rather than forbidden: whether a booking exists is not an agent's business
+        // either, and a refusal that distinguishes the two is a way of asking.
+        if ($agent && $order->sales_agent_id !== $agent->id) {
+            throw ApiException::notFound('That booking cannot be found.', 'unknown_order');
+        }
 
         $order->load(['event.venue', 'allocations.ticket', 'apiClient']);
 

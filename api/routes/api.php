@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\V1\Management\ReportController;
 use App\Http\Controllers\Api\V1\Management\ReportPageController;
 use App\Http\Controllers\Api\V1\Management\RenewalController as ManagementRenewals;
 use App\Http\Controllers\Api\V1\Management\ResaleController;
+use App\Http\Controllers\Api\V1\Management\SalesAgentController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\ProductionController;
@@ -174,6 +175,29 @@ Route::prefix('v1')->group(function () {
         Route::delete('productions/{production}', [ProductionController::class, 'destroy']);
         // The same show, somewhere else: a copy that knows it is going to another building.
         Route::post('productions/{production}/dates', [ProductionController::class, 'addDate']);
+
+        /*
+         * The shops and bureaux that sell on the organiser's behalf.
+         *
+         * Behind `agents.manage` — deciding what somebody may sell, and how far they may go before
+         * they have paid for it, is not the same job as working the window.
+         */
+        Route::get('sales-agents', [SalesAgentController::class, 'index']);
+        Route::post('sales-agents', [SalesAgentController::class, 'store']);
+        // Before `{agent}`: "summary" is not an agent id and would match nothing.
+        Route::get('sales-agents/summary', [SalesAgentController::class, 'summary']);
+        Route::get('sales-agents/{agent}', [SalesAgentController::class, 'show']);
+        Route::patch('sales-agents/{agent}', [SalesAgentController::class, 'update']);
+        Route::delete('sales-agents/{agent}', [SalesAgentController::class, 'destroy']);
+        // What they may sell, replaced wholesale: partial edits across a list are where "half the
+        // festival is still granted from last season" comes from.
+        Route::put('sales-agents/{agent}/events', [SalesAgentController::class, 'allow']);
+        // Money in, money out, and what is between the two parties today.
+        Route::post('sales-agents/{agent}/credit', [SalesAgentController::class, 'record']);
+        // A way in for the agent themselves. Takes `team.manage` as well as `agents.manage`:
+        // creating somebody who can sign in is the team's business too.
+        Route::post('sales-agents/{agent}/sign-in', [SalesAgentController::class, 'signIn']);
+        Route::get('sales-agents/{agent}/statement', [SalesAgentController::class, 'statement']);
 
         // A school pays a deposit in November and the balance in March. The seats are theirs from
         // the first payment; the codes that open a door arrive with the last.

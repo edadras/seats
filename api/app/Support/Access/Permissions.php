@@ -55,6 +55,16 @@ final class Permissions
          * them ask a manager would push the whole thing back onto a spreadsheet.
          */
         'vouchers.manage' => 'boxoffice',
+        /*
+         * The shops and bureaux that sell on the organiser's behalf, and their accounts.
+         *
+         * Beside the box office rather than under the account, because it is the same kind of act:
+         * deciding what somebody may sell and how far they may go before they have paid for it.
+         * Separate from `orders.sell` for the reason every one of these is separate — the person
+         * who works the window is not thereby the person who extends an agency eleven thousand
+         * euros of credit.
+         */
+        'agents.manage' => 'boxoffice',
 
         // --- The door ------------------------------------------------------------------
         'checkins.view' => 'door',
@@ -106,7 +116,7 @@ final class Permissions
             'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
-            'vouchers.manage',
+            'vouchers.manage', 'agents.manage',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish', 'domains.manage',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
@@ -118,7 +128,7 @@ final class Permissions
             'events.view', 'events.manage', 'events.publish', 'pricing.manage', 'discounts.manage',
             'venues.view', 'venues.manage', 'maps.view', 'maps.manage', 'maps.publish',
             'tickets.view', 'tickets.release', 'orders.view', 'orders.refund', 'orders.sell',
-            'vouchers.manage',
+            'vouchers.manage', 'agents.manage',
             'checkins.view', 'devices.manage',
             'sites.view', 'sites.manage', 'sites.publish',
             'reports.attendance.view', 'reports.orders.view', 'reports.build',
@@ -138,6 +148,23 @@ final class Permissions
             'checkins.view', 'devices.manage',
             'reports.attendance.view',
         ],
+        /*
+         * Somebody who sells for the organiser without working for them.
+         *
+         * Deliberately thin, and thinner than the box office in the two places that matter: no
+         * refunds, because money back is the organiser's decision, and no vouchers, because that
+         * is the organiser's money. What an agent may sell is not in this list at all — it is the
+         * list of events they were given, checked at the moment of sale.
+         */
+        'agent' => [
+            'events.view',
+            'venues.view',
+            'maps.view',
+            'tickets.view',
+            'orders.view',
+            'orders.sell',
+        ],
+
         'viewer' => [
             'events.view', 'venues.view', 'maps.view', 'sites.view',
             'reports.attendance.view',
@@ -145,7 +172,7 @@ final class Permissions
     ];
 
     /** The keys nobody may take for a custom role. */
-    public const RESERVED_ROLE_KEYS = ['owner', 'admin', 'manager', 'box_office', 'door', 'viewer'];
+    public const RESERVED_ROLE_KEYS = ['owner', 'admin', 'manager', 'box_office', 'door', 'agent', 'viewer'];
 
     public static function exists(string $permission): bool
     {
