@@ -283,4 +283,16 @@ return [
         'closed' => 'أُغلق حجز هذا العرض.',
         'notYet' => 'لم تُطرح تذاكر هذا العرض للبيع بعد.',
     ],
+    'wallet' => [
+        'apple' => 'أضِف إلى Apple Wallet',
+        'google' => 'احفَظ في Google Wallet',
+        'seat' => 'المقعد',
+        'entry' => 'وقت الدخول',
+        'ticketType' => 'التذكرة',
+        'reference' => 'رقم الحجز',
+        'event' => 'الفعالية',
+        'venue' => 'المكان',
+        'doors' => 'البداية',
+        'code' => 'الرمز',
+    ],
 ];

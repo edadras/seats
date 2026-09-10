@@ -284,4 +284,16 @@ return [
         'closed' => 'Der Vorverkauf für diese Vorstellung ist geschlossen.',
         'notYet' => 'Tickets für diese Vorstellung sind noch nicht im Verkauf.',
     ],
+    'wallet' => [
+        'apple' => 'Zu Apple Wallet hinzufügen',
+        'google' => 'In Google Wallet sichern',
+        'seat' => 'Platz',
+        'entry' => 'Einlass',
+        'ticketType' => 'Ticket',
+        'reference' => 'Buchung',
+        'event' => 'Veranstaltung',
+        'venue' => 'Ort',
+        'doors' => 'Beginn',
+        'code' => 'Code',
+    ],
 ];

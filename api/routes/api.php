@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\Management\TicketTypeController;
 use App\Http\Controllers\Api\V1\Management\TwoFactorController;
 use App\Http\Controllers\Api\V1\Management\WaitingListController as ManagementWaitingList;
 use App\Http\Controllers\Api\V1\Management\VenueController;
+use App\Http\Controllers\Api\V1\Management\WalletController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -247,6 +248,12 @@ Route::prefix('v1')->group(function () {
         // The panel's first screen, in one request: six spinners settling at different times is
         // not a first impression. What it may include is decided permission by permission inside.
         Route::get('overview', [OverviewController::class, 'index']);
+
+        // Where an organiser puts their own Apple and Google credentials. Nothing secret comes
+        // back out: the screen says whether each half is configured, never what it holds.
+        Route::get('wallet', [WalletController::class, 'show']);
+        Route::put('wallet', [WalletController::class, 'update']);
+        Route::post('wallet/test', [WalletController::class, 'test']);
 
         // Read-only, by construction. An audit trail an administrator can edit is a diary.
         Route::get('audit', [AuditController::class, 'index']);

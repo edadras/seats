@@ -60,6 +60,7 @@
 			{ key: 'modules', icon: 'puzzle' },
 			{ key: 'team', icon: 'users' },
 			{ key: 'security', icon: 'lock' },
+			{ key: 'wallet', icon: 'ticket' },
 			{ key: 'audit', icon: 'history' },
 		] },
 	];
@@ -615,6 +616,7 @@
 			case 'questions': return window.SeatmapQuestions.render( this );
 			case 'entryslots': return window.SeatmapEntrySlots.render( this );
 			case 'security': return window.SeatmapSecurity.render( this );
+			case 'wallet': return window.SeatmapWallet.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );

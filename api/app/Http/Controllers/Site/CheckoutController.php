@@ -18,6 +18,7 @@ use App\Models\Hold;
 use App\Models\Site;
 use App\Support\Locale\Money;
 use App\Support\Pdf\InvoicePdf;
+use App\Domain\Wallet\Wallets;
 use App\Support\Pdf\TicketPdf;
 use App\Support\Qr\QrRenderer;
 use Illuminate\Http\Request;
@@ -390,6 +391,34 @@ class CheckoutController extends Controller
      * work, and opened on a phone that has never seen this website. How it is built — and why that
      * takes a text engine rather than a template — is in App\Support\Pdf\TicketPdf.
      */
+    /**
+     * Straight into the phone, while the codes still exist.
+     *
+     * The plaintext codes live for one request — at issue time, in this session, and nowhere else
+     * — so this is the moment a pass can be made without reissuing anything. Which is exactly why
+     * it is offered on the confirmation page and not only in an account somebody logs into later.
+     */
+    public function wallet(Request $request, string $reference, string $platform)
+    {
+        $site = $request->attributes->get('site');
+        $order = $this->ownOrder($request, $reference);
+        $tokens = (array) $request->session()->get('seatmap_tokens', []);
+        $wallets = app(Wallets::class);
+
+        if ('google' === $platform) {
+            return redirect()->away($wallets->google($site, $order, $tokens));
+        }
+
+        $pass = $wallets->apple($site, $order, $tokens);
+
+        return response($pass['body'], 200, [
+            'Content-Type' => $pass['type'],
+            'Content-Disposition' => 'attachment; filename="'.$pass['filename'].'"',
+            // The codes in here open a door. Nothing between us and the buyer keeps a copy.
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     public function tickets(Request $request, string $reference)
     {
         $site = $request->attributes->get('site');
@@ -466,6 +495,9 @@ class CheckoutController extends Controller
             'order' => $order,
             'tokens' => $tokens,
             'invoice' => app(InvoiceIssuer::class)->isEligible($site, $order),
+            // Offered only where pressing it will actually work: "enabled" is a switch somebody
+            // flicked, and a button that hands back an error is worse than no offer at all.
+            'wallets' => $tokens ? app(Wallets::class)->offered() : ['apple' => false, 'google' => false],
             'qr' => fn (string $token) => $this->qr->dataUri($token, 200),
         ]);
     }

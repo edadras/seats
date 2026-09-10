@@ -8,6 +8,7 @@ use App\Domain\Refunds\RefundRequests;
 use App\Domain\Orders\TicketTransfers;
 use App\Domain\Sites\Auth\GoogleIdentity;
 use App\Domain\Sites\Themes;
+use App\Domain\Wallet\Wallets;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Site\Concerns\RendersSitePages;
 use App\Models\ExternalOrder;
@@ -51,6 +52,7 @@ class BuyerAccountController extends Controller
             'buyer' => $buyer,
             'orders' => $buyer ? $this->orders($site, $buyer['email']) : [],
             'canSignIn' => $this->available($site),
+            'wallets' => app(Wallets::class)->offered(),
             'notice' => $request->query('signin'),
         ]);
     }
@@ -110,6 +112,40 @@ class BuyerAccountController extends Controller
      * hand back what it does not have — so the page says so before the button is pressed, and a
      * browser prefetching a link must never be able to invalidate somebody's ticket.
      */
+    /**
+     * The same booking, into a phone's wallet.
+     *
+     * A reissue, like the PDF beside it and for the same reason: the platform keeps a hash of the
+     * code it emailed and cannot hand that code back, so the only way to put a working ticket in a
+     * wallet later is to make a new one. The warning is on the button.
+     */
+    public function wallet(Request $request, string $reference, string $platform)
+    {
+        $site = $request->attributes->get('site');
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            throw new NotFoundHttpException('Not signed in.');
+        }
+
+        $order = $this->ownOrder($buyer['email'], $reference);
+        $tokens = $this->reissueAll($order);
+        $wallets = app(Wallets::class);
+        $fresh = $order->fresh(['allocations.ticket', 'event.venue']);
+
+        if ('google' === $platform) {
+            return redirect()->away($wallets->google($site, $fresh, $tokens));
+        }
+
+        $pass = $wallets->apple($site, $fresh, $tokens);
+
+        return response($pass['body'], 200, [
+            'Content-Type' => $pass['type'],
+            'Content-Disposition' => 'attachment; filename="'.$pass['filename'].'"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
     public function tickets(Request $request, string $reference)
     {
         $site = $request->attributes->get('site');
@@ -120,15 +156,7 @@ class BuyerAccountController extends Controller
         }
 
         $order = $this->ownOrder($buyer['email'], $reference);
-        $tokens = [];
-
-        foreach ($order->allocations as $allocation) {
-            $ticket = $this->tickets->reissue($allocation);
-
-            if ($ticket?->plainToken) {
-                $tokens[$allocation->id] = $ticket->plainToken;
-            }
-        }
+        $tokens = $this->reissueAll($order);
 
         $pdf = app(TicketPdf::class)->render($site, $order->fresh(['allocations.ticket', 'event.venue']), $tokens);
 
@@ -245,6 +273,29 @@ class BuyerAccountController extends Controller
         return redirect('/account')->with('seatmap_message', __(
             'approved' === $asked->status ? 'site.refunds.done' : 'site.refunds.asked'
         ));
+    }
+
+    /**
+     * New codes for every ticket on a booking.
+     *
+     * Shared by the PDF and the wallet passes, because they are the same act: the old codes stop
+     * working the moment these exist, and doing that twice in two places is doing it twice.
+     *
+     * @return array<string, string> allocation id => plaintext code
+     */
+    private function reissueAll(ExternalOrder $order): array
+    {
+        $tokens = [];
+
+        foreach ($order->allocations as $allocation) {
+            $ticket = $this->tickets->reissue($allocation);
+
+            if ($ticket?->plainToken) {
+                $tokens[$allocation->id] = $ticket->plainToken;
+            }
+        }
+
+        return $tokens;
     }
 
     private function orders(Site $site, string $email): array

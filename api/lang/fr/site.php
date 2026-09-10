@@ -283,4 +283,16 @@ return [
         'closed' => 'La billetterie de cette représentation est fermée.',
         'notYet' => 'Les billets de cette représentation ne sont pas encore en vente.',
     ],
+    'wallet' => [
+        'apple' => 'Ajouter à Apple Wallet',
+        'google' => 'Enregistrer dans Google Wallet',
+        'seat' => 'Place',
+        'entry' => 'Entrée',
+        'ticketType' => 'Billet',
+        'reference' => 'Réservation',
+        'event' => 'Événement',
+        'venue' => 'Lieu',
+        'doors' => 'Début',
+        'code' => 'Code',
+    ],
 ];

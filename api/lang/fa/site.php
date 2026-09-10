@@ -283,4 +283,16 @@ return [
         'closed' => 'فروش بلیط این اجرا بسته شده است.',
         'notYet' => 'بلیط این اجرا هنوز به فروش نرسیده است.',
     ],
+    'wallet' => [
+        'apple' => 'افزودن به Apple Wallet',
+        'google' => 'ذخیره در Google Wallet',
+        'seat' => 'صندلی',
+        'entry' => 'زمان ورود',
+        'ticketType' => 'بلیت',
+        'reference' => 'شمارهٔ رزرو',
+        'event' => 'رویداد',
+        'venue' => 'مکان',
+        'doors' => 'شروع',
+        'code' => 'کد',
+    ],
 ];

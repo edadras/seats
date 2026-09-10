@@ -283,4 +283,16 @@ return [
         'closed' => 'La vendita per questa rappresentazione è chiusa.',
         'notYet' => 'I biglietti per questa rappresentazione non sono ancora in vendita.',
     ],
+    'wallet' => [
+        'apple' => 'Aggiungi ad Apple Wallet',
+        'google' => 'Salva in Google Wallet',
+        'seat' => 'Posto',
+        'entry' => 'Ingresso',
+        'ticketType' => 'Biglietto',
+        'reference' => 'Prenotazione',
+        'event' => 'Evento',
+        'venue' => 'Luogo',
+        'doors' => 'Inizio',
+        'code' => 'Codice',
+    ],
 ];

@@ -155,6 +155,20 @@
                                      ticket again is to make a new one. --}}
                                 <span class="field__hint">{{ __('site.account.reissueWarning') }}</span>
                             </form>
+
+                            @foreach (['apple', 'google'] as $platform)
+                                @if ($wallets[$platform])
+                                    {{-- A reissue as well, which is why it is a form rather than a
+                                         link a mail client could prefetch. --}}
+                                    <form class="order__actions" method="POST"
+                                          action="/account/orders/{{ $order['reference'] }}/wallet/{{ $platform }}">
+                                        @csrf
+                                        <button class="button button--quiet" type="submit">
+                                            {{ __('site.wallet.'.$platform) }}
+                                        </button>
+                                    </form>
+                                @endif
+                            @endforeach
                         @else
                             <p class="field__hint">{{ __('site.account.nothingToReissue') }}</p>
                         @endif

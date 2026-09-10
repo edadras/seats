@@ -287,4 +287,16 @@ return [
         'closed' => 'Booking for this performance has closed.',
         'notYet' => 'Tickets for this performance are not on sale yet.',
     ],
+    'wallet' => [
+        'apple' => 'Add to Apple Wallet',
+        'google' => 'Save to Google Wallet',
+        'seat' => 'Seat',
+        'entry' => 'Arrive',
+        'ticketType' => 'Ticket',
+        'reference' => 'Booking',
+        'event' => 'Event',
+        'venue' => 'Venue',
+        'doors' => 'Starts',
+        'code' => 'Code',
+    ],
 ];

@@ -33,6 +33,18 @@
                        download>{{ __('site.invoice.download') }}</a>
                 @endif
 
+                @if ($wallets['apple'])
+                    <a class="button button--quiet" href="/order/{{ $order->external_order_id }}/wallet/apple">
+                        {{ __('site.wallet.apple') }}
+                    </a>
+                @endif
+
+                @if ($wallets['google'])
+                    <a class="button button--quiet" href="/order/{{ $order->external_order_id }}/wallet/google">
+                        {{ __('site.wallet.google') }}
+                    </a>
+                @endif
+
                 @if ($order->event)
                     <a class="button button--secondary"
                        href="/events/{{ $order->event->public_id }}/calendar.ics"

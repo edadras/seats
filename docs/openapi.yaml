@@ -49,6 +49,7 @@ tags:
   - name: Embed
   - name: WooCommerce
   - name: Tickets
+  - name: Wallet
   - name: Orders
   - name: Discounts
   - name: Box office
@@ -941,6 +942,99 @@ paths:
                 type: object
                 properties:
                   status: { type: string, enum: [declined] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /wallet:
+    get:
+      operationId: getWalletSettings
+      tags: [Wallet]
+      summary: Whether this account can put a ticket in a phone
+      description: |
+        Requires `account.manage`. What is stored behind this endpoint can mint passes in the
+        organiser's name — the same class of secret as an API key — so it is not a thing a box
+        office clerk reaches.
+
+        No secret is ever returned. The response says whether each half is configured and whether
+        the two together can actually sign; a screen that displayed a private key would be a screen
+        that leaked one.
+
+        `ready` is the field that matters. `enabled` is a switch somebody flicked; `ready` is
+        whether flicking it can sign anything, and only `ready` puts a button in front of a buyer.
+      responses:
+        "200":
+          description: The settings, without the secrets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WalletSettings" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    put:
+      operationId: updateWalletSettings
+      tags: [Wallet]
+      summary: Store the organiser's own wallet credentials
+      description: |
+        Requires `account.manage`. The credentials are the organiser's, always: an Apple pass is
+        signed with a certificate issued to a named Apple Developer account and a Google pass with
+        a service account belonging to a named issuer. This platform cannot issue either on
+        anybody's behalf, and a pass it signed would say it sold the ticket.
+
+        A secret field left out of the body keeps what is stored; sent as an empty string, it is
+        removed. The distinction exists so that changing a colour does not mean pasting a
+        certificate again.
+
+        Everything secret is encrypted at rest and never comes back out.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WalletSettingsInput" }
+      responses:
+        "200":
+          description: The settings as they now stand
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WalletSettings" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /wallet/test:
+    post:
+      operationId: testWalletCredentials
+      tags: [Wallet]
+      summary: Sign a throwaway pass and see
+      description: |
+        Requires `account.manage`. A certificate that cannot sign is indistinguishable from one
+        that can until a buyer presses a button, so this presses it: a pass for nobody, built and
+        signed and thrown away. No ticket is involved and nothing is stored.
+
+        A failure answers with the real reason rather than "it did not work". These are somebody
+        else's certificates, and the difference between a wrong password and a wrong file is the
+        whole of the debugging.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform]
+              properties:
+                platform: { type: string, enum: [apple, google] }
+      responses:
+        "200":
+          description: Whether it signed, and why not
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  reason:
+                    type: string
+                    description: >-
+                      Absent when it signed. One of no_site, apple_wallet_not_set_up,
+                      apple_certificate_unreadable, apple_key_unreadable, apple_signing_failed,
+                      pass_not_written, google_wallet_not_set_up,
+                      google_service_account_unreadable or google_signing_failed.
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
@@ -5156,6 +5250,70 @@ components:
             email: { type: [string, "null"] }
             status: { type: string }
             total: { type: string, description: "Formatted in the reader's language." }
+
+    WalletSettings:
+      type: object
+      description: >-
+        What is configured, never what is stored. Each `has_*` says a secret is present; `ready`
+        says the pieces together can actually sign, which is the only thing that puts a button in
+        front of a buyer.
+      properties:
+        apple:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            pass_type_id: { type: [string, "null"] }
+            team_id: { type: [string, "null"] }
+            has_certificate: { type: boolean }
+            has_key: { type: boolean }
+            has_wwdr:
+              type: boolean
+              description: >-
+                Apple's intermediate certificate, which has to travel with the signature or a phone
+                will refuse the pass whatever it does on a desk.
+            ready: { type: boolean }
+        google:
+          type: object
+          properties:
+            enabled: { type: boolean }
+            issuer_id: { type: [string, "null"] }
+            has_service_account: { type: boolean }
+            ready: { type: boolean }
+        look:
+          type: object
+          properties:
+            background_colour: { type: [string, "null"] }
+            text_colour: { type: [string, "null"] }
+            logo_text: { type: [string, "null"] }
+
+    WalletSettingsInput:
+      type: object
+      description: >-
+        A secret field omitted keeps what is stored; sent as an empty string it is removed. Nothing
+        here is ever read back.
+      properties:
+        apple_enabled: { type: boolean }
+        apple_pass_type_id: { type: [string, "null"], maxLength: 190 }
+        apple_team_id: { type: [string, "null"], maxLength: 60 }
+        apple_certificate:
+          type: [string, "null"]
+          maxLength: 20000
+          description: "The pass certificate in PEM, including the BEGIN and END lines."
+        apple_key: { type: [string, "null"], maxLength: 20000 }
+        apple_key_password:
+          type: [string, "null"]
+          maxLength: 190
+          description: "Only where the key is encrypted."
+        apple_wwdr: { type: [string, "null"], maxLength: 20000 }
+        google_enabled: { type: boolean }
+        google_issuer_id: { type: [string, "null"], maxLength: 60 }
+        google_service_account:
+          type: [string, "null"]
+          maxLength: 20000
+          description: "The whole service-account JSON file Google issued."
+        background_colour: { type: [string, "null"], maxLength: 20 }
+        text_colour: { type: [string, "null"], maxLength: 20 }
+        logo_text: { type: [string, "null"], maxLength: 60 }
 
     EntrySlot:
       type: object

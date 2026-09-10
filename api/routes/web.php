@@ -44,6 +44,10 @@ Route::middleware('site')->group(function () {
     Route::get('order/{reference}', [CheckoutController::class, 'confirmation']);
     // The same tickets, laid out for paper and for the browser's own "Save as PDF".
     Route::get('order/{reference}/tickets', [CheckoutController::class, 'tickets']);
+    // Straight into a phone, while the codes still exist in this session.
+    Route::get('order/{reference}/wallet/{platform}', [CheckoutController::class, 'wallet'])
+        ->whereIn('platform', ['apple', 'google'])
+        ->middleware('throttle:30,1');
     // The document the buyer's accounts department will want. Numbered on the first ask, and only
     // for a booking that was actually paid for.
     Route::get('order/{reference}/invoice', [CheckoutController::class, 'invoice'])
@@ -85,6 +89,10 @@ Route::middleware('site')->group(function () {
     // mints another, which is not something a link a mail client can prefetch should be able to do.
     // "Can I have my money back?" — granted at once inside the organiser's own terms, and put in
     // front of the box office outside them.
+    // A reissue, like the PDF beside it: the old codes stop working, and the button says so.
+    Route::post('account/orders/{reference}/wallet/{platform}', [BuyerAccountController::class, 'wallet'])
+        ->whereIn('platform', ['apple', 'google'])
+        ->middleware('throttle:20,1');
     Route::post('account/orders/{reference}/refund', [BuyerAccountController::class, 'refund'])
         ->middleware('throttle:10,1');
     Route::post('account/orders/{reference}/transfer', [BuyerAccountController::class, 'transfer'])

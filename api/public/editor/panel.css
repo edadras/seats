@@ -2663,3 +2663,47 @@
 .feed__what { font-size: var(--text-sm); font-weight: 600; }
 .feed__subject { font-size: var(--text-xs); color: var(--text-secondary); }
 .feed__who { font-size: var(--text-xs); color: var(--text-muted); }
+
+/* ------------------------------------------------------------------- wallet passes */
+
+/*
+ * Two credential cards that sit side by side while there is room for both and stack when there
+ * is not. Apple and Google are asked for the same thing twice, so they read best as a pair.
+ */
+.cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+	gap: var(--s-4);
+	align-items: start;
+}
+
+.card__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-2);
+	margin-block-end: var(--s-3);
+}
+
+.card__head .subhead { margin: 0; }
+
+.wallet-card { display: flex; flex-direction: column; gap: var(--s-3); }
+.wallet-card .btn { align-self: flex-start; }
+
+/*
+ * A box somebody pastes a certificate into.
+ *
+ * Tall enough to see that something arrived, monospaced so a stray character shows, and never
+ * resizable sideways: a PEM block is long and the card is not.
+ */
+.input--pem {
+	block-size: auto;
+	min-block-size: 4.5rem;
+	padding-block: var(--s-2);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	line-height: 1.5;
+	resize: vertical;
+	white-space: pre;
+	overflow-wrap: normal;
+}
