@@ -82,6 +82,12 @@ class OrderService
          * confirmation is therefore not held to the limit at all, which is the honest consequence
          * of that ordering and is written down in the contract rather than papered over.
          */
+        // Who may not buy from this organiser at all, asked before the money rather than at the
+        // door: a person barred at a turnstile has already paid, and getting that back is a
+        // conversation nobody wants to have on the night.
+        app(\App\Domain\Risk\Blocklist::class)
+            ->assertNotBlocked($buyer['email'] ?? null, $buyer['phone'] ?? null);
+
         if ($email = ($buyer['email'] ?? null)) {
             app(\App\Domain\Access\PurchaseLimits::class)
                 ->assertWithin($hold->event, $email, $this->placesIn($hold), $client);

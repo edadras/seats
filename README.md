@@ -78,6 +78,13 @@ A seat is the start of it, not the end. Around the map:
   what they are paying and an organiser can reconcile it. **Invoices** carry a VAT number.
 - **Discount codes**, percentage or fixed, per event or account-wide, with a cap on uses and a
   record of who spent them.
+- **Chargebacks and blocking** — a chargeback is not a refund and is not recorded as one: a refund is
+  the organiser deciding, a chargeback is the bank deciding, usually against them and with a fee.
+  Recording one releases the seats and voids the tickets in the same transaction whatever the
+  refund policy says, because a booking nobody paid for is not a booking and the code at the door
+  has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
+  carry a date that lifts it without anybody acting, and is checked where a booking is registered so
+  the refusal arrives before the money — with a sentence, not a silent failure.
 - **Sales attribution and promoter links** — a promoter is a person an organiser created on purpose,
   with a name, a link of their own and a percentage, which is what makes it safe to pay against; a
   `utm_source` is a string anybody can type. What was clicked is stamped on the booking once, name
@@ -558,6 +565,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A refund takes the commission back with it | `PromoterAttributionTest` |
 | A link older than the window has stopped selling | `PromoterAttributionTest` |
 | A promoter who has sold something is switched off rather than deleted | `PromoterAttributionTest` |
+| A chargeback puts the seats back and stops the ticket at the door | `ChargebackTest`, `chargeback_smoke` |
+| The same dispute reported twice is one chargeback | `ChargebackTest` |
+| A chargeback is told apart from a refund in the takings | `ChargebackTest` |
+| A block lapses on its date without anybody acting | `ChargebackTest` |
+| A blocked buyer is refused before the money, and told to ring | `ChargebackTest`, `chargeback_smoke` |
 
 ## Installing the plugin
 

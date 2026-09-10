@@ -545,6 +545,19 @@ class CheckoutController extends Controller
                 return redirect('/checkout')->with('seatmap_addon_error', $e->localisedMessage());
             }
 
+            if ('buyer_blocked' === $e->errorCode()) {
+                /*
+                 * They may not book from this organiser.
+                 *
+                 * Back to the checkout with the sentence, exactly as every other refusal here: a
+                 * buyer who meets a page of JSON telephones the box office to ask what happened,
+                 * and the person who answers cannot see it either. The reason somebody typed on
+                 * the block is deliberately not in it — that is a note about a person, not a
+                 * message to them.
+                 */
+                return redirect('/checkout')->with('seatmap_checkout_error', $e->localisedMessage());
+            }
+
             if ('buyer_limit_reached' === $e->errorCode()) {
                 /*
                  * They already hold as many as this night allows one person.

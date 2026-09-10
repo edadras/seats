@@ -321,6 +321,12 @@
 				( 'pending' === order.status
 					? '<button class="btn btn--danger" id="order-cancel">' +
 						esc( App.t( 'panel.orders.cancel' ) ) + '</button>'
+					: '' ) +
+				// The bank taking the money back, which is not a refund and must not be recorded
+				// as one: the settlement has to be able to tell what was given from what was taken.
+				( 'confirmed' === order.status || 'partially_refunded' === order.status
+					? '<button class="btn btn--danger" id="order-chargeback">' +
+						esc( App.t( 'panel.orders.chargeback' ) ) + '</button>'
 					: '' ),
 			body:
 				'<div class="stat-strip">' +
@@ -398,12 +404,58 @@
 		} );
 
 		bind( 'order-refund', function () { Orders.refund( open ); } );
+		bind( 'order-chargeback', function () { Orders.chargeback(); } );
 		bind( 'order-cancel', function () { Orders.cancel(); } );
 		bind( 'order-resend', function () { Orders.resend(); } );
 	};
 
 	Orders.badgeText = function ( status ) {
 		return Orders.App.t( 'panel.customers.orderStatus.' + status );
+	};
+
+	/**
+	 * Recording that the bank took the money back.
+	 *
+	 * Not a refund, and deliberately a different button: this releases the seats and voids the
+	 * tickets whatever the organiser's refund policy says, because a booking nobody paid for is not
+	 * a booking. Barring the person is offered here and ticked by hand — a disputed payment is
+	 * sometimes a stolen card and sometimes somebody who could not reach anybody about a train.
+	 */
+	Orders.chargeback = function () {
+		var App = Orders.App;
+		var order = Orders.order;
+
+		App.modal( {
+			title: App.t( 'panel.orders.chargebackTitle' ),
+			submitLabel: App.t( 'panel.orders.chargeback' ),
+			danger: true,
+			body:
+				'<p>' + esc( App.t( 'panel.orders.chargebackBody' ) ) + '</p>' +
+				'<div class="field"><label class="field__label" for="cb-reason">' +
+					esc( App.t( 'panel.orders.chargebackReason' ) ) + '</label>' +
+					'<input class="input" id="cb-reason" name="reason" maxlength="190" required></div>' +
+				'<div class="field"><label class="field__label" for="cb-fee">' +
+					esc( App.t( 'panel.orders.chargebackFee' ) ) + '</label>' +
+					'<input class="input tnum" id="cb-fee" name="fee" type="number" min="0" ' +
+						'step="0.01" value="0">' +
+					'<span class="field__hint">' +
+						esc( App.t( 'panel.orders.chargebackFeeHint' ) ) + '</span></div>' +
+				'<label class="perms__row"><input type="checkbox" class="checkbox" id="cb-block" name="block">' +
+					'<span>' + esc( App.t( 'panel.orders.chargebackBlock' ) ) +
+					'<span class="muted on-own-line">' +
+						esc( App.t( 'panel.orders.chargebackBlockHint' ) ) + '</span></span></label>',
+			onSubmit: function ( data ) {
+				return App.request( 'POST', '/orders/' + order.id + '/chargeback', {
+					reason: data.get( 'reason' ),
+					// Minor units on the wire, whole money on the screen, as everywhere else.
+					fee: Math.round( Number( data.get( 'fee' ) || 0 ) * 100 ),
+					block: null !== data.get( 'block' ),
+				} ).then( function () {
+					App.toast( App.t( 'panel.orders.chargebackDone' ) );
+					Orders.render( App );
+				} );
+			},
+		} );
 	};
 
 	/**

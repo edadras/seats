@@ -99,6 +99,9 @@ class StorefrontCheckout
          * one ticket over a limit is a smaller wrong than a payment taken for a booking that does
          * not exist. See App\Domain\Access\PurchaseLimits.
          */
+        app(\App\Domain\Risk\Blocklist::class)
+            ->assertNotBlocked($buyer['email'] ?? null, $buyer['phone'] ?? null);
+
         app(\App\Domain\Access\PurchaseLimits::class)->assertWithin(
             $hold->event,
             $buyer['email'] ?? null,
