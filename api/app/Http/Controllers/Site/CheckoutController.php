@@ -52,6 +52,16 @@ class CheckoutController extends Controller
         $site = $request->attributes->get('site');
         $hold = $this->heldSeats($request);
 
+        /*
+         * When this page was drawn, kept in the session rather than in the form.
+         *
+         * A hidden field saying when the page opened is a hidden field a script sets to whatever
+         * it likes. The session is the server's own memory of it, needs no JavaScript, and cannot
+         * be back-dated from outside — and it costs a real buyer nothing, because they were going
+         * to spend fifteen seconds typing their name and card anyway.
+         */
+        $request->session()->put('seatmap_checkout_shown_at', now()->timestamp);
+
         if (! $hold) {
             return redirect('/')->with('seatmap_message', __('site.holdGone'));
         }
@@ -130,6 +140,9 @@ class CheckoutController extends Controller
             // buyer chooses a programme in the same breath as their seats.
             'addons' => app(Addons::class)->offer($hold->event, count($this->places($hold))),
             'addonError' => $request->session()->get('seatmap_addon_error'),
+            // Anything the last attempt was refused for that is not about one field: a limit on
+            // how many one person may buy, or a form sent faster than a person can fill one in.
+            'checkoutError' => $request->session()->get('seatmap_checkout_error'),
             'donation' => app(Donations::class)->prompt($hold->event),
             'currency' => $hold->currency,
             'expires_at' => $hold->expires_at,
@@ -344,6 +357,47 @@ class CheckoutController extends Controller
         ]);
     }
 
+    /**
+     * Two cheap questions a script gets wrong and a person never notices.
+     *
+     * The first is a field that is not there: hidden from sight, out of the tab order, announced to
+     * nothing, and named the way a form-filler expects. A person cannot type in it; a script that
+     * fills every input it finds does.
+     *
+     * The second is time. A checkout form takes a person fifteen seconds — a name, an address, a
+     * card — and takes a script none. The event says how long is too quick, and zero, the default,
+     * means the question is not asked at all.
+     *
+     * Deliberately not: a CAPTCHA, a third-party scoring service, or anything that sends a buyer's
+     * behaviour somewhere else to be judged. Those cost a blind buyer their evening and cost this
+     * platform somebody else's promise about privacy, and neither is worth what they catch.
+     *
+     * @return \Illuminate\Http\RedirectResponse|null the refusal, or null to carry on
+     */
+    private function smellsLikeAScript(Request $request, \App\Models\Event $event)
+    {
+        // Anything at all in the field that is not there.
+        if ('' !== trim((string) $request->input('website', ''))) {
+            return redirect('/checkout')->with('seatmap_checkout_error', __('site.checkoutRefused'));
+        }
+
+        $least = (int) ($event->checkout_min_seconds ?? 0);
+
+        if ($least < 1) {
+            return null;
+        }
+
+        $shown = (int) $request->session()->get('seatmap_checkout_shown_at', 0);
+
+        // No memory of the page being drawn is the same answer as too quickly: it is what a
+        // request that never opened the page looks like.
+        if (0 === $shown || (now()->timestamp - $shown) < $least) {
+            return redirect('/checkout')->with('seatmap_checkout_error', __('site.checkoutTooQuick'));
+        }
+
+        return null;
+    }
+
     public function place(Request $request)
     {
         $site = $request->attributes->get('site');
@@ -371,6 +425,10 @@ class CheckoutController extends Controller
             'addons.*' => ['integer', 'min:0', 'max:999'],
             'donation' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ]);
+
+        if ($refusal = $this->smellsLikeAScript($request, $hold->event)) {
+            return $refusal;
+        }
 
         // Priced a moment before the money moves, like the discount, and against the total these
         // extras actually come to rather than the one the page was rendered with.
@@ -441,6 +499,17 @@ class CheckoutController extends Controller
                 // and their seats are still theirs, so they are sent back to choose again rather
                 // than losing a booking over a five-euro extra.
                 return redirect('/checkout')->with('seatmap_addon_error', $e->localisedMessage());
+            }
+
+            if ('buyer_limit_reached' === $e->errorCode()) {
+                /*
+                 * They already hold as many as this night allows one person.
+                 *
+                 * Nothing has been charged and their seats are still held, so they go back to a
+                 * checkout that says so — with the number, because "no" without one is a telephone
+                 * call to a box office that cannot change the answer either.
+                 */
+                return redirect('/checkout')->with('seatmap_checkout_error', $e->localisedMessage());
             }
 
             if ('voucher_spent' === $e->errorCode()) {

@@ -385,4 +385,8 @@ return [
         'label' => 'Amount in :currency',
         'hint' => 'No booking fee and no tax is added to a donation.',
     ],
+    'website' => 'Website',
+    'checkoutRefused' => 'That booking could not be taken. Please try again from the seat map.',
+    'checkoutTooQuick' => 'That was sent before the form was filled in. Please check your details and confirm again.',
+    'limitPerBuyer' => 'There is a limit of one ticket per person for this event.|There is a limit of :count tickets per person for this event.',
 ];

@@ -410,6 +410,13 @@ class SitePageController extends Controller
                 ? null
                 : $this->money($cheapest, $event->currency),
             'on_sale' => $onSale,
+            /*
+             * The limit, said before somebody chooses rather than after they have paid.
+             *
+             * A refusal at the checkout is correct and it is also a wasted evening: a buyer who
+             * reads "four per person" while they are looking at the seat map chooses four.
+             */
+            'per_buyer' => $event->max_per_buyer,
             // Where the sale is open but this visitor is not in it, the page offers the box
             // instead of the seats. The two states are different sentences and different shapes.
             'sale_state' => $sale,

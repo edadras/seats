@@ -381,4 +381,8 @@ return [
         'label' => 'Importo in :currency',
         'hint' => 'A una donazione non si aggiunge commissione di prenotazione né imposta.',
     ],
+    'website' => 'Sito web',
+    'checkoutRefused' => 'Non è stato possibile accettare questa prenotazione. Riprova dalla mappa dei posti.',
+    'checkoutTooQuick' => 'Il modulo è stato inviato prima di essere compilato. Controlla i dati e conferma di nuovo.',
+    'limitPerBuyer' => 'Questo evento ha un limite di un biglietto a persona.|Questo evento ha un limite di :count biglietti a persona.',
 ];

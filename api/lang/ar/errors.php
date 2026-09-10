@@ -231,4 +231,6 @@ return [
     'till_closed' => 'ذلك الصندوق مغلق.',
     'movement_needs_amount' => 'حدّد المبلغ الذي تحرّك.',
     'not_your_till' => 'ذلك صندوق شخص آخر.',
+    'buyer_limit_reached' => 'هذه الفعالية محدودة بـ :limit تذكرة لكل شخص؛ يمكنك أخذ :count أخرى.',
+    'buyer_limit_used' => 'هذه الفعالية محدودة بـ :limit لكل شخص، ولديك هذا العدد بالفعل.',
 ];

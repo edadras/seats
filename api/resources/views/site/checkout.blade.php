@@ -213,6 +213,22 @@
                     {{ __('site.voucher.settled') }}
                 </p>
 
+                {{-- A field that is not there.
+
+                     Hidden from sight, out of the tab order, announced to nothing, and named the
+                     way a form-filler expects. A person cannot type in it; a script that fills
+                     every input it finds does, and says so about itself in the process. It is not
+                     a CAPTCHA, and that is the point: nothing here asks a blind buyer to identify
+                     a bicycle or sends anybody's behaviour to a third party to be scored. --}}
+                <div class="nowhere" aria-hidden="true">
+                    <label for="website">{{ __('site.website') }}</label>
+                    <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" value="">
+                </div>
+
+                @if ($checkoutError)
+                    <p class="field__error checkout__refusal">{{ $checkoutError }}</p>
+                @endif
+
                 <button class="button button--block checkout__submit" type="submit">{{ __('site.confirmBooking') }}</button>
             </form>
 

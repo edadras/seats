@@ -382,4 +382,8 @@ return [
         'label' => 'Betrag in :currency',
         'hint' => 'Auf eine Spende kommt keine Buchungsgebühr und keine Steuer.',
     ],
+    'website' => 'Website',
+    'checkoutRefused' => 'Diese Buchung konnte nicht angenommen werden. Bitte versuchen Sie es vom Saalplan aus erneut.',
+    'checkoutTooQuick' => 'Das wurde abgeschickt, bevor das Formular ausgefüllt war. Bitte prüfen Sie Ihre Angaben und bestätigen Sie erneut.',
+    'limitPerBuyer' => 'Für diese Veranstaltung gilt eine Grenze von einer Karte pro Person.|Für diese Veranstaltung gilt eine Grenze von :count Karten pro Person.',
 ];

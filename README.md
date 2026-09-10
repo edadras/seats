@@ -105,6 +105,15 @@ A seat is the start of it, not the end. Around the map:
   looked → basket → checkout → bought. Everything but the looking is derived from rows that already
   exist; the looking is counted per event, per day, per source, and never per visitor, so there is
   no cookie, no identifier and nothing to erase under a subject access request.
+- **Purchase limits, and a bot defence that costs a buyer nothing** — a cap per basket stops
+  nothing, because four at a time six times over is twenty-four. The limit that means anything is
+  counted across everything one address already holds for that night, refunded tickets excluded, and
+  it is checked before the money and never after it: a booking refused at confirmation is money
+  taken for tickets nobody has. The counter is exempt, because the person is standing in front of
+  the clerk. Against scripts there are two cheap questions — a field a person cannot see and a form
+  sent faster than a person can fill one in — and deliberately no CAPTCHA, no third-party scoring and
+  no cookie, because those cost a blind buyer their evening and send somebody's behaviour elsewhere
+  to be judged.
 - **The till** — a shift is a person and a drawer between two times, and at eleven o'clock it
   answers the question every venue asks: is the money in the drawer the money that should be in the
   drawer? Only cash counts, because a card is money that never touched it; a taxi paid for out of
@@ -303,7 +312,7 @@ prints the credentials you need for the plugin, and a platform-console operator.
 
 ```bash
 cd api
-./vendor/bin/phpunit                        # 669 unit, feature and module tests
+./vendor/bin/phpunit                        # 677 unit, feature and module tests
 ./vendor/bin/phpunit --group concurrency    # the races, as real parallel processes
 node --test tests/js/chart.test.cjs         # 33 chart model tests
 
@@ -329,7 +338,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-four, in order
+./smoke.sh                    # all thirty-five, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -438,6 +447,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | One open till per person, in the database as well as the application | `TillTest` |
 | A count is a photograph: tomorrow's refund cannot rewrite tonight's discrepancy | `TillTest` |
 | A closed till cannot be reopened, recounted or reached into by a manager | `TillTest` |
+| A per-person limit counts across baskets, and forgets refunded tickets | `PurchaseLimitTest` |
+| The limit is applied before the money and never after it | `PurchaseLimitTest` |
+| A field only a script fills, and a form sent faster than a person fills one | `PurchaseLimitTest` |
 
 ## Installing the plugin
 

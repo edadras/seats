@@ -176,6 +176,11 @@ return [
         'refunds' => "Rimborsi",
         'refundHours' => "Ore prima",
         'refundKeepsFee' => "Trattenere i diritti di prevendita al rimborso",
+        'perBuyer' => 'Massimo per persona',
+        'perBuyerNone' => 'Nessun limite',
+        'perBuyerHint' => 'Contato su tutto ciò che quell’indirizzo ha già per questa serata, non per singolo carrello. I biglietti rimborsati non contano.',
+        'checkoutSeconds' => 'Tempo minimo sulla cassa',
+        'checkoutSecondsHint' => 'Secondi in cui il modulo deve essere rimasto aperto prima di poter essere inviato. Una persona ne impiega quindici, uno script nessuno. Zero non chiede nulla.',
         'refundKinds' => [
             'never' => "Non offerto",
             'until' => "Fino a un certo numero di ore prima",

@@ -1652,3 +1652,29 @@ hr { border: none; }
 	.masthead, .footer, .skip { display: none; }
 	.ticket { box-shadow: none; break-inside: avoid; }
 }
+
+/* A field that is not there.
+
+   Not `display: none`: a form-filler that only fills what it can see would skip it, and the point
+   is that a script which fills everything gives itself away. Off the page, out of the tab order,
+   and `aria-hidden` in the markup so no screen reader ever meets it. */
+.nowhere {
+	position: absolute;
+	inset-inline-start: -9999px;
+	inline-size: 1px;
+	block-size: 1px;
+	overflow: hidden;
+}
+
+/* A refusal that is about the booking rather than about one field. */
+.checkout__refusal {
+	margin-block: var(--space-3, 0.75rem);
+}
+
+/* The limit, above the seat map rather than at the checkout. Quiet, because it is information and
+   not a refusal — the refusal only ever happens to somebody who ignored it. */
+.booking__limit {
+	margin-block-end: var(--space-3, 0.75rem);
+	color: var(--muted, #6b7280);
+	font-size: 0.9375rem;
+}

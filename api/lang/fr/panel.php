@@ -177,6 +177,11 @@ return [
         'refunds' => "Remboursements",
         'refundHours' => "Heures avant",
         'refundKeepsFee' => "Conserver les frais de réservation lors du remboursement",
+        'perBuyer' => 'Maximum par personne',
+        'perBuyerNone' => 'Sans limite',
+        'perBuyerHint' => 'Compté sur tout ce que cette adresse détient déjà pour cette soirée, et non par panier. Les billets remboursés ne comptent pas.',
+        'checkoutSeconds' => 'Temps minimum sur le paiement',
+        'checkoutSecondsHint' => 'Secondes pendant lesquelles le formulaire doit être resté ouvert avant d’être envoyé. Une personne en met quinze, un script aucune. Zéro ne demande rien.',
         'refundKinds' => [
             'never' => "Non proposé",
             'until' => "Jusqu'à un nombre d'heures avant",

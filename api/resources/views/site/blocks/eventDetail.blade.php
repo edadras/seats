@@ -197,6 +197,15 @@
     @elseif ($event['on_sale'])
         <section class="shell section section--tight">
             <div class="booking">
+                @if (! empty($event['per_buyer']))
+                    {{-- Said before anybody chooses. A refusal at the checkout is correct and it is
+                         also a wasted evening: a buyer who reads "four per person" while they are
+                         looking at the seat map chooses four. --}}
+                    <p class="booking__limit">
+                        {{ trans_choice('site.limitPerBuyer', $event['per_buyer'], ['count' => $event['per_buyer']]) }}
+                    </p>
+                @endif
+
                 {{-- The same picker the WordPress plugin ships; see tools/sync-seat-picker.sh. --}}
                 <div class="seatmap-widget" id="{{ $event['container_id'] }}" data-event="{{ $event['public_id'] }}">
                     <noscript>{{ __('site.pickerNeedsScript') }}</noscript>

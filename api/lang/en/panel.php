@@ -187,6 +187,11 @@ return [
         'refunds' => "Refunds",
         'refundHours' => "Hours before",
         'refundKeepsFee' => "Keep the booking fee when refunding",
+        'perBuyer' => 'Most one person may buy',
+        'perBuyerNone' => 'No limit',
+        'perBuyerHint' => 'Counted across everything that address already holds for this night, not per basket. Refunded tickets do not count.',
+        'checkoutSeconds' => 'Least time on the checkout',
+        'checkoutSecondsHint' => 'Seconds a checkout form must have been open before it may be sent. A person takes fifteen; a script takes none. Nought asks nothing.',
         'refundKinds' => [
             'never' => "Not offered",
             'until' => "Up to a number of hours before",

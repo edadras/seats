@@ -8182,6 +8182,35 @@ components:
           description: "How long an admission lasts before the place is given away."
         hold_ttl_seconds: { type: integer }
         max_extends: { type: integer }
+        max_seats_per_order:
+          type: integer
+          description: "How many places one basket may hold. On its own it stops nothing — see `max_per_buyer`."
+        max_per_buyer:
+          type: [integer, "null"]
+          description: >-
+            How many places one *person* may buy of this night, counted across everything that
+            address already holds rather than per basket: four at a time, six times over, is
+            twenty-four. Refunded tickets do not count — a limit that remembered a cancelled
+            booking would tell somebody who gave their ticket back that they may not come at all.
+            Null is no limit, which is the ordinary case.
+
+            A person is an email address here, which is stated rather than implied: it is the only
+            identity a ticket buyer has on this platform, and somebody determined can use a second
+            one. This is the defence against the ordinary case, not against that.
+
+            Checked before the money and never after it. A shop that registers its order before
+            charging is held to the limit; one that sends no address until it confirms is not,
+            because the only place left to refuse would be after the gateway settled — and one
+            ticket over a limit is a smaller wrong than money taken for a booking that does not
+            exist. The counter is exempt: the person is standing in front of the clerk.
+        checkout_min_seconds:
+          type: integer
+          description: >-
+            How long the hosted checkout form must have been on screen before it may be submitted.
+            A person filling in a name and a card takes fifteen seconds; a script takes none. Zero,
+            the default, asks nothing. Together with the hidden field the checkout form carries,
+            this is the whole of the bot defence — no CAPTCHA, no third-party scoring, no cookie,
+            and nothing that makes a blind buyer's evening worse than a sighted one's.
         refund_policy:
           type: string
           enum: [release, hold_back]

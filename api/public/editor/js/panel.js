@@ -1584,6 +1584,31 @@
 			'<span class="field__hint">' + esc( App.t( 'panel.events.roomMinutesHint' ) ) + '</span></div>' +
 			'</div>' +
 
+			/*
+			 * How many one person may have, and how fast is too fast.
+			 *
+			 * The first is the limit that means anything: a cap per basket stops nothing, because
+			 * four at a time six times over is twenty-four. The second is the whole of the bot
+			 * defence — a checkout form takes a person fifteen seconds and a script none — and it
+			 * is off by default, because a night that did not need it should not refuse a fast
+			 * typist for nothing.
+			 */
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-per-buyer">' +
+			esc( App.t( 'panel.events.perBuyer' ) ) + '</label>' +
+			'<input class="input tnum" id="e-per-buyer" name="max_per_buyer" ' +
+			'type="number" min="1" max="1000" placeholder="' +
+			esc( App.t( 'panel.events.perBuyerNone' ) ) + '" value="' +
+			esc( ( event && event.max_per_buyer ) || '' ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.perBuyerHint' ) ) + '</span></div>' +
+			'<div class="field"><label class="field__label" for="e-min-seconds">' +
+			esc( App.t( 'panel.events.checkoutSeconds' ) ) + '</label>' +
+			'<input class="input tnum" id="e-min-seconds" name="checkout_min_seconds" ' +
+			'type="number" min="0" max="120" value="' +
+			esc( ( event && event.checkout_min_seconds ) || 0 ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.events.checkoutSecondsHint' ) ) + '</span></div>' +
+			'</div>' +
+
 			// The refund terms. Written here rather than in a settings screen because they belong
 			// to this night: a matinee for schools and a sold-out final are not the same promise.
 			'<div class="field-duo">' +
@@ -1653,6 +1678,9 @@
 			waiting_room: null !== data.get( 'waiting_room' ),
 			waiting_room_capacity: Number( data.get( 'waiting_room_capacity' ) ) || 100,
 			waiting_room_minutes: Number( data.get( 'waiting_room_minutes' ) ) || 10,
+			// An empty box is "no limit", which is the ordinary case — not a limit of nought.
+			max_per_buyer: Number( data.get( 'max_per_buyer' ) ) || null,
+			checkout_min_seconds: Number( data.get( 'checkout_min_seconds' ) ) || 0,
 		};
 	}
 

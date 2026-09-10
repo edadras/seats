@@ -39,6 +39,12 @@ class OrderService
     ) {}
 
     /** Register an order against a hold — called as soon as WooCommerce creates the order. */
+    /** Places in a hold, counting a standing area as the number of people it is for. */
+    private function placesIn(Hold $hold): int
+    {
+        return (int) $hold->items()->sum(DB::raw('COALESCE(quantity, 1)'));
+    }
+
     public function register(
         ApiClient $client,
         string $externalOrderId,
@@ -65,6 +71,20 @@ class OrderService
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
                 'This hold is %s; the seats are no longer reserved.', $hold->currentState()
             ));
+        }
+
+        /*
+         * How many this person may have for this night.
+         *
+         * Here rather than at confirmation, because registering an order happens before a shop
+         * takes the money and confirming it happens after: refusing at the later of the two would
+         * mean money taken for a booking that does not exist. A shop that sends no address until
+         * confirmation is therefore not held to the limit at all, which is the honest consequence
+         * of that ordering and is written down in the contract rather than papered over.
+         */
+        if ($email = ($buyer['email'] ?? null)) {
+            app(\App\Domain\Access\PurchaseLimits::class)
+                ->assertWithin($hold->event, $email, $this->placesIn($hold), $client);
         }
 
         try {

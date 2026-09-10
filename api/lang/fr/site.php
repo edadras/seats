@@ -381,4 +381,8 @@ return [
         'label' => 'Montant en :currency',
         'hint' => "Aucun frais de réservation ni taxe n'est ajouté à un don.",
     ],
+    'website' => 'Site web',
+    'checkoutRefused' => 'Cette réservation n’a pas pu être prise. Veuillez réessayer depuis le plan de salle.',
+    'checkoutTooQuick' => 'Le formulaire a été envoyé avant d’être rempli. Vérifiez vos informations et confirmez à nouveau.',
+    'limitPerBuyer' => 'Cet événement est limité à un billet par personne.|Cet événement est limité à :count billets par personne.',
 ];

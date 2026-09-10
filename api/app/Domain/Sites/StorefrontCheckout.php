@@ -90,6 +90,20 @@ class StorefrontCheckout
             ));
         }
 
+        /*
+         * How many this person may have, asked before the gateway rather than after it.
+         *
+         * A limit enforced at confirmation would be a limit enforced after the money moved, and
+         * one ticket over a limit is a smaller wrong than a payment taken for a booking that does
+         * not exist. See App\Domain\Access\PurchaseLimits.
+         */
+        app(\App\Domain\Access\PurchaseLimits::class)->assertWithin(
+            $hold->event,
+            $buyer['email'] ?? null,
+            self::placesIn($hold),
+            $this->clientFor($site),
+        );
+
         $lines = $this->addons->price($hold->event, $addons, self::placesIn($hold));
         $discount = $offer?->isAllowed() ? $offer->amount : 0;
 

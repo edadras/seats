@@ -231,4 +231,6 @@ return [
     'till_closed' => 'That till is closed.',
     'movement_needs_amount' => 'Say how much moved.',
     'not_your_till' => 'That is somebody else’s till.',
+    'buyer_limit_reached' => 'This event is limited to :limit tickets per person; you may take :count more.',
+    'buyer_limit_used' => 'This event is limited to :limit per person, and you already have that many.',
 ];

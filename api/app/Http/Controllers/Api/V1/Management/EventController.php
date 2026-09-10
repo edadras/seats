@@ -436,6 +436,12 @@ class EventController extends Controller
             'hold_ttl_seconds' => ['sometimes', 'integer', 'min:60', 'max:3600'],
             'max_extends' => ['sometimes', 'integer', 'min:0', 'max:10'],
             'max_seats_per_order' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            // Null is no limit, which is the ordinary case: most nights do not need one, and a
+            // limit invented for a night that did not is an argument with a family of six.
+            'max_per_buyer' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:1000'],
+            // How long a checkout form must have been on screen before it may be sent. A person
+            // takes fifteen seconds to type their name and card; a script takes none.
+            'checkout_min_seconds' => ['sometimes', 'integer', 'min:0', 'max:120'],
             'refund_policy' => ['sometimes', 'in:release,hold_back'],
             // What the *seat* does on a refund is `refund_policy`; these three are whether the
             // buyer may ask for one at all, and are the terms shown on their own page.
@@ -524,6 +530,8 @@ class EventController extends Controller
             'hold_ttl_seconds' => $event->hold_ttl_seconds,
             'max_extends' => $event->max_extends,
             'max_seats_per_order' => $event->max_seats_per_order,
+            'max_per_buyer' => $event->max_per_buyer,
+            'checkout_min_seconds' => (int) $event->checkout_min_seconds,
             'refund_policy' => $event->refund_policy,
             'refunds' => $event->refunds,
             'refund_window_hours' => (int) $event->refund_window_hours,

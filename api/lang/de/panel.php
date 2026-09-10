@@ -177,6 +177,11 @@ return [
         'refunds' => "Erstattungen",
         'refundHours' => "Stunden vorher",
         'refundKeepsFee' => "Buchungsgebühr bei Erstattung einbehalten",
+        'perBuyer' => 'Höchstens pro Person',
+        'perBuyerNone' => 'Keine Grenze',
+        'perBuyerHint' => 'Gezählt über alles, was diese Adresse für diesen Abend schon hat, nicht pro Warenkorb. Erstattete Karten zählen nicht.',
+        'checkoutSeconds' => 'Mindestzeit auf der Kasse',
+        'checkoutSecondsHint' => 'Sekunden, die das Kassenformular offen gewesen sein muss, bevor es gesendet werden darf. Ein Mensch braucht fünfzehn, ein Skript keine. Null fragt nicht.',
         'refundKinds' => [
             'never' => "Nicht angeboten",
             'until' => "Bis zu einer Anzahl Stunden vorher",
