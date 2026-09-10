@@ -37,6 +37,13 @@
                         <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
                     </svg>
                     {{ $event['long_when'] }}
+                    @if (! empty($event['moved_from']))
+                        {{-- People arrive here from a diary entry they made months ago. Saying
+                             nothing about a change of date is how they turn up on the old one. --}}
+                        <span class="event-hero__moved">{{ __('site.movedFrom', [
+                            'was' => $event['moved_from'],
+                        ]) }}</span>
+                    @endif
                 </li>
 
                 @if ($event['from_price'] && $event['on_sale'])
@@ -93,6 +100,10 @@
     @else
         <section class="shell section section--tight">
             <p class="notice">{{ $event['closed_message'] }}</p>
+
+            @if (! empty($event['closed_reason']))
+                <p class="notice notice--quiet" dir="auto">{{ $event['closed_reason'] }}</p>
+            @endif
         </section>
     @endif
 

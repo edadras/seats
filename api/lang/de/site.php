@@ -223,6 +223,7 @@ return [
     'bookingStatus' => 'Diese Buchung ist :status. Falls das falsch aussieht, wenden Sie sich an die Kasse und nennen Sie :reference.',
     'holdGone' => 'Diese Plätze sind nicht mehr reserviert. Bitte wählen Sie erneut.',
     'standing' => 'Stehplatz',
+    'movedFrom' => 'verlegt von :was',
     'entry' => [
         'between' => "Einlass :from – :to",
         'title' => "Einlasszeit",

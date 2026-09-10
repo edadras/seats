@@ -26,6 +26,14 @@ return [
             'name' => 'Rappel',
             'description' => 'La veille, à tous les détenteurs de billets. Désactivé tant que vous ne l’activez pas.',
         ],
+        'event_cancelled' => [
+            'name' => "Événement annulé",
+            'description' => "Envoyé à tous les détenteurs de billets quand une soirée est annulée. Non désactivable : quelqu'un a payé une place pour quelque chose qui n'aura pas lieu.",
+        ],
+        'event_moved' => [
+            'name' => "Date reportée",
+            'description' => "Envoyé quand une date change. Que le billet reste valable est la première chose qu'il dit.",
+        ],
         'waitlist_available' => [
             'name' => 'Une place s’est libérée',
             'description' => 'Envoyé aux suivants sur une liste d’attente quand des places reviennent. C’est exactement ce qu’ils ont demandé : impossible de le désactiver.',
@@ -50,6 +58,14 @@ return [
         'event_reminder' => [
             'subject' => '{event}, c’est demain',
             'body' => "{buyer}, {event} a lieu demain.\n\n{venue}\n{starts}\nPlaces : {seats}\n\nRéférence {reference}.",
+        ],
+        'event_cancelled' => [
+            'subject' => "Annulé : {event}",
+            'body' => "{buyer}, nous avons le regret de vous annoncer que {event} du {starts} à {venue} est annulé.\n\n{reason}\n\nVotre commande {reference} a été remboursée. Rien n'est dû et vos billets ne sont plus valables.",
+        ],
+        'event_moved' => [
+            'subject' => "Nouvelle date : {event}",
+            'body' => "{buyer}, {event} est reporté du {was} au {starts} à {venue}.\n\n{reason}\n\nVos billets restent valables — commande {reference}, {seats}. Vous n'avez rien à faire.",
         ],
         'waitlist_available' => [
             'subject' => 'Une place s’est libérée pour {event}',

@@ -26,6 +26,14 @@ return [
             'name' => 'Event reminder',
             'description' => 'Sent the day before, to everyone holding a ticket. Off unless you turn it on.',
         ],
+        'event_cancelled' => [
+            'name' => "Event cancelled",
+            'description' => "Sent to everybody holding a ticket when a night is called off. It cannot be switched off — somebody paid for a seat at something that is not happening.",
+        ],
+        'event_moved' => [
+            'name' => "Event moved",
+            'description' => "Sent when a date changes. Their ticket still works, which is the first thing it says.",
+        ],
         'waitlist_available' => [
             'name' => 'A seat came free',
             'description' => 'Sent to the next people on a waiting list when places come back. They asked for exactly this, so it cannot be switched off.',
@@ -50,6 +58,14 @@ return [
         'event_reminder' => [
             'subject' => '{event} is tomorrow',
             'body' => "{buyer}, {event} is tomorrow.\n\n{venue}\n{starts}\nSeats: {seats}\n\nBooking reference {reference}.",
+        ],
+        'event_cancelled' => [
+            'subject' => "Cancelled: {event}",
+            'body' => "{buyer}, we are sorry to say that {event} on {starts} at {venue} has been cancelled.\n\n{reason}\n\nYour booking {reference} has been refunded. Nothing is owed and your tickets are no longer valid.",
+        ],
+        'event_moved' => [
+            'subject' => "New date: {event}",
+            'body' => "{buyer}, {event} has moved from {was} to {starts} at {venue}.\n\n{reason}\n\nYour tickets are still valid — booking {reference}, {seats}. There is nothing you need to do.",
         ],
         'waitlist_available' => [
             'subject' => 'A seat has come free for {event}',

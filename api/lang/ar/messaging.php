@@ -26,6 +26,14 @@ return [
             'name' => 'تذكير بالفعالية',
             'description' => 'قبل يوم، لكل حامل تذكرة. مطفأة حتى تشغّلها.',
         ],
+        'event_cancelled' => [
+            'name' => "إلغاء الفعالية",
+            'description' => "تُرسل إلى كل من يحمل تذكرة عند إلغاء ليلة. لا يمكن إيقافها — فقد دفع أحدهم مقابل مقعد في شيء لن يقام.",
+        ],
+        'event_moved' => [
+            'name' => "تغيير موعد الفعالية",
+            'description' => "تُرسل عند تغيّر التاريخ. أول ما تقوله أن التذكرة ما زالت صالحة.",
+        ],
         'waitlist_available' => [
             'name' => 'شغر مقعد',
             'description' => 'يُرسل إلى التالين في قائمة الانتظار عند عودة أماكن. طلبوا هذا تحديدًا، فلا يمكن إيقافه.',
@@ -50,6 +58,14 @@ return [
         'event_reminder' => [
             'subject' => '{event} غدًا',
             'body' => "{buyer}، {event} غدًا.\n\n{venue}\n{starts}\nالمقاعد: {seats}\n\nرقم الحجز {reference}.",
+        ],
+        'event_cancelled' => [
+            'subject' => "أُلغيت: {event}",
+            'body' => "{buyer}، يؤسفنا إبلاغك بأن {event} في {starts} في {venue} قد أُلغيت.\n\n{reason}\n\nتمت إعادة مبلغ حجزك {reference}. لا شيء مستحق عليك، ولم تعد تذاكرك صالحة.",
+        ],
+        'event_moved' => [
+            'subject' => "موعد جديد: {event}",
+            'body' => "{buyer}، انتقلت {event} من {was} إلى {starts} في {venue}.\n\n{reason}\n\nتذاكرك ما زالت صالحة — الحجز {reference}، {seats}. لا يلزمك فعل شيء.",
         ],
         'waitlist_available' => [
             'subject' => 'شغر مقعد في {event}',

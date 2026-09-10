@@ -35,6 +35,26 @@ class OrderMessages
         $this->announce('order.cancelled', $order);
     }
 
+    /**
+     * The night is off, and here is why.
+     *
+     * The organiser's own sentence rather than a template's: "cancelled" on its own is the start
+     * of an argument rather than the end of one.
+     */
+    public function eventCancelled(ExternalOrder $order, string $reason): void
+    {
+        $this->announce('event.cancelled', $order, ['reason' => $reason]);
+    }
+
+    /** The night has moved, and their ticket still works — which is the part people doubt. */
+    public function eventMoved(ExternalOrder $order, \DateTimeInterface $was, string $reason): void
+    {
+        $this->announce('event.moved', $order, [
+            'reason' => $reason,
+            'was' => Dates::longWhen($was, Locales::normalise($order->buyer['locale'] ?? app()->getLocale())),
+        ]);
+    }
+
     /** @return array<string, string> */
     public function variables(ExternalOrder $order, string $locale): array
     {
@@ -60,7 +80,8 @@ class OrderMessages
         ];
     }
 
-    private function announce(string $kind, ExternalOrder $order): void
+    /** @param  array<string, string>  $extra  variables this kind has that a booking does not */
+    private function announce(string $kind, ExternalOrder $order, array $extra = []): void
     {
         try {
             $order->loadMissing(['event.venue', 'allocations', 'apiClient']);
@@ -76,7 +97,7 @@ class OrderMessages
                     'phone' => $order->buyer['phone'] ?? null,
                     'handle' => $order->buyer['handle'] ?? null,
                 ]),
-                $this->variables($order, $locale),
+                $this->variables($order, $locale) + $extra,
                 $locale,
                 ['event_id' => $order->event_id, 'order_id' => $order->id],
             );

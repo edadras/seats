@@ -19,11 +19,15 @@ class Event extends Model
         'hold_ttl_seconds', 'max_extends', 'max_seats_per_order', 'refund_policy', 'settings',
         'booking_fee_kind', 'booking_fee_amount', 'booking_fee_percent', 'booking_fee_label',
         'tax_rate', 'tax_included', 'tax_label',
+        'cancelled_at', 'cancellation_reason', 'rescheduled_from', 'rescheduled_at',
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'rescheduled_from' => 'datetime',
+        'rescheduled_at' => 'datetime',
         'settings' => 'array',
         'hold_ttl_seconds' => 'integer',
         'max_extends' => 'integer',
@@ -88,6 +92,11 @@ class Event extends Model
     public function isSellable(): bool
     {
         return $this->status === 'published' && $this->seat_map_version_id !== null;
+    }
+
+    public function isCancelled(): bool
+    {
+        return 'cancelled' === $this->status;
     }
 
     /**

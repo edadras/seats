@@ -26,6 +26,28 @@ class MessageKinds
             'placeholders' => ['buyer', 'event', 'reference', 'site'],
             'optional' => false,
         ],
+        /*
+         * The night is off.
+         *
+         * Not optional, and not an announcement an organiser composes: somebody paid for a seat at
+         * something that is no longer happening, and being told is not a marketing preference.
+         * `reason` is the organiser's own sentence, because "cancelled" without one is the start
+         * of an argument rather than the end of it.
+         */
+        'event.cancelled' => [
+            'placeholders' => ['buyer', 'event', 'venue', 'starts', 'seats', 'reference', 'reason', 'site'],
+            'optional' => false,
+        ],
+        /*
+         * The night has moved. Their ticket still works, which is the first thing to say — the
+         * commonest reaction to "your event has changed" is to assume the ticket has not.
+         */
+        'event.moved' => [
+            'placeholders' => [
+                'buyer', 'event', 'venue', 'starts', 'was', 'seats', 'reference', 'reason', 'site',
+            ],
+            'optional' => false,
+        ],
         'event.reminder' => [
             'placeholders' => ['buyer', 'event', 'venue', 'starts', 'seats', 'reference', 'site'],
             'optional' => true,

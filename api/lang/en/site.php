@@ -226,6 +226,7 @@ return [
     'bookingStatus' => 'This booking is :status. If that looks wrong, contact the box office and quote :reference.',
     'holdGone' => 'Those seats are no longer held. Please choose again.',
     'standing' => 'Standing',
+    'movedFrom' => 'moved from :was',
     'entry' => [
         'between' => "Entry :from – :to",
         'title' => "Arrival time",

@@ -222,6 +222,7 @@ return [
     'bookingStatus' => 'حالة هذا الحجز :status. إن بدا ذلك خطأً فتواصل مع شبّاك التذاكر واذكر :reference.',
     'holdGone' => 'لم تعد تلك المقاعد محجوزة. اختر من جديد من فضلك.',
     'standing' => 'وقوف',
+    'movedFrom' => 'نُقل من :was',
     'entry' => [
         'between' => "الدخول :from – :to",
         'title' => "وقت الدخول",

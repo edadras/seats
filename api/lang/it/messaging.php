@@ -26,6 +26,14 @@ return [
             'name' => 'Promemoria',
             'description' => 'Il giorno prima, a chi ha un biglietto. Spento finché non lo accendi.',
         ],
+        'event_cancelled' => [
+            'name' => "Evento annullato",
+            'description' => "Inviato a chiunque abbia un biglietto quando una serata salta. Non disattivabile: qualcuno ha pagato un posto per qualcosa che non si farà.",
+        ],
+        'event_moved' => [
+            'name' => "Data spostata",
+            'description' => "Inviato quando cambia una data. La prima cosa che dice è che il biglietto resta valido.",
+        ],
         'waitlist_available' => [
             'name' => 'Si è liberato un posto',
             'description' => 'Inviato ai successivi in lista d’attesa quando tornano dei posti. È esattamente ciò che hanno chiesto, quindi non si può disattivare.',
@@ -50,6 +58,14 @@ return [
         'event_reminder' => [
             'subject' => '{event} è domani',
             'body' => "{buyer}, {event} è domani.\n\n{venue}\n{starts}\nPosti: {seats}\n\nRiferimento {reference}.",
+        ],
+        'event_cancelled' => [
+            'subject' => "Annullato: {event}",
+            'body' => "{buyer}, ci dispiace comunicarvi che {event} del {starts} presso {venue} è stato annullato.\n\n{reason}\n\nIl vostro ordine {reference} è stato rimborsato. Non c'è nulla da pagare e i vostri biglietti non sono più validi.",
+        ],
+        'event_moved' => [
+            'subject' => "Nuova data: {event}",
+            'body' => "{buyer}, {event} è stato spostato dal {was} al {starts} presso {venue}.\n\n{reason}\n\nI vostri biglietti restano validi — ordine {reference}, {seats}. Non dovete fare nulla.",
         ],
         'waitlist_available' => [
             'subject' => 'Si è liberato un posto per {event}',

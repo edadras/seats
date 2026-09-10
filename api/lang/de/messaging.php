@@ -26,6 +26,14 @@ return [
             'name' => 'Erinnerung',
             'description' => 'Am Vortag, an alle mit Ticket. Aus, bis Sie sie einschalten.',
         ],
+        'event_cancelled' => [
+            'name' => "Veranstaltung abgesagt",
+            'description' => "Geht an alle mit einem Ticket, wenn ein Abend ausfällt. Nicht abschaltbar — jemand hat für einen Platz bezahlt, den es nicht mehr gibt.",
+        ],
+        'event_moved' => [
+            'name' => "Termin verlegt",
+            'description' => "Geht raus, wenn sich ein Datum ändert. Dass das Ticket weiter gilt, steht zuerst darin.",
+        ],
         'waitlist_available' => [
             'name' => 'Ein Platz ist frei geworden',
             'description' => 'Geht an die Nächsten auf einer Warteliste, wenn Plätze zurückkommen. Genau darum haben sie gebeten, also lässt es sich nicht abschalten.',
@@ -50,6 +58,14 @@ return [
         'event_reminder' => [
             'subject' => '{event} ist morgen',
             'body' => "{buyer}, {event} ist morgen.\n\n{venue}\n{starts}\nPlätze: {seats}\n\nBuchungsnummer {reference}.",
+        ],
+        'event_cancelled' => [
+            'subject' => "Abgesagt: {event}",
+            'body' => "{buyer}, leider müssen wir Ihnen mitteilen, dass {event} am {starts} im {venue} abgesagt wurde.\n\n{reason}\n\nIhre Buchung {reference} wurde erstattet. Es ist nichts offen, und Ihre Tickets sind nicht mehr gültig.",
+        ],
+        'event_moved' => [
+            'subject' => "Neuer Termin: {event}",
+            'body' => "{buyer}, {event} wurde von {was} auf {starts} im {venue} verlegt.\n\n{reason}\n\nIhre Tickets bleiben gültig — Buchung {reference}, {seats}. Sie müssen nichts tun.",
         ],
         'waitlist_available' => [
             'subject' => 'Für {event} ist ein Platz frei geworden',

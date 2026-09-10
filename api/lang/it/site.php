@@ -222,6 +222,7 @@ return [
     'bookingStatus' => 'Questa prenotazione è :status. Se ti sembra sbagliato, contatta il botteghino citando :reference.',
     'holdGone' => 'Quei posti non sono più tenuti. Sceglietene altri.',
     'standing' => 'In piedi',
+    'movedFrom' => 'spostato dal :was',
     'entry' => [
         'between' => "Ingresso :from – :to",
         'title' => "Orario d'ingresso",

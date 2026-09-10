@@ -363,6 +363,14 @@ class SitePageController extends Controller
                 'closed' => __('site.closed.closed'),
                 default => __('site.closed.notYet'),
             },
+            // The organiser's own sentence, where they gave one. "Cancelled" alone sends somebody
+            // to a telephone; "cancelled, the singer is ill" does not.
+            'closed_reason' => 'cancelled' === $event->status ? $event->cancellation_reason : null,
+            // A night that used to be another night. People arrive on this page from a diary entry
+            // they made months ago, and saying nothing about the change is how they turn up then.
+            'moved_from' => $event->rescheduled_from
+                ? Dates::longWhen($event->rescheduled_from, app()->getLocale())
+                : null,
             'container_id' => $containerId,
             'calendar_url' => '/events/'.$event->public_id.'/calendar.ics',
             'boot' => $onSale ? $this->boot($site, $event, $containerId) : null,

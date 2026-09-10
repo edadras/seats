@@ -413,6 +413,13 @@ hr { border: none; }
 	color: var(--text-muted);
 }
 
+/* The organiser's own sentence under the refusal above it — an explanation, not a second alarm. */
+.notice--quiet {
+	margin-block-start: 0.6rem;
+	border-style: dashed;
+	background: transparent;
+}
+
 /* ================================================================================= chips */
 
 .chip {
@@ -683,6 +690,13 @@ hr { border: none; }
 	margin: 1.25rem 0 0;
 	padding: 0;
 	list-style: none;
+}
+
+/* A night that used to be another night, said where the date is rather than in a banner. */
+.event-hero__moved {
+	margin-inline-start: 0.45rem;
+	opacity: 0.75;
+	font-size: 0.85em;
 }
 
 .event-hero__fact {

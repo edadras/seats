@@ -725,6 +725,24 @@
 			: App.money( low, currency ) + ' – ' + App.money( high, currency ) );
 	}
 
+	/**
+	 * An ISO instant as the value a datetime-local input wants.
+	 *
+	 * The browser's own clock, deliberately: somebody moving tomorrow's date is sitting at the
+	 * venue, and a field showing UTC would have them typing an hour they do not mean.
+	 */
+	function localStamp( iso ) {
+		if ( ! iso ) {
+			return '';
+		}
+
+		var when = new Date( iso );
+		var pad = function ( n ) { return String( n ).padStart( 2, '0' ); };
+
+		return when.getFullYear() + '-' + pad( when.getMonth() + 1 ) + '-' + pad( when.getDate() ) +
+			'T' + pad( when.getHours() ) + ':' + pad( when.getMinutes() );
+	}
+
 	function actionButton( attribute, value, label, iconName ) {
 		return '<button class="btn btn--sm" data-' + attribute + '="' + esc( value ) + '">' +
 			( iconName ? icon( iconName, { size: 14 } ) : '' ) + esc( label ) + '</button>';
@@ -759,7 +777,9 @@
 						'<button type="button" class="btn" data-close>' +
 						esc( options.cancelLabel || App.t( 'panel.common.cancel' ) ) + '</button>' ) +
 					( isForm
-						? '<button type="submit" class="btn btn--primary">' +
+						// A destructive action does not get the same button as saving a name.
+						? '<button type="submit" class="btn btn--' +
+							( options.danger ? 'danger' : 'primary' ) + '">' +
 							esc( options.submitLabel || App.t( 'panel.common.save' ) ) + '</button>'
 						: '<button type="button" class="btn btn--primary" data-close>' +
 							esc( options.doneLabel || App.t( 'panel.common.done' ) ) + '</button>' ) +
@@ -1228,6 +1248,12 @@
 						actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) +
 						actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) +
 						actionButton( 'repeat', event.id, self.t( 'panel.events.repeat' ), 'calendar' ) +
+						actionButton( 'move', event.id, self.t( 'panel.events.reschedule' ), 'clock' ) +
+						// Not offered on a night that is already off: there is nothing left to
+						// cancel, and the button would only invite somebody to try.
+						( 'cancelled' === event.status
+							? ''
+							: actionButton( 'call-off', event.id, self.t( 'panel.events.cancel' ), 'close' ) ) +
 						'</td></tr>';
 				} ).join( '' );
 
@@ -1291,6 +1317,20 @@
 						if ( event ) {
 							self.repeatEvent( event );
 						}
+					} );
+				} );
+
+				[ [ 'move', 'rescheduleEvent' ], [ 'call-off', 'cancelEvent' ] ].forEach( function ( pair ) {
+					self.main().querySelectorAll( '[data-' + pair[ 0 ] + ']' ).forEach( function ( button ) {
+						button.addEventListener( 'click', function () {
+							var event = results[ 0 ].data.filter( function ( row ) {
+								return row.id === button.dataset[ 'move' === pair[ 0 ] ? 'move' : 'callOff' ];
+							} )[ 0 ];
+
+							if ( event ) {
+								self[ pair[ 1 ] ]( event );
+							}
+						} );
 					} );
 				} );
 
@@ -1499,6 +1539,108 @@
 	 * That one is deliberately absent: an event keeps selling against the version published when it
 	 * was created, and moving a live event onto another chart would strand every seat already sold.
 	 */
+	/**
+	 * Move a night to another night.
+	 *
+	 * Every ticket already sold stays sold and stays valid, which is the whole difference from
+	 * calling it off — and the first thing the modal says, because the commonest reaction to "your
+	 * event has changed" is to assume the ticket has not survived it.
+	 */
+	App.rescheduleEvent = function ( event ) {
+		var self = this;
+
+		this.modal( {
+			title: this.t( 'panel.events.rescheduleTitle', { name: event.name } ),
+			submitLabel: this.t( 'panel.events.rescheduleSubmit' ),
+			body:
+				'<div class="stack">' +
+					'<p class="hint">' + esc( this.t( 'panel.events.rescheduleHint' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="move-starts">' +
+						esc( this.t( 'panel.events.rescheduleTo' ) ) + '</label>' +
+						'<input class="input" id="move-starts" type="datetime-local" value="' +
+						esc( localStamp( event.starts_at ) ) + '"></div>' +
+					'<div class="field"><label class="field__label" for="move-reason">' +
+						esc( this.t( 'panel.events.reason' ) ) + '</label>' +
+						'<input class="input" id="move-reason" maxlength="300">' +
+						'<span class="field__hint">' + esc( this.t( 'panel.events.reasonHint' ) ) +
+						'</span></div>' +
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="move-notify" checked>' +
+						'<span>' + esc( this.t( 'panel.events.tellBuyers' ) ) + '</span></label>' +
+				'</div>',
+			onSubmit: function () {
+				var when = document.getElementById( 'move-starts' ).value;
+
+				if ( ! when ) {
+					self.toast( self.t( 'panel.events.rescheduleNeedsDate' ), true );
+
+					return true;
+				}
+
+				return self.request( 'POST', '/events/' + event.id + '/reschedule', {
+					starts_at: new Date( when ).toISOString(),
+					reason: document.getElementById( 'move-reason' ).value.trim() || null,
+					notify: document.getElementById( 'move-notify' ).checked,
+				} ).then( function () {
+					self.toast( self.t( 'panel.events.rescheduled' ) );
+					self.renderEvents();
+				} );
+			},
+		} );
+	};
+
+	/**
+	 * Call a night off.
+	 *
+	 * The one action on this platform that cannot be undone by pressing something else: the money
+	 * goes back, the tickets are void, and everybody is told. So it asks for the event's own name
+	 * rather than a yes — on a list of twelve dates, a mis-click on the wrong row would be a
+	 * disaster with no way back.
+	 */
+	App.cancelEvent = function ( event ) {
+		var self = this;
+
+		this.modal( {
+			title: this.t( 'panel.events.cancelTitle', { name: event.name } ),
+			submitLabel: this.t( 'panel.events.cancelSubmit' ),
+			danger: true,
+			body:
+				'<div class="stack">' +
+					'<p class="hint">' + esc( this.t( 'panel.events.cancelHint' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="off-reason">' +
+						esc( this.t( 'panel.events.reason' ) ) + '</label>' +
+						'<input class="input" id="off-reason" maxlength="300" required>' +
+						'<span class="field__hint">' + esc( this.t( 'panel.events.cancelReasonHint' ) ) +
+						'</span></div>' +
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="off-refund" checked>' +
+						'<span>' + esc( this.t( 'panel.events.refundEverything' ) ) + '</span></label>' +
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="off-notify" checked>' +
+						'<span>' + esc( this.t( 'panel.events.tellBuyers' ) ) + '</span></label>' +
+					'<div class="field"><label class="field__label" for="off-confirm">' +
+						esc( this.t( 'panel.events.typeTheName', { name: event.name } ) ) + '</label>' +
+						'<input class="input" id="off-confirm" autocomplete="off"></div>' +
+				'</div>',
+			onSubmit: function () {
+				var reason = document.getElementById( 'off-reason' ).value.trim();
+
+				if ( ! reason ) {
+					self.toast( self.t( 'panel.events.cancelNeedsReason' ), true );
+
+					return true;
+				}
+
+				return self.request( 'POST', '/events/' + event.id + '/cancel', {
+					reason: reason,
+					confirm: document.getElementById( 'off-confirm' ).value,
+					refund: document.getElementById( 'off-refund' ).checked,
+					notify: document.getElementById( 'off-notify' ).checked,
+				} ).then( function () {
+					self.toast( self.t( 'panel.events.cancelled' ) );
+					self.renderEvents();
+				} );
+			},
+		} );
+	};
+
 	/**
 	 * Put the same production on again on other nights.
 	 *

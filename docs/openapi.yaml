@@ -842,6 +842,106 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/cancel:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    post:
+      operationId: cancelEvent
+      tags: [Events]
+      summary: Call a night off
+      description: |
+        Requires `events.manage` **and** `orders.refund`. Cancelling stops an event selling, which
+        is the first, and hands back everything already taken, which is the second — and somebody
+        who may do one is not automatically somebody who may do the other.
+
+        `confirm` must carry the event's own name. This is the one action on the platform that
+        cannot be undone by pressing something else: the tickets are void and the money has gone
+        back, and a mis-click on a list of twelve dates would be a disaster with no way out of it.
+
+        Two halves. The sale stops inside the request — nothing may be sold for a cancelled night,
+        not for the second it takes to answer, and carts in flight are released rather than left to
+        their own expiry. Refunding and telling people is the long half, and runs as a job: an
+        arena is twenty thousand bookings, and a cancellation that times out halfway through the
+        refunds is worse than one that never started. One booking that will not settle is logged
+        and counted rather than allowed to stop the rest.
+
+        `refund: false` for money taken somewhere this platform cannot reach, which the organiser
+        will hand back themselves. The seats are released and the tickets voided either way: a
+        valid ticket to a cancelled event is a person at a locked door.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, confirm]
+              properties:
+                reason:
+                  type: string
+                  maxLength: 300
+                  description: >-
+                    The organiser's own sentence. It goes in the message and on the event page:
+                    "cancelled" alone starts an argument rather than ending one.
+                confirm:
+                  type: string
+                  description: "The event's name, exactly."
+                refund: { type: boolean, default: true }
+                notify: { type: boolean, default: true }
+      responses:
+        "200":
+          description: The event, now cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /events/{event}/reschedule:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    post:
+      operationId: rescheduleEvent
+      tags: [Events]
+      summary: Move it to another night
+      description: |
+        Requires `events.manage` alone: nothing is refunded and nothing is voided. Every ticket
+        already sold stays sold and stays valid, which is the whole difference from a cancellation
+        and the first thing the message says — the commonest reaction to "your event has changed"
+        is to assume the ticket has not survived it.
+
+        Arrival windows shift by exactly the same interval the event did. A timetable of half-hours
+        from ten in the morning is the same timetable on the new day; leaving them on the old one
+        would print tickets for a date that has passed.
+
+        `rescheduled_from` keeps the original date rather than overwriting it, because that is the
+        answer to the only question anybody asks afterwards.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [starts_at]
+              properties:
+                starts_at: { type: string, format: date-time }
+                ends_at:
+                  type: [string, "null"]
+                  format: date-time
+                  description: "Omit to keep the run's current length."
+                reason: { type: [string, "null"], maxLength: 300 }
+                notify: { type: boolean, default: true }
+      responses:
+        "200":
+          description: The event, on its new date
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: A cancelled event cannot be moved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /events/{event}/best-available:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -5388,6 +5488,14 @@ components:
         currency: { type: [string, "null"], description: "Set for `fixed` only." }
         starts_at: { type: [string, "null"], format: date-time }
         ends_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        cancellation_reason:
+          type: [string, "null"]
+          description: "Why the night is off, in the organiser's own words."
+        rescheduled_from:
+          type: [string, "null"]
+          format: date-time
+          description: "The date this used to be on, kept rather than overwritten."
         max_uses: { type: [integer, "null"] }
         used_count: { type: integer }
         min_seats: { type: integer }
@@ -5713,6 +5821,14 @@ components:
         status: { type: string, enum: [draft, published, closed, cancelled] }
         starts_at: { type: string, format: date-time }
         ends_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        cancellation_reason:
+          type: [string, "null"]
+          description: "Why the night is off, in the organiser's own words."
+        rescheduled_from:
+          type: [string, "null"]
+          format: date-time
+          description: "The date this used to be on, kept rather than overwritten."
         timezone: { type: string }
         currency: { type: string }
         currency_decimals:

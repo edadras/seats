@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
+use App\Domain\Events\EventCancellation;
 use App\Domain\Events\EventStats;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
@@ -13,6 +14,7 @@ use App\Models\Seat;
 use App\Models\SeatMap;
 use App\Support\Audit\AuditLogger;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
@@ -107,6 +109,76 @@ class EventController extends Controller
      * is priced from last season" bugs come from. Sending the complete intended state each time
      * makes the result unambiguous.
      */
+    /**
+     * Call a night off.
+     *
+     * Two permissions, not one. Cancelling an event stops it selling, which is `events.manage`,
+     * and hands back everything already taken, which is `orders.refund` — and somebody who may do
+     * the first is not automatically somebody who may do the second.
+     *
+     * `confirm` has to carry the event's own name. This is the one action on the platform that
+     * cannot be undone by pressing something else: the tickets are void and the money is gone
+     * back, and a mis-click on a list of twelve dates would be a disaster with no way back.
+     */
+    public function cancel(Request $request, Event $event)
+    {
+        $this->authorize($request, 'events.manage');
+        $this->authorize($request, 'orders.refund');
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:300'],
+            'confirm' => ['required', 'string'],
+            // False where the money was taken somewhere this platform cannot reach and the
+            // organiser will hand it back themselves. The seats come back either way.
+            'refund' => ['sometimes', 'boolean'],
+            'notify' => ['sometimes', 'boolean'],
+        ]);
+
+        if (trim($data['confirm']) !== trim($event->name)) {
+            throw ApiException::unprocessable(
+                'confirm_with_the_name',
+                'Type the event name exactly to confirm.',
+            );
+        }
+
+        $cancelled = app(EventCancellation::class)->cancel(
+            $event,
+            $data['reason'],
+            $request->boolean('refund', true),
+            $request->boolean('notify', true),
+        );
+
+        return response()->json($this->present($cancelled));
+    }
+
+    /**
+     * Move it to another night.
+     *
+     * `events.manage` alone: nothing is refunded and nothing is voided. Every ticket already sold
+     * stays sold and stays valid, which is the whole difference from a cancellation.
+     */
+    public function reschedule(Request $request, Event $event)
+    {
+        $this->authorize($request, 'events.manage');
+
+        $data = $request->validate([
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['nullable', 'date', 'after:starts_at'],
+            'reason' => ['nullable', 'string', 'max:300'],
+            'notify' => ['sometimes', 'boolean'],
+        ]);
+
+        $moved = app(EventCancellation::class)->reschedule(
+            $event,
+            Carbon::parse($data['starts_at']),
+            ($data['ends_at'] ?? null) ? Carbon::parse($data['ends_at']) : null,
+            $data['reason'] ?? '',
+            $request->boolean('notify', true),
+        );
+
+        return response()->json($this->present($moved));
+    }
+
     public function pricing(Request $request, Event $event)
     {
         $this->authorize($request, 'pricing.manage');
@@ -344,6 +416,11 @@ class EventController extends Controller
             'status' => $event->status,
             'starts_at' => $event->starts_at?->toIso8601String(),
             'ends_at' => $event->ends_at?->toIso8601String(),
+            // What happened to this night, where something did. Null on almost every event, and
+            // the screen shows nothing rather than an empty row.
+            'cancelled_at' => $event->cancelled_at?->toIso8601String(),
+            'cancellation_reason' => $event->cancellation_reason,
+            'rescheduled_from' => $event->rescheduled_from?->toIso8601String(),
             'timezone' => $event->timezone,
             'currency' => $event->currency,
             'booking_fee_kind' => $event->booking_fee_kind,

@@ -96,6 +96,10 @@ Route::prefix('v1')->group(function () {
         Route::patch('events/{event}', [EventController::class, 'update']);
         // Put the same production on again on other nights. The copies are drafts.
         Route::post('events/{event}/repeat', [EventController::class, 'repeat']);
+        // The night that is off, and the night that moved. One refunds everything and voids every
+        // ticket; the other keeps them all and says so.
+        Route::post('events/{event}/cancel', [EventController::class, 'cancel']);
+        Route::post('events/{event}/reschedule', [EventController::class, 'reschedule']);
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
         // Who the tickets are for. Beside pricing because that is what a concession is: an
         // adjustment to the price the seat already has.

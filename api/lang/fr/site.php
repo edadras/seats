@@ -222,6 +222,7 @@ return [
     'bookingStatus' => 'Cette réservation est :status. Si cela vous semble faux, contactez le guichet en indiquant :reference.',
     'holdGone' => 'Ces places ne sont plus retenues. Choisissez à nouveau.',
     'standing' => 'Debout',
+    'movedFrom' => 'reporté du :was',
     'entry' => [
         'between' => "Entrée :from – :to",
         'title' => "Heure d'arrivée",
