@@ -901,6 +901,19 @@ optional: the correctness guarantees use partial unique indexes and `SELECT … 
 extensions are declared in `composer.json`, so a server missing one is refused at install rather
 than at the moment somebody looks at a price.
 
+## What "professional" means on the buyer's side
+
+`docs/DESIGN.md` is the standard the hosted site is held to, and `.claude/skills/site-design/` is
+the working version of it. Both exist because "make it look better" is not a brief anybody can check
+their work against, and because the failures that separate a competent ticket page from a
+professional one turn out to be specific, repeatable and measurable rather than matters of taste.
+
+Every rule in it was written after looking at a rendered page and measuring it. The rule that
+catches the most, and the one it is most tempting to skip: **reading the stylesheet is not looking
+at the page.** A `position: sticky` that had been in this repository for months, correctly written
+and commented, did nothing at all — its column was exactly as tall as the card inside it, so the
+card had nowhere to travel. Nothing in the source said so. One scroll and one measurement did.
+
 ## Putting it on a server
 
 `docs/OPERATIONS.md` has the sequence. The part worth knowing before you read it is the last step:

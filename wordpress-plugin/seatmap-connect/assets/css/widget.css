@@ -148,10 +148,34 @@
 	min-inline-size: 0;
 }
 
-/* Beside the plan it follows the seat list down; stacked underneath there is nothing to follow. */
+/*
+ * Beside the plan it follows the seat list down; stacked underneath there is nothing to follow.
+ *
+ * `align-self: stretch` is what makes that true rather than merely declared. A sticky element only
+ * travels inside its own containing block, and the layout above sets `align-items: flex-start` —
+ * so this column was exactly as tall as the card inside it, the card had nowhere to travel, and the
+ * rule below did nothing at all. Measured: a 260px column holding a 260px summary, scrolling away
+ * with the page while the buyer read a seat list eight hundred pixels long.
+ *
+ * Stretching the column is invisible — it is a bare wrapper, and the card keeps its own height —
+ * and it gives the sticky card the room it was always supposed to have. It matters most on exactly
+ * the page where it was broken: the total and the button that reserves the seats now stay in front
+ * of somebody who is scrolling a long list of areas to choose from.
+ */
+.seatmap-widget__side { align-self: stretch; }
+
 .seatmap-widget__side .seatmap-widget__summary {
 	position: sticky;
-	inset-block-start: 1rem;
+	/*
+	 * How much to leave above it is the host's business, not the picker's.
+	 *
+	 * This same widget is served inside a hosted site with a sticky masthead, inside somebody
+	 * else's WordPress theme with whatever header they have, and inside the panel's box office. A
+	 * fixed offset is right for exactly one of those and puts the total behind a header on the
+	 * others. So the host sets `--seatmap-sticky-top` if it has something in the way, and 1rem is
+	 * the answer when nobody says otherwise.
+	 */
+	inset-block-start: var(--seatmap-sticky-top, 1rem);
 	margin-block-start: 0;
 }
 

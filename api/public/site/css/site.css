@@ -91,9 +91,15 @@ h1, h2, h3, h4 {
 
 h1 { font-size: clamp(2.25rem, 6vw, 4rem); }
 h2 { font-size: clamp(1.6rem, 3.8vw, 2.4rem); }
-h3 { font-size: 1.2rem; }
+/* The step that was missing. h2 lands at 38px and h3 at 19px, so every heading between those two
+   jobs — a card's title against a section's title — had to pick a side, and the hierarchy went flat
+   at exactly the level a buyer scans. */
+h3 { font-size: clamp(1.2rem, 1.6vw, 1.45rem); }
+h4 { font-size: 1.0625rem; }
 
-p { margin: 0 0 1em; }
+/* `pretty` rather than `balance` below a heading: balancing a paragraph evens its lines, which is
+   wrong for running text; `pretty` only refuses to leave one word alone on the last line. */
+p { margin: 0 0 1em; text-wrap: pretty; }
 a { color: inherit; }
 img { max-inline-size: 100%; block-size: auto; display: block; }
 hr { border: none; }
@@ -315,6 +321,19 @@ hr { border: none; }
 .hero--short { min-block-size: clamp(12rem, 26dvh, 17rem); }
 .hero--tall { min-block-size: clamp(19rem, 52dvh, 30rem); }
 .hero--full { min-block-size: min(84dvh, 46rem); }
+
+/*
+ * A height is for a photograph. With no photograph there is nothing to give room to.
+ *
+ * The default page a new site is provisioned with has a `tall` hero and no artwork, which rendered
+ * as 480px of gradient carrying a venue name that the masthead already says forty pixels above it —
+ * so the first screen of a ticket shop sold nothing, and on a phone the whole first screen went to
+ * it. Sized to its own content instead, with enough padding to still read as a band.
+ *
+ * Only the height is dropped. The colour, the scrim and the type are untouched, so an organiser who
+ * uploads a picture this afternoon gets the full band back with no setting to find.
+ */
+.hero:not(:has(.hero__art)) { min-block-size: 0; }
 
 .hero__art {
 	position: absolute;
@@ -557,23 +576,48 @@ hr { border: none; }
 		linear-gradient(155deg, hsl(var(--art-h) 48% 24%), hsl(calc(var(--art-h) + 26) 58% 12%));
 }
 
+/*
+ * Lettering on a drawn tile is a texture, not a headline.
+ *
+ * Three things share this box — the date, the category and these initials — and at 14cqi the
+ * initials were the loudest of them on a card whose actual title sits underneath in 19px. The date
+ * is what somebody scanning a programme is looking for, so the date wins and this recedes.
+ *
+ * It stays legible rather than disappearing: on a card with no artwork the tile is all there is,
+ * and an empty coloured rectangle reads as a picture that failed to load.
+ */
 .cover__initials {
 	font-family: var(--font-heading);
-	font-size: clamp(2.5rem, 14cqi, 6rem);
+	font-size: clamp(1.75rem, 8cqi, 3.25rem);
 	font-weight: 800;
-	letter-spacing: 0.02em;
-	color: rgba(255, 255, 255, 0.92);
-	text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+	letter-spacing: 0.06em;
+	color: rgba(255, 255, 255, 0.66);
+	text-shadow: 0 2px 18px rgba(0, 0, 0, 0.3);
 	user-select: none;
 }
 
 /* ============================================================================== events */
 
+/*
+ * `auto-fit`, not `auto-fill`.
+ *
+ * `auto-fill` reserves every track the measure has room for whether or not anything goes in it, so
+ * a venue with two nights on sale got a three-track grid: two cards at 292px and a 292px hole where
+ * the third would have been. `auto-fit` collapses the empty track and the two cards share the row.
+ *
+ * The hole is not a rare case. It is what every venue's programme looks like in its first week and
+ * in its quiet month, which are exactly the weeks somebody is deciding whether this shop looks
+ * finished.
+ */
 .events--cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
 	gap: clamp(1rem, 2.2vw, 1.6rem);
 }
+
+/* The other end of the same correction: one card stretched across the whole measure is not a
+   feature, it is a card that has lost its proportions. */
+.events--cards > .event-card:only-child { max-inline-size: 26rem; }
 
 .events--list { display: flex; flex-direction: column; gap: 0.75rem; }
 
@@ -709,13 +753,24 @@ hr { border: none; }
 .events--spotlight {
 	display: grid;
 	gap: clamp(1rem, 2.2vw, 1.6rem);
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
 }
 
 .events--spotlight .event-card--lead { grid-column: 1 / -1; }
 
+/*
+ * Three columns only when there is a lead card to build them around.
+ *
+ * The spotlight layout is two-plus-one: a large card taking two tracks and the rest beside it. That
+ * shape needs exactly three tracks — but the lead card only appears once there are three or more
+ * dates, and below that the same rule was still forcing three tracks onto two cards. The result was
+ * two cards at 292px and a 292px hole, which is what every venue's programme looks like in its
+ * first week and in its quiet month.
+ *
+ * With no lead, the `auto-fit` above takes over and the cards share the row.
+ */
 @media (min-width: 60rem) {
-	.events--spotlight { grid-template-columns: repeat(3, 1fr); }
+	.events--spotlight:has(.event-card--lead) { grid-template-columns: repeat(3, 1fr); }
 	.events--spotlight .event-card--lead { grid-column: span 2; grid-row: span 2; }
 	.events--spotlight .event-card--lead .event-card__art { aspect-ratio: 16 / 10; }
 	.events--spotlight .event-card--lead .event-card__name { font-size: clamp(1.4rem, 2.4vw, 2rem); }
@@ -807,12 +862,33 @@ hr { border: none; }
  * Given a surface of its own rather than dropped onto the page: buying is a different job from
  * reading about the evening, and the join between the two is where people lose their place.
  */
+/*
+ * What this site's own sticky masthead costs anything that sticks underneath it.
+ *
+ * Read by the seat picker, which is shared with somebody else's WordPress theme and with the
+ * panel's box office and therefore cannot know what is above it. Without this the summary card —
+ * the running total and the button that reserves the seats — parked itself behind the header.
+ */
+.booking { --seatmap-sticky-top: 5.25rem; }
+
 .booking {
 	padding: clamp(1rem, 2.5vw, 1.75rem);
 	border: 1px solid var(--hairline);
 	border-radius: var(--radius-lg);
 	background: var(--surface);
 	box-shadow: var(--shadow);
+}
+
+/*
+ * Measure belongs to what is in it.
+ *
+ * Prose wants 60–75 characters and the listing measure suits a row of cards, but a seating plan is
+ * the product on this page, and holding it to the width of a paragraph makes a buyer pan around a
+ * diagram that would have fitted. So the booking surface is allowed past the shell on a screen wide
+ * enough to be worth it, and is unchanged below that — a phone has no width to give it.
+ */
+@media (min-width: 78rem) {
+	.shell:has(> .booking) { inline-size: min(100% - 2.5rem, 78rem); }
 }
 
 .booking .seatmap-widget { margin-block: 0; }
@@ -824,6 +900,17 @@ hr { border: none; }
 	border-block-start: 1px solid var(--hairline);
 	background: var(--surface-sunken);
 }
+
+/*
+ * A section already ends with its own padding. Adding the footer's margin on top of it measured
+ * 152px of nothing between the last card and the rule above the footer — a gap neither author
+ * intended and which reads as the page having run out rather than having finished.
+ *
+ * Keyed off `main` rather than off the section, because the footer is a sibling of `main` and never
+ * of the section inside it. The margin is kept for the case it was written for: a page whose last
+ * block brings its own edge right up to the footer.
+ */
+main:has(> .section:last-child) + .footer { margin-block-start: 0; }
 
 .footer__inner {
 	display: flex;
