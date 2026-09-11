@@ -160,7 +160,6 @@ return [
     'device_not_authorised' => 'This device is not authorised to scan that event.',
     'no_membership' => 'This account is not a member of any organiser.',
     'not_part_of_site' => 'Not part of this site.',
-    'unknown_event' => 'Unknown event.',
     'unknown_tenant' => 'Unknown organiser.',
 
     // --- Team, roles and invitations --------------------------------------------------------

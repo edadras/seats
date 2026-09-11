@@ -294,7 +294,6 @@ return [
 
     // --- Visiting ---------------------------------------------------------------------------
     'findingUs' => 'Finding us',
-    'questions' => 'Questions',
 
     // --- Confirmation page and empty states ------------------------------------------------
     'bookedHeading' => 'You’re booked',
@@ -329,7 +328,6 @@ return [
     'search' => 'Search',
     'showEverything' => 'Show everything',
     'nothingMatched' => 'Nothing matches that. Try a different word, or show everything.',
-    'addToCalendar' => 'Add to calendar',
     'pickerNeedsScript' => 'Choosing seats needs JavaScript. Please turn it on, or call the box office.',
     'book' => 'Book',
     'account' => [
@@ -408,7 +406,7 @@ return [
     'checkoutRefused' => 'That booking could not be taken. Please try again from the seat map.',
     'checkoutTooQuick' => 'That was sent before the form was filled in. Please check your details and confirm again.',
     'limitPerBuyer' => 'There is a limit of one ticket per person for this event.|There is a limit of :count tickets per person for this event.',
-    'access' => [
+    'accessNeeds' => [
         'label' => 'What do you need to get in and sit down?',
         'placeholder' => 'A hearing loop, a guide dog, step-free access…',
         'hint' => 'Optional. It goes to the people on the door, not to a mailing list.',
@@ -478,5 +476,12 @@ return [
     ],
     'terms' => [
         'title' => 'Terms and conditions',
+    ],
+    'cookies' => [
+        'title' => 'Cookies',
+        'body' => ':site would like to measure which pages people visit, to see whether its marketing works. Nothing is loaded until you say yes.',
+        'yes' => 'Allow',
+        'no' => 'No thanks',
+        'change' => 'Cookies',
     ],
 ];

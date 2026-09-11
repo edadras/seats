@@ -160,7 +160,6 @@ return [
     'device_not_authorised' => 'Dieses Gerät darf diese Veranstaltung nicht scannen.',
     'no_membership' => 'Dieses Konto gehört zu keinem Veranstalter.',
     'not_part_of_site' => 'Gehört nicht zu dieser Website.',
-    'unknown_event' => 'Unbekannte Veranstaltung.',
     'unknown_tenant' => 'Unbekannter Veranstalter.',
 
     // --- Team, roles and invitations --------------------------------------------------------

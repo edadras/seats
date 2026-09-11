@@ -1,6 +1,26 @@
 @extends('site.layout')
 
 @section('content')
+    @if ('confirmed' === $order->status)
+        @push('scripts')
+            <script>
+                /*
+                 * The sale, recorded once, on the page a buyer only reaches by having paid.
+                 *
+                 * The amount comes from the order the server wrote, not from anything a browser
+                 * worked out: a figure a page could argue with is a figure an organiser's reporting
+                 * cannot be held to.
+                 */
+                ( window.seatmapTrack || function () {} )( 'purchase', {
+                    transaction_id: @json($order->external_order_id),
+                    value: @json(round($order->total_amount / (10 ** \App\Support\Locale\Money::exponent($order->currency ?: $site->currency)), 2)),
+                    currency: @json($order->currency ?: $site->currency),
+                    item_name: @json($order->event?->nameFor()),
+                } );
+            </script>
+        @endpush
+    @endif
+
     <section class="shell section">
         @if ('confirmed' === $order->status)
             <div class="done">

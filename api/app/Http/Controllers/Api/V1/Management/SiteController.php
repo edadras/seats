@@ -99,7 +99,21 @@ class SiteController extends Controller
             'billing_address' => ['sometimes', 'nullable', 'string', 'max:600'],
             'invoice_footer' => ['sometimes', 'nullable', 'string', 'max:300'],
             'invoice_prefix' => ['sometimes', 'nullable', 'string', 'max:12', 'regex:/^[A-Za-z0-9-]*$/'],
+            /*
+             * Which analytics this site loads, by id.
+             *
+             * Ids rather than a snippet, and normalised rather than trusted: a box an organiser can
+             * paste script tags into is a stored cross-site scripting hole on a domain we serve and
+             * a checkout we run. An id that does not match its provider's shape is dropped, so a
+             * site is never left with a tag that quietly does nothing.
+             */
+            'measurement' => ['sometimes', 'array'],
+            'measurement.*' => ['nullable', 'string', 'max:80'],
         ]);
+
+        if (array_key_exists('measurement', $data)) {
+            $data['measurement'] = \App\Domain\Sites\Measurement::clean($data['measurement']);
+        }
 
         // Offered only where the platform has credentials to offer it with. A switch that turns on
         // a button leading to a Google error page is worse than no switch.
@@ -657,6 +671,8 @@ class SiteController extends Controller
             'google_signin' => (bool) $site->google_signin,
             // So the screen can say why the switch is unavailable rather than showing a dead one.
             'signin_available' => app(GoogleIdentity::class)->configured(),
+            // What this site measures, as ids. Normalised, so what comes back is what will be used.
+            'measurement' => \App\Domain\Sites\Measurement::clean($site->measurement ?? []),
             'url' => $site->canonicalHost() ? $site->url('/') : null,
             'domains' => $site->domains->map(fn ($d) => $this->presentDomain($d))->values(),
         ];

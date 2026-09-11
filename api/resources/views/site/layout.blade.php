@@ -161,16 +161,26 @@
             @endif
         </div>
 
-        @if (count($footerMenu))
+        @if (count($footerMenu) || \App\Domain\Sites\Measurement::measures($site))
             <nav class="nav nav--footer" aria-label="{{ __('site.footerNav') }}">
                 @foreach ($footerMenu as $item)
                     <a class="nav__link" href="{{ $item['href'] }}"
                        @if ($item['new_tab']) target="_blank" rel="noopener" @endif>{{ $item['label'] }}</a>
                 @endforeach
+
+                {{-- A way back to a question somebody has already answered. Only where there is a
+                     question: a site that measures nothing has nothing to change your mind about. --}}
+                @if (\App\Domain\Sites\Measurement::measures($site))
+                    <a class="nav__link" href="#" data-consent-reopen>{{ __('site.cookies.change') }}</a>
+                @endif
             </nav>
         @endif
     </div>
 </footer>
+
+{{-- Measurement, and the question that comes before it. Renders nothing at all on a site that
+     measures nothing, which is most of them. --}}
+@include('site.partials.measurement')
 
 @stack('scripts')
 </body>

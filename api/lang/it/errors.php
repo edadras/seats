@@ -160,7 +160,6 @@ return [
     'device_not_authorised' => 'Questo dispositivo non è autorizzato a scansionare quell’evento.',
     'no_membership' => 'Questo account non appartiene a nessun organizzatore.',
     'not_part_of_site' => 'Non fa parte di questo sito.',
-    'unknown_event' => 'Evento sconosciuto.',
     'unknown_tenant' => 'Organizzatore sconosciuto.',
 
     // --- Team, roles and invitations --------------------------------------------------------

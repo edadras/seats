@@ -290,7 +290,6 @@ return [
 
     // --- Come arrivare ----------------------------------------------------------------------
     'findingUs' => 'Come trovarci',
-    'questions' => 'Domande',
 
     // --- Pagina di conferma e stati vuoti ---------------------------------------------------
     'bookedHeading' => 'Prenotato',
@@ -325,7 +324,6 @@ return [
     'search' => 'Cerca',
     'showEverything' => 'Mostra tutto',
     'nothingMatched' => 'Non corrisponde niente. Provate un’altra parola, o mostrate tutto.',
-    'addToCalendar' => 'Aggiungi al calendario',
     'pickerNeedsScript' => 'La scelta dei posti richiede JavaScript. Attivatelo, oppure chiamate la biglietteria.',
     'book' => 'Prenota',
     'account' => [
@@ -404,7 +402,7 @@ return [
     'checkoutRefused' => 'Non è stato possibile accettare questa prenotazione. Riprova dalla mappa dei posti.',
     'checkoutTooQuick' => 'Il modulo è stato inviato prima di essere compilato. Controlla i dati e conferma di nuovo.',
     'limitPerBuyer' => 'Questo evento ha un limite di un biglietto a persona.|Questo evento ha un limite di :count biglietti a persona.',
-    'access' => [
+    'accessNeeds' => [
         'label' => 'Di cosa ha bisogno per entrare e sedersi?',
         'placeholder' => 'Anello magnetico, cane guida, accesso senza gradini…',
         'hint' => 'Facoltativo. Arriva a chi sta all\'ingresso, non a una lista di distribuzione.',
@@ -474,5 +472,12 @@ return [
     ],
     'terms' => [
         'title' => 'Termini e condizioni',
+    ],
+    'cookies' => [
+        'title' => 'Cookie',
+        'body' => ':site vorrebbe misurare quali pagine vengono visitate, per capire se la sua comunicazione funziona. Non viene caricato nulla finché non accetti.',
+        'yes' => 'Accetto',
+        'no' => 'No, grazie',
+        'change' => 'Cookie',
     ],
 ];

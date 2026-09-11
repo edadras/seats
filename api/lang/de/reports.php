@@ -194,7 +194,7 @@ return [
     'unscheduleTitle' => 'Diesen Bericht nicht mehr senden?',
     'unscheduleBody' => 'Der Bericht selbst bleibt; nur der Zeitplan geht.',
     'unscheduled' => 'Beendet.',
-    'scheduled' => 'Gespeichert.',
+    'scheduleSaved' => 'Gespeichert.',
     'atHour' => 'um :hour:00',
     'everyDay' => 'Täglich',
     'everyWeekday' => 'Jeden :day',

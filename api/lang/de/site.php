@@ -291,7 +291,6 @@ return [
 
     // --- Anfahrt ----------------------------------------------------------------------------
     'findingUs' => 'So finden Sie uns',
-    'questions' => 'Fragen',
 
     // --- Bestätigungsseite und leere Zustände ----------------------------------------------
     'bookedHeading' => 'Gebucht',
@@ -326,7 +325,6 @@ return [
     'search' => 'Suchen',
     'showEverything' => 'Alles zeigen',
     'nothingMatched' => 'Dazu passt nichts. Versuchen Sie ein anderes Wort, oder zeigen Sie alles.',
-    'addToCalendar' => 'Zum Kalender hinzufügen',
     'pickerNeedsScript' => 'Für die Sitzplatzauswahl wird JavaScript gebraucht. Bitte einschalten oder die Kasse anrufen.',
     'book' => 'Buchen',
     'account' => [
@@ -405,7 +403,7 @@ return [
     'checkoutRefused' => 'Diese Buchung konnte nicht angenommen werden. Bitte versuchen Sie es vom Saalplan aus erneut.',
     'checkoutTooQuick' => 'Das wurde abgeschickt, bevor das Formular ausgefüllt war. Bitte prüfen Sie Ihre Angaben und bestätigen Sie erneut.',
     'limitPerBuyer' => 'Für diese Veranstaltung gilt eine Grenze von einer Karte pro Person.|Für diese Veranstaltung gilt eine Grenze von :count Karten pro Person.',
-    'access' => [
+    'accessNeeds' => [
         'label' => 'Was brauchen Sie, um hereinzukommen und Platz zu nehmen?',
         'placeholder' => 'Induktionsschleife, Blindenhund, stufenloser Zugang …',
         'hint' => 'Freiwillig. Es geht an den Einlass, nicht an einen Verteiler.',
@@ -475,5 +473,12 @@ return [
     ],
     'terms' => [
         'title' => 'Allgemeine Geschäftsbedingungen',
+    ],
+    'cookies' => [
+        'title' => 'Cookies',
+        'body' => ':site möchte messen, welche Seiten besucht werden, um zu sehen, ob die Werbung wirkt. Nichts wird geladen, bevor Sie zustimmen.',
+        'yes' => 'Zustimmen',
+        'no' => 'Nein danke',
+        'change' => 'Cookies',
     ],
 ];

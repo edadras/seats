@@ -160,7 +160,6 @@ return [
     'device_not_authorised' => 'Cet appareil n’est pas autorisé à scanner cet événement.',
     'no_membership' => 'Ce compte n’appartient à aucun organisateur.',
     'not_part_of_site' => 'Ne fait pas partie de ce site.',
-    'unknown_event' => 'Événement inconnu.',
     'unknown_tenant' => 'Organisateur inconnu.',
 
     // --- Team, roles and invitations --------------------------------------------------------

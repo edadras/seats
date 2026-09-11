@@ -2006,3 +2006,38 @@ hr { border: none; }
 	.buy__act { inline-size: 100%; }
 	.buy__act .button { flex: 1 1 auto; text-align: center; }
 }
+
+/* ============================================================== the question before the measuring */
+
+/*
+ * A bar at the foot of the page rather than a curtain over it.
+ *
+ * A modal that has to be dismissed before the page can be read is a modal that gets whatever answer
+ * makes it go away, which is not consent — and on a phone it sits over the one button the visitor
+ * came for.
+ */
+.cookiebar {
+	position: sticky;
+	inset-block-end: 0;
+	z-index: 40;
+	border-block-start: 1px solid var(--border);
+	background: var(--surface);
+	box-shadow: 0 -6px 24px rgba(16, 20, 30, 0.07);
+}
+
+.cookiebar__inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1.5rem;
+	padding-block: 0.9rem;
+}
+
+.cookiebar__text { margin: 0; flex: 1 1 22rem; font-size: 0.9375rem; }
+.cookiebar__acts { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+@media (max-width: 40rem) {
+	.cookiebar__acts { inline-size: 100%; }
+	.cookiebar__acts .button { flex: 1 1 auto; text-align: center; }
+}

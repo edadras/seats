@@ -14,7 +14,11 @@
  *   3. every placeholder in a key appears in every translation of that key. A translation that
  *      silently drops `:max` tells a buyer they can select up to seats;
  *   4. placeholder *shape* does not change between locales — `%d` in one and `:count` in another
- *      means one of them renders literally.
+ *      means one of them renders literally;
+ *   5. no catalogue declares the same key twice. PHP resolves a duplicate by keeping the last one
+ *      and discarding the first without a murmur, so appending a section that happens to reuse a
+ *      name silently deletes everything the earlier one held — in all six locales at once, which
+ *      is exactly why checks 1 and 2 cannot see it.
  *
  * Run: node tools/i18n-check.mjs
  */
@@ -93,6 +97,37 @@ function placeholders(text) {
     return [...new Set(found)].sort();
 }
 
+/**
+ * Keys declared more than once in one file.
+ *
+ * Read from the source rather than from the parsed array, because by the time PHP has parsed it the
+ * evidence is gone: the winner is in the array and the loser is nowhere. Only top-level keys —
+ * indentation is what tells them apart, and a top-level collision is the one that destroys a whole
+ * section rather than one string.
+ *
+ * @return string[]
+ */
+function duplicateKeys(file) {
+    const seen = new Set();
+    const twice = new Set();
+
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+        const match = line.match(/^ {4}'([^']+)' =>/);
+
+        if (!match) {
+            continue;
+        }
+
+        if (seen.has(match[1])) {
+            twice.add(match[1]);
+        }
+
+        seen.add(match[1]);
+    }
+
+    return [...twice];
+}
+
 const locales = supportedLocales();
 const namespaces = fs
     .readdirSync(path.join(langDir, REFERENCE))
@@ -113,6 +148,19 @@ for (const locale of locales) {
 for (const namespace of namespaces) {
     const referencePath = path.join(langDir, REFERENCE, `${namespace}.php`);
     const reference = flatten(readCatalogue(referencePath));
+
+    for (const locale of locales) {
+        const own = path.join(langDir, locale, `${namespace}.php`);
+
+        if (fs.existsSync(own)) {
+            for (const key of duplicateKeys(own)) {
+                problems.push(
+                    `${locale}/${namespace}: "${key}" is declared twice — the first one, and ` +
+                        'everything under it, has been silently discarded'
+                );
+            }
+        }
+    }
 
     for (const locale of locales) {
         if (locale === REFERENCE) continue;

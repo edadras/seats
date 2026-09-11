@@ -1,6 +1,16 @@
 @extends('site.layout')
 
 @section('content')
+    @push('scripts')
+        <script>
+            {{-- Somebody reached the form. The half of a funnel an organiser can actually act on is
+                 the gap between this and the sale. --}}
+            ( window.seatmapTrack || function () {} )( 'begin_checkout', {
+                currency: @json($site->currency),
+            } );
+        </script>
+    @endpush
+
     <section class="shell section checkout">
         <div class="section__head">
             <div>
@@ -220,10 +230,10 @@
                          the needs whoever wrote the form happened to think of. Optional, asked
                          once, and it goes to the door rather than to a mailing list. --}}
                     <div class="field">
-                        <label class="field__label" for="access-needs">{{ __('site.access.label') }}</label>
+                        <label class="field__label" for="access-needs">{{ __('site.accessNeeds.label') }}</label>
                         <textarea class="input" id="access-needs" name="access_needs" rows="2"
-                            maxlength="500" placeholder="{{ __('site.access.placeholder') }}"></textarea>
-                        <span class="field__hint">{{ __('site.access.hint') }}</span>
+                            maxlength="500" placeholder="{{ __('site.accessNeeds.placeholder') }}"></textarea>
+                        <span class="field__hint">{{ __('site.accessNeeds.hint') }}</span>
                     </div>
                 @endif
 

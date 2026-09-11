@@ -194,7 +194,7 @@ return [
     'unscheduleTitle' => 'Smettere di inviare questo report?',
     'unscheduleBody' => 'Il report resta; sparisce solo la pianificazione.',
     'unscheduled' => 'Interrotto.',
-    'scheduled' => 'Salvato.',
+    'scheduleSaved' => 'Salvato.',
     'atHour' => 'alle :hour:00',
     'everyDay' => 'Ogni giorno',
     'everyWeekday' => 'Ogni :day',

@@ -562,6 +562,26 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## Measurement, and the question that comes first
+
+A hosted site had no analytics of any kind, so an organiser who spent money on a poster could see
+how many tickets sold and nothing about where the buyers came from — which is most of what the money
+was for.
+
+Three providers, configured by **id** rather than by snippet: a Google Analytics measurement id, a
+Meta pixel number, a Plausible domain. There is deliberately no box to paste script tags into and
+there will not be — organiser-supplied script on a domain we serve, on a checkout we run the card
+form on, is a stored cross-site scripting hole that crosses tenants. An id that does not match its
+provider's shape is dropped rather than stored, so an organiser is never left with a tag that
+quietly does nothing.
+
+**Nothing loads until a visitor says yes.** Not the tag, not the address. A bar at the foot of the
+page asks and remembers; a browser that already set Global Privacy Control or Do Not Track is not
+asked at all and gets nothing; a site with no ids shows no bar, because it has nothing to ask about.
+Pages record what happened on them — a night looked at, a checkout begun, a sale — through one
+function that queues until the answer is known, so no page has to think about consent and there is
+exactly one place that does.
+
 ## Email that comes from the venue
 
 Every message this platform sent used to leave from one address, for every venue on it: a buyer who
@@ -706,7 +726,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all fifty-nine, in order
+./smoke.sh                    # all sixty, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -933,6 +953,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The From address is the venue's only where the operator authorised that domain | `SenderIdentityTest` |
 | Changing the address takes the old one out of the header until the new one is proved | `SenderIdentityTest` |
 | The code that proves an address is the one email that cannot be sent from it | `SenderIdentityTest` |
+| Nothing is fetched from Google, Meta or Plausible until a visitor has said yes | `measurement_smoke` |
+| A tracking id that is not one is dropped rather than rendered into a tag | `MeasurementTest`, `measurement_smoke` |
+| A site that measures nothing asks nothing | `MeasurementTest` |
+| A page records what happened on it without knowing anything about consent | `MeasurementTest`, `measurement_smoke` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

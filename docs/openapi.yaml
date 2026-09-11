@@ -9931,6 +9931,13 @@ paths:
                 currency: { type: string, minLength: 3, maxLength: 3 }
                 status: { type: string, enum: [draft, live] }
                 brand: { $ref: "#/components/schemas/SiteBrand" }
+                measurement:
+                  type: object
+                  description: >-
+                    Provider ids, as on the Site schema. An id that does not match its provider's
+                    shape is dropped rather than refused, so the response is what will actually be
+                    used — send an empty string to remove one.
+                  additionalProperties: { type: [string, "null"], maxLength: 80 }
       responses:
         "200":
           description: Updated
@@ -13710,6 +13717,23 @@ components:
         domains:
           type: array
           items: { $ref: "#/components/schemas/SiteDomain" }
+        measurement:
+          type: object
+          description: |
+            What this site measures, as provider ids — `ga4` (`G-…`), `meta` (the pixel's number),
+            `plausible` (the domain it is registered under there). There is deliberately no field
+            for a tracking snippet: organiser-supplied script on a domain we serve, and on a
+            checkout we run the card form on, is a stored cross-site scripting hole that crosses
+            tenants. The tags are built from these ids.
+
+            An id that does not match its provider's shape is dropped rather than stored, so what
+            comes back is what will be used.
+
+            Nothing is loaded in a visitor's browser until they have said yes to a consent bar; a
+            site with no ids here shows no bar, because it has nothing to ask about.
+          additionalProperties: { type: string }
+          examples:
+            - { ga4: G-ABC1234567, plausible: northgate.example }
 
     SiteDetail:
       allOf:

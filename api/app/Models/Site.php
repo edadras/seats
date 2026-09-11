@@ -22,7 +22,7 @@ class Site extends Model
         'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'locales', 'timezone',
         'currency', 'brand', 'status', 'google_signin', 'published_at',
         'invoices_enabled', 'legal_name', 'tax_number', 'billing_address',
-        'invoice_footer', 'invoice_prefix',
+        'invoice_footer', 'invoice_prefix', 'measurement',
     ];
 
     protected $casts = [
@@ -31,6 +31,8 @@ class Site extends Model
         'google_signin' => 'boolean',
         'published_at' => 'datetime',
         'invoices_enabled' => 'boolean',
+        // {provider => id}. {@see \App\Domain\Sites\Measurement}.
+        'measurement' => 'array',
     ];
 
     /**

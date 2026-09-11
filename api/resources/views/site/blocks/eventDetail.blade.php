@@ -68,6 +68,23 @@
         </div>
     </header>
 
+    @push('scripts')
+        <script>
+            /*
+             * Somebody looked at this night.
+             *
+             * `seatmapTrack` exists whether or not anybody has consented — it queues, and the queue
+             * is sent or thrown away by the one place that knows the answer. A page recording an
+             * event therefore never has to think about consent, which is why it is always right.
+             */
+            ( window.seatmapTrack || function () {} )( 'view_item', {
+                item_id: @json($event['public_id']),
+                item_name: @json($event['name']),
+                currency: @json($site->currency),
+            } );
+        </script>
+    @endpush
+
     {{-- dir="auto" throughout: what an organiser wrote is in their language, not the reader's, and
          an English sentence dropped into a Persian page reads with its full stop at the front. --}}
     @if ($event['description'])

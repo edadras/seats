@@ -243,6 +243,7 @@
 			[ 'domains', 'globe', 'addressNav' ],
 			[ 'signin', 'user', 'signinNav' ],
 			[ 'invoicing', 'file', 'invoicingNav' ],
+			[ 'measurement', 'chart', 'measurementNav' ],
 		].forEach( function ( entry ) {
 			var button = node( 'button', 'nav-item' );
 			button.innerHTML = icon( entry[ 1 ], { size: 15 } ) +
@@ -272,6 +273,7 @@
 			case 'domains': return Sites.paintDomains( App );
 			case 'signin': return Sites.paintSignIn( App );
 			case 'invoicing': return Sites.paintInvoicing( App );
+			case 'measurement': return Sites.paintMeasurement( App );
 			default: return Sites.paintPage( App );
 		}
 	};
@@ -1633,6 +1635,70 @@
 	 * none, this says so plainly rather than showing a control that would fail: an organiser who
 	 * turns something on and finds a Google error page has been lied to by the panel.
 	 */
+	/**
+	 * What this site measures, and the question it has to ask first.
+	 *
+	 * Ids rather than a box to paste a snippet into. A snippet box would be an organiser typing
+	 * script tags onto a domain we serve and a checkout we run the card form on — and "it is only
+	 * their analytics" is exactly how such a box gets added. The three providers here cover what a
+	 * venue actually uses; anything else is a conversation with the operator.
+	 */
+	Sites.paintMeasurement = function ( App ) {
+		var site = Sites.state.site;
+		var host = document.getElementById( 'site-main' );
+		var ids = site.measurement || {};
+
+		var field = function ( key, label, hint, placeholder ) {
+			return '<div class="field">' +
+				'<label class="field__label" for="m-' + key + '">' + esc( label ) + '</label>' +
+				'<input class="input" id="m-' + key + '" maxlength="80" placeholder="' +
+				esc( placeholder ) + '" value="' + esc( ids[ key ] || '' ) + '">' +
+				'<p class="field__hint">' + esc( hint ) + '</p></div>';
+		};
+
+		host.innerHTML =
+			'<div class="site-pane">' +
+				'<div class="page-head page-head--inline">' +
+					'<div class="page-head__text">' +
+						'<h1>' + esc( App.t( 'panel.sites.measurementTitle' ) ) + '</h1>' +
+						'<p class="page-head__desc">' +
+							esc( App.t( 'panel.sites.measurementDescription' ) ) + '</p>' +
+					'</div>' +
+				'</div>' +
+				'<div class="card card--pad">' +
+					field( 'ga4', App.t( 'panel.sites.ga4' ), App.t( 'panel.sites.ga4Hint' ), 'G-XXXXXXXXXX' ) +
+					field( 'meta', App.t( 'panel.sites.metaPixel' ), App.t( 'panel.sites.metaHint' ), '123456789012345' ) +
+					field( 'plausible', App.t( 'panel.sites.plausible' ), App.t( 'panel.sites.plausibleHint' ), 'northgate.example' ) +
+					'<button class="btn btn--primary spaced" id="measure-save">' +
+					esc( App.t( 'panel.common.save' ) ) + '</button>' +
+				'</div>' +
+				'<div class="card card--pad">' +
+					'<h2 class="card__title">' + esc( App.t( 'panel.sites.consentTitle' ) ) + '</h2>' +
+					'<p class="hint">' + esc( App.t( 'panel.sites.consentBody' ) ) + '</p>' +
+					'<p class="hint spaced">' + esc( App.t( 'panel.sites.consentSnippet' ) ) + '</p>' +
+				'</div>' +
+			'</div>';
+
+		document.getElementById( 'measure-save' ).addEventListener( 'click', function () {
+			App.request( 'PATCH', '/sites/' + site.id, {
+				measurement: {
+					ga4: document.getElementById( 'm-ga4' ).value,
+					meta: document.getElementById( 'm-meta' ).value,
+					plausible: document.getElementById( 'm-plausible' ).value,
+				},
+			} )
+				.then( function ( updated ) {
+					// Repainted from the server's answer rather than from what was typed: an id
+					// that did not match its provider's shape was dropped, and the organiser should
+					// see that it was rather than believe it was saved.
+					site.measurement = updated.measurement;
+					App.toast( App.t( 'panel.sites.measurementSaved' ) );
+					Sites.paintMeasurement( App );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+	};
+
 	Sites.paintSignIn = function ( App ) {
 		var site = Sites.state.site;
 		var host = document.getElementById( 'site-main' );

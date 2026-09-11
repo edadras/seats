@@ -401,8 +401,10 @@ class SiteModulesTest extends TestCase
 
         $page = $this->get('http://northgate.test/')->assertOk();
 
-        // A button that leads to a page with nothing to buy is worse than a sentence.
-        $page->assertSee(__('site.closed.closed'), false)
+        // A button that leads to a page with nothing to buy is worse than a sentence. Asserted as
+        // the sentence rather than through `__()`, which would compare a missing key with itself
+        // and pass on a catalogue where somebody had deleted it.
+        $page->assertSee('Booking for this performance has closed.', false)
             ->assertDontSee('Book a seat', false);
     }
 
@@ -428,7 +430,7 @@ class SiteModulesTest extends TestCase
 
         $this->get('http://northgate.test/')
             ->assertOk()
-            ->assertSee(__('site.access.presaleOnly'), false)
+            ->assertSee('This is a presale. A code is needed to book.', false)
             ->assertDontSee('Book a seat', false);
     }
 

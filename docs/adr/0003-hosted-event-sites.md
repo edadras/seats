@@ -95,6 +95,14 @@ Themes are first-party Blade layouts plus a token set, chosen by key. A theme ca
 organiser-supplied code, which is the whole reason for not being WordPress. The one escape hatch,
 the `html` block, is sanitised and is available only to a tenant whose plan allows it.
 
+Measurement follows the same rule and is worth naming because it is where every other platform gives
+in: a site is configured with a provider **id**, never a snippet. A field that accepts script tags
+is organiser-supplied code running on a domain we serve and on the page a buyer types a card number
+into, and "it is only their analytics" is precisely the argument that would add it. The tag is built
+from the id, and an id that does not match its provider's shape is dropped rather than stored.
+
+None of it loads until the visitor has said yes, and a site that measures nothing never asks.
+
 Every page has a **draft** and a **published** revision. Editing does not change what visitors see
 until publish — the same discipline the seat maps already have, and for the same reason: a venue
 should not be able to break its own storefront in the middle of an on-sale.

@@ -194,7 +194,7 @@ return [
     'unscheduleTitle' => 'أتوقف إرسال هذا التقرير؟',
     'unscheduleBody' => 'يبقى التقرير نفسه؛ يُحذَف الجدول وحده.',
     'unscheduled' => 'تم الإيقاف.',
-    'scheduled' => 'حُفظ.',
+    'scheduleSaved' => 'حُفظ.',
     'atHour' => 'الساعة :hour:٠٠',
     'everyDay' => 'كل يوم',
     'everyWeekday' => 'كل :day',

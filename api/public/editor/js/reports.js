@@ -245,7 +245,7 @@
 					} ) );
 
 				return request.then( function () {
-					App.toast( App.t( 'reports.scheduled' ) );
+					App.toast( App.t( 'reports.scheduleSaved' ) );
 					Reports.render( App );
 				} );
 			},

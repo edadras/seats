@@ -290,7 +290,6 @@ return [
 
     // --- Venir ------------------------------------------------------------------------------
     'findingUs' => 'Nous trouver',
-    'questions' => 'Questions',
 
     // --- Page de confirmation et états vides -----------------------------------------------
     'bookedHeading' => 'C’est réservé',
@@ -325,7 +324,6 @@ return [
     'search' => 'Rechercher',
     'showEverything' => 'Tout afficher',
     'nothingMatched' => 'Rien ne correspond. Essayez un autre mot, ou affichez tout.',
-    'addToCalendar' => 'Ajouter au calendrier',
     'pickerNeedsScript' => 'Le choix des places nécessite JavaScript. Activez-le, ou appelez la billetterie.',
     'book' => 'Réserver',
     'account' => [
@@ -404,7 +402,7 @@ return [
     'checkoutRefused' => 'Cette réservation n’a pas pu être prise. Veuillez réessayer depuis le plan de salle.',
     'checkoutTooQuick' => 'Le formulaire a été envoyé avant d’être rempli. Vérifiez vos informations et confirmez à nouveau.',
     'limitPerBuyer' => 'Cet événement est limité à un billet par personne.|Cet événement est limité à :count billets par personne.',
-    'access' => [
+    'accessNeeds' => [
         'label' => 'De quoi avez-vous besoin pour entrer et vous installer ?',
         'placeholder' => 'Boucle magnétique, chien guide, accès de plain-pied…',
         'hint' => 'Facultatif. Cela va aux personnes à l\'entrée, pas à une liste de diffusion.',
@@ -474,5 +472,12 @@ return [
     ],
     'terms' => [
         'title' => 'Conditions générales',
+    ],
+    'cookies' => [
+        'title' => 'Cookies',
+        'body' => ':site souhaite mesurer les pages visitées, pour savoir si sa communication fonctionne. Rien n’est chargé tant que vous n’avez pas accepté.',
+        'yes' => 'Accepter',
+        'no' => 'Non merci',
+        'change' => 'Cookies',
     ],
 ];

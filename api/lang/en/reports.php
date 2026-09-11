@@ -194,7 +194,7 @@ return [
     'unscheduleTitle' => 'Stop sending this report?',
     'unscheduleBody' => 'The report itself stays; only the schedule goes.',
     'unscheduled' => 'Stopped.',
-    'scheduled' => 'Saved.',
+    'scheduleSaved' => 'Saved.',
     'atHour' => 'at :hour:00',
     'everyDay' => 'Every day',
     'everyWeekday' => 'Every :day',

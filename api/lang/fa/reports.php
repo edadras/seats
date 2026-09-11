@@ -194,7 +194,7 @@ return [
     'unscheduleTitle' => 'فرستادن این گزارش متوقف شود؟',
     'unscheduleBody' => 'خود گزارش می‌ماند؛ فقط زمان‌بندی حذف می‌شود.',
     'unscheduled' => 'متوقف شد.',
-    'scheduled' => 'ذخیره شد.',
+    'scheduleSaved' => 'ذخیره شد.',
     'atHour' => 'ساعت :hour:۰۰',
     'everyDay' => 'هر روز',
     'everyWeekday' => 'هر :day',

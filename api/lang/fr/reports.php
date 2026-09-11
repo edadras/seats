@@ -194,7 +194,7 @@ return [
     'unscheduleTitle' => 'Arrêter l’envoi de ce rapport ?',
     'unscheduleBody' => 'Le rapport lui-même reste ; seule la programmation disparaît.',
     'unscheduled' => 'Arrêté.',
-    'scheduled' => 'Enregistré.',
+    'scheduleSaved' => 'Enregistré.',
     'atHour' => 'à :hour h 00',
     'everyDay' => 'Tous les jours',
     'everyWeekday' => 'Chaque :day',
