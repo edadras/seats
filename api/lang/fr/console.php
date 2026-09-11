@@ -33,6 +33,7 @@ return [
         'tenants' => 'Organisateurs',
         'sites' => 'Sites web',
         'plans' => 'Forfaits',
+        'invoices' => 'Factures',
         'audit' => 'Journal des opérateurs',
     ],
 
@@ -171,6 +172,24 @@ return [
         'whyVoid' => 'Pourquoi annuler ce versement ? La période redevient libre.',
         'clash' => 'Ces jours chevauchent un versement qui existe déjà : :periods. Annulez-le, ou choisissez d’autres dates.',
         'nothing' => 'Rien n’a été encaissé sur cette période, il n’y a donc rien à régler.',
+    ],
+
+
+    'invoices' => [
+        'heading' => 'Factures',
+        'outstanding' => 'Impayé sur l’ensemble des organisateurs : :amount.',
+        'pastDue' => 'En retard, tentatives épuisées : :accounts. Ce qui suit relève d’une personne, pas d’une tâche planifiée.',
+        'number' => 'Numéro',
+        'period' => 'Période',
+        'range' => 'du :from au :to',
+        'amount' => 'Montant',
+        'reference' => 'Référence',
+        'none' => 'Rien n’a encore été facturé.',
+        'markPaid' => 'Marquer comme payée',
+        'retry' => 'Réessayer la carte',
+        'void' => 'Annuler',
+        'askReference' => 'Référence bancaire de ce paiement (laisser vide s’il n’y en a pas) :',
+        'whyVoid' => 'Pourquoi annuler cette facture ? Sa période redevient libre.',
     ],
 
 ];

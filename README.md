@@ -302,6 +302,21 @@ A seat is the start of it, not the end. Around the map:
   reference the buyer's bank will want.
 - **Settlement** — what was taken, what was handed back, what the platform's commission was, per
   period or per event, as a statement somebody can send to an accountant.
+- **The platform collects its own money.** Everything else about money here is the organiser's:
+  their gateways, their refunds, their settlement, their payouts. The platform's own side was a
+  price list and a `subscriptions` row with a `current_period_end` that nothing ever looked at — an
+  account signed up, a period passed, and not one thing happened. Now a finished period becomes an
+  invoice: the plan fee at the price it carried that day, plus the commission on what they sold,
+  taken from the same settlement arithmetic the organiser reads so the two can be compared line by
+  line. Numbered sequentially per year, frozen when raised, and one per account per period by an
+  exclusion constraint rather than a check. It is collected from a card on file — through the
+  platform's own account, off-session, keyed on the invoice so a retry cannot charge twice — or, by
+  default, by an invoice somebody pays by transfer, which is a complete answer and the only one a
+  self-hosted deployment needs. A refused card climbs a retry ladder with the gateway's own reason
+  on each rung, and an account that runs out of rungs is marked past due **and keeps working**:
+  taking a venue's box office down on the night of a show over an unpaid invoice is a decision with
+  a full house on the other end of it, so it belongs to a person in the console, not to a scheduled
+  command.
 - **Payouts: a period settled once.** The settlement report would tell anybody who asked what a
   window was worth, and told nobody whether it had been paid — so the same month could go out twice,
   a fortnight could fall between two payouts nobody lined up, and a refund in March quietly rewrote
@@ -598,6 +613,15 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Credit instead of money never touches the gateway | `RefundToCardTest` |
 | A payment the gateway has already refunded is not refunded twice | `RefundToCardTest`, `StripeGatewayTest` |
 | A buyer's granted request sends money, and a refused one stays pending | `RefundToCardTest` |
+| A finished period becomes an invoice; an unfinished one does not | `PlatformBillingTest` |
+| The commission on what they sold is on the same invoice, with what it was taken of | `PlatformBillingTest` |
+| Four missed months are four invoices, numbered per year and never reused | `PlatformBillingTest` |
+| An account in its trial is not billed | `PlatformBillingTest` |
+| An account that pays by transfer is never told a payment failed | `PlatformBillingTest` |
+| A card on file is charged off-session, keyed so a retry cannot charge twice | `PlatformBillingTest` |
+| A refused card climbs a ladder; a ladder that runs out marks past due and stops there | `PlatformBillingTest` |
+| Paying brings an account back into good standing on its own | `PlatformBillingTest` |
+| A box office manager is not shown the account's card | `PlatformBillingTest` |
 | A period is settled at the figures it had, and a later refund does not rewrite them | `PayoutTest` |
 | The same days cannot be settled twice, nor two periods that merely touch | `PayoutTest` |
 | The database itself refuses an overlap, past every check in the code | `PayoutTest` |

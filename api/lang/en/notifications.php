@@ -34,5 +34,17 @@ return [
             'title' => 'Address verified',
             'body' => ':hostname is verified and can serve :site.',
         ],
+        'billing_invoiced' => [
+            'title' => 'Invoice raised',
+            'body' => 'Invoice :number is ready. It is due on :due.',
+        ],
+        'billing_payment_failed' => [
+            'title' => 'A payment did not go through',
+            'body' => 'Invoice :number could not be charged: :reason. It will be tried again.',
+        ],
+        'billing_past_due' => [
+            'title' => 'This account is past due',
+            'body' => 'Invoice :number has not been paid and the retries are finished: :reason. Settle it on the billing screen.',
+        ],
     ],
 ];

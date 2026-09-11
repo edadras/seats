@@ -28,5 +28,17 @@ return [
             'title' => 'Indirizzo verificato',
             'body' => ':hostname è verificato e può servire :site.',
         ],
+        'billing_invoiced' => [
+            'title' => 'Fattura emessa',
+            'body' => 'La fattura :number è pronta. Scade il :due.',
+        ],
+        'billing_payment_failed' => [
+            'title' => 'Un pagamento non è andato a buon fine',
+            'body' => 'Non è stato possibile addebitare la fattura :number: :reason. Si riproverà.',
+        ],
+        'billing_past_due' => [
+            'title' => 'Questo account è scaduto',
+            'body' => 'La fattura :number non è stata pagata e i tentativi sono finiti: :reason. Saldatela dalla schermata di fatturazione.',
+        ],
     ],
 ];

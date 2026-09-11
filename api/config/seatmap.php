@@ -121,6 +121,48 @@ return [
         'window_days' => (int) env('SEATMAP_ATTRIBUTION_WINDOW_DAYS', 30),
     ],
 
+    /*
+     | The platform's own money (ADR-0001 drew the boundary the other way round: this is the one
+     | place the platform is the merchant rather than the organiser).
+     |
+     | `mode` decides how an invoice gets paid:
+     |
+     |   invoice — the platform raises it and somebody pays by transfer. An operator marks it paid
+     |             in the console. This is the default, and the only mode a self-hosted deployment
+     |             needs: it needs no credentials and invents no card vault.
+     |   card    — a card the organiser put on file is charged off-session through the *platform's*
+     |             own Stripe account. Not a tenant's module: those hold an organiser's credentials
+     |             and take money into an organiser's account, which is the opposite of this.
+     |
+     | `suspend_after_days` is deliberately null. Cutting a venue off over an unpaid invoice is a
+     | decision with a box office and a full house on the other end of it, so a deployment has to
+     | ask for it: without it, billing marks an account past due, says so loudly on every screen,
+     | tells the people who run the platform, and stops there.
+     */
+    'billing' => [
+        'mode' => env('SEATMAP_BILLING_MODE', 'invoice'),
+        'currency' => mb_strtoupper((string) env('SEATMAP_BILLING_CURRENCY', 'EUR')),
+
+        // What the platform adds to its own invoices, in basis points. 2000 is 20%.
+        'vat_rate' => (int) env('SEATMAP_BILLING_VAT_RATE', 0),
+        'vat_number' => (string) env('SEATMAP_BILLING_VAT_NUMBER', ''),
+
+        // Days after an invoice is issued before it is due, and the retry ladder after that —
+        // days from the due date, one entry per attempt.
+        'terms_days' => (int) env('SEATMAP_BILLING_TERMS_DAYS', 14),
+        'retry_days' => [0, 3, 7, 14],
+
+        'suspend_after_days' => null === env('SEATMAP_BILLING_SUSPEND_AFTER_DAYS')
+            ? null
+            : (int) env('SEATMAP_BILLING_SUSPEND_AFTER_DAYS'),
+
+        // The platform's own Stripe account, used only in `card` mode. Empty means no card can be
+        // put on file, and the panel says so rather than offering a button that cannot work.
+        'stripe' => [
+            'secret_key' => (string) env('SEATMAP_BILLING_STRIPE_SECRET', ''),
+        ],
+    ],
+
     'checkin' => [
         'pairing_code_ttl_minutes' => 30,
         'max_batch_scans' => 500,

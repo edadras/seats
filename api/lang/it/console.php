@@ -33,6 +33,7 @@ return [
         'tenants' => 'Organizzatori',
         'sites' => 'Siti web',
         'plans' => 'Piani',
+        'invoices' => 'Fatture',
         'audit' => 'Registro operatori',
     ],
 
@@ -171,6 +172,24 @@ return [
         'whyVoid' => 'Perché questo pagamento viene annullato? Il periodo torna libero.',
         'clash' => 'Quei giorni si sovrappongono a un pagamento che esiste già: :periods. Annullalo, oppure scegli altre date.',
         'nothing' => 'In quel periodo non è stato incassato nulla, quindi non c’è nulla da liquidare.',
+    ],
+
+
+    'invoices' => [
+        'heading' => 'Fatture',
+        'outstanding' => 'In sospeso su tutti gli organizzatori: :amount.',
+        'pastDue' => 'Scadute e con i tentativi finiti: :accounts. Cosa succede dopo lo decide una persona, non una pianificazione.',
+        'number' => 'Numero',
+        'period' => 'Periodo',
+        'range' => 'dal :from al :to',
+        'amount' => 'Importo',
+        'reference' => 'Riferimento',
+        'none' => 'Non è stato ancora fatturato nulla.',
+        'markPaid' => 'Segna come pagata',
+        'retry' => 'Riprova la carta',
+        'void' => 'Annulla',
+        'askReference' => 'Riferimento bancario di questo pagamento (lascia vuoto se non c’è):',
+        'whyVoid' => 'Perché questa fattura viene annullata? Il suo periodo torna libero.',
     ],
 
 ];

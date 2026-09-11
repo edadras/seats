@@ -28,6 +28,14 @@ class NotificationKinds
         'announcement.finished' => ['permission' => 'messages.send', 'level' => 'info'],
         'message.refused' => ['permission' => 'account.manage', 'level' => 'danger'],
         'domain.verified' => ['permission' => 'sites.view', 'level' => 'info'],
+        // The platform's own bill. `account.manage` rather than a money permission: this is not
+        // the organiser's takings, it is what they owe for the software, and the person who pays
+        // for the account is the person who should hear about it.
+        'billing.invoiced' => ['permission' => 'account.manage', 'level' => 'info'],
+        // A card that would not go through. Loud, and emailed: an account nobody is watching goes
+        // past due in silence otherwise, and the first anybody hears of it is a suspension.
+        'billing.payment_failed' => ['permission' => 'account.manage', 'level' => 'danger'],
+        'billing.past_due' => ['permission' => 'account.manage', 'level' => 'danger'],
     ];
 
     public static function exists(string $kind): bool

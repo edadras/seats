@@ -44,6 +44,7 @@ return [
         'tenants' => 'Organisers',
         'sites' => 'Websites',
         'plans' => 'Plans',
+        'invoices' => 'Invoices',
         'audit' => 'Operator log',
     ],
 
@@ -182,6 +183,24 @@ return [
         'whyVoid' => 'Why is this payout being voided? The period becomes free again.',
         'clash' => 'Those days overlap a payout that already exists: :periods. Void it, or choose different dates.',
         'nothing' => 'Nothing was taken in that period, so there is nothing to settle.',
+    ],
+
+
+    'invoices' => [
+        'heading' => 'Invoices',
+        'outstanding' => 'Outstanding across every organiser: :amount.',
+        'pastDue' => 'Past due, and the retries are finished: :accounts. Deciding what happens next is a person’s job, not a schedule’s.',
+        'number' => 'Number',
+        'period' => 'Period',
+        'range' => ':from to :to',
+        'amount' => 'Amount',
+        'reference' => 'Reference',
+        'none' => 'Nothing has been invoiced yet.',
+        'markPaid' => 'Mark as paid',
+        'retry' => 'Try the card again',
+        'void' => 'Void',
+        'askReference' => 'Bank reference for this payment (leave blank if there is none):',
+        'whyVoid' => 'Why is this invoice being voided? Its period becomes free again.',
     ],
 
 ];

@@ -56,6 +56,7 @@
     <script src="{{ asset('editor/js/settlement.js') }}"></script>
     <script src="{{ asset('editor/js/pace.js') }}"></script>
     <script src="{{ asset('editor/js/tills.js') }}"></script>
+    <script src="{{ asset('editor/js/billing.js') }}"></script>
     <script src="{{ asset('editor/js/panel.js') }}"></script>
 </body>
 </html>

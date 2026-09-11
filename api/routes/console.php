@@ -44,6 +44,15 @@ Schedule::command('messages:announce')->everyMinute()->withoutOverlapping()->run
 Schedule::command('events:watch-capacity')->hourly()->withoutOverlapping()->runInBackground();
 
 /*
+ * The platform's own bill.
+ *
+ * Daily, because an account's period ends on the day it signed up: on any given day a few are due
+ * and most are not. Monthly would invoice everybody on the first for periods that ended on the
+ * eleventh. Early, so a failed card has the whole working day to be noticed and fixed.
+ */
+Schedule::command('billing:run')->dailyAt('06:15')->withoutOverlapping()->runInBackground();
+
+/*
  * The queue for a sold-out night.
  *
  * Every few minutes rather than the instant a refund lands: seats come back in bursts — a party of

@@ -80,6 +80,7 @@
 			{ key: 'modules', icon: 'puzzle', needs: 'modules.manage' },
 			{ key: 'team', icon: 'users', needs: 'team.view' },
 			{ key: 'managers', icon: 'users', needs: 'team.view' },
+			{ key: 'billing', icon: 'wallet', needs: 'account.manage' },
 			{ key: 'security', icon: 'lock' },
 			{ key: 'wallet', icon: 'ticket', needs: 'account.manage' },
 			{ key: 'audit', icon: 'history', needs: 'audit.view' },
@@ -969,6 +970,7 @@
 			case 'doorlist': return window.SeatmapDoorList.render( this );
 			case 'questions': return window.SeatmapQuestions.render( this );
 			case 'entryslots': return window.SeatmapEntrySlots.render( this );
+			case 'billing': return window.SeatmapBilling.render( this );
 			case 'security': return window.SeatmapSecurity.render( this );
 			case 'access': return window.SeatmapAccess.render( this );
 			case 'vouchers': return window.SeatmapVouchers.render( this );

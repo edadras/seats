@@ -33,6 +33,7 @@ return [
         'tenants' => 'Veranstalter',
         'sites' => 'Websites',
         'plans' => 'Tarife',
+        'invoices' => 'Rechnungen',
         'audit' => 'Betreiberprotokoll',
     ],
 
@@ -171,6 +172,24 @@ return [
         'whyVoid' => 'Warum wird diese Auszahlung storniert? Der Zeitraum wird wieder frei.',
         'clash' => 'Diese Tage überschneiden sich mit einer bestehenden Auszahlung: :periods. Stornieren Sie sie oder wählen Sie andere Daten.',
         'nothing' => 'In diesem Zeitraum wurde nichts eingenommen, also gibt es nichts abzurechnen.',
+    ],
+
+
+    'invoices' => [
+        'heading' => 'Rechnungen',
+        'outstanding' => 'Offen über alle Veranstalter: :amount.',
+        'pastDue' => 'Überfällig, Versuche ausgeschöpft: :accounts. Was nun geschieht, entscheidet ein Mensch, kein Zeitplan.',
+        'number' => 'Nummer',
+        'period' => 'Zeitraum',
+        'range' => ':from bis :to',
+        'amount' => 'Betrag',
+        'reference' => 'Referenz',
+        'none' => 'Es wurde noch nichts in Rechnung gestellt.',
+        'markPaid' => 'Als bezahlt markieren',
+        'retry' => 'Karte erneut versuchen',
+        'void' => 'Stornieren',
+        'askReference' => 'Bankreferenz für diese Zahlung (leer lassen, wenn es keine gibt):',
+        'whyVoid' => 'Warum wird diese Rechnung storniert? Ihr Zeitraum wird wieder frei.',
     ],
 
 ];

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Embed\EmbedController;
 use App\Http\Controllers\Api\V1\Integrations\WooCommerceController;
 use App\Http\Controllers\Api\V1\Admin\AuthController as ConsoleAuthController;
 use App\Http\Controllers\Api\V1\Admin\ConsoleController;
+use App\Http\Controllers\Api\V1\Admin\InvoiceController;
 use App\Http\Controllers\Api\V1\Admin\PayoutController;
 use App\Http\Controllers\Api\V1\Admin\PlanController;
 use App\Http\Controllers\Api\V1\LocaleController;
@@ -49,6 +50,7 @@ use App\Http\Controllers\Api\V1\Management\ReceiptController;
 use App\Http\Controllers\Api\V1\Management\PaymentPlanController;
 use App\Http\Controllers\Api\V1\Management\RiskController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
+use App\Http\Controllers\Api\V1\Management\BillingController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
@@ -484,6 +486,14 @@ Route::prefix('v1')->group(function () {
         // One night's takings, for whoever is running that night. Scoped by `managed` like every
         // other route with an `{event}` in it.
         Route::get('events/{event}/settlement', [SettlementController::class, 'forEvent']);
+        // What this account owes the platform, and how it pays. `account.manage`, not a money
+        // permission: it is the bill for the software, not the organiser's takings.
+        Route::get('billing', [BillingController::class, 'show']);
+        Route::get('billing/invoices/{invoice}', [BillingController::class, 'invoice']);
+        Route::post('billing/card/setup', [BillingController::class, 'startSetup']);
+        Route::post('billing/card/finish', [BillingController::class, 'finishSetup']);
+        Route::post('billing/invoice-me', [BillingController::class, 'payByInvoice']);
+
         Route::get('settlement', [SettlementController::class, 'index']);
         Route::get('settlement/payouts', [SettlementController::class, 'payouts']);
         Route::get('settlement/export', [SettlementController::class, 'export']);
@@ -611,6 +621,13 @@ Route::prefix('v1')->group(function () {
         Route::post('tenants/{tenant}/payouts', [PayoutController::class, 'store']);
         Route::post('payouts/{payout}/paid', [PayoutController::class, 'markPaid']);
         Route::post('payouts/{payout}/void', [PayoutController::class, 'void']);
+
+        // The platform's own invoices. Looking is support's; changing what somebody owes is not.
+        Route::get('invoices', [InvoiceController::class, 'index']);
+        Route::post('tenants/{tenant}/invoices', [InvoiceController::class, 'raise']);
+        Route::post('invoices/{invoice}/paid', [InvoiceController::class, 'markPaid']);
+        Route::post('invoices/{invoice}/retry', [InvoiceController::class, 'retry']);
+        Route::post('invoices/{invoice}/void', [InvoiceController::class, 'void']);
 
         Route::get('plans', [PlanController::class, 'index']);
         Route::post('plans', [PlanController::class, 'store']);

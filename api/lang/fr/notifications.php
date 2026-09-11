@@ -28,5 +28,17 @@ return [
             'title' => 'Adresse vérifiée',
             'body' => ':hostname est vérifié et peut servir :site.',
         ],
+        'billing_invoiced' => [
+            'title' => 'Facture émise',
+            'body' => 'La facture :number est prête. Elle est due le :due.',
+        ],
+        'billing_payment_failed' => [
+            'title' => 'Un paiement n’est pas passé',
+            'body' => 'La facture :number n’a pas pu être prélevée : :reason. Une nouvelle tentative aura lieu.',
+        ],
+        'billing_past_due' => [
+            'title' => 'Ce compte est en retard de paiement',
+            'body' => 'La facture :number reste impayée et les tentatives sont épuisées : :reason. Réglez-la sur la page de facturation.',
+        ],
     ],
 ];

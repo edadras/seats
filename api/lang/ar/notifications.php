@@ -28,5 +28,17 @@ return [
             'title' => 'تم توثيق العنوان',
             'body' => 'وُثّق :hostname ويمكنه عرض :site.',
         ],
+        'billing_invoiced' => [
+            'title' => 'صدرت فاتورة',
+            'body' => 'الفاتورة :number جاهزة، ويحين أجلها في :due.',
+        ],
+        'billing_payment_failed' => [
+            'title' => 'لم تتم إحدى الدفعات',
+            'body' => 'تعذّر خصم الفاتورة :number: :reason. وستُعاد المحاولة.',
+        ],
+        'billing_past_due' => [
+            'title' => 'هذا الحساب متأخّر السداد',
+            'body' => 'لم تُسدَّد الفاتورة :number وانتهت المحاولات: :reason. سوِّها من شاشة الفواتير.',
+        ],
     ],
 ];

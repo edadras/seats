@@ -35,6 +35,7 @@
 		{ key: 'tenants', icon: 'users' },
 		{ key: 'sites', icon: 'globe' },
 		{ key: 'plans', icon: 'tag' },
+		{ key: 'invoices', icon: 'wallet' },
 		{ key: 'audit', icon: 'history' },
 	];
 
@@ -321,9 +322,117 @@
 			case 'tenants': return Console.tenants();
 			case 'sites': return Console.sites();
 			case 'plans': return Console.plans();
+			case 'invoices': return Console.invoices();
 			case 'audit': return Console.audit();
 			default: return Console.overview();
 		}
+	};
+
+	/**
+	 * What the platform is owed, across every organiser.
+	 *
+	 * The one screen on this console that is about the platform's own money rather than about what
+	 * an organiser is doing with theirs. Most accounts on most deployments pay by transfer, so the
+	 * common action here is somebody with a bank statement open marking an invoice paid — which is
+	 * why that button is the plain one and "retry the card" is not.
+	 *
+	 * Accounts whose retries have run out are named at the top rather than acted on. Cutting a
+	 * venue off is a decision with a box office and a full house on the other end of it, and a
+	 * scheduled command is not the thing that should make it.
+	 */
+	Console.invoices = function () {
+		Console.request( 'GET', '/admin/invoices' ).then( function ( body ) {
+			var operator = 'operator' === Console.level;
+			var rows = ( body.data || [] ).map( function ( row ) {
+				return '<tr' + ( 'void' === row.status ? ' class="is-muted"' : '' ) + '>' +
+					'<td class="table__primary"><code>' + esc( row.number ) + '</code>' +
+						'<span class="muted on-own-line">' +
+							esc( ( row.tenant || {} ).name || '—' ) + '</span></td>' +
+					'<td class="nowrap muted tnum">' +
+						esc( t( 'console.invoices.range', { from: row.from, to: row.to } ) ) + '</td>' +
+					'<td class="tnum">' + esc( money( row.total, row.currency ) ) + '</td>' +
+					'<td>' + badge( row.status ) +
+						( row.last_error
+							? '<span class="muted on-own-line">' + esc( row.last_error ) + '</span>'
+							: '' ) +
+						( row.void_reason
+							? '<span class="muted on-own-line">' + esc( row.void_reason ) + '</span>'
+							: '' ) + '</td>' +
+					'<td>' + esc( row.reference || '—' ) + '</td>' +
+					'<td class="table__actions">' + ( operator && 'paid' !== row.status && 'void' !== row.status
+						? '<button class="btn btn--sm" data-invoice-paid="' + esc( row.id ) + '">' +
+								esc( t( 'console.invoices.markPaid' ) ) + '</button>' +
+							' <button class="btn btn--sm" data-invoice-retry="' + esc( row.id ) + '">' +
+								esc( t( 'console.invoices.retry' ) ) + '</button>' +
+							' <button class="btn btn--sm btn--danger" data-invoice-void="' + esc( row.id ) + '">' +
+								esc( t( 'console.invoices.void' ) ) + '</button>'
+						: '' ) + '</td>' +
+				'</tr>';
+			} ).join( '' );
+
+			Console.page(
+				t( 'console.invoices.heading' ),
+				t( 'console.invoices.outstanding', {
+					amount: money( body.outstanding || 0, body.currency ),
+				} ),
+				( ( body.past_due || [] ).length
+					? '<p class="issue issue--error">' + icon( 'alert', { size: 16 } ) + '<span>' +
+						esc( t( 'console.invoices.pastDue', {
+							accounts: body.past_due.map( function ( account ) {
+								return account.name;
+							} ).join( ', ' ),
+						} ) ) + '</span></p>'
+					: '' ) +
+				( rows
+					? Console.table( [
+						t( 'console.invoices.number' ),
+						t( 'console.invoices.period' ),
+						t( 'console.invoices.amount' ),
+						t( 'console.tenants.status' ),
+						t( 'console.invoices.reference' ),
+						'',
+					], rows )
+					: '<p class="muted">' + esc( t( 'console.invoices.none' ) ) + '</p>' )
+			);
+
+			each( '[data-invoice-paid]', function ( button ) {
+				button.addEventListener( 'click', function () {
+					var reference = global.prompt( t( 'console.invoices.askReference' ) );
+
+					if ( null === reference ) {
+						return;
+					}
+
+					Console.request( 'POST', '/admin/invoices/' + button.dataset.invoicePaid + '/paid', {
+						method: 'transfer',
+						reference: reference || null,
+					} ).then( function () { Console.invoices(); } ).catch( fail );
+				} );
+			} );
+
+			each( '[data-invoice-retry]', function ( button ) {
+				button.addEventListener( 'click', function () {
+					Console.request( 'POST', '/admin/invoices/' + button.dataset.invoiceRetry + '/retry' )
+						.then( function () { Console.invoices(); } ).catch( fail );
+				} );
+			} );
+
+			each( '[data-invoice-void]', function ( button ) {
+				button.addEventListener( 'click', function () {
+					// Required: an invoice number that was quoted and then vanished is a question
+					// somebody answers from memory months later.
+					var reason = global.prompt( t( 'console.invoices.whyVoid' ) );
+
+					if ( ! reason ) {
+						return;
+					}
+
+					Console.request( 'POST', '/admin/invoices/' + button.dataset.invoiceVoid + '/void', {
+						reason: reason,
+					} ).then( function () { Console.invoices(); } ).catch( fail );
+				} );
+			} );
+		} ).catch( fail );
 	};
 
 	Console.page = function ( title, description, body, actions ) {

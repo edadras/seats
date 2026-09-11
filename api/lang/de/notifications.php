@@ -28,5 +28,17 @@ return [
             'title' => 'Adresse bestätigt',
             'body' => ':hostname ist bestätigt und kann :site ausliefern.',
         ],
+        'billing_invoiced' => [
+            'title' => 'Rechnung erstellt',
+            'body' => 'Rechnung :number liegt vor. Sie ist am :due fällig.',
+        ],
+        'billing_payment_failed' => [
+            'title' => 'Eine Zahlung ging nicht durch',
+            'body' => 'Rechnung :number konnte nicht abgebucht werden: :reason. Es wird erneut versucht.',
+        ],
+        'billing_past_due' => [
+            'title' => 'Dieses Konto ist überfällig',
+            'body' => 'Rechnung :number ist unbezahlt und die Versuche sind ausgeschöpft: :reason. Bitte über die Rechnungsseite begleichen.',
+        ],
     ],
 ];
