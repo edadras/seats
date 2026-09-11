@@ -62,6 +62,16 @@ Schedule::command('reports:send')->hourly()->withoutOverlapping()->runInBackgrou
 Schedule::command('billing:run')->dailyAt('06:15')->withoutOverlapping()->runInBackground();
 
 /*
+ * Accounts that have been closed for long enough, and archives nobody fetched.
+ *
+ * Once a day and no oftener. The window between closing an account and erasing it is measured in
+ * days, so a command that ran hourly would spend twenty-three of every twenty-four asking a
+ * question whose answer cannot have changed — and the one time it matters, erasing a few hours
+ * late is nothing, while erasing a few hours early is somebody's season gone.
+ */
+Schedule::command('accounts:erase')->dailyAt('03:40')->withoutOverlapping()->runInBackground();
+
+/*
  * The queue for a sold-out night.
  *
  * Every few minutes rather than the instant a refund lands: seats come back in bursts — a party of

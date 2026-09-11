@@ -163,6 +163,20 @@ return [
         ],
     ],
 
+    /*
+     * Taking an account's data, and closing the account.
+     *
+     * Both numbers are promises rather than settings anybody tunes. `export_days` is how long a
+     * download link and its archive live — long enough to fetch from a link in an inbox, short
+     * enough that a copy of an account's whole history is not left lying about for ever.
+     * `keep_days` is the window between closing an account and erasing it: an organiser who closes
+     * by accident has that long to ask for it back, and after it there is nothing to ask for.
+     */
+    'accounts' => [
+        'export_days' => (int) env('SEATMAP_ACCOUNT_EXPORT_DAYS', 7),
+        'keep_days' => (int) env('SEATMAP_ACCOUNT_KEEP_DAYS', 30),
+    ],
+
     'checkin' => [
         'pairing_code_ttl_minutes' => 30,
         'max_batch_scans' => 500,

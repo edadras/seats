@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\V1\Management\DemandPricingController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\ProductionController;
 use App\Http\Controllers\Api\V1\Management\ProgrammeManagerController;
+use App\Http\Controllers\Api\V1\Management\AccountController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
 use App\Http\Controllers\Api\V1\Management\RehearsalController;
 use App\Http\Controllers\Api\V1\Management\ReceiptController;
@@ -264,6 +265,20 @@ Route::prefix('v1')->group(function () {
         Route::get('events/{event}/price-tiers', [PriceTierController::class, 'index']);
         Route::get('events/{event}/demand-pricing', [DemandPricingController::class, 'show']);
         Route::get('events/{event}/rehearsal', [RehearsalController::class, 'show']);
+
+        /*
+         * Taking this account's data, and closing it.
+         *
+         * The export is throttled on its own name: an archive is expensive to build and cheap to
+         * ask for, and the honest place to say "not that often" is in front of the work rather
+         * than inside it.
+         */
+        Route::get('account/exports', [AccountController::class, 'exports']);
+        Route::post('account/exports', [AccountController::class, 'export'])
+            ->middleware('throttle:3,60,account-export');
+        Route::get('account/closure', [AccountController::class, 'closure']);
+        Route::post('account/closure', [AccountController::class, 'close'])
+            ->middleware('throttle:5,60,account-closure');
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);

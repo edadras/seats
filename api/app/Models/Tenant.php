@@ -16,6 +16,10 @@ class Tenant extends Model
     protected $casts = [
         'settings' => 'array',
         'require_two_factor' => 'boolean',
+        // When this account stopped selling, and when there will be nothing left of it.
+        // {@see \App\Domain\Accounts\AccountClosure} for what sits between the two.
+        'closed_at' => 'datetime',
+        'erase_after' => 'datetime',
     ];
 
     public function members()

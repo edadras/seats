@@ -197,6 +197,24 @@ A seat is the start of it, not the end. Around the map:
   of the path saying so. The embedded picker refuses to hold seats for one, because what happens
   after that endpoint is somebody else's basket and money this platform neither takes nor can stop:
   the promise is enforced at the edge of what we control rather than quietly broken beyond it.
+- **An organiser can take their data and leave.** A platform nobody can leave is a platform nobody
+  should arrive at. One button makes an archive of everything the account holds — every table that
+  carries a tenant id, one comma-separated file each, plus every published seating plan as the
+  geometry it is drawn from, which is the only part that is portable in the sense that matters.
+  Inclusion is the default and the exclusions are four, named with reasons: a promise to hand
+  somebody their data cannot be kept by a list that has to be extended each time a feature is added,
+  so the archive asks the database what tables exist. Anything that was a credential is replaced by
+  a marker in its own column rather than dropped, so the row still says what was set up without
+  handing over the key. The download link is signed rather than authenticated, because it has to
+  keep working after the account is closed — which is exactly when it is needed. Closing stops
+  selling at once: sites down, keys off, schedules paused, and every session revoked except those of
+  colleagues who also work for another venue. It is refused while any night that has not happened
+  still has a live ticket on it — nobody vanishes while strangers are holding tickets — and the
+  refusal names the nights so an organiser can cancel them, which refunds everybody through the
+  ordinary path. A closed account is recoverable for thirty days and then erased: one `DELETE`
+  against one row, which every table cascades from — and the staff go with it, except anybody who
+  also works for another venue, because leaving their names behind would make the promise a
+  half-measure.
 - **Best available** — "four together" without a buyer hunting for them, scored by price, by how
   central the run is, and by how many orphan seats it would leave behind.
 - **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
@@ -788,6 +806,14 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Clearing hands back what a discount code and a gift voucher spent | `RehearsalTest` |
 | A rehearsal is listed nowhere and opens by its own address, saying what it is | `RehearsalTest`, `rehearsal_smoke` |
 | Somebody else's shop cannot hold seats on a rehearsed night, though it can still read the plan | `RehearsalTest` |
+| An archive holds every tenant-scoped table, including the one added last month | `LeavingTest`, `leaving_smoke` |
+| A credential is replaced in its own column rather than exported or dropped | `LeavingTest` |
+| The download link needs no password, and a tampered one is nothing | `LeavingTest`, `leaving_smoke` |
+| Nobody can close an account while people are holding tickets for nights that have not happened | `LeavingTest`, `leaving_smoke` |
+| Closing stops the sites, the keys and the sessions at once — except a colleague's at another venue | `LeavingTest`, `leaving_smoke` |
+| The link still works after the door is shut, which is when it is needed | `LeavingTest`, `leaving_smoke` |
+| A closed account is erased when its window runs out, and not before | `LeavingTest` |
+| The staff go with the account, unless they also work for somebody else | `LeavingTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

@@ -145,8 +145,21 @@ class ConsoleController extends Controller
         ]);
 
         if (isset($data['status'])) {
-            $tenant->status = $data['status'];
-            $tenant->save();
+            /*
+             * Opening an account that closed itself is not the same act as un-suspending one.
+             *
+             * A closed account carries the instant it will be erased on, and a status set back to
+             * `active` without clearing that would leave an account selling tickets with a delete
+             * scheduled against it. So the one case goes through the closure itself, which knows
+             * what closing set and therefore what reopening has to unset.
+             */
+            if ('active' === $data['status'] && $tenant->closed_at) {
+                app(\App\Domain\Accounts\AccountClosure::class)->reopen($tenant);
+                $tenant->refresh();
+            } else {
+                $tenant->status = $data['status'];
+                $tenant->save();
+            }
         }
 
         if (isset($data['plan'])) {

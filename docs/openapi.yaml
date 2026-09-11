@@ -1765,6 +1765,150 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /account/exports:
+    get:
+      operationId: listAccountExports
+      tags: [Account]
+      summary: The copies taken of this account
+      description: |
+        Requires `account.manage`. Reading the list is behind the same permission as making one: an
+        archive is every buyer this venue has ever had, and a colleague who may not see the billing
+        screen has no business fetching it.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AccountExport" }
+                  keeps_days:
+                    type: integer
+                    description: How long each archive and its link last.
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createAccountExport
+      tags: [Account]
+      summary: Take a copy of everything
+      description: |
+        Every table that carries a tenant id, one comma-separated file each, plus every published
+        seating plan as the geometry it is drawn from — the only part of the archive that is
+        portable in the sense that matters, because a hall nobody can redraw is a hall somebody has
+        to survey again.
+
+        Inclusion is the default and the exclusions are four: hashed key material, the idempotency
+        cache, the platform's own staff log, and the list of archives itself. A promise to hand
+        somebody their data cannot be kept by a list that has to be extended every time a feature is
+        added, so the archive asks the database what tables exist rather than asking a constant.
+
+        Anything that was a credential or a one-time token is replaced by a marker **in its own
+        column** rather than dropped: the row still says that this account had SMS configured,
+        without handing over the key to somebody's account in a file that will sit in an inbox.
+
+        Built during the request rather than queued. An export is asked for by somebody sitting in
+        front of the screen who is about to leave, and a job queue between them and their own
+        history is one more thing that can be down on the day they need it. Rate limited instead:
+        three an hour.
+      responses:
+        "201":
+          description: Built
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountExport" }
+        "202":
+          description: Attempted, and it did not work. The row says what went wrong.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountExport" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /account/closure:
+    get:
+      operationId: getAccountClosure
+      tags: [Account]
+      summary: What stands between this account and the door
+      description: |
+        Read before the button is offered, so a screen can say which nights are in the way rather
+        than refusing after somebody has typed their own account's name to confirm.
+
+        `owed` is stated and is not a refusal. An organiser leaving should know whether the platform
+        is going to invoice them for the days they have already used; being unable to pay is not a
+        reason to be unable to leave.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountClosure" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: closeAccount
+      tags: [Account]
+      summary: Close this account
+      description: |
+        Selling stops at once — the sites come down, the keys stop working, the scheduled reports
+        pause and every session belonging to somebody who worked only here is revoked. A colleague
+        who also works for another venue keeps that session: a token belongs to a person rather than
+        to an account, and one venue closing is not the other's business.
+
+        Refused with `closure_has_live_tickets` while any night that has not happened still has a
+        live ticket on it. That is the one thing an organiser cannot be allowed to do on the way
+        out: disappear while strangers are holding tickets. It is not an obstacle course — cancelling
+        those nights refunds them through the ordinary path, and then the account closes.
+
+        `confirm` must be the account's own name, typed. Not a checkbox: this is the one action on
+        the platform that a mis-click should not be able to complete.
+
+        The account is recoverable for `keep_days` afterwards, by asking the platform — nobody can
+        sign in to a closed account, which is the point of closing one. After that it is erased:
+        one `DELETE` against one row, which every table on this platform cascades from, and the
+        staff go with it unless they also work for another account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm:
+                  type: string
+                  description: The account's name, exactly as it appears.
+                reason: { type: [string, "null"], maxLength: 200 }
+      responses:
+        "200":
+          description: Closed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/AccountClosure" }
+                  - type: object
+                    properties:
+                      export:
+                        description: >-
+                          The latest archive, handed back with the closure because after this
+                          response nobody from this account can sign in to come and look for it.
+                        oneOf:
+                          - { $ref: "#/components/schemas/AccountExport" }
+                          - { type: "null" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: People are holding tickets for nights that have not happened
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: The name was not typed exactly
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
   /events/{event}/rehearsal:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -12153,6 +12297,61 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    AccountExport:
+      type: object
+      description: A copy of everything one account holds, and how long it lasts.
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [building, ready, failed] }
+        bytes: { type: integer }
+        contents:
+          type: object
+          description: What went in, table by table, counted.
+          additionalProperties: { type: integer }
+        error: { type: [string, "null"] }
+        requested_by: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        ready_at: { type: [string, "null"], format: date-time }
+        expires_at: { type: [string, "null"], format: date-time }
+        link:
+          type: [string, "null"]
+          format: uri
+          description: >-
+            A signed link, valid until the archive expires. Signed rather than authenticated
+            because it has to keep working after the account is closed, which is exactly when it is
+            needed, and nobody can sign in to a closed account.
+
+    AccountClosure:
+      type: object
+      description: Whether this account can be closed, and what it would take.
+      properties:
+        status: { type: string, enum: [active, suspended, cancelled] }
+        closed_at: { type: [string, "null"], format: date-time }
+        erase_after:
+          type: [string, "null"]
+          format: date-time
+          description: When there will be nothing left to change their mind about.
+        keep_days: { type: integer }
+        can_close: { type: boolean }
+        nights:
+          type: array
+          description: Nights that have not happened and still carry live tickets.
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              starts_at: { type: [string, "null"], format: date-time }
+              tickets: { type: integer }
+        owed:
+          type: array
+          description: What the platform has invoiced and not been paid. Stated, never a refusal.
+          items:
+            type: object
+            properties:
+              currency: { type: string, minLength: 3, maxLength: 3 }
+              amount: { type: integer }
 
     Rehearsal:
       type: object

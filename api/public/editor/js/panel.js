@@ -84,6 +84,9 @@
 			{ key: 'team', icon: 'users', needs: 'team.view' },
 			{ key: 'managers', icon: 'users', needs: 'team.view' },
 			{ key: 'billing', icon: 'wallet', needs: 'account.manage' },
+			// Taking this account's data, and closing it. Last but one in the account group,
+			// because it is the last thing anybody does here.
+			{ key: 'leaving', icon: 'download', needs: 'account.manage' },
 			{ key: 'security', icon: 'lock' },
 			{ key: 'wallet', icon: 'ticket', needs: 'account.manage' },
 			{ key: 'audit', icon: 'history', needs: 'audit.view' },
@@ -980,6 +983,7 @@
 			case 'wallet': return window.SeatmapWallet.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'rehearsal': return window.SeatmapRehearsal.render( this );
+			case 'leaving': return window.SeatmapLeaving.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );

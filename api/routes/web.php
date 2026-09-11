@@ -3,6 +3,7 @@
 use App\Http\Controllers\CheckinAppController;
 use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\GoogleSignInController;
+use App\Http\Controllers\AccountExportController;
 use App\Http\Controllers\ScheduledReportController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\BasketController;
@@ -250,6 +251,17 @@ Route::get('reports/scheduled/{schedule}', ScheduledReportController::class)
     ->name('reports.scheduled.download')
     ->middleware('throttle:20,1,scheduled-report');
 
+/*
+ * An account's whole history, fetched from a signed link.
+ *
+ * Ahead of the front door for the same reason as the one above, and with one more: this link is
+ * followed after the account has closed, when there is no panel to sign in to and possibly no site
+ * left standing. The signature is the whole of the authorisation and expires with the file.
+ */
+Route::get('accounts/exports/{export}', AccountExportController::class)
+    ->name('account.export.download')
+    ->middleware('throttle:20,1,account-export');
+
 Route::get('console', fn () => view('console'));
 
 // The door scanner. Ahead of the front door because /checkin belongs to the platform on every
@@ -259,4 +271,4 @@ Route::get('checkin/{path}', CheckinAppController::class)->where('path', '.*');
 
 Route::get('/', FrontDoorController::class);
 Route::get('{path}', FrontDoorController::class)
-    ->where('path', '^(?!v1|up|storage|site|checkin|console|reports).*$');
+    ->where('path', '^(?!v1|up|storage|site|checkin|console|reports|accounts).*$');

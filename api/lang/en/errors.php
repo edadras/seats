@@ -306,4 +306,6 @@ return [
     'rehearsal_not_cleared' => 'Clear the rehearsal first, or its bookings would go on sale as real ones.',
     'not_a_rehearsal' => 'This night is selling for real. Its bookings are not ours to delete.',
     'event_rehearsing' => 'This night is being rehearsed and is not on sale here. Rehearse it on your own site, where nothing is charged.',
+    'closure_has_live_tickets' => 'People are holding tickets for nights that have not happened. Cancel those nights first — that refunds them — and then close the account.',
+    'closure_not_confirmed' => 'Type the account’s name exactly as it appears to confirm.',
 ];

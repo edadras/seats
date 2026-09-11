@@ -306,4 +306,6 @@ return [
     'rehearsal_not_cleared' => 'Effacez d\'abord la répétition, sinon ses réservations partiraient en vente comme de vraies.',
     'not_a_rehearsal' => 'Cette soirée est en vente réelle. Ses réservations ne sont pas à nous de supprimer.',
     'event_rehearsing' => 'Cette soirée est en répétition et n\'est pas en vente ici. Répétez-la sur votre propre site, où rien n\'est débité.',
+    'closure_has_live_tickets' => 'Des gens détiennent des billets pour des soirées qui n\'ont pas eu lieu. Annulez d\'abord ces soirées — cela les rembourse — puis fermez le compte.',
+    'closure_not_confirmed' => 'Tapez le nom du compte exactement tel qu\'il apparaît pour confirmer.',
 ];

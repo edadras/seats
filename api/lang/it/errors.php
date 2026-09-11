@@ -306,4 +306,6 @@ return [
     'rehearsal_not_cleared' => 'Cancella prima la prova, altrimenti le sue prenotazioni andrebbero in vendita come vere.',
     'not_a_rehearsal' => 'Questa serata vende per davvero. Le sue prenotazioni non sta a noi cancellarle.',
     'event_rehearsing' => 'Questa serata è in prova e qui non è in vendita. Provala sul tuo sito, dove non si addebita nulla.',
+    'closure_has_live_tickets' => 'Ci sono persone che hanno biglietti per serate non ancora avvenute. Annulla prima quelle serate — così vengono rimborsate — e poi chiudi il conto.',
+    'closure_not_confirmed' => 'Per confermare, scrivi il nome del conto esattamente come appare.',
 ];

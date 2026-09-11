@@ -306,4 +306,6 @@ return [
     'rehearsal_not_cleared' => 'Löschen Sie zuerst die Probe, sonst gehen ihre Buchungen als echte in den Verkauf.',
     'not_a_rehearsal' => 'Dieser Abend verkauft echt. Seine Buchungen dürfen wir nicht löschen.',
     'event_rehearsing' => 'Dieser Abend wird geprobt und ist hier nicht im Verkauf. Proben Sie ihn auf Ihrer eigenen Seite, wo nichts berechnet wird.',
+    'closure_has_live_tickets' => 'Menschen halten Tickets für Abende, die noch nicht stattgefunden haben. Sagen Sie diese Abende zuerst ab — das erstattet sie — und schließen Sie dann das Konto.',
+    'closure_not_confirmed' => 'Tippen Sie zur Bestätigung den Kontonamen genau so, wie er dasteht.',
 ];

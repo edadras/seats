@@ -36,6 +36,7 @@
     <script src="{{ asset('editor/js/doorlist.js') }}"></script>
     <script src="{{ asset('editor/js/waitlist.js') }}"></script>
     <script src="{{ asset('editor/js/rehearsal.js') }}"></script>
+    <script src="{{ asset('editor/js/leaving.js') }}"></script>
     <script src="{{ asset('editor/js/questions.js') }}"></script>
     <script src="{{ asset('editor/js/entry-slots.js') }}"></script>
     <script src="{{ asset('editor/js/security.js') }}"></script>
