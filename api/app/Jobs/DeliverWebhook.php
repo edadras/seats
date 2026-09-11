@@ -78,7 +78,13 @@ class DeliverWebhook implements ShouldQueue
                         'next_attempt_at' => null,
                     ])->save();
 
-                    $endpoint->forceFill(['consecutive_failures' => 0])->save();
+                    $endpoint->forceFill([
+                        'consecutive_failures' => 0,
+                        'last_delivered_at' => now(),
+                        // Cleared, so a screen showing "last error" is showing something current
+                        // rather than something from a fault that was fixed a fortnight ago.
+                        'last_error' => null,
+                    ])->save();
 
                     return;
                 }
@@ -102,6 +108,16 @@ class DeliverWebhook implements ShouldQueue
         $endpoint->increment('consecutive_failures');
         $endpoint->refresh();
 
+        // What the receiver said, kept on the endpoint as well as on the delivery: the question a
+        // screen has to answer first is "is this working", and that should not cost a table scan.
+        $endpoint->forceFill([
+            'last_failed_at' => now(),
+            'last_error' => Str::limit(
+                (null === $status ? '' : $status.' — ').preg_replace('/\s+/', ' ', $body),
+                480
+            ),
+        ])->save();
+
         // Past the end of the schedule, stop. A dead delivery stays in the log for the tenant to
         // see and replay by hand; dropping it silently would be worse than never sending it.
         if ($attempt >= count($delays)) {
@@ -114,8 +130,12 @@ class DeliverWebhook implements ShouldQueue
 
             if ($endpoint->consecutive_failures >= (int) config('seatmap.webhooks.dead_after_failures')) {
                 // A site that has been down for hours should stop costing a queue worker per event.
-                // The tenant re-enables it once their end is fixed.
-                $endpoint->forceFill(['status' => 'dead'])->save();
+                // The tenant re-enables it once their end is fixed, and is told why it stopped —
+                // an endpoint that went quiet with no reason on the screen is a support ticket.
+                $endpoint->forceFill([
+                    'status' => 'dead',
+                    'disabled_reason' => 'too_many_failures',
+                ])->save();
             }
 
             return;

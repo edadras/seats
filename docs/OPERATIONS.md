@@ -35,7 +35,19 @@ The four that actually indicate customer harm:
 2. **Holds expiring at an unusual rate**, or a hold-to-confirm ratio that collapses — a checkout
    that has started failing, or inventory-denial abuse (threat T8).
 3. **Queue depth and worker liveness.** A stalled worker shows as availability that never frees up.
-4. **Webhook deliveries going dead.** A tenant's site has stopped hearing about sales.
+4. **Webhook deliveries going dead.** A tenant's site has stopped hearing about sales. An endpoint
+   we switched off ourselves carries `disabled_reason`, and the organiser sees it on the Connections
+   screen — but a whole account's worth going quiet at once is ours, not theirs.
+
+`webhooks:retry` runs every ten minutes. It exists because a retry is a *delayed job*, and a delayed
+job lives in the queue rather than in the database: a worker restarted at the wrong second, or a
+Redis flushed by hand, and a delivery sits `pending` with its moment in the past for ever. The sweep
+is what makes the delivery table rather than the queue the record of what is still owed to somebody
+else's server. It also prunes the log (`SEATMAP_WEBHOOK_LOG_DAYS`, 30 by default).
+
+**`SEATMAP_WEBHOOK_VERIFY_DESTINATION` must be `true` in production.** Off, a webhook address is not
+resolved and plain `http` is accepted — which suits a development machine and undoes threat T13's
+mitigation entirely on a real one.
 
 Also worth graphing: `409 seat_unavailable` (normal in bursts at on-sale, suspicious when constant),
 `401 stale_timestamp` grouped by API key (a tenant's clock), and p99 on `POST /holds`.

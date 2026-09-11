@@ -319,4 +319,10 @@ return [
     'loyalty_closed' => 'Dieses Konto führt kein Punkteprogramm.',
     'loyalty_below_minimum' => 'Das sind weniger Punkte, als dieses Programm in Guthaben umwandelt.',
     'loyalty_not_enough' => 'So viele Punkte liegen auf dieser Adresse nicht.',
+    'url_not_https' => 'Eine Webhook-Adresse muss mit https:// beginnen.',
+    'url_not_a_name' => 'Geben Sie einen Hostnamen statt einer IP-Adresse an.',
+    'url_unresolvable' => 'Dieser Hostname löst zu nichts auf.',
+    'url_private' => 'Diese Adresse liegt in einem privaten Netz; dieser Server ruft sie nicht auf.',
+    'no_events_chosen' => 'Wählen Sie mindestens ein Ereignis, über das Sie informiert werden möchten.',
+    'endpoint_not_active' => 'Schalten Sie das Ziel wieder ein, bevor erneut etwas gesendet wird.',
 ];

@@ -319,4 +319,10 @@ return [
     'loyalty_closed' => 'This account is not running a points scheme.',
     'loyalty_below_minimum' => 'That is fewer points than this scheme will turn into credit.',
     'loyalty_not_enough' => 'There are not that many points on this address.',
+    'url_not_https' => 'A webhook address has to start with https://.',
+    'url_not_a_name' => 'Give the address a hostname rather than an IP address.',
+    'url_unresolvable' => 'That hostname does not resolve to anything.',
+    'url_private' => 'That address is on a private network, so this server will not open it.',
+    'no_events_chosen' => 'Choose at least one event to be told about.',
+    'endpoint_not_active' => 'Switch the endpoint back on before sending anything to it again.',
 ];

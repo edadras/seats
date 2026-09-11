@@ -2863,10 +2863,14 @@
 			// The snippet below needs an event to point at, and an organiser reading this screen
 			// should not have to go and fetch an id from another one.
 			this.request( 'GET', '/events?per_page=50' ).catch( function () { return { data: [] }; } ),
+			// The other half of connecting a shop: a key lets it ask us things, a webhook means it
+			// does not have to. Same screen, because it is the same afternoon's work.
+			window.SeatmapWebhooks.load( this ),
 		] )
 			.then( function ( results ) {
 				var response = results[ 0 ];
 				var events = results[ 1 ].data || [];
+				var hooks = results[ 2 ];
 				var rows = response.data.map( function ( client ) {
 					var keys = client.keys.map( function ( key ) {
 						return '<div class="row"><code>' + esc( key.key_id ) + '</code>' +
@@ -2920,10 +2924,11 @@
 						rows,
 						emptyState( 'plug', self.t( 'panel.connections.emptyTitle' ),
 							esc( self.t( 'panel.connections.emptyBody' ) ) )
-					) + self.embedMarkup( events ),
+					) + window.SeatmapWebhooks.markup( self, hooks ) + self.embedMarkup( events ),
 				} );
 
 				self.bindEmbed( events );
+				window.SeatmapWebhooks.bind( self, hooks );
 
 				document.getElementById( 'add-client' ).addEventListener( 'click', function () {
 					self.newClient();

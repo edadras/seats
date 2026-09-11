@@ -157,6 +157,31 @@ class CheckinService
             'updated_at' => now(),
         ]);
 
+        /*
+         * Somebody walked in, and whatever the organiser has connected is told.
+         *
+         * Only a scan that actually admitted somebody: a wrong-event beep at the second door is a
+         * fact about the door, not about the audience, and a shop counting arrivals should not have
+         * to work out which results mean an arrival.
+         */
+        if ('valid' === $result && $ticket) {
+            try {
+                app(\App\Domain\Webhooks\WebhookDispatcher::class)->dispatch($event->tenant_id, 'ticket.checked_in', [
+                    'event_public_id' => $event->public_id,
+                    'ticket_id' => $ticket->id,
+                    'seat_label' => $ticket->allocation?->seat_label,
+                    'scanned_at' => $scannedAt->toIso8601String(),
+                    // True where the scanner was out of signal and this arrived later, which is
+                    // the difference between "now" and "at some point this evening".
+                    'offline' => $offline,
+                ]);
+            } catch (\Throwable $e) {
+                // The door never waits for anything. A webhook that could not be queued must not
+                // turn into a queue of people at the entrance.
+                report($e);
+            }
+        }
+
         return ['result' => $result, 'ticket' => $ticket, 'first_scan' => $firstScan];
     }
 }

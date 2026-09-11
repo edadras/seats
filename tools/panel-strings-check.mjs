@@ -95,6 +95,18 @@ for (const surface of SURFACES) {
 	const borrowed = new Set((surface.borrowed ?? []).flatMap(catalogueKeys));
 	const reachable = [...surface.namespaces, ...(surface.borrowed ?? [])];
 	const pattern = new RegExp(`'((?:${reachable.join('|')})\\.[A-Za-z0-9_.]*)'(\\s*\\+)?`, 'g');
+	/*
+	 * The same thing, for PHP, whose concatenation operator is a dot rather than a plus.
+	 *
+	 * Without this a key assembled on the server — `__('panel.webhooks.types.'.$type)` — is read as
+	 * a whole key called `panel.webhooks.types.`, which is reported as missing, and everything
+	 * actually under that prefix is reported as dead. Both halves of the answer are wrong, and the
+	 * only reason it was never noticed is that nothing built a panel key in PHP until now.
+	 */
+	const phpPattern = new RegExp(
+		`'((?:${reachable.join('|')})\\.[A-Za-z0-9_.]*)'(\\s*[.+])?`,
+		'g'
+	);
 
 	const exact = new Set();
 	const prefixes = new Set();
@@ -110,7 +122,7 @@ for (const surface of SURFACES) {
 
 	if (surface.php) {
 		for (const file of [...phpFiles(phpDir), ...phpFiles(viewDir)]) {
-			for (const match of fs.readFileSync(file, 'utf8').matchAll(pattern)) {
+			for (const match of fs.readFileSync(file, 'utf8').matchAll(phpPattern)) {
 				(match[2] ? prefixes : exact).add(match[1]);
 			}
 		}

@@ -77,6 +77,14 @@ class EventCancellation
 
         SettleCancelledEvent::dispatch($event->id, $event->tenant_id, $reason, $refund, $notify);
 
+        /*
+         * And every system the organiser has connected.
+         *
+         * Told here rather than from the controller, so a cancellation is announced whichever door
+         * it came in by — the panel, a console operator, or the job that cancels a whole run.
+         */
+        $this->publish($event, 'event.cancelled', ['reason' => $reason, 'refunding' => $refund]);
+
         return $event->refresh();
     }
 
@@ -146,6 +154,32 @@ class EventCancellation
             TellBuyersTheDateMoved::dispatch($event->id, $event->tenant_id, $was->toIso8601String(), $reason);
         }
 
+        $this->publish($event, 'event.rescheduled', [
+            'was' => $was->toIso8601String(),
+            'now' => $startsAt->toIso8601String(),
+            'reason' => $reason,
+        ]);
+
         return $event->refresh();
+    }
+
+    /**
+     * Tell whatever the organiser has connected.
+     *
+     * Never allowed to fail the thing it is reporting: a shop whose webhook could not be queued is
+     * a shop that is out of date, and an event that could not be cancelled because of it would be
+     * an event still selling seats for a night that is not happening.
+     */
+    private function publish(Event $event, string $type, array $data): void
+    {
+        try {
+            app(\App\Domain\Webhooks\WebhookDispatcher::class)->dispatch($event->tenant_id, $type, [
+                'event_public_id' => $event->public_id,
+                'name' => $event->name,
+                'starts_at' => $event->starts_at?->toIso8601String(),
+            ] + $data);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

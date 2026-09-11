@@ -90,6 +90,7 @@ class EventController extends Controller
         ]);
 
         $this->audit->record('event.created', $event, ['name' => $event->name]);
+        $this->announce($event, 'draft');
 
         return response()->json($this->present($event), 201);
     }
@@ -118,11 +119,14 @@ class EventController extends Controller
         // Filled from the request and audited *before* the write, so the log records what the
         // database is about to be told rather than what the caller believed they asked for. After
         // save() there is nothing dirty left to read, and those two differ often enough to matter.
+        $was = (string) $event->status;
+
         $event->fill($data);
 
         $this->audit->recordChange('event.updated', $event);
 
         $event->save();
+        $this->announce($event->fresh(), $was);
 
         return response()->json($this->present($event->fresh()));
     }
@@ -604,6 +608,33 @@ class EventController extends Controller
         return response()->json([
             'data' => array_map(fn (Event $copy) => $this->present($copy), $made),
         ], 201);
+    }
+
+    /**
+     * Tell whatever the organiser has connected that a night has gone on sale.
+     *
+     * Only on the *change*: an edit to a published event's description is not a new event, and a
+     * shop that created a product every time somebody fixed a typo would have a catalogue full of
+     * them. Cancelling and rescheduling announce themselves from the domain, where they happen.
+     */
+    private function announce(Event $event, string $was): void
+    {
+        if ('published' !== $event->status || 'published' === $was) {
+            return;
+        }
+
+        try {
+            app(\App\Domain\Webhooks\WebhookDispatcher::class)->dispatch($event->tenant_id, 'event.published', [
+                'event_public_id' => $event->public_id,
+                'name' => $event->name,
+                'starts_at' => $event->starts_at?->toIso8601String(),
+                'venue' => $event->venue?->name,
+                'currency' => $event->currency,
+            ]);
+        } catch (\Throwable $e) {
+            // Never worth failing the save for: the event is on sale either way.
+            report($e);
+        }
     }
 
     private function present(Event $event): array

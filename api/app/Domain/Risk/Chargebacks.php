@@ -106,6 +106,23 @@ class Chargebacks
                 report($e);
             }
 
+            /*
+             * And whoever sold it is told.
+             *
+             * The shop that took the money is usually the first to know, but not always — a dispute
+             * typed in at the box office reaches us and nothing else — and a shop still showing the
+             * booking as paid will keep honouring it.
+             */
+            app(\App\Domain\Webhooks\WebhookDispatcher::class)->dispatch($order->tenant_id, 'order.charged_back', [
+                'external_order_id' => $order->external_order_id,
+                'event_public_id' => $order->event?->public_id,
+                'seats' => $allocations->count(),
+                'amount' => $order->total_amount,
+                'fee' => $order->chargeback_fee,
+                'currency' => $order->currency,
+                'reason' => $order->chargeback_reason,
+            ]);
+
             return $order->fresh(['allocations.ticket']);
         });
     }

@@ -133,6 +133,27 @@ Buyer name/email arrive with orders and appear in tickets and exports.
 personal data in QR payloads, per-tenant export and delete endpoints, and a retention policy that
 purges buyer contact data on a configurable schedule after the event.
 
+### T13 — Server-side request forgery through an organiser-supplied address (Elevation, Information disclosure)
+
+Two screens take a URL from an organiser and make *this server* open it: a webhook endpoint, and an
+identity provider's discovery document. A server that fetches whatever it is told to fetch can be
+pointed inwards — at a cloud metadata service on `169.254.169.254`, at a database on the private
+network, at something bound only to localhost — and the reply comes back to the person who asked
+for it. Nothing in the original code checked this at all; the webhook screen made it obvious, and
+the SSO issuer was carrying the same hole.
+
+*Mitigations.* `App\Support\Http\OutboundUrl` is the one judgement: `https` only, a hostname
+rather than a bare IP address, and every address that name resolves to has to be on the public
+internet — v4 and v6, including an IPv4 loopback wearing an IPv6 mapping, which is the usual way
+past such a check. A bare address is refused even when it is public, because no legitimate
+integration needs one and it removes a whole class of near-miss.
+
+What this does not close is DNS rebinding: a name that answers publicly here and privately a moment
+later when the request is actually made. Closing that means connecting to the address rather than to
+the name, which cannot be done without giving up TLS verification of the name. The operator's egress
+rules are where that is closed properly, and `SEATMAP_WEBHOOK_VERIFY_DESTINATION` must be on in
+production — off, the whole check is relaxed to suit a development machine.
+
 ## Assumptions
 
 - TLS is terminated in front of the API and enforced (HSTS); plaintext HTTP is not supported.

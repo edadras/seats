@@ -41,5 +41,11 @@
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_DATABASE" value="seatmap_test"/>
         <env name="SEATMAP_SIGNING_KEY" value="test-signing-key-not-for-production"/>
+        <!--
+          Webhook receivers in the suite are invented names that resolve to nothing, so the
+          hostname half of the SSRF guard is off here. The scheme and bare-address halves still
+          apply, and the address classifier the resolver feeds is tested directly.
+        -->
+        <env name="SEATMAP_WEBHOOK_VERIFY_DESTINATION" value="false"/>
     </php>
 </phpunit>

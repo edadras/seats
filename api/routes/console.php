@@ -28,6 +28,15 @@ Schedule::command('payments:reconcile')->everyTenMinutes()->withoutOverlapping()
  * asking a provider that already said no is how a platform gets rate-limited for nothing.
  */
 Schedule::command('messages:retry')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
+
+/*
+ * The webhook deliveries the queue lost.
+ *
+ * Not a substitute for the delayed jobs, which do the ordinary retrying: this is the insurance that
+ * makes the delivery table rather than the queue the record of what is still owed to somebody
+ * else's server. It also prunes the log, which is the only thing that stops it growing for ever.
+ */
+Schedule::command('webhooks:retry')->everyTenMinutes()->withoutOverlapping()->runInBackground();
 Schedule::command('messages:remind')->hourly()->withoutOverlapping()->runInBackground();
 
 /*

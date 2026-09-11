@@ -78,6 +78,16 @@ class SingleSignOn
     {
         $url = rtrim(trim($issuer), '/').'/.well-known/openid-configuration';
 
+        /*
+         * Where this server may be sent.
+         *
+         * The issuer is typed by an organiser and fetched by *us*, which is the same shape as a
+         * webhook address and the same risk: without this, the SSO screen is a way to make the
+         * platform open a connection to a metadata service on a link-local address and hand the
+         * answer back. It was missing here until the webhook screen made the pattern obvious.
+         */
+        \App\Support\Http\OutboundUrl::assert($url);
+
         try {
             $response = Http::timeout(12)->acceptJson()->get($url);
         } catch (\Throwable $e) {

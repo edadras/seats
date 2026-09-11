@@ -265,6 +265,25 @@ class WaitingList
                 'told' => $told,
                 'free' => $free,
             ]);
+
+            /*
+             * And whatever the organiser has connected.
+             *
+             * One announcement for the round rather than one per person: this fires by itself when
+             * a seat frees, and a marketing system that wants to know "are seats coming back on
+             * this night" is asking about the night, not about a queue it cannot see anyway.
+             */
+            try {
+                app(\App\Domain\Webhooks\WebhookDispatcher::class)->dispatch($event->tenant_id, 'waitlist.offered', [
+                    'event_public_id' => $event->public_id,
+                    'name' => $event->name,
+                    'told' => $told,
+                    'free_places' => $free,
+                    'claim_minutes' => self::CLAIM_MINUTES,
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return $told;

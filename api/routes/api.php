@@ -59,6 +59,7 @@ use App\Http\Controllers\Api\V1\Management\BillingController;
 use App\Http\Controllers\Api\V1\Management\ReportScheduleController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
+use App\Http\Controllers\Api\V1\Management\WebhookController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
@@ -669,6 +670,26 @@ Route::prefix('v1')->group(function () {
 
         Route::get('api-clients', [ApiClientController::class, 'index']);
         Route::delete('api-clients/{client}/keys/{keyId}', [ApiClientController::class, 'revoke']);
+
+        /*
+         * Webhooks: where an organiser's own systems are told what happened here.
+         *
+         * Same permission as the keys above, because it is the same job — connecting this box
+         * office to something else — and an account that may issue a credential for a shop may
+         * certainly tell that shop when a seat sells.
+         */
+        Route::get('webhooks', [WebhookController::class, 'index']);
+        Route::post('webhooks', [WebhookController::class, 'store']);
+        Route::patch('webhooks/{endpoint}', [WebhookController::class, 'update']);
+        Route::delete('webhooks/{endpoint}', [WebhookController::class, 'destroy']);
+        Route::post('webhooks/{endpoint}/secret', [WebhookController::class, 'rotate']);
+        // Throttled on its own: pressing Test is a way to make this server open a connection to
+        // an address somebody typed, and holding the button down should not be a load generator.
+        Route::post('webhooks/{endpoint}/test', [WebhookController::class, 'test'])
+            ->middleware('throttle:10,1,webhook-test');
+        Route::get('webhook-deliveries', [WebhookController::class, 'deliveries']);
+        Route::post('webhook-deliveries/{delivery}/replay', [WebhookController::class, 'replay'])
+            ->middleware('throttle:60,1,webhook-replay');
     });
 
     // ---- The platform's own console -------------------------------------------------------

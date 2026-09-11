@@ -562,6 +562,29 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## Telling your own systems what happened
+
+An organiser's box office is rarely the only system they run. Webhooks are how the others find out:
+nine event types — a booking confirmed, cancelled, refunded or disputed; a night published, cancelled
+or moved; somebody walking through the door; seats offered to the waiting list — posted to endpoints
+the organiser manages on the Connections screen, beside the API keys, because it is the same job.
+
+Every delivery carries `X-Seatmap-Signature`: an HMAC-SHA256 over the method, path, timestamp, nonce
+and body hash, joined by newlines — the same construction this API requires of signed calls coming
+the other way, so a receiver verifies us with the code they already wrote.
+
+Three things make it a feature rather than a mechanism, and all three are on the screen: whether an
+endpoint is working, what was actually sent, and a way to send it again. A receiver that has been
+down for hours is switched off with a reason an organiser can read, and switching it back on forgives
+the count that switched it off. A replay is a **new** delivery, never a reset of the old one: what
+was tried and what came back is the record somebody reads to settle an argument with their own
+developer.
+
+A webhook address is opened by *our* server on an organiser's instruction, which is a server-side
+request forgery surface (threat T13). `https` only, a hostname rather than a bare IP, and every
+address it resolves to has to be public. The same guard now covers the SSO issuer URL, which was
+carrying the identical hole.
+
 ## Selling from somebody else's website
 
 Three ways to sell, and the same seat picker in all of them:
@@ -661,7 +684,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all fifty-seven, in order
+./smoke.sh                    # all fifty-eight, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -878,6 +901,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A row somebody is still typing into survives the save and does not survive publishing | `SiteModulesTest`, `modules_smoke` |
 | A buy button says what the event says, and a presale is not advertised to somebody without a code | `SiteModulesTest` |
 | A buy block cannot name another organiser's night | `SiteModulesTest` |
+| What we post is signed the way we require of calls coming the other way | `WebhookTest`, `webhooks_smoke` |
+| Every event the picker offers is one something actually sends | `WebhookTest` |
+| A receiver that is down is switched off with a reason, and switching it on forgives the count | `WebhookTest`, `webhooks_smoke` |
+| A replay is a new delivery, so what happened the first time survives | `WebhookTest`, `webhooks_smoke` |
+| A retry the queue lost is picked up by the sweep rather than owed for ever | `WebhookTest` |
+| An address an organiser types can never point this server at a private network | `WebhookTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

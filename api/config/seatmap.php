@@ -41,6 +41,26 @@ return [
         'retry_delays' => [10, 60, 300, 1800, 7200, 21600],
         'timeout_seconds' => 10,
         'dead_after_failures' => 20,
+        /*
+         * Whether a webhook address is held to what production requires (SSRF).
+         *
+         * On, and it has to be in production: a webhook address is typed by an organiser and opened
+         * by *our* server, so without this the panel is a way to make the platform fetch a cloud
+         * metadata endpoint and hand the answer back. On means https only and a hostname that
+         * resolves to the public internet.
+         *
+         * Off relaxes both halves — plain http is accepted and no name is resolved — because a
+         * development machine's receiver is `http://localhost:8300` and a guard that refused every
+         * fixture is a guard somebody switches off for good. It is off in the test suite and in
+         * `.env.example`, and turning it off in production undoes the protection entirely.
+         *
+         * A bare IP address is refused either way. That check costs no lookup and there is no
+         * legitimate integration that cannot be given a name.
+         */
+        'verify_destination' => env('SEATMAP_WEBHOOK_VERIFY_DESTINATION', true),
+        // How long a delivery stays in the log. Long enough to answer "did you ever tell us about
+        // that refund?", short enough that a busy on-sale does not grow the table for ever.
+        'log_days' => (int) env('SEATMAP_WEBHOOK_LOG_DAYS', 30),
     ],
 
     /*

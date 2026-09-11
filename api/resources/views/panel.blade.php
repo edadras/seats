@@ -41,6 +41,7 @@
     <script src="{{ asset('editor/js/questions.js') }}"></script>
     <script src="{{ asset('editor/js/entry-slots.js') }}"></script>
     <script src="{{ asset('editor/js/security.js') }}"></script>
+    <script src="{{ asset('editor/js/webhooks.js') }}"></script>
     <script src="{{ asset('editor/js/wallet.js') }}"></script>
     <script src="{{ asset('editor/js/discounts.js') }}"></script>
     <script src="{{ asset('editor/js/access.js') }}"></script>
