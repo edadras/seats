@@ -232,7 +232,21 @@ for ( const scheme of [ 'light', 'dark' ] ) {
 		await buyer.locator( '.seatmap-widget__list > summary' ).click();
 		await buyer.locator( '.seatmap-widget__seat:not([disabled])' ).first().focus();
 		await buyer.keyboard.press( 'Enter' );
-		await buyer.waitForTimeout( 300 );
+
+		/*
+		 * Waited for rather than slept through.
+		 *
+		 * Choosing a seat takes a round trip to hold it, and the list is repainted when the answer
+		 * comes back — so a fixed pause is a bet on how busy the machine is, and the assertion that
+		 * follows is about *where focus is after that repaint*. On a loaded runner the pause
+		 * expired first and the check reported a keyboard trap that was not there. A check that
+		 * cries wolf on an accessibility guarantee is worse than no check, because the next person
+		 * to see it red learns to scroll past it.
+		 */
+		await buyer.waitForSelector( '.seatmap-widget__seat.is-selected', { timeout: 15000 } );
+		// The summary line is written last, after the hold has come back, so it is the signal that
+		// the repaint this is about has actually finished.
+		await buyer.waitForSelector( '.seatmap-widget__selection li', { timeout: 15000 } );
 
 		check( 'a seat can be chosen from the keyboard',
 			1 === await buyer.locator( '.seatmap-widget__seat.is-selected' ).count() );
