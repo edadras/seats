@@ -303,6 +303,16 @@
                         </li>
                     @endif
 
+                    {{-- What being a Friend took off, named. A buyer who pays to be a member should
+                         see the membership rather than an anonymous reduction — it is the one line
+                         on this page that tells them the fee was worth paying. --}}
+                    @if (! empty($member))
+                        <li class="summary-lines__off">
+                            <span>{{ __('site.member.line', ['scheme' => $member['scheme']]) }}</span>
+                            <span>−{{ $money($member['amount']) }}</span>
+                        </li>
+                    @endif
+
                     {{-- A booking fee is added to the total; an inclusive tax is already inside it
                          and is shown as a note, not as another thing to add up. Re-rendered by the
                          quote below when extras change — from the server's own arithmetic, never

@@ -325,4 +325,6 @@ return [
     'no_events_chosen' => 'Scegli almeno un evento di cui essere informato.',
     'endpoint_not_active' => 'Riattiva la destinazione prima di inviarle di nuovo qualcosa.',
     'sender_no_address' => 'Non c’è nessun indirizzo a cui mandare un codice. Inseriscine uno prima.',
+    'membership_no_address' => 'Una tessera ha bisogno di un indirizzo email.',
+    'membership_scheme_in_use' => 'Delle persone si sono iscritte a questa formula, quindi non si può eliminare. Spegnila: tengono quello che hanno pagato.',
 ];

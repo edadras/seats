@@ -46,6 +46,10 @@ return [
             'name' => 'Renouvellement d’abonnement',
             'description' => 'Envoyé aux abonnés de la saison passée quand leurs places leur sont réservées. Impossible à désactiver : quelqu’un risque de perdre les places qu’il occupe depuis des années.',
         ],
+        'membership_expiring' => [
+            'name' => 'Adhésion qui expire',
+            'description' => 'Envoyé trois semaines avant la fin, à qui n’a pas encore renouvelé. Désactivé tant que vous ne l’activez pas.',
+        ],
     ],
     'channels' => [
         'email' => 'E-mail',
@@ -86,6 +90,10 @@ return [
         'season_renewal' => [
             'subject' => 'Vos places pour {run}',
             'body' => "{buyer}, vos places pour {run} vous sont réservées : {seats}.\n\nElles sont à vous jusqu’au {deadline}, ensuite elles partent en vente libre. Pour les garder, ou pour nous dire que vous ne pourrez pas venir cette année :\n{link}\n\n{site}",
+        ],
+        'membership_expiring' => [
+            'subject' => 'Votre adhésion {scheme} se termine le {ends}',
+            'body' => "{buyer}, votre adhésion {scheme} se termine le {ends}.\n\nPour continuer — et pour réserver toujours avant tout le monde — réadhérez ici :\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

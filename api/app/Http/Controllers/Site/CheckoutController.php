@@ -94,7 +94,23 @@ class CheckoutController extends Controller
             $offer = null;
         }
 
-        $off = $offer ? $offer->amount : 0;
+        /*
+         * A Friend's standing, and the better of it and the code.
+         *
+         * Read from the address the buyer is *already* known by — signed in, or carried from the
+         * seat map — rather than from the box they have not filled in yet. A discount that appeared
+         * when somebody typed an address would be a summary that changes under them, and one that
+         * appeared only at the payment step would be a charge the summary never promised.
+         *
+         * Never both: a member who also holds a code gets whichever helps more, and the other is
+         * left unspent.
+         */
+        $memberOff = $this->memberDiscount($request, $hold);
+        $member = $memberOff > ($offer ? $offer->amount : 0)
+            ? app(\App\Domain\Memberships\Memberships::class)->standing($this->knownEmail($request))
+            : null;
+
+        $off = max($offer ? $offer->amount : 0, $memberOff);
         // The same arithmetic the payment will use, asked of the same code. A summary that adds
         // up differently from the charge is the one bug a checkout must not have.
         $totals = StorefrontCheckout::totalsFor($hold, $off);
@@ -126,11 +142,17 @@ class CheckoutController extends Controller
             // again: it is part of what was reserved, and the page must show what was reserved.
             'entry' => $snapshot['entry'] ?? null,
             'subtotal' => (int) $hold->total_amount,
-            'discount' => $offer ? [
+            'discount' => ($offer && ! $member) ? [
                 'code' => $offer->code->code,
                 'amount' => $off,
             ] : null,
             'discountError' => $error,
+            // What a membership took off, said in the member's own words rather than as an
+            // anonymous reduction: somebody paying to be a Friend should see the Friend.
+            'member' => $member ? [
+                'scheme' => $member->scheme->name,
+                'amount' => $memberOff,
+            ] : null,
             'extras' => $totals->extraLines(),
             'total' => $totals->total,
             // Money already taken, being spent. Shown under the total rather than among the lines
@@ -334,9 +356,15 @@ class CheckoutController extends Controller
             return response()->json(['error' => $e->errorCode(), 'message' => $e->localisedMessage()], 422);
         }
 
+        // The better of the code and the membership, exactly as the page and the payment take it.
+        $off = max(
+            $offer?->isAllowed() ? $offer->amount : 0,
+            $this->memberDiscount($request, $hold)
+        );
+
         $totals = StorefrontCheckout::totalsFor(
             $hold,
-            $offer?->isAllowed() ? $offer->amount : 0,
+            $off,
             app(Addons::class)->total($lines),
             app(Donations::class)->amount($hold->event, $data['donation'] ?? 0),
         );
@@ -347,7 +375,7 @@ class CheckoutController extends Controller
         $voucher = $this->voucherFor($request, $hold, $totals->total);
         $totals = StorefrontCheckout::totalsFor(
             $hold,
-            $offer?->isAllowed() ? $offer->amount : 0,
+            $off,
             app(Addons::class)->total($lines),
             app(Donations::class)->amount($hold->event, $data['donation'] ?? 0),
             $voucher?->isAllowed() ? $voucher->amount : 0,
@@ -540,6 +568,9 @@ class CheckoutController extends Controller
                 $voucher,
                 $hold->event->ask_access_needs ? ($data['access_needs'] ?? null) : null,
                 $request->session()->get(\App\Domain\Attribution\Attribution::SESSION_KEY),
+                // From the same address the summary was priced against, so the charge and the page
+                // cannot disagree about what being a Friend is worth.
+                $this->memberDiscount($request, $hold),
             );
         } catch (ApiException $e) {
             if (in_array($e->errorCode(), ['addon_sold_out', 'addon_too_many', 'unknown_addon'], true)) {
@@ -946,6 +977,27 @@ class CheckoutController extends Controller
         ));
 
         return null;
+    }
+
+    /**
+     * The address this checkout already knows the buyer by.
+     *
+     * The session, not the form: it is set when somebody signs in and when they come through the
+     * seat map having identified themselves, and it is the same address the presale door reads.
+     * Somebody who types a member's address into the form at the last moment is not that member.
+     */
+    private function knownEmail(Request $request): ?string
+    {
+        $email = $request->session()->get('seatmap_buyer')['email'] ?? null;
+
+        return $email ? mb_strtolower(trim((string) $email)) : null;
+    }
+
+    /** What a current membership takes off these seats, or nothing. */
+    private function memberDiscount(Request $request, Hold $hold): int
+    {
+        return app(\App\Domain\Memberships\Memberships::class)
+            ->discountOn($this->knownEmail($request), (int) $hold->total_amount);
     }
 
     private function voucherFor(Request $request, Hold $hold, int $payable): ?VoucherOffer

@@ -346,6 +346,19 @@ class OrderService
                 report($e);
             }
 
+            /*
+             * And, where the booking carried one, somebody has joined.
+             *
+             * Beside the points for the same reason and with the same guard: a membership is worth
+             * a great deal to a venue and nothing at all compared with a paid booking that failed
+             * to be recorded because granting it threw.
+             */
+            try {
+                app(\App\Domain\Memberships\Memberships::class)->settle($order->fresh());
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             // The buyer is told, on whatever channels this organiser has turned on. Failures are
             // recorded and swallowed inside: an order that fails because a text message could not
             // be sent is a worse outcome than a text message that arrives late.

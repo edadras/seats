@@ -46,6 +46,10 @@ return [
             'name' => 'Rinnovo abbonamento',
             'description' => 'Va agli abbonati della stagione passata quando i loro posti sono tenuti per loro. Non si può spegnere: qualcuno rischia di perdere i posti su cui siede da anni.',
         ],
+        'membership_expiring' => [
+            'name' => 'Tessera in scadenza',
+            'description' => 'Inviato tre settimane prima della fine, a chi non ha già rinnovato. Spento finché non lo accendi.',
+        ],
     ],
     'channels' => [
         'email' => 'E-mail',
@@ -86,6 +90,10 @@ return [
         'season_renewal' => [
             'subject' => 'I tuoi posti per {run}',
             'body' => "{buyer}, i tuoi posti per {run} sono tenuti per te: {seats}.\n\nSono tuoi fino al {deadline}, poi passano alla vendita libera. Per tenerli, o per dirci che quest’anno non puoi venire:\n{link}\n\n{site}",
+        ],
+        'membership_expiring' => [
+            'subject' => 'La tua tessera {scheme} scade il {ends}',
+            'body' => "{buyer}, la tua tessera {scheme} scade il {ends}.\n\nPer continuare — e per prenotare sempre prima di tutti — rinnova qui:\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

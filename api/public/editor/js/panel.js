@@ -63,6 +63,9 @@
 			// Points and tiers. Beside the vouchers because that is what a point turns into, and
 			// behind the same permission for the same reason.
 			{ key: 'loyalty', icon: 'target', needs: 'vouchers.manage' },
+			// The Friends scheme. Beside the points and the credit because it is the third thing
+			// a venue gives its regulars, and the same desk hands out all three.
+			{ key: 'memberships', icon: 'users', needs: 'vouchers.manage' },
 		] },
 		{ group: 'venue', items: [
 			{ key: 'maps', icon: 'map', needs: 'maps.view' },
@@ -1083,6 +1086,7 @@
 			case 'rehearsal': return window.SeatmapRehearsal.render( this );
 			case 'leaving': return window.SeatmapLeaving.render( this );
 			case 'loyalty': return window.SeatmapLoyalty.render( this );
+			case 'memberships': return window.SeatmapMemberships.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );

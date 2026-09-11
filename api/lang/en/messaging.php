@@ -46,6 +46,10 @@ return [
             'name' => 'Season renewal',
             'description' => "Sent to last season's subscribers when their seats are being kept for them. It cannot be switched off — somebody stands to lose the chairs they have sat in for years.",
         ],
+        'membership_expiring' => [
+            'name' => 'Membership running out',
+            'description' => 'Sent three weeks before a membership ends, to somebody who has not already renewed. Off unless you turn it on.',
+        ],
     ],
     'channels' => [
         'email' => 'Email',
@@ -86,6 +90,10 @@ return [
         'season_renewal' => [
             'subject' => 'Your seats for {run}',
             'body' => "{buyer}, your seats for {run} are being kept for you: {seats}.\n\nThey are yours until {deadline}, after which they go on general sale. To keep them, or to let us know you cannot come this year:\n{link}\n\n{site}",
+        ],
+        'membership_expiring' => [
+            'subject' => 'Your {scheme} membership ends on {ends}',
+            'body' => "{buyer}, your {scheme} membership runs out on {ends}.\n\nTo carry on — and to keep booking before everybody else — join again here:\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

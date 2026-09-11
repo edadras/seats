@@ -56,6 +56,7 @@ tags:
   - name: Discounts
   - name: Access
   - name: Vouchers
+  - name: Memberships
   - name: Seasons
   - name: Baskets
   - name: Box office
@@ -5686,6 +5687,187 @@ paths:
         "422": { $ref: "#/components/responses/ValidationError" }
         "429": { $ref: "#/components/responses/RateLimited" }
 
+  /memberships:
+    get:
+      operationId: listMembershipSchemes
+      tags: [Memberships]
+      summary: The rungs of this venue's Friends scheme
+      description: |
+        Requires `vouchers.manage` — the same permission as gift credit, because it is the same job
+        at the same desk. A membership is a fee, a period and two promises: a percentage off the
+        seats, and booking before the general sale on the nights the venue says so.
+
+        `sell_online` is read off the add-on the scheme is sold as rather than stored twice.
+      responses:
+        "200":
+          description: The schemes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MembershipScheme" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: createMembershipScheme
+      tags: [Memberships]
+      summary: Add a scheme
+      description: >-
+        Requires `vouchers.manage`. With `sell_online`, the platform creates and maintains the
+        event-wide add-on the scheme is sold as — one per order, priced from the scheme. An
+        organiser never edits that add-on themselves; taking the scheme off sale hides it rather
+        than deleting it, because it is on the booking of everybody who has already joined.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MembershipSchemeInput" }
+      responses:
+        "201":
+          description: The scheme
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MembershipScheme" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /memberships/{scheme}:
+    parameters:
+      - name: scheme
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateMembershipScheme
+      tags: [Memberships]
+      summary: Change a scheme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MembershipSchemeInput" }
+      responses:
+        "200":
+          description: The scheme
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MembershipScheme" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+    delete:
+      operationId: deleteMembershipScheme
+      tags: [Memberships]
+      summary: Remove a scheme nobody has joined
+      description: >-
+        Requires `vouchers.manage`. Refused with `membership_scheme_in_use` once anybody has joined:
+        a membership somebody paid for must not disappear because a scheme was tidied up. Switch it
+        off instead — it stops being offered and everybody in it keeps what they bought until it
+        runs out.
+      responses:
+        "204": { description: Removed }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /memberships/members:
+    get:
+      operationId: listMembers
+      tags: [Memberships]
+      summary: Who is in it
+      description: >-
+        Requires `vouchers.manage`. Whether a membership is *current* is a comparison against today
+        and is never stored: a status column would need a nightly job to stay true, and the one
+        night it did not run is the night a member is turned away at their own presale.
+      parameters:
+        - name: scheme
+          in: query
+          schema: { type: string, format: uuid }
+        - name: state
+          in: query
+          schema: { type: string, enum: [current, lapsed] }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: The members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Membership" }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+                      last_page: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    post:
+      operationId: addMember
+      tags: [Memberships]
+      summary: Somebody joins at the window
+      description: >-
+        Requires `vouchers.manage`. Also how an old paper list is brought across. Renewing somebody
+        who is still a member **extends** what they hold rather than replacing it — a scheme that
+        took months away for paying early would punish the members it exists to keep.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scheme_id, email]
+              properties:
+                scheme_id: { type: string, format: uuid }
+                email: { type: string, format: email, maxLength: 190 }
+                name: { type: [string, "null"], maxLength: 120 }
+      responses:
+        "201":
+          description: The membership
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Membership" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /memberships/members/{membership}:
+    parameters:
+      - name: membership
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: endMembership
+      tags: [Memberships]
+      summary: End a membership
+      description: >-
+        Requires `vouchers.manage`. It stops counting today and the row stays, because it was true.
+      responses:
+        "200":
+          description: The membership, now ended
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Membership" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /messaging:
     get:
       operationId: getMessagingSettings
@@ -10750,6 +10932,75 @@ components:
             email: { type: [string, "null"] }
             status: { type: string }
             total: { type: string, description: "Formatted in the reader's language." }
+
+    MembershipScheme:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 300 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        price:
+          type: integer
+          description: The joining fee, in minor units.
+        months:
+          type: integer
+          description: How long a membership lasts. A length, not a date — somebody who joins in June is a member until next June.
+        discount_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: >-
+            Off the seats only — never the booking fee, the tax or an add-on, which is the rule a
+            discount code already follows. A member who also holds a code gets the better of the
+            two and never both.
+        presale:
+          type: boolean
+          description: Whether this scheme walks past the code box on a night with `member_presale` set.
+        enabled: { type: boolean }
+        position: { type: integer }
+        sell_online:
+          type: boolean
+          description: Whether the add-on this scheme is sold as is on offer at the checkout.
+        members:
+          type: integer
+          description: How many memberships in this scheme are running today.
+
+    MembershipSchemeInput:
+      type: object
+      required: [name, currency, price, months]
+      properties:
+        name: { type: string, maxLength: 80 }
+        description: { type: [string, "null"], maxLength: 300 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        price: { type: integer, minimum: 0 }
+        months: { type: integer, minimum: 1, maximum: 120 }
+        discount_percent: { type: integer, minimum: 0, maximum: 100 }
+        presale: { type: boolean }
+        enabled: { type: boolean }
+        position: { type: integer, minimum: 0 }
+        sell_online:
+          type: boolean
+          description: Whether to offer it beside a ticket at the checkout.
+
+    Membership:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        name: { type: [string, "null"] }
+        scheme:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: [string, "null"] }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        current:
+          type: boolean
+          description: A comparison against today, never a stored status.
+        source: { type: string, enum: [bought, granted] }
+        cancelled_at: { type: [string, "null"], format: date-time }
 
     SenderIdentity:
       type: object

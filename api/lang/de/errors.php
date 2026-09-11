@@ -325,4 +325,6 @@ return [
     'no_events_chosen' => 'Wählen Sie mindestens ein Ereignis, über das Sie informiert werden möchten.',
     'endpoint_not_active' => 'Schalten Sie das Ziel wieder ein, bevor erneut etwas gesendet wird.',
     'sender_no_address' => 'Es gibt keine Adresse, an die ein Code gehen könnte. Tragen Sie zuerst eine ein.',
+    'membership_no_address' => 'Eine Mitgliedschaft braucht eine E-Mail-Adresse.',
+    'membership_scheme_in_use' => 'Diesem Modell sind Leute beigetreten, es lässt sich nicht löschen. Schalten Sie es ab — sie behalten, wofür sie bezahlt haben.',
 ];

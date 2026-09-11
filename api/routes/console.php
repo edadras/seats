@@ -90,6 +90,14 @@ Schedule::command('accounts:erase')->dailyAt('03:40')->withoutOverlapping()->run
 Schedule::command('loyalty:expire')->dailyAt('04:20')->withoutOverlapping()->runInBackground();
 
 /*
+ * Friends whose membership is running out, told once, three weeks before it does.
+ *
+ * In the morning rather than overnight: it is a renewal notice, and one that arrives at four in the
+ * morning is read at nine with everything else that arrived at four in the morning.
+ */
+Schedule::command('memberships:remind')->dailyAt('09:30')->withoutOverlapping()->runInBackground();
+
+/*
  * The queue for a sold-out night.
  *
  * Every few minutes rather than the instant a refund lands: seats come back in bursts — a party of

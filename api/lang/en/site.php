@@ -484,4 +484,7 @@ return [
         'no' => 'No thanks',
         'change' => 'Cookies',
     ],
+    'member' => [
+        'line' => ':scheme discount',
+    ],
 ];

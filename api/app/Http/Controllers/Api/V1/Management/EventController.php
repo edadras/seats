@@ -557,6 +557,13 @@ class EventController extends Controller
              * pointing at a rung by id would break the moment somebody reordered it.
              */
             'tier_presale' => ['sometimes', 'nullable', 'string', 'max:40'],
+            /*
+             * Whether a Friend gets in before the general sale on this night.
+             *
+             * A separate switch from the loyalty tier because a venue may run both, and because
+             * they are different promises: one is earned by coming, the other is paid for.
+             */
+            'member_presale' => ['sometimes', 'boolean'],
             'resale_pays' => ['sometimes', 'in:credit,refund'],
             'refund_policy' => ['sometimes', 'in:release,hold_back'],
             // What the *seat* does on a refund is `refund_policy`; these three are whether the
@@ -714,6 +721,7 @@ class EventController extends Controller
              */
             'is_rehearsal' => (bool) $event->is_rehearsal,
             'tier_presale' => $event->tier_presale,
+            'member_presale' => (bool) $event->member_presale,
             'availability_version' => $event->availability_version,
 
             /*

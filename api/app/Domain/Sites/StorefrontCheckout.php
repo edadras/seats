@@ -88,6 +88,7 @@ class StorefrontCheckout
         ?VoucherOffer $voucher = null,
         ?string $accessNeeds = null,
         ?array $landing = null,
+        int $memberDiscount = 0,
     ): array {
         if (! $hold->isActive()) {
             throw ApiException::conflict('hold_'.$hold->currentState(), sprintf(
@@ -113,7 +114,18 @@ class StorefrontCheckout
         );
 
         $lines = $this->addons->price($hold->event, $addons, self::placesIn($hold));
-        $discount = $offer?->isAllowed() ? $offer->amount : 0;
+
+        /*
+         * The better of the code and the membership, never both.
+         *
+         * Two discounts on one booking is how a venue discovers it sold seats below cost, and a
+         * member who also holds a code should get whichever helps them more rather than neither.
+         * The losing one is not spent: a code that took nothing off must still be there tomorrow.
+         */
+        $codeOff = $offer?->isAllowed() ? $offer->amount : 0;
+        $memberOff = max(0, $memberDiscount);
+        $usingCode = $codeOff >= $memberOff;
+        $discount = max($codeOff, $memberOff);
 
         /*
          * What this will come to, worked out before anything is written.
@@ -175,13 +187,35 @@ class StorefrontCheckout
          * one the buyer agreed to. Only on a first registration, because a retried submit lands on
          * the same order, and an order that already carries the discount must not carry it twice.
          */
-        if ($offer && $registered && $offer->isAllowed()) {
+        if ($usingCode && $offer && $registered && $offer->isAllowed()) {
             if (! $this->discounts->applyTo($order, $offer->code, $offer->amount)) {
                 throw ApiException::conflict(
                     'discount_used_up',
                     'That code has just been used for the last time.'
                 );
             }
+
+            $order->refresh();
+        }
+
+        /*
+         * A member's standing, written onto the order the way a code's redemption is.
+         *
+         * Without this the totals two blocks down read the discount back from the order's metadata,
+         * find nothing, and charge the full price after a summary that promised otherwise. A
+         * membership spends nothing, so there is no redemption to record — only the fact that this
+         * booking was priced as a member's.
+         */
+        if (! $usingCode && $memberOff > 0 && $registered) {
+            $order->forceFill([
+                'metadata' => ($order->metadata ?? []) + [
+                    'discount' => [
+                        'member' => true,
+                        'subtotal' => (int) $order->total_amount,
+                        'amount' => min((int) $order->total_amount, $memberOff),
+                    ],
+                ],
+            ])->save();
 
             $order->refresh();
         }

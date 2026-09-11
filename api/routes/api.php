@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\BillingController;
 use App\Http\Controllers\Api\V1\Management\ReportScheduleController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
+use App\Http\Controllers\Api\V1\Management\MembershipController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\WebhookController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
@@ -304,6 +305,21 @@ Route::prefix('v1')->group(function () {
         Route::get('loyalty/members/{email}', [LoyaltyController::class, 'member'])
             ->where('email', '.*');
         Route::post('loyalty/adjust', [LoyaltyController::class, 'adjust']);
+
+        /*
+         * The Friends scheme.
+         *
+         * Behind the same permission as gift credit and for the same reason: somebody at the window
+         * takes thirty euros and writes down that a person is now a member. Making the membership
+         * secretary ask a director is how a venue ends up keeping the list in a spreadsheet.
+         */
+        Route::get('memberships', [MembershipController::class, 'index']);
+        Route::post('memberships', [MembershipController::class, 'store']);
+        Route::patch('memberships/{scheme}', [MembershipController::class, 'update']);
+        Route::delete('memberships/{scheme}', [MembershipController::class, 'destroy']);
+        Route::get('memberships/members', [MembershipController::class, 'members']);
+        Route::post('memberships/members', [MembershipController::class, 'join']);
+        Route::delete('memberships/members/{membership}', [MembershipController::class, 'cancel']);
 
         Route::get('sso', [SsoController::class, 'show']);
         Route::put('sso', [SsoController::class, 'save'])->middleware('throttle:20,60,sso-save');

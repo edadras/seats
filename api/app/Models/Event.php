@@ -28,7 +28,7 @@ class Event extends Model
         'presale_starts_at', 'on_sale_at',
         'accessible_sale', 'accessible_release_hours', 'ask_access_needs',
         'demand_pricing', 'price_floor', 'price_ceiling',
-        'tier_presale',
+        'tier_presale', 'member_presale',
     ];
 
     protected $casts = [
@@ -40,6 +40,8 @@ class Event extends Model
         'settings' => 'array',
         'translations' => 'array',
         'ask_access_needs' => 'boolean',
+        // Whether a Friend books before the general sale on this night.
+        'member_presale' => 'boolean',
         'accessible_release_hours' => 'integer',
         'hold_ttl_seconds' => 'integer',
         'max_extends' => 'integer',

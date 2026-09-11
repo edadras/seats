@@ -99,6 +99,17 @@ class MessageKinds
          * delivery, and a delivery has to say what it was. Its channels are chosen per
          * announcement, which is why it is not in the channel-settings screen.
          */
+        /*
+         * A membership running out, with time to do something about it.
+         *
+         * Optional, because it is the one message on this list that is also a renewal notice — a
+         * venue that would rather ring its Friends than email them must be able to say so. Sent
+         * once, three weeks out, and only to somebody who has not already renewed.
+         */
+        'membership.expiring' => [
+            'placeholders' => ['buyer', 'scheme', 'ends', 'site', 'link'],
+            'optional' => true,
+        ],
         'announcement' => [
             'placeholders' => ['buyer', 'event', 'site'],
             'optional' => true,

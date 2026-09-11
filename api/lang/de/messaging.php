@@ -46,6 +46,10 @@ return [
             'name' => 'Abo-Verlängerung',
             'description' => 'Geht an die Abonnenten der letzten Spielzeit, wenn ihre Plätze für sie reserviert sind. Nicht abschaltbar — jemand kann die Plätze verlieren, auf denen er seit Jahren sitzt.',
         ],
+        'membership_expiring' => [
+            'name' => 'Mitgliedschaft läuft aus',
+            'description' => 'Drei Wochen vor Ablauf an alle, die noch nicht verlängert haben. Aus, bis Sie es einschalten.',
+        ],
     ],
     'channels' => [
         'email' => 'E-Mail',
@@ -86,6 +90,10 @@ return [
         'season_renewal' => [
             'subject' => 'Ihre Plätze für {run}',
             'body' => "{buyer}, Ihre Plätze für {run} sind für Sie reserviert: {seats}.\n\nSie gehören Ihnen bis zum {deadline}, danach gehen sie in den freien Verkauf. Um sie zu behalten oder uns zu sagen, dass Sie dieses Jahr nicht können:\n{link}\n\n{site}",
+        ],
+        'membership_expiring' => [
+            'subject' => 'Ihre {scheme}-Mitgliedschaft endet am {ends}',
+            'body' => "{buyer}, Ihre {scheme}-Mitgliedschaft läuft am {ends} aus.\n\nUm weiterzumachen — und weiterhin vor allen anderen zu buchen — hier erneut beitreten:\n{link}\n\n{site}",
         ],
     ],
     'logKinds' => [

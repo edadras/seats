@@ -235,7 +235,7 @@
 
 		App.main().querySelectorAll( '[data-event]' ).forEach( function ( select ) {
 			select.addEventListener( 'change', function () {
-				App.request( 'PUT', '/events/' + select.dataset.event, {
+				App.request( 'PATCH', '/events/' + select.dataset.event, {
 					tier_presale: select.value || null,
 				} )
 					.then( function () { App.toast( App.t( 'panel.loyalty.earlySaved' ) ); } )

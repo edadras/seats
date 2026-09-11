@@ -325,4 +325,6 @@ return [
     'no_events_chosen' => 'Choisissez au moins un événement dont vous voulez être informé.',
     'endpoint_not_active' => 'Réactivez la destination avant de lui envoyer quoi que ce soit.',
     'sender_no_address' => 'Il n’y a aucune adresse à laquelle envoyer un code. Saisissez-en une d’abord.',
+    'membership_no_address' => 'Une adhésion a besoin d’une adresse e-mail.',
+    'membership_scheme_in_use' => 'Des gens ont adhéré à cette formule, elle ne peut pas être supprimée. Désactivez-la : ils gardent ce qu’ils ont payé.',
 ];

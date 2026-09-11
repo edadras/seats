@@ -114,6 +114,20 @@ class AccessCodes
             return null;
         }
 
+        /*
+         * And a Friend, where this night lets members in.
+         *
+         * The same door as a tier and for the same reason: a venue that sells a membership on the
+         * promise of booking first has to honour it without issuing everybody a code. Both are
+         * checked because a venue may run both, and either is enough on its own.
+         */
+        if (SaleWindow::PRESALE === $state
+            && $event->member_presale
+            && $buyerEmail
+            && app(\App\Domain\Memberships\Memberships::class)->admitsToPresale($buyerEmail)) {
+            return null;
+        }
+
         if (null === $typed || '' === trim($typed)) {
             throw ApiException::conflict(
                 'access_code_required',

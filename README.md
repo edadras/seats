@@ -562,6 +562,29 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## The Friends scheme
+
+Loyalty is earned by coming and a season ticket is one run of one production. A membership is
+neither, and it is the oldest of the three: a fee, a year, and two promises — a percentage off every
+seat, and booking before the general sale on the nights the venue says so.
+
+It is **sold as an add-on** rather than through a checkout of its own. A membership bought beside a
+ticket is an ordinary booking that happens to have made somebody a member: one order, one gateway,
+one settlement line, one refund path, and nothing downstream learning a new shape. It can also be
+granted at the window, which is how an existing paper list comes across.
+
+A renewal **extends** rather than replaces. Somebody renewing four months early keeps those four
+months — a scheme that took them away would punish the members it exists to keep. Whether a
+membership is current is a comparison against today and is never stored: a status column would need
+a nightly job to stay true, and the night it did not run is the night a Friend is turned away at
+their own presale.
+
+The discount applies to the address a buyer is **already known by** — signed in, or carried from the
+seat map — and never to one typed into the form at the last moment. A discount that appeared while
+somebody typed would be a summary changing under them; one that appeared only at the payment step
+would be a charge the page never promised. A member who also holds a code gets the better of the
+two and never both, and the losing one is not spent.
+
 ## Measurement, and the question that comes first
 
 A hosted site had no analytics of any kind, so an organiser who spent money on a poster could see
@@ -726,7 +749,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty, in order
+./smoke.sh                    # all sixty-one, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -957,6 +980,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A tracking id that is not one is dropped rather than rendered into a tag | `MeasurementTest`, `measurement_smoke` |
 | A site that measures nothing asks nothing | `MeasurementTest` |
 | A page records what happened on it without knowing anything about consent | `MeasurementTest`, `measurement_smoke` |
+| A membership bought beside a ticket is granted by the same confirm that issues the tickets | `MembershipTest`, `memberships_smoke` |
+| Renewing early adds to what somebody holds rather than replacing it | `MembershipTest` |
+| A signed-in member is charged the member price; a stranger typing their address is not | `MembershipTest` |
+| A Friend walks past the presale door without spending anybody's code | `MembershipTest`, `memberships_smoke` |
+| A scheme people have joined is switched off, never deleted | `MembershipTest` |
+| Nobody who has already renewed is sent a renewal reminder | `MembershipTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |
