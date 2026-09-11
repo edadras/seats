@@ -562,6 +562,51 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## A shop that fits in a hand
+
+Most tickets are bought on a phone, and every one of them is *used* on a phone — in a queue, at a
+door, on a cell three hundred other people are sharing. So the buyer's side of this platform is a
+web app, per site, in the venue's own name and colours.
+
+**Installable.** Every hosted site serves its own `manifest.webmanifest`, its own service worker at
+`/sw.js` and its own tile at `/app-icon-{180,192,512}.png`. All three are derived from the site's
+record: the name, the two brand colours, the theme it is wearing. There is no platform manifest and
+no platform icon — a white-label product whose home-screen icon is the vendor's logo is not
+white-label. The tile is *drawn* rather than fetched, with the typeface this repository ships, which
+covers Latin, Persian and Arabic; an organiser's logo lives on somebody else's server and an icon
+that depends on an outbound request is sometimes a broken square on a home screen.
+
+**The ticket opens at the door.** That is the whole reason for the service worker, and its rules are
+worth stating because a cache on a shop is how a sold-out night keeps selling:
+
+| | |
+| --- | --- |
+| A page | Network first, always. A cached page is only ever the fallback for a network that failed. |
+| An order page | Kept, in a cache that is *not* versioned with the build. It is the buyer's own ticket, it does not change after the sale, and shipping a stylesheet the week of a concert must not throw it away. |
+| The checkout, the store endpoints, the gateway, the account page, the queue | Never touched. An account page cached on a borrowed phone is somebody's order history left behind. |
+| Signing out | Deletes the ticket cache with it. |
+
+When there is no signal and no cached copy, the site serves its own offline page — one file with no
+stylesheet, no script and no font, because a page that says "you are offline" by fetching two files
+to say it is a page that shows a browser error instead.
+
+The install is **offered, never insisted on**: the button appears only when the browser itself says
+an install is possible, and only once — somebody who said no has said no.
+
+**Made for a phone, not merely surviving one.** The header folds into a button under 52rem and is
+laid out as a row above it — one copy of the links in the template, with the disclosure undone by
+the stylesheet rather than printed twice. The checkout puts the total *above* the form, because
+stacked it used to land under two hundred pixels of address fields and the first sight of the price
+came after everything had been typed. Every field is at least 16px, or Safari zooms the page and
+stays zoomed. Every sticky bar is padded with `env(safe-area-inset-bottom)`, or the button sits
+exactly where an iPhone's swipe-up handle is. Heroes are sized in `dvh`, not `vh`.
+
+And in the seat picker, on a touch screen narrow enough to be a phone and **only once something has
+been chosen**, the summary lifts off the page and sits at the foot of the screen: the plan stays
+visible while you drag it, and the total and the button that reserves it stay under your thumb.
+Nothing is duplicated and no script is involved — it is the same element, in the same place in the
+document, told to stay where a thumb is.
+
 ## The view from the seat
 
 A chart says where a seat is; a price says what it costs. Neither answers the question somebody
@@ -769,7 +814,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-two, in order
+./smoke.sh                    # all sixty-three, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -1007,6 +1052,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A scheme people have joined is switched off, never deleted | `MembershipTest` |
 | Nobody who has already renewed is sent a renewal reminder | `MembershipTest` |
 | A photograph hangs off the room, not the drawing: republishing a chart keeps every view | `SeatViewTest` |
+| A ticket opens at the door with every request to the network refused | `webapp_smoke` |
+| The account page is in no cache, on a phone that has been signed out of or borrowed | `WebAppTest`, `webapp_smoke` |
+| A site is installed under the venue's own name, colours and tile — never the platform's | `WebAppTest`, `webapp_smoke` |
+| The page that says there is no connection needs no stylesheet, script or font to say it | `WebAppTest`, `webapp_smoke` |
+| The header is a button on a phone and a row on a desktop, from one copy of the links | `webapp_smoke` |
+| Nothing scrolls sideways at 390px, and the reserve button stays under a thumb | `webapp_smoke` |
 | An address that is not one a browser would fetch never reaches a buyer's page | `SeatViewTest`, `views_smoke` |
 | A buyer who opens a section sees that section's photograph, on every host the picker runs on | `SeatViewTest`, `views_smoke` |
 | A section with no photograph shows nothing rather than an empty frame | `SeatViewTest`, `views_smoke` |

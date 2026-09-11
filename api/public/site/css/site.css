@@ -141,7 +141,9 @@ hr { border: none; }
 }
 
 .shell {
-	inline-size: min(100% - 2.5rem, var(--shell));
+	/* The gutter narrows on a phone rather than staying at 40px: on a 360px screen a fixed gutter
+	   is a ninth of the page spent on nothing, and the thing it takes it from is the poster. */
+	inline-size: min(100% - clamp(2rem, 5vw, 2.5rem), var(--shell));
 	margin-inline: auto;
 }
 
@@ -308,9 +310,11 @@ hr { border: none; }
 		linear-gradient(160deg, color-mix(in srgb, var(--accent) 92%, #000), color-mix(in srgb, var(--accent) 45%, #000));
 }
 
-.hero--short { min-block-size: clamp(12rem, 26vh, 17rem); }
-.hero--tall { min-block-size: clamp(19rem, 52vh, 30rem); }
-.hero--full { min-block-size: min(84vh, 46rem); }
+/* `dvh`, not `vh`: on a phone `100vh` is the height with the browser's toolbars *hidden*, so a
+   hero sized in it is cropped by exactly the toolbar that is on screen when the page loads. */
+.hero--short { min-block-size: clamp(12rem, 26dvh, 17rem); }
+.hero--tall { min-block-size: clamp(19rem, 52dvh, 30rem); }
+.hero--full { min-block-size: min(84dvh, 46rem); }
 
 .hero__art {
 	position: absolute;
@@ -724,7 +728,7 @@ hr { border: none; }
 	position: relative;
 	display: flex;
 	align-items: flex-end;
-	min-block-size: clamp(19rem, 52vh, 30rem);
+	min-block-size: clamp(17rem, 52dvh, 30rem);
 	padding-block: clamp(2rem, 6vw, 4rem);
 	overflow: hidden;
 	isolation: isolate;
@@ -897,6 +901,9 @@ hr { border: none; }
 .field input {
 	inline-size: 100%;
 	min-block-size: 3rem;
+	/* Never below 16px. Safari on iOS zooms the whole page into any field smaller than that, and
+	   a checkout that jumps and stays zoomed is a checkout people abandon. */
+	font-size: max(1rem, 16px);
 	padding-inline: 0.9rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
@@ -2040,4 +2047,305 @@ hr { border: none; }
 @media (max-width: 40rem) {
 	.cookiebar__acts { inline-size: 100%; }
 	.cookiebar__acts .button { flex: 1 1 auto; text-align: center; }
+}
+
+/* =========================================================== a shop that fits in a hand
+ *
+ * Everything below is here because a ticket is bought on a phone. Not "works on a phone" in the
+ * sense that it does not overflow — that was already true — but *made for one*: a header that folds
+ * into a button, a checkout that puts the total above the form where a thumb can see it before it
+ * types, a reserve button that stays on the screen while the plan is being dragged, and nothing
+ * ever sitting under the home indicator.
+ *
+ * The breakpoint is 52rem throughout, and it is one number on purpose: a stylesheet with four
+ * breakpoints is a stylesheet nobody can hold in their head, and every layout here has the same
+ * question to answer — is there room for a row, or does this become a column?
+ */
+
+/* -------------------------------------------------------------------- the folding header */
+
+/*
+ * Phone-first, and no-JavaScript-first.
+ *
+ * The panel is an ordinary row of links by default: that is what a visitor with no script gets, and
+ * it is what every screen wide enough gets too. Only when the script has revealed the button —
+ * `.menu--folds` — and only on a narrow screen does it become a dropdown that the button opens.
+ * A header whose navigation depends on a script is a header with no navigation in it.
+ */
+.menu {
+	position: relative;
+	display: flex;
+	align-items: center;
+	margin-inline-start: auto;
+}
+
+.menu__button {
+	display: inline-grid;
+	place-items: center;
+	inline-size: 2.75rem;
+	block-size: 2.75rem;
+	padding: 0;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--text);
+	cursor: pointer;
+}
+
+.menu__button:hover { border-color: var(--accent-line); }
+
+.menu__shut { display: none; }
+.menu__button[aria-expanded="true"] .menu__open { display: none; }
+.menu__button[aria-expanded="true"] .menu__shut { display: block; }
+
+.menu__panel {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 1.25rem;
+}
+
+@media (max-width: 51.999rem) {
+	/*
+	 * The panel a phone gets: under the header, and nothing behind it to mis-tap.
+	 *
+	 * Not a fixed overlay. An overlay has to trap focus, has to be closed again, and has to fight
+	 * the address bar for the bottom of the screen; a sheet that pushes nothing and covers nothing
+	 * has none of those problems and is dismissed by the same button that opened it.
+	 */
+	.menu--folds .menu__panel {
+		position: absolute;
+		inset-block-start: calc(100% + 0.65rem);
+		inset-inline-end: 0;
+		z-index: 12;
+		flex-direction: column;
+		align-items: stretch;
+		flex-wrap: nowrap;
+		gap: 0.35rem;
+		min-inline-size: min(16rem, calc(100vw - 2.5rem));
+		padding: 0.5rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		background: var(--surface);
+		box-shadow: var(--lift-strong);
+	}
+
+	.menu--folds .menu__button[aria-expanded="false"] + .menu__panel { display: none; }
+
+	.menu--folds .menu__panel .nav { flex-direction: column; gap: 0.15rem; }
+
+	/* A menu is a list of decisions, and on a touch screen a decision needs a target. Aligned to
+	   the reading edge, not centred: a column of centred links has no edge to run the eye down,
+	   and the coarse-pointer rule further down would otherwise centre every one of them. */
+	.menu--folds .menu__panel .nav__link {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 0.5rem;
+		min-block-size: 2.75rem;
+		padding-inline: 0.85rem;
+		font-size: 1rem;
+	}
+
+	.menu--folds .menu__panel .langs { margin-block-start: 0.25rem; }
+
+	.menu--folds .menu__panel .langs__button {
+		inline-size: 100%;
+		justify-content: space-between;
+		min-block-size: 2.75rem;
+	}
+}
+
+/* Wide enough for a row, so the button has nothing to fold. */
+@media (min-width: 52rem) {
+	.menu__button { display: none; }
+}
+
+/* The notch, and the room under it. */
+.masthead__inner { padding-block-start: max(0.9rem, env(safe-area-inset-top)); }
+
+/* ------------------------------------------------------------------------- the offer to install */
+
+.install {
+	position: sticky;
+	inset-block-end: 0;
+	z-index: 38;
+	border-block-start: 1px solid var(--border);
+	background: var(--surface);
+	box-shadow: 0 -6px 24px rgba(16, 20, 30, 0.07);
+}
+
+.install__inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1.5rem;
+	padding-block: 0.9rem;
+	padding-block-end: max(0.9rem, env(safe-area-inset-bottom));
+}
+
+/*
+ * One bar at a time.
+ *
+ * The consent question and the install offer are both pinned to the foot of the page, and two
+ * stacked bars over the button somebody came to press is worse than either. Consent goes first: it
+ * is a question the visitor is owed an answer to, and the offer will still be there afterwards.
+ */
+body:has([data-consent]:not([hidden])) .install { display: none; }
+
+.install__text { margin: 0; flex: 1 1 20rem; font-size: 0.9375rem; }
+.install__hint { display: block; color: var(--text-muted); }
+.install__acts { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+/* ------------------------------------------------------------------ bars that reach the bottom */
+
+/*
+ * Anything pinned to the foot of the screen clears the home indicator.
+ *
+ * Without this the "yes" on the consent bar sits exactly where an iPhone's swipe-up handle is, and
+ * roughly half the people who try to press it go to their home screen instead.
+ */
+.cookiebar__inner { padding-block-end: max(0.9rem, env(safe-area-inset-bottom)); }
+
+/* --------------------------------------------------------------------------- touch targets */
+
+/*
+ * Anything a finger presses is at least 44px tall.
+ *
+ * Not a rule invented here: it is the smallest target that most adults hit reliably first time,
+ * and a shop where the second tap is the one that works is a shop that feels broken.
+ */
+@media (pointer: coarse) {
+	.button,
+	.nav__link,
+	.finder__clear {
+		min-block-size: 2.75rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* `flex`, not `inline-flex`: these are the rows of a menu, and inline boxes would line them up
+	   beside one another rather than under one another. */
+	.langs__link,
+	.langs__current {
+		display: flex;
+		align-items: center;
+		min-block-size: 2.75rem;
+	}
+
+	.finder input,
+	.finder select,
+	.promo__row input,
+	.addon__pick select,
+	.unlock__input {
+		min-block-size: 2.75rem;
+		font-size: max(1rem, 16px);
+	}
+
+	/* A grey flash over a card the moment it is touched reads as a fault, not as feedback. */
+	a, button, summary { -webkit-tap-highlight-color: transparent; }
+}
+
+/* ------------------------------------------------------------------ what a phone sees instead */
+
+@media (max-width: 52rem) {
+	/*
+	 * The total, above the form.
+	 *
+	 * Stacked, the summary used to land under two hundred pixels of name and address fields, so
+	 * the first time anybody saw what they were about to pay was after they had typed everything.
+	 * It goes first on a phone, and it stops being sticky — a box pinned to the top of a screen
+	 * that is already only 700px tall is a box that leaves no room for the thing it describes.
+	 */
+	.checkout__summary {
+		order: -1;
+		position: static;
+		flex-basis: 100%;
+	}
+
+	.checkout__form { flex-basis: 100%; }
+
+	/* A poster lying on its side is a poster with nothing on it at this width. */
+	.events--list .event-card { flex-direction: column; }
+	.events--list .event-card__art { inline-size: 100%; aspect-ratio: 16 / 10; }
+	.events--list .event-card__body { padding: 1rem 1.1rem 0; }
+
+	.events--list .event-card__foot {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.9rem 1.1rem 1.1rem;
+	}
+
+	.event-hero__facts { gap: 0.4rem; }
+	.event-hero__fact { font-size: 0.875rem; padding: 0.4rem 0.7rem; }
+
+	.order__head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+	.order__actions { flex-direction: column; align-items: stretch; }
+	.order__actions .button { justify-content: center; }
+
+	.waitlist__fields { flex-direction: column; }
+	.waitlist__fields .field--narrow { max-inline-size: none; }
+
+	.footer__inner { flex-direction: column; gap: 1.5rem; }
+
+	/* One ticket per row: two 150px QR codes side by side are two codes a scanner argues with. */
+	.tickets { grid-template-columns: 1fr; }
+
+	.done__actions { display: flex; flex-direction: column; gap: 0.6rem; }
+	.done__actions .button { justify-content: center; }
+}
+
+/*
+ * Room for a thumb at the foot of every page.
+ *
+ * `100dvh` on a phone excludes the browser's toolbar, and the last element of a page otherwise ends
+ * exactly where that toolbar sits. Applied to the footer rather than to `body`, so a full-bleed
+ * hero still bleeds.
+ */
+.footer { padding-block-end: max(clamp(1.5rem, 4vw, 2.5rem), env(safe-area-inset-bottom)); }
+
+/* --------------------------------------------------------------------------- a little polish */
+
+/*
+ * The one thing every page has in common is its buttons, so they are worth getting right.
+ *
+ * A press that moves is a press that was felt. The transition is short enough not to be an
+ * animation and long enough to read as a surface rather than as a repaint.
+ */
+.button {
+	min-block-size: 2.75rem;
+	transition: box-shadow 160ms var(--ease), transform 90ms var(--ease), filter 160ms var(--ease);
+}
+
+/* Written out rather than left implicit: the bar that asks about measurement and the one that
+   offers an install both say `--primary`, and a modifier that does nothing is a modifier that
+   somebody eventually redefines by accident. */
+.button--primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+.event-card {
+	transition: transform 180ms var(--ease), box-shadow 180ms var(--ease), border-color 180ms var(--ease);
+}
+
+@media (hover: hover) {
+	.event-card:hover { transform: translateY(-3px); }
+}
+
+/* A card being pressed on a touch screen has no hover to show for it, so it says so by moving. */
+@media (pointer: coarse) {
+	.event-card:active { transform: scale(0.99); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.event-card,
+	.button {
+		transition: none;
+	}
+
+	.event-card:hover,
+	.event-card:active {
+		transform: none;
+	}
 }

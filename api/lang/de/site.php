@@ -328,6 +328,16 @@ return [
     'nothingMatched' => 'Dazu passt nichts. Versuchen Sie ein anderes Wort, oder zeigen Sie alles.',
     'pickerNeedsScript' => 'Für die Sitzplatzauswahl wird JavaScript gebraucht. Bitte einschalten oder die Kasse anrufen.',
     'book' => 'Buchen',
+    'app' => [
+        'tickets' => 'Meine Tickets',
+        'install' => 'Zum Startbildschirm hinzufügen',
+        'installHint' => 'Ihre Tickets öffnen sich dann am Einlass, mit oder ohne Empfang.',
+        'notNow' => 'Jetzt nicht',
+        'offlineTitle' => 'Keine Verbindung',
+        'offlineBody' => 'Diese Seite braucht Internet, und gerade gibt es keines. Bereits geöffnete Tickets sind weiterhin da.',
+        'retry' => 'Erneut versuchen',
+        'home' => 'Zur Startseite',
+    ],
     'account' => [
         'title' => 'Meine Tickets',
         'link' => 'Meine Tickets',

@@ -16,6 +16,7 @@ use App\Http\Controllers\Site\SeasonController;
 use App\Http\Controllers\Site\SiteFilesController;
 use App\Http\Controllers\Site\SitePageController;
 use App\Http\Controllers\Site\StoreController;
+use App\Http\Controllers\Site\WebAppController;
 use App\Http\Controllers\Site\WaitingListController;
 use Illuminate\Support\Facades\Route;
 
@@ -242,6 +243,22 @@ Route::get('auth/google/callback', GoogleSignInController::class)->middleware('t
  */
 Route::get('robots.txt', [SiteFilesController::class, 'robots']);
 Route::get('sitemap.xml', [SiteFilesController::class, 'sitemap']);
+
+/*
+ * A venue's site, installable.
+ *
+ * These four live at the root of the host for reasons that are not stylistic: a manifest's `scope`
+ * cannot reach above the directory it is served from, and neither can a service worker's — a worker
+ * registered from a subdirectory would only ever see requests to that subdirectory, which is the
+ * one part of a ticket shop that needs it least.
+ *
+ * Ahead of the front door, and resolving the Host themselves, because the panel answers on a host
+ * too and has to be able to say "there is no app here" rather than 404 into the site renderer.
+ */
+Route::get('manifest.webmanifest', [WebAppController::class, 'manifest']);
+Route::get('sw.js', [WebAppController::class, 'serviceWorker']);
+Route::get('app-icon-{size}.png', [WebAppController::class, 'icon'])->whereNumber('size');
+Route::get('offline', [WebAppController::class, 'offline']);
 
 /*
  * The platform's own console. Ahead of the front door, and a separate page from the panel: they

@@ -95,6 +95,29 @@ Check the three indexes exist first (a restore is the usual culprit), then look 
 allocations on one `(event_id, seat_id)` — the index makes that unrepresentable, so if you find it,
 the index was missing at the time of writing.
 
+## Service workers on buyers' devices
+
+Every hosted site installs a service worker at `/sw.js` with root scope. Two things follow from
+that, and both are worth knowing before a deploy goes wrong.
+
+**The build stamp is what retires an old shell.** `/sw.js` is served with a `SEATMAP_BUILD` line
+prepended, hashed from the modification times of the files it precaches (`site.css`, the site's
+theme, the picker's CSS and JS, and `/offline`). A deploy that rewrites those files changes the
+stamp, the browser sees a byte-different worker, installs it, and the old cache is dropped on
+activation. A deploy that somehow preserved their modification times would not — so if a stylesheet
+change is not reaching browsers, check that first. `touch`ing the file is a valid fix.
+
+**Ticket pages are cached on purpose, and separately.** The `seatmap-tickets` cache is *not*
+versioned with the build: a ticket outlives a stylesheet, and throwing every opened order page away
+because the CSS changed would do it in exactly the week it matters. It is emptied when somebody
+signs out, and never holds anything under `/checkout`, `/_store/`, `/pay/`, `/account`, `/season/`
+or `/queue`.
+
+**Backing out.** `/sw.js` is served `Cache-Control: no-cache`, so a worker is never revalidated from
+a stale copy, and browsers re-check it at least daily regardless. To remove the worker from devices
+entirely, serve a `/sw.js` whose body is `self.registration.unregister()` and leave it up for a few
+days — the routes are ordinary Laravel routes, so that is a one-line change, not a client rollout.
+
 ## Data retention
 
 Buyer contact data arrives with orders and appears on tickets. Purge it on a schedule after each

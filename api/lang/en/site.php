@@ -331,6 +331,22 @@ return [
     'nothingMatched' => 'Nothing matches that. Try a different word, or show everything.',
     'pickerNeedsScript' => 'Choosing seats needs JavaScript. Please turn it on, or call the box office.',
     'book' => 'Book',
+    /*
+     * The site, kept on a phone.
+     *
+     * A ticket shop is the web's clearest case for an app: it is bought on a sofa and needed at a
+     * door, in a queue, on a phone sharing one cell with three hundred other people.
+     */
+    'app' => [
+        'tickets' => 'My tickets',
+        'install' => 'Add to home screen',
+        'installHint' => 'Your tickets then open at the door, with or without signal.',
+        'notNow' => 'Not now',
+        'offlineTitle' => 'No connection',
+        'offlineBody' => 'This page needs the internet and there is none just now. Tickets you have already opened are still here.',
+        'retry' => 'Try again',
+        'home' => 'Go to the home page',
+    ],
     'account' => [
         'title' => 'My tickets',
         'link' => 'My tickets',

@@ -51,8 +51,9 @@ await page.waitForSelector( '.sidebar' );
 await page.click( 'nav button[data-view=maps]' );
 await page.waitForSelector( 'tbody tr', { timeout: 20000 } );
 
-// The seated chart, which is the one the event above is sold from.
-await page.locator( 'tr', { hasText: 'Main auditorium' } ).first().locator( 'button' ).first().click();
+// The seated chart, which is the one the event above is sold from. Named by what the button does
+// rather than by where it sits: the row carries more than one now.
+await page.locator( 'tr', { hasText: 'Main auditorium' } ).first().locator( '[data-map]' ).click();
 await page.waitForSelector( '#dz-canvas', { timeout: 60000 } );
 await page.waitForTimeout( 2500 );
 

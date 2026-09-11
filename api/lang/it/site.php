@@ -327,6 +327,16 @@ return [
     'nothingMatched' => 'Non corrisponde niente. Provate un’altra parola, o mostrate tutto.',
     'pickerNeedsScript' => 'La scelta dei posti richiede JavaScript. Attivatelo, oppure chiamate la biglietteria.',
     'book' => 'Prenota',
+    'app' => [
+        'tickets' => 'I miei biglietti',
+        'install' => 'Aggiungi alla schermata Home',
+        'installHint' => 'I tuoi biglietti si aprono così all’ingresso, con o senza campo.',
+        'notNow' => 'Non ora',
+        'offlineTitle' => 'Nessuna connessione',
+        'offlineBody' => 'Questa pagina ha bisogno di internet e al momento non ce n’è. I biglietti che hai già aperto sono ancora qui.',
+        'retry' => 'Riprova',
+        'home' => 'Vai alla home',
+    ],
     'account' => [
         'title' => 'I miei biglietti',
         'link' => 'I miei biglietti',
