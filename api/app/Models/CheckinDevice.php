@@ -22,7 +22,7 @@ class CheckinDevice extends Model implements Authenticatable
 
     protected $fillable = [
         'tenant_id', 'checkin_operator_id', 'name', 'pairing_code_hash',
-        'pairing_expires_at', 'paired_at', 'status', 'last_seen_at',
+        'pairing_expires_at', 'paired_at', 'status', 'last_seen_at', 'door_list_taken_at',
     ];
 
     protected $hidden = ['pairing_code_hash'];
@@ -31,6 +31,7 @@ class CheckinDevice extends Model implements Authenticatable
         'pairing_expires_at' => 'datetime',
         'paired_at' => 'datetime',
         'last_seen_at' => 'datetime',
+        'door_list_taken_at' => 'datetime',
     ];
 
     public function operator()

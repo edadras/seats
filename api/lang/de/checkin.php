@@ -73,7 +73,27 @@ return [
         'refunded' => ['headline' => 'Erstattet', 'detail' => 'Diese Buchung wurde erstattet.'],
         'wrongEvent' => ['headline' => 'Falscher Termin', 'detail' => 'Dieses Ticket gilt für eine andere Vorstellung.'],
         'invalid' => ['headline' => 'Kein Ticket', 'detail' => 'Dieser Code ist keiner von uns.'],
+        'notOnList' => ['headline' => 'Nicht auf der Liste', 'detail' => 'Nicht auf der Kopie, die dieses Gerät bei sich hat.'],
         'queued' => ['headline' => 'Offline gespeichert', 'detail' => 'Keine Verbindung. Wird gesendet, sobald Sie wieder online sind.'],
+    ],
+
+    'door' => [
+        'title' => 'Einlassliste',
+        'taking' => 'Kopie wird geholt…',
+        'held' => ':count Tickets · geholt :time',
+        'none' => 'Keine Einlassliste auf diesem Gerät',
+        'noneHint' => 'Holen Sie eine, solange Sie Empfang haben. Ohne sie kann dieser Scanner bei Verbindungsverlust nichts prüfen.',
+        'take' => 'Kopie holen',
+        'retake' => 'Frische Kopie holen',
+        'failed' => 'Kopie nicht möglich.',
+        'checkedAgainst' => 'Geprüft gegen die Kopie von :time.',
+        'sinceTaken' => 'Wer seither gekauft hat, steht nicht darauf — einlassen, es wird geprüft, sobald der Empfang zurück ist.',
+        'conflictsOne' => 'Über 1 Scan wurde nach dem Senden anders entschieden',
+        'conflictsMany' => 'Über :count Scans wurde nach dem Senden anders entschieden',
+        'conflictsTitle' => 'Was das System sagte',
+        'conflictsHint' => 'Der Einlass hat sie hereingelassen. Das System war anderer Meinung.',
+        'conflictLine' => ':who — der Einlass sagte :said, das System sagte :was',
+        'dismiss' => 'Verstanden',
     ],
 
     'status' => [

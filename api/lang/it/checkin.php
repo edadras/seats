@@ -73,7 +73,27 @@ return [
         'refunded' => ['headline' => 'Rimborsato', 'detail' => 'Questa prenotazione è stata rimborsata.'],
         'wrongEvent' => ['headline' => 'Evento sbagliato', 'detail' => 'Questo biglietto è per un’altra recita.'],
         'invalid' => ['headline' => 'Non è un biglietto', 'detail' => 'Questo codice non è dei nostri.'],
+        'notOnList' => ['headline' => 'Non in elenco', 'detail' => 'Non è nella copia che questo scanner ha con sé.'],
         'queued' => ['headline' => 'Salvato offline', 'detail' => 'Nessuna connessione. Verrà inviato appena tornerai online.'],
+    ],
+
+    'door' => [
+        'title' => 'Lista d’ingresso',
+        'taking' => 'Copia in corso…',
+        'held' => ':count biglietti · presa :time',
+        'none' => 'Nessuna lista d’ingresso su questo dispositivo',
+        'noneHint' => 'Prendine una finché hai segnale. Senza, questo scanner non può controllare nulla quando cade la connessione.',
+        'take' => 'Prendi una copia',
+        'retake' => 'Prendi una copia nuova',
+        'failed' => 'Copia non riuscita.',
+        'checkedAgainst' => 'Controllato sulla copia presa :time.',
+        'sinceTaken' => 'Chi ha comprato dopo non c’è — fallo entrare, sarà controllato al ritorno del segnale.',
+        'conflictsOne' => '1 scansione è stata decisa diversamente una volta inviata',
+        'conflictsMany' => ':count scansioni sono state decise diversamente una volta inviate',
+        'conflictsTitle' => 'Cosa ha detto il sistema',
+        'conflictsHint' => 'L’ingresso li ha fatti entrare. Il sistema non era d’accordo.',
+        'conflictLine' => ':who — l’ingresso ha detto :said, il sistema ha detto :was',
+        'dismiss' => 'Capito',
     ],
 
     'status' => [

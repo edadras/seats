@@ -73,7 +73,27 @@ return [
         'refunded' => ['headline' => 'Remboursé', 'detail' => 'Cette réservation a été remboursée.'],
         'wrongEvent' => ['headline' => 'Mauvais événement', 'detail' => 'Ce billet est pour une autre représentation.'],
         'invalid' => ['headline' => 'Pas un billet', 'detail' => 'Ce code n’est pas des nôtres.'],
+        'notOnList' => ['headline' => 'Pas sur la liste', 'detail' => 'Absent de la copie que ce scanner a sur lui.'],
         'queued' => ['headline' => 'Gardé hors ligne', 'detail' => 'Pas de connexion. Il partira dès votre retour en ligne.'],
+    ],
+
+    'door' => [
+        'title' => 'Liste d’entrée',
+        'taking' => 'Copie en cours…',
+        'held' => ':count billets · prise :time',
+        'none' => 'Aucune liste d’entrée sur cet appareil',
+        'noneHint' => 'Prenez-en une tant que vous avez du réseau. Sans elle, ce scanner ne peut rien vérifier quand la connexion tombe.',
+        'take' => 'Prendre une copie',
+        'retake' => 'Prendre une copie fraîche',
+        'failed' => 'Copie impossible.',
+        'checkedAgainst' => 'Vérifié sur la copie prise :time.',
+        'sinceTaken' => 'Qui a acheté depuis n’y figure pas — faites entrer, ce sera vérifié au retour du réseau.',
+        'conflictsOne' => '1 scan a été tranché autrement une fois envoyé',
+        'conflictsMany' => ':count scans ont été tranchés autrement une fois envoyés',
+        'conflictsTitle' => 'Ce qu’a dit le système',
+        'conflictsHint' => 'L’entrée les a laissés passer. Le système n’était pas d’accord.',
+        'conflictLine' => ':who — l’entrée a dit :said, le système a dit :was',
+        'dismiss' => 'Compris',
     ],
 
     'status' => [

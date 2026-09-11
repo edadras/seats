@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Checkin;
 
 use App\Domain\Checkin\CheckinService;
+use App\Domain\Checkin\ScannerDoorList;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\CheckinDevice;
@@ -73,6 +74,34 @@ class CheckinController extends Controller
         return response()->json([
             'data' => $device->events()->get()->map(fn (Event $e) => $this->presentEvent($e)),
         ]);
+    }
+
+    /**
+     * Every ticket for one night, so the device can answer for itself.
+     *
+     * Tagged with the list's own version rather than a timestamp: a device that asks again five
+     * minutes later and finds nothing has changed gets 304 and a few bytes, which is what makes it
+     * reasonable for the scanner to keep asking while it still has signal.
+     *
+     * The fetch is recorded on the device, because "when did that tablet last take a copy" is the
+     * one question a manager needs answered before the house opens and cannot answer by looking at
+     * the tablet.
+     */
+    public function doorList(Request $request, string $eventId)
+    {
+        $device = $request->attributes->get('checkin_device');
+        $event = $this->authorizedEvent($device, $eventId);
+
+        $list = app(ScannerDoorList::class)->for($event);
+        $etag = '"'.$list['version'].'"';
+
+        $device->forceFill(['door_list_taken_at' => now()])->save();
+
+        if ($etag === $request->headers->get('If-None-Match')) {
+            return response('', 304)->setEtag($etag);
+        }
+
+        return response()->json($list)->setEtag($etag);
     }
 
     public function scan(Request $request)

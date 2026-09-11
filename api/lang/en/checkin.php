@@ -81,7 +81,34 @@ return [
         'refunded' => ['headline' => 'Refunded', 'detail' => 'This booking was refunded.'],
         'wrongEvent' => ['headline' => 'Wrong event', 'detail' => 'This ticket is for another performance.'],
         'invalid' => ['headline' => 'Not a ticket', 'detail' => 'This code is not one of ours.'],
+        'notOnList' => ['headline' => 'Not on the list', 'detail' => 'Not on the copy this scanner is carrying.'],
         'queued' => ['headline' => 'Saved offline', 'detail' => 'No connection. It will be sent when you are back online.'],
+    ],
+
+    /*
+     * The list the device carries, so it can say no with no signal.
+     *
+     * The important string here is `sinceTaken`. A list is a moment, not a fact, and the difference
+     * between "this is not a ticket" and "this was not a ticket at six o'clock" is somebody who
+     * bought at seven standing outside in the rain.
+     */
+    'door' => [
+        'title' => 'Door list',
+        'taking' => 'Taking a copy…',
+        'held' => ':count tickets · taken :time',
+        'none' => 'No door list on this device',
+        'noneHint' => 'Take one while you still have signal. Without it this scanner cannot check anything when the connection drops.',
+        'take' => 'Take a copy',
+        'retake' => 'Take a fresh copy',
+        'failed' => 'Could not take a copy.',
+        'checkedAgainst' => 'Checked against the copy taken :time.',
+        'sinceTaken' => 'Anybody who bought since then is not on it — let them in and it will be checked when the signal comes back.',
+        'conflictsOne' => '1 scan was decided differently once it was sent',
+        'conflictsMany' => ':count scans were decided differently once they were sent',
+        'conflictsTitle' => 'What the system said',
+        'conflictsHint' => 'The door admitted these. The system did not agree.',
+        'conflictLine' => ':who — the door said :said, the system said :was',
+        'dismiss' => 'Got it',
     ],
 
     'status' => [

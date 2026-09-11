@@ -5,6 +5,7 @@ import 'dart:io' show SocketException;
 import 'package:http/http.dart' as http;
 
 import '../l10n/strings.dart';
+import '../storage/door_list.dart';
 import 'models.dart';
 
 /// The check-in API, as this app uses it.
@@ -65,6 +66,15 @@ class CheckinApi {
     return ((json['data'] as List?) ?? const [])
         .map((e) => CheckinEvent.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Take a copy of the door list for one night.
+  ///
+  /// Several thousand rows, asked for once before the house opens and then only when somebody
+  /// presses refresh. The server tags it, so asking again when nothing has changed costs a round
+  /// trip and no body at all — which is what makes it reasonable to re-take it during an interval.
+  Future<DoorList> doorList(String eventId) async {
+    return DoorList.fromJson(await _get('/events/$eventId/door-list'));
   }
 
   Future<ScanOutcome> scan({

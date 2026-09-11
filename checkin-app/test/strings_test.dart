@@ -35,6 +35,7 @@ void main() {
       // than against the PHP it came from.
       const results = [
         'valid', 'alreadyUsed', 'cancelled', 'refunded', 'wrongEvent', 'invalid', 'queued',
+        'notOnList',
       ];
 
       for (final locale in kLocales) {

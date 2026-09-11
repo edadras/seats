@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../api/checkin_api.dart';
 import '../api/models.dart';
 import '../l10n/strings.dart';
+import '../storage/door_list.dart';
 import '../storage/scan_queue.dart';
 import '../theme.dart';
 import '../widgets/result_card.dart';
@@ -22,12 +23,14 @@ class ScanScreen extends StatefulWidget {
     required this.api,
     required this.event,
     required this.queue,
+    required this.doorLists,
     required this.onChangeEvent,
   });
 
   final CheckinApi api;
   final CheckinEvent event;
   final ScanQueue queue;
+  final DoorListStore doorLists;
   final VoidCallback onChangeEvent;
 
   @override
@@ -47,6 +50,15 @@ class _ScanScreenState extends State<ScanScreen> {
   EventStats? _stats;
   Timer? _drain;
 
+  /// The copy of the house this device is carrying, and the tickets it has let in on its own.
+  DoorList? _doorList;
+  Map<String, DateTime> _admitted = {};
+
+  /// Scans this device decided one way and the server then decided another. Shown once, loudly,
+  /// on the night — not left in a report somebody reads on Monday.
+  List<ScanConflict> _conflicts = [];
+  bool _takingList = false;
+
   /// The last code, so a QR sitting in front of the lens is not scanned forty times a second.
   String? _lastCode;
   DateTime _lastCodeAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -57,6 +69,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
     _refreshQueue();
     _refreshStats();
+    _loadDoorList();
 
     // Try the queue on a timer rather than on a connectivity event: the venue Wi-Fi that drops at
     // a door does not always announce itself, and a request that succeeds is the only proof.
@@ -103,21 +116,149 @@ class _ScanScreenState extends State<ScanScreen> {
     }
 
     try {
-      await widget.api.sync(pending);
+      final results = await widget.api.sync(pending);
+
       await widget.queue.remove(pending.map((p) => p.clientScanId));
 
+      final disagreed = _disagreements(pending, results);
+
       if (mounted) {
-        setState(() => _online = true);
+        setState(() {
+          _online = true;
+          _conflicts = [..._conflicts, ...disagreed];
+        });
       }
 
       await _refreshQueue();
       await _refreshStats();
+      // The house has moved while this device was deaf; the copy it is carrying has not.
+      await _loadDoorList(refresh: true);
     } on ApiFailure catch (e) {
       // Still no connection. The queue stays exactly as it is; nothing is lost by trying again.
       if (mounted && e.isOffline) {
         setState(() => _online = false);
       }
     }
+  }
+
+  /// The copy of the house this device carries.
+  ///
+  /// Loaded from storage first and then refreshed if there is signal, in that order: the point of
+  /// the thing is to be there when the network is not, so a failed refresh must never leave the
+  /// door with less than it had a moment ago.
+  Future<void> _loadDoorList({bool refresh = false}) async {
+    final held = await widget.doorLists.load(widget.event.id);
+
+    if (mounted && held != null) {
+      setState(() => _doorList = held);
+    }
+
+    _admitted = await widget.doorLists.admitted();
+
+    if (held != null && !refresh) {
+      return;
+    }
+
+    try {
+      final fresh = await widget.api.doorList(widget.event.id);
+
+      await widget.doorLists.save(fresh);
+
+      if (mounted) {
+        setState(() => _doorList = fresh);
+      }
+    } on ApiFailure {
+      // No signal, or none yet. Whatever was already on the device stands.
+    }
+  }
+
+  /// Where the door and the server did not agree.
+  ///
+  /// Only admissions are compared. A door that refused somebody the server would have admitted is
+  /// a person who came back to the desk and got in; a door that admitted somebody the server
+  /// refuses is a person now sitting in the room, and that is the one worth a volunteer's
+  /// attention before the interval.
+  List<ScanConflict> _disagreements(List<PendingScan> sent, List<ScanOutcome> results) {
+    final found = <ScanConflict>[];
+
+    for (var i = 0; i < sent.length && i < results.length; i++) {
+      final said = sent[i].said;
+
+      if (said != ScanResult.valid.name || results[i].result.admits) {
+        continue;
+      }
+
+      found.add(ScanConflict(
+        who: sent[i].who ?? '',
+        said: ScanResult.valid,
+        was: results[i].result,
+      ));
+    }
+
+    return found;
+  }
+
+  /// Take a copy now, because somebody pressed the button that says so.
+  Future<void> _takeDoorList() async {
+    setState(() => _takingList = true);
+
+    await _loadDoorList(refresh: true);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _takingList = false);
+
+    if (_doorList == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(Strings.t('door.failed'))),
+      );
+    }
+  }
+
+  void _showConflicts() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ScannerTheme.surface,
+        title: Text(Strings.t('door.conflictsTitle')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                Strings.t('door.conflictsHint'),
+                style: const TextStyle(color: ScannerTheme.muted),
+              ),
+              const SizedBox(height: 12),
+              for (final conflict in _conflicts)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(Strings.t('door.conflictLine', {
+                    'who': conflict.who.isEmpty ? Strings.t('result.valid.headline') : conflict.who,
+                    'said': conflict.said.headline,
+                    'was': conflict.was.headline,
+                  })),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
+            onPressed: () {
+              // Dismissed for good. They have been read, and a strip that will not go away is a
+              // strip people stop reading.
+              setState(() => _conflicts = []);
+              Navigator.of(context).pop();
+            },
+            child: Text(Strings.t('door.dismiss')),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handle(String code) async {
@@ -161,13 +302,27 @@ class _ScanScreenState extends State<ScanScreen> {
           setState(() => _outcome = ScanOutcome(result: ScanResult.parse(e.code)));
         }
       } else {
-        // No connection. Take the scan anyway: the person is standing there, and a door that
-        // stops working when the Wi-Fi does is a door that gets propped open.
+        // No connection. The scan is taken either way — the person is standing there, and a door
+        // that stops working when the Wi-Fi does is a door that gets propped open — but what the
+        // volunteer is *told* now comes from the list this device is carrying.
+        final list = _doorList;
+        final verdict = list == null ? ScanOutcome.queued : list.verdict(code, _admitted);
+
+        if (list != null && verdict.result.admits) {
+          // Recorded before anything is shown: the same ticket presented again ninety seconds
+          // later, still with no signal, is the easiest way there is to get two people into one
+          // seat.
+          await widget.doorLists.admit(DoorList.hashOf(code), now);
+          _admitted = await widget.doorLists.admitted();
+        }
+
         await widget.queue.add(PendingScan(
           clientScanId: clientScanId,
           eventId: widget.event.id,
           token: code,
           scannedAt: now,
+          said: verdict.result.name,
+          who: verdict.seat ?? verdict.holderName,
         ));
 
         await _refreshQueue();
@@ -175,7 +330,7 @@ class _ScanScreenState extends State<ScanScreen> {
         if (mounted) {
           setState(() {
             _online = false;
-            _outcome = ScanOutcome.queued;
+            _outcome = verdict;
           });
         }
       }
@@ -241,6 +396,51 @@ class _ScanScreenState extends State<ScanScreen> {
               queued: _queued,
               onTap: widget.onChangeEvent,
             ),
+            /*
+             * Two strips, and neither is decoration.
+             *
+             * A scanner with no copy of the house cannot check anything the moment the wifi drops,
+             * and the only time that can be put right is *before* it drops. A scanner that admitted
+             * somebody the system then refused has a person sitting in the room who should not be,
+             * and the only time anybody can act on that is tonight.
+             */
+            if (_doorList == null)
+              _Strip(
+                colour: ScannerTheme.warn,
+                icon: Icons.playlist_add_rounded,
+                title: Strings.t('door.none'),
+                detail: Strings.t('door.noneHint'),
+                action: Strings.t('door.take'),
+                onAction: _takeDoorList,
+                busy: _takingList,
+              ),
+            /*
+             * The copy this scanner is armed with, and how old it is.
+             *
+             * One slim line, always there. "Is this thing going to work when the wifi drops" is a
+             * question a duty manager asks at the door, and until now the only way to find out was
+             * to switch the wifi off and try it.
+             */
+            if (_doorList != null)
+              _Held(
+                summary: Strings.t('door.held', {
+                  'count': Strings.number(_doorList!.count),
+                  'time': Strings.time(_doorList!.takenAt),
+                }),
+                busy: _takingList,
+                onRefresh: _takeDoorList,
+              ),
+            if (_conflicts.isNotEmpty)
+              _Strip(
+                colour: ScannerTheme.refuse,
+                icon: Icons.report_rounded,
+                title: _conflicts.length == 1
+                    ? Strings.t('door.conflictsOne')
+                    : Strings.t('door.conflictsMany', {'count': Strings.number(_conflicts.length)}),
+                detail: Strings.t('door.conflictsHint'),
+                action: Strings.t('door.conflictsTitle'),
+                onAction: _showConflicts,
+              ),
             Expanded(
               child: Stack(
                 fit: StackFit.expand,
@@ -326,6 +526,122 @@ class _ScanScreenState extends State<ScanScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A line across the top of the door, for the two things that cannot wait until tomorrow.
+class _Strip extends StatelessWidget {
+  const _Strip({
+    required this.colour,
+    required this.icon,
+    required this.title,
+    required this.detail,
+    required this.action,
+    required this.onAction,
+    this.busy = false,
+  });
+
+  final Color colour;
+  final IconData icon;
+  final String title;
+  final String detail;
+  final String action;
+  final VoidCallback onAction;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: colour,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.white),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  detail,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          busy
+              ? const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                  ),
+                )
+              : TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(64, 44),
+                  ),
+                  onPressed: onAction,
+                  child: Text(action),
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What the device is carrying, in one line.
+class _Held extends StatelessWidget {
+  const _Held({required this.summary, required this.onRefresh, this.busy = false});
+
+  final String summary;
+  final VoidCallback onRefresh;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: ScannerTheme.surface,
+      padding: const EdgeInsetsDirectional.only(start: 14, end: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.fact_check_outlined, size: 16, color: ScannerTheme.muted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              summary,
+              style: const TextStyle(color: ScannerTheme.muted, fontSize: 12.5),
+            ),
+          ),
+          busy
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : IconButton(
+                  onPressed: onRefresh,
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.refresh_rounded, color: ScannerTheme.muted),
+                  tooltip: Strings.t('door.retake'),
+                ),
+        ],
       ),
     );
   }

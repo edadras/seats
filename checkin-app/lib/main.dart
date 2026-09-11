@@ -8,6 +8,7 @@ import 'screens/event_screen.dart';
 import 'screens/pair_screen.dart';
 import 'screens/scan_screen.dart';
 import 'storage/device_store.dart';
+import 'storage/door_list.dart';
 import 'storage/scan_queue.dart';
 import 'theme.dart';
 
@@ -79,6 +80,7 @@ class _Root extends StatefulWidget {
 class _RootState extends State<_Root> {
   final _store = DeviceStore();
   final _queue = ScanQueue();
+  final _doorLists = DoorListStore();
 
   CheckinApi? _api;
   String _deviceName = '';
@@ -224,6 +226,9 @@ class _RootState extends State<_Root> {
     }
 
     await _store.forget();
+    // The audience's names go with the pairing. The queue does not — those are people who are
+    // already inside, and the record of them is worth more than the tidiness of an empty device.
+    await _doorLists.clear();
 
     setState(() {
       _api = null;
@@ -275,6 +280,7 @@ class _RootState extends State<_Root> {
       api: api,
       event: event,
       queue: _queue,
+      doorLists: _doorLists,
       onChangeEvent: () => setState(() => _event = null),
     );
   }

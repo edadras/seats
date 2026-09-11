@@ -36,6 +36,7 @@ return [
         'plans' => 'Payment plans',
         'tickets' => 'Tickets',
         'doorlist' => 'Door list',
+        'scanners' => 'Scanners',
         'questions' => 'Questions',
         'entryslots' => 'Entry times',
         'discounts' => 'Discounts',
@@ -708,6 +709,46 @@ return [
         'noneTogether' => 'There are no seats side by side left.',
         'sold' => 'Sold. Booking :reference.',
         'clientName' => 'Box office',
+    ],
+
+    /*
+     * The phones and tablets at the doors.
+     *
+     * `doorList` above is what the door works *from*; this is what it works *on*. The column that
+     * earns this screen its place is the age of the copy each device is carrying — the one fact
+     * that decides whether a scanner will still work when the venue wifi does not, and the one
+     * thing a tablet cannot tell you without switching the wifi off first.
+     */
+    'scanners' => [
+        'title' => 'Scanners',
+        'description' => 'The phones and tablets at your doors: what each may scan, and whether it is ready for a night with no signal.',
+        'add' => 'Add a scanner',
+        'create' => 'Create and show the code',
+        'edit' => 'Edit this scanner',
+        'namePlaceholder' => 'Front of house',
+        'nameHint' => 'What the volunteer holding it will see, and what appears beside every scan it takes.',
+        'nights' => 'Nights it may scan',
+        'nightsHint' => 'A scanner can only ever open the nights ticked here. Nothing else is on it.',
+        'noNights' => 'There are no events to give it yet.',
+        'countEvents' => ':count nights',
+        'lastSeen' => 'Last seen',
+        'doorList' => 'Door list',
+        'noList' => 'Never taken',
+        'paired' => 'Paired',
+        'waiting' => 'Waiting to pair',
+        'expired' => 'Code expired',
+        'recode' => 'New pairing code',
+        'recodeConfirm' => 'Issue a new code',
+        'recodeBody' => 'This signs :name out and gives you a fresh code. Anything it has not sent yet is kept on the device and goes up when it is paired again.',
+        'codeTitle' => 'Pairing code',
+        'codeBody' => 'Type this into the scanner. It works once and expires on its own, so a printout left on a desk cannot enrol anybody.',
+        'codeWhere' => 'The scanner is at /checkin on this address.',
+        'remove' => 'Remove this scanner?',
+        'removeBody' => ':name stops working immediately. What it has already scanned stays — those are check-ins, and they belong to the event.',
+        'removed' => 'Scanner removed.',
+        'saved' => 'Scanner saved.',
+        'emptyTitle' => 'No scanners yet',
+        'emptyBody' => 'Add one for each door. A volunteer opens /checkin on their own phone, types the code once, and it is a scanner.',
     ],
 
     'doorList' => [

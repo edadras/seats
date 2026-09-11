@@ -67,6 +67,7 @@ use App\Http\Controllers\Api\V1\Management\TicketController;
 use App\Http\Controllers\Api\V1\Management\TicketTypeController;
 use App\Http\Controllers\Api\V1\Management\TwoFactorController;
 use App\Http\Controllers\Api\V1\Management\WaitingListController as ManagementWaitingList;
+use App\Http\Controllers\Api\V1\Management\ScannerController;
 use App\Http\Controllers\Api\V1\Management\VenueController;
 use App\Http\Controllers\Api\V1\Management\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -345,6 +346,22 @@ Route::prefix('v1')->group(function () {
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);
         Route::get('events/{event}/checkins', [EventController::class, 'checkins']);
+
+        /*
+         * The phones and tablets at the doors.
+         *
+         * `devices.manage` has existed since permissions did, granted to four roles and referred to
+         * by nothing: the scanner could be paired by a code that no screen on this platform could
+         * issue. These are that screen's routes.
+         *
+         * The pairing code is returned by exactly two of them and is never readable afterwards,
+         * like every other credential here.
+         */
+        Route::get('scanners', [ScannerController::class, 'index']);
+        Route::post('scanners', [ScannerController::class, 'store']);
+        Route::patch('scanners/{device}', [ScannerController::class, 'update']);
+        Route::post('scanners/{device}/code', [ScannerController::class, 'recode']);
+        Route::delete('scanners/{device}', [ScannerController::class, 'destroy']);
 
         // ---- Who bought ------------------------------------------------------------------
         // Derived from the orders rather than stored beside them, so the list cannot drift from
@@ -822,6 +839,15 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware(['auth:sanctum', 'device', 'throttle:600,1,door'])->group(function () {
             Route::get('events', [CheckinController::class, 'events']);
+            /*
+             * The door list, so a scanner with no signal can still say no.
+             *
+             * Throttled far below the door's own limit: this is a file of several thousand rows
+             * and a device needs it once a night, not once a scan. The tag on the response is what
+             * makes asking again cheap enough to do on a timer.
+             */
+            Route::get('events/{event}/door-list', [CheckinController::class, 'doorList'])
+                ->middleware('throttle:30,1,door-list');
             Route::post('scan', [CheckinController::class, 'scan']);
             Route::post('sync', [CheckinController::class, 'sync']);
             Route::get('events/{event}/stats', [CheckinController::class, 'stats']);

@@ -15,6 +15,9 @@ dependencies:
   # The device token and the offline queue have to survive a reload; a door phone gets reloaded.
   shared_preferences: ^2.5.5
   http: ^1.6.0
+  # sha256, and nothing else. The door list carries hashes of ticket codes rather than the codes
+  # themselves, so the device has to be able to hash what it just scanned before it can look it up.
+  crypto: ^3.0.6
   # Right-to-left layout and Material's own strings — a Persian door gets a Persian "Cancel" in
   # every dialog Flutter draws, which is not something this app's catalogue can reach.
   flutter_localizations:

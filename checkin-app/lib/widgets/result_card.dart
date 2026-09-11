@@ -18,6 +18,9 @@ class ResultCard extends StatelessWidget {
         ScanResult.valid => ScannerTheme.admit,
         ScanResult.alreadyUsed => ScannerTheme.warn,
         ScanResult.queued => ScannerTheme.accent,
+        // Amber, not red. "Not on the copy I am carrying" is a doubt, and a volunteer who reads it
+        // as a refusal turns away the person who bought twenty minutes ago.
+        ScanResult.notOnList => ScannerTheme.warn,
         _ => ScannerTheme.refuse,
       };
 
@@ -26,6 +29,7 @@ class ResultCard extends StatelessWidget {
         ScanResult.alreadyUsed => Icons.history_rounded,
         ScanResult.queued => Icons.cloud_off_rounded,
         ScanResult.wrongEvent => Icons.event_busy_rounded,
+        ScanResult.notOnList => Icons.help_rounded,
         _ => Icons.cancel_rounded,
       };
 
@@ -103,6 +107,28 @@ class ResultCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ],
+              /*
+               * Where the answer came from, whenever it did not come from the server.
+               *
+               * The whole safety of deciding offline rests on the volunteer knowing that the copy
+               * is a moment rather than a fact. Said under every offline answer, not only the
+               * awkward ones: a rule with an exception is a rule nobody trusts at a door.
+               */
+              if (outcome.decidedOffline && outcome.listTakenAt != null) ...[
+                const SizedBox(height: 14),
+                Text(
+                  Strings.t('door.checkedAgainst', {'time': Strings.time(outcome.listTakenAt!)}),
+                  style: TextStyle(fontSize: 13.5, color: Colors.white.withValues(alpha: 0.85)),
+                ),
+                if (outcome.result == ScanResult.notOnList)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      Strings.t('door.sinceTaken'),
+                      style: TextStyle(fontSize: 13.5, color: Colors.white.withValues(alpha: 0.85)),
+                    ),
+                  ),
               ],
               const SizedBox(height: 20),
               SizedBox(

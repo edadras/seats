@@ -52,7 +52,14 @@ enum ScanResult {
   refunded,
   wrongEvent,
   invalid,
-  queued;
+  queued,
+
+  /// Decided from the door list this device is carrying, and the code was not on it.
+  ///
+  /// Deliberately not `invalid`. The list is a copy of a moment, and a real ticket sold after it
+  /// was taken looks exactly like a forgery from here — so this answer says what it actually
+  /// knows, and the screen says when the copy was taken.
+  notOnList;
 
   static ScanResult parse(String? value) => switch (value) {
         'valid' => ScanResult.valid,
@@ -75,6 +82,7 @@ enum ScanResult {
         ScanResult.wrongEvent => 'wrongEvent',
         ScanResult.invalid => 'invalid',
         ScanResult.queued => 'queued',
+        ScanResult.notOnList => 'notOnList',
       };
 
   /// What the person on the door reads, at arm's length, in the dark.
@@ -90,11 +98,23 @@ class ScanOutcome {
     this.seat,
     this.firstScan,
     this.firstScanBy,
+    this.decidedOffline = false,
+    this.listTakenAt,
   });
 
   final ScanResult result;
   final String? holderName;
   final String? seat;
+
+  /// Whether this device worked the answer out for itself, rather than being told.
+  ///
+  /// It changes what the screen says, and it should: an answer from the server is about the
+  /// ticket, and an answer from a list taken two hours ago is about the ticket *as it was two
+  /// hours ago*. A door told the difference can act on it; a door not told cannot.
+  final bool decidedOffline;
+
+  /// When the copy this was decided from was taken. Null on an answer from the server.
+  final DateTime? listTakenAt;
 
   /// When this ticket was first admitted, on an `already_used` answer.
   final DateTime? firstScan;
@@ -166,12 +186,25 @@ class PendingScan {
     required this.eventId,
     required this.token,
     required this.scannedAt,
+    this.said,
+    this.who,
   });
 
   final String clientScanId;
   final String eventId;
   final String token;
   final DateTime scannedAt;
+
+  /// What the door told the person standing there, decided from the list this device carries.
+  ///
+  /// Kept so that the answer can be compared with the server's once the queue goes up. A door that
+  /// admitted somebody the system then refused is worth knowing about *that night*, and nobody was
+  /// going to find it in a report the next morning. Null on a scan taken before this existed, and
+  /// such a scan simply never raises a conflict.
+  final String? said;
+
+  /// Who it was, for the line the volunteer reads afterwards: a seat, or a name.
+  final String? who;
 
   Map<String, dynamic> toJson() => {
         'client_scan_id': clientScanId,
@@ -180,11 +213,43 @@ class PendingScan {
         'scanned_at': scannedAt.toUtc().toIso8601String(),
       };
 
+  /// The same scan as it is kept on this device — with the two fields the server has no use for.
+  Map<String, dynamic> toStorage() => {
+        ...toJson(),
+        if (said != null) 'said': said,
+        if (who != null) 'who': who,
+      };
+
   factory PendingScan.fromJson(Map<String, dynamic> json) => PendingScan(
         clientScanId: json['client_scan_id'] as String,
         eventId: json['event_id'] as String,
         token: json['token'] as String,
         scannedAt: DateTime.parse(json['scanned_at'] as String),
+        said: json['said'] as String?,
+        who: json['who'] as String?,
+      );
+}
+
+/// A scan the door decided one way and the server decided another.
+class ScanConflict {
+  const ScanConflict({required this.who, required this.said, required this.was});
+
+  final String who;
+  final ScanResult said;
+  final ScanResult was;
+
+  Map<String, dynamic> toJson() => {'who': who, 'said': said.name, 'was': was.name};
+
+  factory ScanConflict.fromJson(Map<String, dynamic> json) => ScanConflict(
+        who: json['who'] as String? ?? '',
+        said: ScanResult.values.firstWhere(
+          (r) => r.name == json['said'],
+          orElse: () => ScanResult.valid,
+        ),
+        was: ScanResult.values.firstWhere(
+          (r) => r.name == json['was'],
+          orElse: () => ScanResult.invalid,
+        ),
       );
 }
 

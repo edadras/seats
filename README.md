@@ -562,6 +562,30 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## A door that works when the network does not
+
+A scanner has always kept working with no signal in the sense that it lost nothing: a scan went
+into a queue and was sent later. What it could not do was **decide**. Everybody was admitted and the
+forgeries turned up the next morning, which at a door is the same as having no check at all.
+
+So a device now takes a copy of the night before the house opens, and can answer for itself.
+
+| | |
+| --- | --- |
+| What travels | `sha256` of each ticket's token — exactly what the server already stores and compares a scan against. A token is 160 bits of randomness, so the hash cannot be walked back: a scanner left in a taxi is a list of names and seat numbers, which is what a printed door list has always been, and not a machine for minting tickets. |
+| A refunded ticket | Is on the list, marked refunded. One that simply failed to appear would read as a forgery, and "you were refunded on Tuesday" is a different conversation. |
+| The same ticket twice at the same door | Refused. The device records its own admissions, so ninety seconds and no signal is no longer all it takes to get two people into one seat. |
+| A code that is not on the list | **"Not on the list"**, not "not a ticket" — and the screen says when the copy was taken. The list is a moment, not a fact, and somebody who bought at seven looks exactly like a forgery to a copy taken at six. |
+| Afterwards | Every offline scan still goes up, and the server is the arbiter. Where it disagreed with what the door said, the scanner says so **that night** rather than leaving it in a report somebody reads on Monday. |
+
+**And the screen that issues the code at all.** `devices.manage` had existed since permissions did,
+granted to four roles and referred to by nothing: the scanner paired by a single-use code that no
+page on this platform could produce. There is a **Scanners** screen now — which devices exist, which
+nights each may scan, when each was last seen, and when each last took a copy of the door list. That
+last column is the one that decides whether a device will still work when the venue's wifi does not,
+and it is the only place anybody can see it: a tablet cannot tell you how old the copy in its pocket
+is until you have already switched the wifi off.
+
 ## A shop that fits in a hand
 
 Most tickets are bought on a phone, and every one of them is *used* on a phone — in a queue, at a
@@ -814,7 +838,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-three, in order
+./smoke.sh                    # all sixty-four, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -1052,6 +1076,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A scheme people have joined is switched off, never deleted | `MembershipTest` |
 | Nobody who has already renewed is sent a renewal reminder | `MembershipTest` |
 | A photograph hangs off the room, not the drawing: republishing a chart keeps every view | `SeatViewTest` |
+| A door list carries hashes and never a code, so a lost scanner mints nothing | `DoorListTest`, `scanners_smoke` |
+| With no signal a forged code is refused, and a ticket sold since is a doubt rather than a refusal | the scanner's own tests |
+| The same ticket twice at one door, offline, is admitted once | the scanner's own tests |
+| A refunded ticket is on the list saying refunded, not missing | `DoorListTest` |
+| A pairing code can actually be issued, is shown once, and signs the old device out when reissued | `DoorListTest`, `scanners_smoke` |
 | A ticket opens at the door with every request to the network refused | `webapp_smoke` |
 | The account page is in no cache, on a phone that has been signed out of or borrowed | `WebAppTest`, `webapp_smoke` |
 | A site is installed under the venue's own name, colours and tile — never the platform's | `WebAppTest`, `webapp_smoke` |

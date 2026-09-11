@@ -10651,6 +10651,172 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EventStats" }
 
+  /checkin/events/{event}/door-list:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getScannerDoorList
+      tags: [Check-in]
+      summary: Every ticket for one night, so a scanner can decide with no signal
+      description: |
+        The scanner takes a copy of this before the house opens and can then answer for itself when
+        the venue's network fails — which, until it could, meant everybody was admitted unchecked
+        and the forgeries turned up the next morning.
+
+        **Hashes, never codes.** Each row carries `sha256` of a ticket's token, exactly what the
+        server already stores and compares a scan against. A token is 160 bits of randomness, so
+        the hash cannot be walked back: a scanner left in a taxi is a list of names and seat
+        numbers — what a printed door list has always been — and not a machine for minting tickets.
+
+        Void tickets are present and marked, rather than absent: one that simply failed to appear
+        would read at the door as a forgery.
+
+        Tagged with the list's own version, so a device that asks again and finds nothing has
+        changed gets a 304 and a few bytes.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScannerDoorList" }
+        "304": { description: The list has not moved since the tag the device sent. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /scanners:
+    get:
+      operationId: listScanners
+      tags: [Check-in]
+      summary: The phones and tablets at the doors
+      description: |
+        Requires `devices.manage`. Returns each device with the nights it may scan, when it was
+        last seen, and when it last took a copy of the door list — the fact that decides whether it
+        will still work when the venue's wifi does not.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Scanner" }
+                  events:
+                    type: array
+                    description: The nights there are to grant, so the panel keeps no copy of the diary.
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        starts_at: { type: [string, "null"], format: date-time }
+    post:
+      operationId: createScanner
+      tags: [Check-in]
+      summary: Make a scanner, and issue the one code that will open it
+      description: |
+        Requires `devices.manage`. The pairing code is returned here and nowhere else: it is stored
+        hashed, spent on first use, and expires on its own, so a printout left on a desk after the
+        run cannot enrol a device.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                event_ids:
+                  type: array
+                  maxItems: 200
+                  items: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Scanner" }
+                  pairing_code: { type: string }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /scanners/{device}:
+    parameters:
+      - name: device
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateScanner
+      tags: [Check-in]
+      summary: Rename a scanner, or change which nights it may scan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                event_ids:
+                  type: array
+                  maxItems: 200
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Scanner" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteScanner
+      tags: [Check-in]
+      summary: Take a scanner out of service
+      description: |
+        Its token goes with it, immediately. What it scanned stays — those are check-ins, and they
+        belong to the event rather than to a phone somebody handed back.
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+
+  /scanners/{device}/code:
+    parameters:
+      - name: device
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: recodeScanner
+      tags: [Check-in]
+      summary: Issue a fresh pairing code, and sign the old device out
+      description: |
+        A scanner being re-paired is a scanner somebody has lost track of, so the existing token is
+        revoked here. Anything the device has not yet uploaded stays on it and goes up once it is
+        paired again.
+      responses:
+        "200":
+          description: A new code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Scanner" }
+                  pairing_code: { type: string }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -11996,6 +12162,53 @@ components:
         name: { type: string, description: The section's name as the designer typed it. }
         url: { type: [string, "null"], format: uri }
         caption: { type: string }
+
+    ScannerDoorList:
+      type: object
+      description: |
+        A copy of one night's tickets for a scanner to check against — not `DoorListRow`, which is
+        the sheet a volunteer reads names off in the panel. Taken at a moment. The keys are short because this is several
+        thousand rows over a venue's wifi and exactly one client reads them.
+      properties:
+        event_id: { type: string, format: uuid }
+        name: { type: string }
+        taken_at: { type: string, format: date-time }
+        version:
+          type: string
+          description: Moves when a ticket is sold, refunded or scanned; stays put otherwise.
+        count: { type: integer }
+        tickets:
+          type: array
+          items:
+            type: object
+            properties:
+              h: { type: string, description: "sha256 of the ticket's token. Never the token." }
+              s: { type: string, enum: [issued, used, refunded, cancelled] }
+              n: { type: string, description: "The holder's name, where there is one." }
+              p:
+                type: array
+                description: "Section, row and seat, in reading order. Absent on a standing place."
+                items: { type: string }
+              k: { type: string, description: "Ticket type, where the event sells more than one." }
+              t: { type: [string, "null"], format: date-time, description: When it was used. }
+
+    Scanner:
+      type: object
+      description: One phone or tablet at a door.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [pending, active] }
+        paired_at: { type: [string, "null"], format: date-time }
+        last_seen_at: { type: [string, "null"], format: date-time }
+        pairing_expires_at: { type: [string, "null"], format: date-time }
+        door_list_taken_at:
+          type: [string, "null"]
+          format: date-time
+          description: When this device last took a copy of the door list.
+        event_ids:
+          type: array
+          items: { type: string, format: uuid }
 
     Geometry:
       type: object

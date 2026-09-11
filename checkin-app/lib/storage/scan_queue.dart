@@ -60,6 +60,6 @@ class ScanQueue {
   Future<void> _write(List<PendingScan> scans) async {
     final prefs = await _prefs;
 
-    await prefs.setString(_key, jsonEncode(scans.map((s) => s.toJson()).toList()));
+    await prefs.setString(_key, jsonEncode(scans.map((s) => s.toStorage()).toList()));
   }
 }

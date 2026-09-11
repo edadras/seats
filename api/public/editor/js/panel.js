@@ -54,6 +54,9 @@
 			{ key: 'plans', icon: 'clock', needs: 'orders.view' },
 			{ key: 'tickets', icon: 'ticket', needs: 'tickets.view' },
 			{ key: 'doorlist', icon: 'check', needs: 'checkins.view' },
+			// The phones at the doors. Beside the door list because they are the same job seen
+			// from two sides: what the door works from, and what it works on.
+			{ key: 'scanners', icon: 'ticket', needs: 'devices.manage' },
 			{ key: 'questions', icon: 'file', needs: 'events.view' },
 			{ key: 'entryslots', icon: 'clock', needs: 'events.view' },
 			{ key: 'discounts', icon: 'tag', needs: 'discounts.manage' },
@@ -1087,6 +1090,7 @@
 			case 'leaving': return window.SeatmapLeaving.render( this );
 			case 'loyalty': return window.SeatmapLoyalty.render( this );
 			case 'memberships': return window.SeatmapMemberships.render( this );
+			case 'scanners': return window.SeatmapScanners.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
