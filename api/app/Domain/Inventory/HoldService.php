@@ -669,9 +669,10 @@ class HoldService
      */
     private function tierFor(Event $event): string
     {
-        $tiers = app(\App\Domain\Pricing\PriceTiers::class);
-
-        return $tiers->express($tiers->active($event), 'COALESCE(zone_override.amount, zone_placement.amount)');
+        return app(\App\Domain\Pricing\Prices::class)->express(
+            $event,
+            'COALESCE(zone_override.amount, zone_placement.amount)',
+        );
     }
 
     /** @return array<string, array{amount: int, zone_key: ?string, state: string}> */

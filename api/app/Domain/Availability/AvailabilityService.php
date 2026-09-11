@@ -188,14 +188,14 @@ class AvailabilityService
     /**
      * Today's price, as SQL.
      *
-     * Looked up once per query rather than joined per row: which tier is in force is a property of
-     * the moment, not of the seat, and asking it three thousand times would be asking it three
-     * thousand times.
+     * Looked up once per query rather than joined per row: which tier is in force, and how much of
+     * the house has gone, are properties of the moment rather than of the seat, and asking them
+     * three thousand times would be asking them three thousand times.
      */
     private function tierFor(Event $event): string
     {
-        return app(\App\Domain\Pricing\PriceTiers::class)->express(
-            app(\App\Domain\Pricing\PriceTiers::class)->active($event),
+        return app(\App\Domain\Pricing\Prices::class)->express(
+            $event,
             'COALESCE(zone_override.amount, zone_placement.amount)',
         );
     }

@@ -58,6 +58,11 @@
 			// And one that has never dated a price change.
 			App.request( 'GET', '/events/' + eventId + '/price-tiers' )
 				.catch( function () { return { data: [], active: null }; } ),
+			// And one that has never let the room's own fullness move a price.
+			App.request( 'GET', '/events/' + eventId + '/demand-pricing' )
+				.catch( function () {
+					return { data: [], demand_pricing: false, sold_percent: 0, capacity: 0 };
+				} ),
 		] ).then( function ( answers ) {
 			Pricing.event = answers[ 0 ];
 			Pricing.zones = Pricing.seed( answers[ 0 ] );
@@ -66,6 +71,8 @@
 			Pricing.donations = answers[ 2 ].donations || { offered: false, prompt: '', suggested: null };
 			Pricing.tiers = answers[ 3 ].data || [];
 			Pricing.activeTier = answers[ 3 ].active || null;
+			Pricing.demand = answers[ 4 ] || {};
+			Pricing.steps = ( answers[ 4 ] && answers[ 4 ].data ) || [];
 			Pricing.paint( App );
 		} ).catch( function ( error ) { App.toast( error.message, true ); } );
 	};
@@ -147,6 +154,7 @@
 					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ) ) ) +
 
 				Pricing.tiersSection( App, currency ) +
+				Pricing.demandSection( App, currency ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'pricing.extras.title' ) ) + '</h3>' +
 				'<p class="hint">' + esc( App.t( 'pricing.extras.subtitle' ) ) + '</p>' +
@@ -767,6 +775,43 @@
 			}
 		);
 
+		document.getElementById( 'demand-add' ).addEventListener( 'click', function () {
+			Pricing.readDemand( document.getElementById( 'pricing-currency' ).value );
+
+			/*
+			 * A new rung starts above the last one.
+			 *
+			 * Two rungs at the same percentage is a refusal, and meeting one for a row somebody has
+			 * not finished typing is the same unhelpfulness the tiers avoid by starting each new
+			 * window where the last one ended.
+			 */
+			var last = Pricing.steps[ Pricing.steps.length - 1 ];
+			var from = last ? Math.min( 100, last.sold_from + 25 ) : 50;
+
+			Pricing.steps.push( {
+				name: App.t( 'pricing.demand.newName' ),
+				sold_from: from, kind: 'percent', value: 0,
+			} );
+			Pricing.paint( App );
+		} );
+
+		Array.prototype.forEach.call( document.querySelectorAll( '[data-step-drop]' ), function ( button ) {
+			button.addEventListener( 'click', function () {
+				Pricing.readDemand( document.getElementById( 'pricing-currency' ).value );
+				Pricing.steps.splice( Number( button.dataset.stepDrop ), 1 );
+				Pricing.saveDemand( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
+
+		Array.prototype.forEach.call(
+			document.querySelectorAll( '#demand-on, #demand-floor, #demand-ceiling, [data-step-name], [data-step-from], [data-step-kind], [data-step-value]' ),
+			function ( input ) {
+				input.addEventListener( 'change', function () {
+					Pricing.saveDemand( App ).catch( function ( error ) { App.toast( error.message, true ); } );
+				} );
+			}
+		);
+
 		document.getElementById( 'pricing-addon-add' ).addEventListener( 'click', function () {
 			Pricing.addonForm( App, null );
 		} );
@@ -871,6 +916,156 @@
 			'</td>' +
 			'<td class="row row--end"><button class="btn btn--quiet" data-tier-drop="' + index + '">' +
 				esc( App.t( 'pricing.tiers.remove' ) ) + '</button></td></tr>';
+	};
+
+	/**
+	 * Pricing by how much is left.
+	 *
+	 * Under the timed tiers because that is the order the two apply in, and because an organiser
+	 * reading down the screen is reading the arithmetic in the order it happens: the published
+	 * price for this window, then what the room's own fullness does to it, then the rails.
+	 *
+	 * The switch, the ladder and the rails are one section and one save. Turning this on without a
+	 * ceiling is the mistake it is most able to make, and a screen that let somebody do it in two
+	 * steps would let them stop after the first.
+	 */
+	Pricing.demandSection = function ( App, currency ) {
+		var state = Pricing.demand || {};
+		var on = !! state.demand_pricing;
+
+		return '<h3 class="subhead">' + esc( App.t( 'pricing.demand.title' ) ) + '</h3>' +
+			'<p class="hint">' + esc( App.t( 'pricing.demand.subtitle' ) ) + '</p>' +
+
+			// How the night is actually going, said whether or not the switch is on: that is the
+			// number somebody needs in order to decide whether to turn it on at all.
+			'<p class="notice notice--info">' + esc( App.t( 'pricing.demand.soldNow', {
+				percent: App.number( state.sold_percent || 0 ),
+				capacity: App.number( state.capacity || 0 ),
+			} ) ) + '</p>' +
+
+			'<label class="perms__row"><input type="checkbox" class="checkbox" id="demand-on"' +
+				( on ? ' checked' : '' ) + '>' +
+				'<span>' + esc( App.t( 'pricing.demand.switchOn' ) ) +
+					'<span class="muted on-own-line">' +
+					esc( App.t( 'pricing.demand.switchHint' ) ) + '</span></span></label>' +
+
+			'<div class="field-duo">' +
+				'<div class="field"><label class="field__label" for="demand-floor">' +
+					esc( App.t( 'pricing.demand.floor' ) ) + '</label>' +
+					'<input class="input tnum" id="demand-floor" type="number" min="0" step="' +
+						Pricing.step( currency ) + '" value="' +
+						esc( null === state.price_floor || undefined === state.price_floor
+							? ''
+							: Pricing.asMajor( state.price_floor, currency ) ) + '">' +
+					'<span class="field__hint">' + esc( App.t( 'pricing.demand.floorHint' ) ) + '</span></div>' +
+				'<div class="field"><label class="field__label" for="demand-ceiling">' +
+					esc( App.t( 'pricing.demand.ceiling' ) ) + '</label>' +
+					'<input class="input tnum" id="demand-ceiling" type="number" min="0" step="' +
+						Pricing.step( currency ) + '" value="' +
+						esc( null === state.price_ceiling || undefined === state.price_ceiling
+							? ''
+							: Pricing.asMajor( state.price_ceiling, currency ) ) + '">' +
+					'<span class="field__hint">' + esc( App.t( 'pricing.demand.ceilingHint' ) ) + '</span></div>' +
+			'</div>' +
+
+			( Pricing.steps.length
+				? App.table(
+					[
+						App.t( 'pricing.demand.name' ), App.t( 'pricing.demand.soldFrom' ),
+						App.t( 'pricing.tiers.change' ), '',
+					],
+					Pricing.steps.map( function ( step, index ) {
+						return Pricing.demandRow( App, step, index, currency );
+					} ).join( '' )
+				)
+				: App.emptyState( 'chart', App.t( 'pricing.demand.none' ),
+					App.t( 'pricing.demand.noneHint' ) ) ) +
+			'<button class="btn" id="demand-add">' + esc( App.t( 'pricing.demand.add' ) ) + '</button>';
+	};
+
+	Pricing.demandRow = function ( App, step, index, currency ) {
+		var isAmount = 'amount' === step.kind;
+		var live = ( Pricing.demand || {} ).in_force || {};
+		var inForce = live.demand && live.demand.sold_from === step.sold_from;
+
+		return '<tr' + ( inForce ? ' class="is-live"' : '' ) + '>' +
+			'<td><input class="input" data-step-name="' + index + '" maxlength="80" value="' +
+				esc( step.name || '' ) + '"></td>' +
+			'<td><input class="input tnum" type="number" min="0" max="100" data-step-from="' +
+				index + '" value="' + esc( step.sold_from ) + '"></td>' +
+			'<td class="row row--wrap">' +
+				'<select class="select" data-step-kind="' + index + '">' +
+					[ 'percent', 'amount' ].map( function ( kind ) {
+						return '<option value="' + kind + '"' + ( kind === step.kind ? ' selected' : '' ) + '>' +
+							esc( App.t( 'pricing.tiers.kinds.' + kind ) ) + '</option>';
+					} ).join( '' ) +
+				'</select>' +
+				'<input class="input tnum" type="number" data-step-value="' + index + '" ' +
+					( isAmount ? 'step="' + Pricing.step( currency ) + '" ' : 'step="1" ' ) +
+					'value="' + esc( isAmount ? Pricing.asMajor( step.value, currency ) : ( step.value || 0 ) ) + '">' +
+			'</td>' +
+			'<td class="row row--end"><button class="btn btn--quiet" data-step-drop="' + index + '">' +
+				esc( App.t( 'pricing.tiers.remove' ) ) + '</button></td></tr>';
+	};
+
+	/** Read the demand boxes back, in the currency an amount rung was typed under. */
+	Pricing.readDemand = function ( currency ) {
+		var decimals = Pricing.decimals( normaliseCode( currency ) );
+		var major = function ( id ) {
+			var box = document.getElementById( id );
+
+			// An empty box is "no rail on this side", which is not the same as a rail at nothing.
+			return box && '' !== String( box.value ).trim()
+				? Math.round( Number( box.value ) * Math.pow( 10, decimals ) )
+				: null;
+		};
+
+		Pricing.demand = Pricing.demand || {};
+		Pricing.demand.demand_pricing = !! ( document.getElementById( 'demand-on' ) || {} ).checked;
+		Pricing.demand.price_floor = major( 'demand-floor' );
+		Pricing.demand.price_ceiling = major( 'demand-ceiling' );
+
+		Pricing.steps.forEach( function ( step, index ) {
+			var value = document.querySelector( '[data-step-value="' + index + '"]' );
+
+			if ( ! value ) {
+				return;
+			}
+
+			step.name = document.querySelector( '[data-step-name="' + index + '"]' ).value;
+			step.kind = document.querySelector( '[data-step-kind="' + index + '"]' ).value;
+			step.sold_from = Math.max( 0, Math.min( 100, Math.round(
+				Number( document.querySelector( '[data-step-from="' + index + '"]' ).value || 0 )
+			) ) );
+			step.value = 'amount' === step.kind
+				? Math.round( Number( value.value || 0 ) * Math.pow( 10, decimals ) )
+				: Math.round( Number( value.value || 0 ) );
+		} );
+	};
+
+	Pricing.saveDemand = function ( App ) {
+		var currency = document.getElementById( 'pricing-currency' ).value;
+
+		Pricing.readDemand( currency );
+
+		return App.request( 'PUT', '/events/' + Pricing.eventId + '/demand-pricing', {
+			demand_pricing: Pricing.demand.demand_pricing,
+			price_floor: Pricing.demand.price_floor,
+			price_ceiling: Pricing.demand.price_ceiling,
+			steps: Pricing.steps.map( function ( step ) {
+				return {
+					name: step.name || null,
+					sold_from: step.sold_from,
+					kind: step.kind,
+					value: step.value,
+				};
+			} ),
+		} ).then( function ( answer ) {
+			Pricing.demand = answer;
+			Pricing.steps = answer.data || [];
+			Pricing.paint( App );
+			App.toast( App.t( 'pricing.demand.saved' ) );
+		} );
 	};
 
 	/** Read the tier boxes back, in the currency an amount tier was typed under. */

@@ -1678,6 +1678,93 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /events/{event}/demand-pricing:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getDemandPricing
+      tags: [Pricing]
+      summary: Pricing by how much is left
+      description: |
+        Requires `pricing.manage`, both ways round, exactly as the timed tiers and the individual
+        seat prices are: this is the same decision about the same numbers made on a different
+        trigger, and somebody who may not set a price has no business reading the rules for
+        changing it either.
+
+        `sold_percent` and `capacity` come back whether or not the switch is on — that is the number
+        an organiser needs in order to decide whether to turn it on at all, and a screen that only
+        showed it afterwards would be asking somebody to set a ladder in the dark.
+
+        Sold means sold. Holds are not counted: a burst of them that expires would ratchet the price
+        up and drop it again an hour later, which is a price nobody can explain. Blocked places are
+        not capacity either — a house holding forty back has a smaller room, not a room that is
+        forty short of selling out.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DemandPricing" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: setDemandPricing
+      tags: [Pricing]
+      summary: Set the switch, the ladder and the rails
+      description: |
+        All three together and in one save. Turning demand pricing on without a ceiling is the
+        mistake this feature is most able to make, and an endpoint that let somebody do it in two
+        calls would let them stop after the first.
+
+        A rung is a floor, not a band: the one in force is the highest the night has reached, so a
+        ladder of 0, 50, 80 and 95 covers every percentage without the edges having to meet. Two
+        rungs at the same percentage are refused (`demand_steps_collide`) rather than resolved.
+
+        The order the adjustments apply in is stated and fixed: the timed tier first (it is the
+        published price for this window), then the demand rung on top of that, then the floor and
+        the ceiling over whatever the two produced. None of it touches an explicit per-seat amount —
+        a house that has typed an exact number against a seat has said what that seat costs.
+
+        `price_floor` above `price_ceiling` is `rails_crossed`: the two together say something that
+        cannot be true, and quietly picking one would leave an organiser looking at a screen that
+        agreed with them while selling at a number they did not choose.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [demand_pricing, steps]
+              properties:
+                demand_pricing:
+                  type: boolean
+                  description: >-
+                    Off unless somebody asks for it: a price that moves on its own is a decision a
+                    house makes deliberately, and some of them are forbidden to.
+                price_floor: { type: [integer, "null"], minimum: 0, description: "Minor units. Null for no floor." }
+                price_ceiling: { type: [integer, "null"], minimum: 0 }
+                steps:
+                  type: array
+                  maxItems: 10
+                  items:
+                    type: object
+                    required: [sold_from, kind, value]
+                    properties:
+                      name: { type: [string, "null"], maxLength: 80 }
+                      sold_from: { type: integer, minimum: 0, maximum: 100 }
+                      kind: { type: string, enum: [percent, amount] }
+                      value: { type: integer, minimum: -100000, maximum: 100000 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DemandPricing" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: The rails cross, or two rungs share a percentage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /events/{event}/price-tiers:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -11953,6 +12040,51 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    DemandPricing:
+      type: object
+      properties:
+        demand_pricing: { type: boolean }
+        price_floor: { type: [integer, "null"] }
+        price_ceiling: { type: [integer, "null"] }
+        data:
+          type: array
+          description: The ladder, always sorted by threshold so the screen reads as one.
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: [string, "null"] }
+              sold_from: { type: integer }
+              kind: { type: string, enum: [percent, amount] }
+              value: { type: integer }
+        sold_percent:
+          type: integer
+          description: How much of the house has gone, counting sales and not holds.
+        capacity:
+          type: integer
+          description: Places this night has to sell — seats plus standing, less anything blocked.
+        in_force:
+          type: object
+          description: Why the price is what it is at this moment, in the order the parts apply.
+          properties:
+            tier:
+              type: [object, "null"]
+              properties:
+                name: { type: string }
+                ends_at: { type: [string, "null"], format: date-time }
+                kind: { type: string }
+                value: { type: integer }
+            sold_percent: { type: [integer, "null"] }
+            demand:
+              type: [object, "null"]
+              properties:
+                name: { type: [string, "null"] }
+                sold_from: { type: integer }
+                kind: { type: string }
+                value: { type: integer }
+            floor: { type: [integer, "null"] }
+            ceiling: { type: [integer, "null"] }
 
     ReportSchedule:
       type: object

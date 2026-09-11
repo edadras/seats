@@ -185,4 +185,24 @@ return [
         'suggested' => 'Suggérer',
         'suggestedHint' => "Un nombre que l'acheteur peut remplacer. Laissez vide pour demander sans suggérer.",
     ],
+
+    'demand' => [
+        'title' => 'Le prix selon le remplissage',
+        'subtitle' => 'En plus des paliers ci-dessus : à mesure que la salle se remplit, le prix de ce qui reste bouge. Le plancher et le plafond le retiennent où que les échelons l’emmènent.',
+        'soldNow' => ':percent % des :capacity places sont parties.',
+        'switchOn' => 'Laisser le remplissage faire bouger le prix',
+        'switchHint' => 'Désactivé tant que vous ne le demandez pas. L’échelle peut être écrite et relue sans qu’un seul prix change.',
+        'floor' => 'Ne jamais vendre en dessous de',
+        'floorHint' => 'Laisser vide pour aucun plancher. Il l’emporte si les deux sont saisis à l’envers.',
+        'ceiling' => 'Ne jamais vendre au-dessus de',
+        'ceilingHint' => 'Laisser vide pour aucun plafond. C’est le garde-fou qui rend un échelon mal tapé supportable.',
+        'name' => 'Échelon',
+        'soldFrom' => 'À partir de ce % vendu',
+        'newName' => 'Bientôt complet',
+        'none' => 'Aucun échelon',
+        'noneHint' => 'Ajoutez-en un pour dire ce qui arrive au prix une fois une part de la salle partie.',
+        'add' => 'Ajouter un échelon',
+        'saved' => 'Enregistré.',
+    ],
+
 ];

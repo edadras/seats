@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\Management\RenewalController as ManagementRenewa
 use App\Http\Controllers\Api\V1\Management\ResaleController;
 use App\Http\Controllers\Api\V1\Management\SalesAgentController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
+use App\Http\Controllers\Api\V1\Management\DemandPricingController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\ProductionController;
 use App\Http\Controllers\Api\V1\Management\ProgrammeManagerController;
@@ -168,6 +169,9 @@ Route::prefix('v1')->group(function () {
         Route::post('events/{event}/reschedule', [EventController::class, 'reschedule']);
         Route::put('events/{event}/pricing', [EventController::class, 'pricing']);
         Route::put('events/{event}/price-tiers', [PriceTierController::class, 'replace']);
+        // The switch, the ladder and the rails together: turning demand pricing on without a
+        // ceiling is the mistake this feature is most able to make.
+        Route::put('events/{event}/demand-pricing', [DemandPricingController::class, 'replace']);
         // Who the tickets are for. Beside pricing because that is what a concession is: an
         // adjustment to the price the seat already has.
         // What the checkout asks. Beside the ticket types because both are decisions about what a
@@ -249,6 +253,7 @@ Route::prefix('v1')->group(function () {
         Route::get('promoters/performance', [PromoterController::class, 'performance']);
 
         Route::get('events/{event}/price-tiers', [PriceTierController::class, 'index']);
+        Route::get('events/{event}/demand-pricing', [DemandPricingController::class, 'show']);
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);

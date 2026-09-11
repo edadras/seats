@@ -185,4 +185,24 @@ return [
         'suggested' => 'Suggerisci',
         'suggestedHint' => "Un numero che l'acquirente può cambiare. Lascia vuoto per chiedere senza suggerire.",
     ],
+
+    'demand' => [
+        'title' => 'Il prezzo in base a quanto è pieno',
+        'subtitle' => 'Oltre alle fasce qui sopra: man mano che la sala si riempie, il prezzo di ciò che resta si muove. Il minimo e il massimo lo trattengono ovunque lo portino i gradini.',
+        'soldNow' => 'È andato il :percent% di :capacity posti.',
+        'switchOn' => 'Lascia che il riempimento muova il prezzo',
+        'switchHint' => 'Spento finché non lo chiedete. La scala si può scrivere e guardare senza che cambi un solo prezzo.',
+        'floor' => 'Non vendere mai sotto',
+        'floorHint' => 'Lasciate vuoto per nessun minimo. Vince sul massimo se i due sono stati scritti al contrario.',
+        'ceiling' => 'Non vendere mai sopra',
+        'ceilingHint' => 'Lasciate vuoto per nessun massimo. È la protezione che rende sopportabile un gradino scritto male.',
+        'name' => 'Gradino',
+        'soldFrom' => 'Da questo % venduto',
+        'newName' => 'Quasi esaurito',
+        'none' => 'Ancora nessun gradino',
+        'noneHint' => 'Aggiungetene uno per dire che cosa succede al prezzo una volta venduta una parte della sala.',
+        'add' => 'Aggiungi un gradino',
+        'saved' => 'Salvato.',
+    ],
+
 ];

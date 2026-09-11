@@ -105,6 +105,43 @@ check( 'with the early one still the live one', 'Early bird' === ( saved.active 
 
 await page.screenshot( { path: `${ SHOTS }/02-two-tiers.png` } );
 
+console.log( 'And a price that moves with the room rather than the calendar' );
+await page.locator( '#demand-on' ).check();
+await page.waitForTimeout( 1200 );
+await page.click( '#demand-add' );
+await page.waitForTimeout( 400 );
+
+await page.fill( '[data-step-from="0"]', '40' );
+await page.fill( '[data-step-value="0"]', '30' );
+await page.fill( '#demand-ceiling', '200' );
+await page.locator( '#demand-ceiling' ).blur();
+await page.waitForTimeout( 1400 );
+
+const demand = ( await api( 'GET', `/v1/events/${ night.id }/demand-pricing` ) ).body;
+
+check( 'the ladder and its rails are saved together',
+	true === demand.demand_pricing && 1 === ( demand.data || [] ).length && demand.price_ceiling > 0,
+	`on=${ demand.demand_pricing } rungs=${ ( demand.data || [] ).length } ceiling=${ demand.price_ceiling }` );
+// The number an organiser needs to decide whether to turn it on at all, shown either way.
+check( 'and the screen says how the night is actually going',
+	'number' === typeof demand.sold_percent && demand.capacity > 0,
+	`${ demand.sold_percent }% of ${ demand.capacity }` );
+
+await page.screenshot( { path: `${ SHOTS }/03-demand.png`, fullPage: true } );
+
+// Rails the wrong way round say something that cannot be true; picking one quietly would leave an
+// organiser looking at a screen that agreed with them while selling at a number they did not choose.
+const crossed = await api( 'PUT', `/v1/events/${ night.id }/demand-pricing`, {
+	demand_pricing: true,
+	price_floor: 20000,
+	price_ceiling: 8000,
+	steps: [],
+} );
+
+check( 'and rails the wrong way round are refused rather than resolved',
+	422 === crossed.status && 'rails_crossed' === ( crossed.body.error || {} ).code,
+	`${ crossed.status } ${ ( crossed.body.error || {} ).code }` );
+
 console.log( 'A window that would charge two prices at once is refused' );
 const clash = await api( 'PUT', `/v1/events/${ night.id }/price-tiers`, {
 	tiers: [

@@ -185,4 +185,24 @@ return [
         'suggested' => 'Suggest',
         'suggestedHint' => 'A number the buyer may overwrite. Leave empty to ask without suggesting.',
     ],
+
+    'demand' => [
+        'title' => 'Price by how full it is',
+        'subtitle' => 'On top of the tiers above: as the house fills, the price of what is left moves. The floor and the ceiling hold it wherever the rungs would take it.',
+        'soldNow' => ':percent% of :capacity places have gone.',
+        'switchOn' => 'Let the room’s own fullness move the price',
+        'switchHint' => 'Off until you say so. The ladder can be written down and looked at without a single price changing.',
+        'floor' => 'Never sell below',
+        'floorHint' => 'Leave it blank for no floor. It wins over the ceiling if the two are typed the wrong way round.',
+        'ceiling' => 'Never sell above',
+        'ceilingHint' => 'Leave it blank for no ceiling. This is the rail that makes a mistyped rung survivable.',
+        'name' => 'Rung',
+        'soldFrom' => 'Once this % has gone',
+        'newName' => 'Nearly gone',
+        'none' => 'No rungs yet',
+        'noneHint' => 'Add one to say what happens to the price once a share of the house has gone.',
+        'add' => 'Add a rung',
+        'saved' => 'Saved.',
+    ],
+
 ];

@@ -168,6 +168,18 @@ A seat is the start of it, not the end. Around the map:
   prices for as long as its window lasts; which one is in force is worked out from the clock every
   time a price is read, so there is no job to miss at midnight and no column to go stale. Two tiers
   may not cover one moment, because a ticket cannot have two prices.
+- **Price by how much is left, not only by when.** Tiers answered "what does this cost this week";
+  they could not answer the question a box office actually asks, which is how the night is going. A
+  ladder of rungs keyed on the percentage sold sits on top of them, and the rung in force is the
+  highest the night has reached — a floor rather than a band, because bands have to meet exactly at
+  every edge and an edge typed one out is a percentage with no price at all. Sold means sold: holds
+  are not counted, or a burst of them expiring would ratchet the price up and drop it an hour later.
+  Blocked places are not capacity, or a house that held forty back could never reach the top rung.
+  A floor and a ceiling hold the result wherever the rungs would take it, which is what makes a
+  mistyped rung survivable rather than a night sold at six times the price. It is off until somebody
+  turns it on — a price that moves on its own is a decision a house makes deliberately, and some of
+  them are forbidden to — and it never moves under a buyer who already has seats in a basket,
+  because the hold carries the price it quoted.
 - **Best available** — "four together" without a buyer hunting for them, scored by price, by how
   central the run is, and by how many orphan seats it would leave behind.
 - **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
@@ -746,6 +758,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Today's price is today's, with nothing running at midnight to make it so | `PriceTierTest` |
 | The number on the plan and the number in the basket are the same number | `PriceTierTest`, `tiers_smoke` |
 | Two price tiers cannot cover one moment | `PriceTierTest` |
+| The price climbs as the house fills, and the tier is adjusted rather than replaced | `DemandPricingTest` |
+| The floor and the ceiling hold whatever the ladder does | `DemandPricingTest` |
+| Holds are not sales, and blocked seats are not capacity | `DemandPricingTest` |
+| A price that moves does not move under somebody already holding seats | `DemandPricingTest` |
+| Nothing moves until somebody turns it on, and an explicit seat price never moves | `DemandPricingTest` |
+| Rails the wrong way round are refused rather than resolved | `DemandPricingTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

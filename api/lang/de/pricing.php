@@ -185,4 +185,24 @@ return [
         'suggested' => 'Vorschlagen',
         'suggestedHint' => 'Eine Zahl, die der Käufer überschreiben darf. Leer lassen, um zu fragen ohne vorzuschlagen.',
     ],
+
+    'demand' => [
+        'title' => 'Preis nach Auslastung',
+        'subtitle' => 'Zusätzlich zu den Stufen oben: je voller das Haus, desto anders der Preis für das, was übrig ist. Unter- und Obergrenze halten ihn, wohin die Sprossen ihn auch trieben.',
+        'soldNow' => ':percent % von :capacity Plätzen sind weg.',
+        'switchOn' => 'Die Auslastung darf den Preis bewegen',
+        'switchHint' => 'Aus, bis Sie es sagen. Die Leiter lässt sich aufschreiben und ansehen, ohne dass sich ein Preis ändert.',
+        'floor' => 'Nie unter',
+        'floorHint' => 'Leer lassen für keine Untergrenze. Sie gewinnt, wenn beide vertauscht eingetragen wurden.',
+        'ceiling' => 'Nie über',
+        'ceilingHint' => 'Leer lassen für keine Obergrenze. Diese Grenze macht eine vertippte Sprosse überlebbar.',
+        'name' => 'Sprosse',
+        'soldFrom' => 'Ab diesem % verkauft',
+        'newName' => 'Fast weg',
+        'none' => 'Noch keine Sprossen',
+        'noneHint' => 'Fügen Sie eine hinzu, um zu sagen, was mit dem Preis geschieht, sobald ein Teil des Hauses weg ist.',
+        'add' => 'Sprosse hinzufügen',
+        'saved' => 'Gespeichert.',
+    ],
+
 ];

@@ -27,6 +27,7 @@ class Event extends Model
         'exchanges', 'exchange_window_hours', 'exchange_fee_amount', 'resale', 'resale_pays',
         'presale_starts_at', 'on_sale_at',
         'accessible_sale', 'accessible_release_hours', 'ask_access_needs',
+        'demand_pricing', 'price_floor', 'price_ceiling',
     ];
 
     protected $casts = [
@@ -45,6 +46,11 @@ class Event extends Model
         'max_per_buyer' => 'integer',
         'checkout_min_seconds' => 'integer',
         'availability_version' => 'integer',
+        // Pricing by how much is left. Off unless somebody asks for it: a price that moves on its
+        // own is a decision a house makes deliberately, and some of them are forbidden to.
+        'demand_pricing' => 'boolean',
+        'price_floor' => 'integer',
+        'price_ceiling' => 'integer',
         'booking_fee_amount' => 'integer',
         'booking_fee_percent' => 'integer',
         'tax_rate' => 'integer',
