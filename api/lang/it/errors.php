@@ -316,4 +316,7 @@ return [
     'issuer_unreachable' => 'Questo indirizzo non ha risposto. Controllalo e riprova.',
     'issuer_not_openid' => 'Questo indirizzo ha risposto, ma non è un provider OpenID Connect.',
     'key_scope' => 'Questa chiave non può farlo.',
+    'loyalty_closed' => 'Questo conto non ha un programma a punti.',
+    'loyalty_below_minimum' => 'Sono meno punti di quanti questo programma converta in credito.',
+    'loyalty_not_enough' => 'Su questo indirizzo non ci sono così tanti punti.',
 ];

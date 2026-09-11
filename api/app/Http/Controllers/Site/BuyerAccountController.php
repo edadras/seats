@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Loyalty\Loyalty;
 use App\Domain\Orders\TicketIssuer;
 use App\Exceptions\ApiException;
 use App\Domain\Refunds\RefundPolicy;
@@ -51,11 +52,73 @@ class BuyerAccountController extends Controller
         return $this->view($site, 'site.account', [
             'title' => __('site.account.title').' · '.$site->name,
             'buyer' => $buyer,
+            // Their standing, where this venue keeps one and they are signed in to have one.
+            'points' => $buyer ? $this->pointsFor($buyer['email']) : null,
             'orders' => $buyer ? $this->orders($site, $buyer['email']) : [],
             'canSignIn' => $this->available($site),
             'wallets' => app(Wallets::class)->offered(),
             'notice' => $request->query('signin'),
         ]);
+    }
+
+    /**
+     * Turn points into credit to spend here.
+     *
+     * The amount is never in the request: the buyer says how many points, and what those are worth
+     * is the organiser's rate rather than anything a browser can name. What comes back is an
+     * ordinary credit note against their address, which the checkout already knows how to spend.
+     */
+    public function redeemPoints(Request $request)
+    {
+        $buyer = $this->signedIn($request);
+
+        if (! $buyer) {
+            return redirect('/account?signin=expired');
+        }
+
+        $data = $request->validate(['points' => ['required', 'integer', 'min:1', 'max:10000000']]);
+
+        try {
+            $voucher = app(Loyalty::class)->redeem($buyer['email'], (int) $data['points']);
+        } catch (ApiException $e) {
+            return redirect('/account')->with('seatmap_message', $e->localisedMessage());
+        }
+
+        return redirect('/account')->with('seatmap_message', __('site.points.turned', [
+            'amount' => Money::format((int) $voucher->amount, (string) $voucher->currency),
+        ]));
+    }
+
+    /**
+     * What this address has, and where that leaves them.
+     *
+     * Null where the venue runs no scheme, so the page renders exactly as it did before this
+     * existed rather than showing somebody a nought they cannot do anything about.
+     */
+    private function pointsFor(string $email): ?array
+    {
+        $loyalty = app(Loyalty::class);
+        $programme = $loyalty->programme();
+
+        if (! $programme || ! $programme->isLive()) {
+            return null;
+        }
+
+        $balance = $loyalty->balance($email);
+        $unit = 10 ** Money::exponent($programme->currency);
+        $units = $programme->points_per_unit > 0 ? intdiv($balance, $programme->points_per_unit) : 0;
+
+        return [
+            'name' => $programme->name,
+            'balance' => $balance,
+            'standing' => $loyalty->standing($email, $programme),
+            'min_redeem' => $programme->min_redeem,
+            // What the whole balance is worth right now, so the offer is a sentence rather than a
+            // sum somebody has to do themselves.
+            'worth' => Money::format($units * $unit, $programme->currency),
+            'can_redeem' => $balance >= max(1, $programme->min_redeem) && $units > 0,
+            'redeemable' => $units * $programme->points_per_unit,
+        ];
     }
 
     /** Off to Google. */

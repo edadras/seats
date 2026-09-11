@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\ProductionController;
 use App\Http\Controllers\Api\V1\Management\ProgrammeManagerController;
 use App\Http\Controllers\Api\V1\Management\AccountController;
+use App\Http\Controllers\Api\V1\Management\LoyaltyController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
 use App\Http\Controllers\Api\V1\Management\SsoController;
 use App\Http\Controllers\Api\V1\Management\RehearsalController;
@@ -289,6 +290,20 @@ Route::prefix('v1')->group(function () {
          * Beside the export and the closure because it is the same kind of decision — who may be
          * here at all — and behind the same permission.
          */
+        /*
+         * The points scheme.
+         *
+         * Behind `vouchers.manage` because that is what it is: a machine for issuing credit, and
+         * the person who may not hand out a gift card should not be able to set up something that
+         * hands them out automatically for ever.
+         */
+        Route::get('loyalty', [LoyaltyController::class, 'show']);
+        Route::put('loyalty', [LoyaltyController::class, 'save']);
+        Route::get('loyalty/members', [LoyaltyController::class, 'members']);
+        Route::get('loyalty/members/{email}', [LoyaltyController::class, 'member'])
+            ->where('email', '.*');
+        Route::post('loyalty/adjust', [LoyaltyController::class, 'adjust']);
+
         Route::get('sso', [SsoController::class, 'show']);
         Route::put('sso', [SsoController::class, 'save'])->middleware('throttle:20,60,sso-save');
         Route::delete('sso', [SsoController::class, 'destroy']);

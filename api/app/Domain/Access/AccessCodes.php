@@ -82,7 +82,7 @@ class AccessCodes
      *
      * @throws ApiException when the sale is shut to this buyer
      */
-    public function admit(Event $event, ?string $typed, int $seats): ?AccessCode
+    public function admit(Event $event, ?string $typed, int $seats, ?string $buyerEmail = null): ?AccessCode
     {
         $state = SaleWindow::state($event);
 
@@ -94,6 +94,24 @@ class AccessCodes
 
         if (SaleWindow::CLOSED === $state) {
             throw ApiException::conflict('event_not_sellable', 'This event is not on sale.');
+        }
+
+        /*
+         * Standing, where this night lets a standing in.
+         *
+         * Checked before the code and only during a presale proper: a night that has not opened at
+         * all has not opened for anybody, and a tier is an invitation to come early rather than a
+         * key to a door nobody has unlocked yet.
+         *
+         * It returns no code because there is none. Everything downstream treats null as "came in
+         * without one", which is exactly what happened — a subscriber walking past the queue is
+         * not spending a code's last use.
+         */
+        if (SaleWindow::PRESALE === $state
+            && $event->tier_presale
+            && $buyerEmail
+            && app(\App\Domain\Loyalty\Loyalty::class)->standsAtLeast($buyerEmail, (string) $event->tier_presale)) {
+            return null;
         }
 
         if (null === $typed || '' === trim($typed)) {

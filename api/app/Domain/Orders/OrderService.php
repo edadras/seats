@@ -333,6 +333,19 @@ class OrderService
                 report($e);
             }
 
+            /*
+             * And whatever this evening is worth in points.
+             *
+             * Here for the same reason as the queue above: every sale on this platform arrives at
+             * this one method, whichever door it came in by. Carried past on failure for the same
+             * reason too — a loyalty scheme is not worth failing a paid booking over.
+             */
+            try {
+                app(\App\Domain\Loyalty\Loyalty::class)->settle($order->fresh());
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             // The buyer is told, on whatever channels this organiser has turned on. Failures are
             // recorded and swallowed inside: an order that fails because a text message could not
             // be sent is a worse outcome than a text message that arrives late.
@@ -402,6 +415,13 @@ class OrderService
                 'external_order_id' => $order->external_order_id,
                 'reason' => $reason,
             ]);
+
+            // A booking that never happened is not an evening somebody came to.
+            try {
+                app(\App\Domain\Loyalty\Loyalty::class)->settle($order->fresh());
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             $this->messages->cancelled($order);
 
@@ -513,6 +533,15 @@ class OrderService
                 'policy' => $policy,
                 'fully_refunded' => $remaining === 0,
             ]);
+
+            // The points follow the seats. `settle()` reads what the booking is worth now and
+            // writes the difference, so half a refund takes back half of them without any separate
+            // path that could disagree with the one that gave them.
+            try {
+                app(\App\Domain\Loyalty\Loyalty::class)->settle($order->fresh());
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return $order->fresh(['allocations.ticket']);
         });

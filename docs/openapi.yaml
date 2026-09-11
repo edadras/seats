@@ -1765,6 +1765,185 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /loyalty:
+    get:
+      operationId: getLoyaltyProgramme
+      tags: [Loyalty]
+      summary: The account's points scheme
+      description: >-
+        Requires `vouchers.manage`, because that is what this is: a machine for issuing credit, and
+        the person who may not hand out a gift card should not be able to set up something that
+        hands them out automatically for ever.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoyaltyProgramme" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: setLoyaltyProgramme
+      tags: [Loyalty]
+      summary: Set what earns points, what they buy, and the ladder
+      description: |
+        Points are earned from the seats somebody still holds rather than from an order's total, so
+        a refund takes them back with the money and a chargeback takes them all. A comp earns
+        nothing — paying somebody points for being given a seat rewards the box office's generosity
+        rather than the audience's custom.
+
+        One currency. Takings in any other do not earn: a single pool fed by two is arithmetic
+        nobody can explain at a counter.
+
+        Points turn into ordinary credit on the buyer's own address — the same thing a refund taken
+        as credit issues — which the checkout already knows how to spend, with its own expiry and
+        its own ledger. A second kind of money at the checkout would be a second set of edge cases
+        at the one place where an edge case costs somebody their evening.
+
+        `window_months` is how far back a tier looks. A standing earned in a rolling window can be
+        lost, which is what makes it mean anything; spending points never costs somebody their tier,
+        because a scheme that made people choose between the reward and the standing it came with is
+        a scheme nobody uses twice.
+
+        `inactive_months` empties a balance after that much silence — the whole balance at once,
+        which is a rule somebody can check against their own receipts. Null promises they never
+        expire, and that promise is kept.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, enabled, currency, earn_rate, points_per_unit, min_redeem, window_months, tiers]
+              properties:
+                name: { type: string, maxLength: 80 }
+                enabled: { type: boolean }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                earn_rate:
+                  type: integer
+                  minimum: 1
+                  description: Points for one whole unit of the currency.
+                points_per_unit:
+                  type: integer
+                  minimum: 1
+                  description: Points that buy one whole unit of credit.
+                min_redeem: { type: integer, minimum: 0 }
+                window_months: { type: integer, minimum: 1, maximum: 120 }
+                inactive_months: { type: [integer, "null"], minimum: 1, maximum: 120 }
+                tiers:
+                  type: array
+                  maxItems: 6
+                  items:
+                    type: object
+                    required: [key, name, from_points]
+                    properties:
+                      key:
+                        type: string
+                        maxLength: 40
+                        description: >-
+                          What a night points at. Renaming a tier moves nobody; changing this does.
+                      name: { type: string, maxLength: 60 }
+                      from_points: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoyaltyProgramme" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /loyalty/members:
+    get:
+      operationId: listLoyaltyMembers
+      tags: [Loyalty]
+      summary: Who has points, and where they stand
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/LoyaltyMember" }
+                  total: { type: integer }
+                  page: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /loyalty/members/{email}:
+    parameters:
+      - name: email
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getLoyaltyMember
+      tags: [Loyalty]
+      summary: One address, and everything that has happened to its points
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string }
+                  balance: { type: integer }
+                  standing: { $ref: "#/components/schemas/LoyaltyStanding" }
+                  history:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [earn, spend, reverse, expire, adjust] }
+                        points: { type: integer }
+                        note: { type: [string, "null"] }
+                        at: { type: string, format: date-time }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /loyalty/adjust:
+    post:
+      operationId: adjustLoyaltyPoints
+      tags: [Loyalty]
+      summary: Points on or off by hand
+      description: >-
+        Every scheme needs this, and every scheme's worst day is the one where somebody did it
+        without saying why — so the reason is required, travels with the movement, and goes into the
+        audit log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, points, why]
+              properties:
+                email: { type: string, format: email }
+                points:
+                  type: integer
+                  description: Negative takes them away. Nought is not an adjustment.
+                why: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string }
+                  balance: { type: integer }
+                  standing: { $ref: "#/components/schemas/LoyaltyStanding" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /sso:
     get:
       operationId: getSingleSignOn
@@ -11909,6 +12088,17 @@ components:
         id: { type: string, format: uuid }
         public_id: { type: string }
         name: { type: string }
+        tier_presale:
+          type: [string, "null"]
+          description: >-
+            The loyalty tier that gets in during this night's presale without a code. Null is the
+            ordinary case and means what a presale always meant: a code, or nothing. A tier that
+            opens no door is a label, so this is the one thing a standing actually does.
+        is_rehearsal:
+          type: boolean
+          description: >-
+            Whether this night is being rehearsed rather than sold. A rehearsal's checkout never
+            reaches a gateway and no account-wide figure counts it.
         image_url: { type: [string, "null"], format: uri, description: "The event's poster, shown on the hosted site and in listings." }
         category: { type: [string, "null"], description: "One word for the kind of evening this is — Concert, Theatre, Sport." }
         status: { type: string, enum: [draft, published, closed, cancelled] }
@@ -12474,6 +12664,64 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    LoyaltyProgramme:
+      type: object
+      description: What earns points, what they buy, and the ladder people climb.
+      properties:
+        configured: { type: boolean }
+        name: { type: [string, "null"] }
+        enabled: { type: boolean }
+        currency: { type: [string, "null"] }
+        earn_rate: { type: integer }
+        points_per_unit: { type: integer }
+        min_redeem: { type: integer }
+        window_months: { type: integer }
+        inactive_months: { type: [integer, "null"] }
+        tiers:
+          type: array
+          description: Lowest first, whatever order they were saved in.
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              name: { type: string }
+              from_points: { type: integer }
+        unit:
+          type: integer
+          description: >-
+            One whole unit of the currency, in minor units — 100 for euros, 1 for rials. Worked out
+            here rather than on the screen, because the exponent of a currency is exactly the kind
+            of thing a panel gets subtly wrong.
+
+    LoyaltyStanding:
+      type: object
+      properties:
+        key: { type: [string, "null"] }
+        name: { type: [string, "null"] }
+        points:
+          type: integer
+          description: Earned inside the window, which is what a tier is read from.
+        next:
+          description: The rung above, and what is left to it.
+          oneOf:
+            - type: object
+              properties:
+                key: { type: string }
+                name: { type: string }
+                needs: { type: integer }
+            - { type: "null" }
+
+    LoyaltyMember:
+      allOf:
+        - { $ref: "#/components/schemas/LoyaltyStanding" }
+        - type: object
+          properties:
+            email: { type: string }
+            balance:
+              type: integer
+              description: What they hold now, which is not what their tier is read from.
+            last_at: { type: string, format: date-time }
 
     SingleSignOn:
       type: object

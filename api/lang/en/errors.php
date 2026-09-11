@@ -316,4 +316,7 @@ return [
     'issuer_unreachable' => 'That address did not answer. Check it and try again.',
     'issuer_not_openid' => 'That address answered, but it is not an OpenID Connect provider.',
     'key_scope' => 'This key is not allowed to do that.',
+    'loyalty_closed' => 'This account is not running a points scheme.',
+    'loyalty_below_minimum' => 'That is fewer points than this scheme will turn into credit.',
+    'loyalty_not_enough' => 'There are not that many points on this address.',
 ];

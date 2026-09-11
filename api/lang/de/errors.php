@@ -316,4 +316,7 @@ return [
     'issuer_unreachable' => 'Diese Adresse hat nicht geantwortet. Prüfen Sie sie und versuchen Sie es erneut.',
     'issuer_not_openid' => 'Diese Adresse hat geantwortet, ist aber kein OpenID-Connect-Anbieter.',
     'key_scope' => 'Dieser Schlüssel darf das nicht.',
+    'loyalty_closed' => 'Dieses Konto führt kein Punkteprogramm.',
+    'loyalty_below_minimum' => 'Das sind weniger Punkte, als dieses Programm in Guthaben umwandelt.',
+    'loyalty_not_enough' => 'So viele Punkte liegen auf dieser Adresse nicht.',
 ];

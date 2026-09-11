@@ -449,4 +449,13 @@ return [
         'title' => 'Eine Probe.',
         'body' => 'Dieser Abend wird getestet. Sie können den ganzen Weg gehen, es wird nichts berechnet – diese Tickets sind nicht echt.',
     ],
+    'points' => [
+        'have' => 'Sie haben :points Punkte',
+        'standing' => 'Sie sind :tier.',
+        'next' => 'Noch :points Punkte bis :tier.',
+        'turn' => 'In :amount Guthaben umwandeln',
+        'notYet' => 'Ab :points Punkten wird Guthaben daraus.',
+        'turned' => 'Erledigt — :amount Guthaben liegt auf Ihrer Adresse, die Kasse bietet es an.',
+        'creditNote' => 'Punkte in Guthaben umgewandelt (:points)',
+    ],
 ];

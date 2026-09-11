@@ -79,6 +79,15 @@ class StoreController extends Controller
         $event = $this->event($data['event_public_id']);
 
         /*
+         * Who is signed in on this site, where anybody is.
+         *
+         * Read from the session this server wrote rather than from anything the request carries:
+         * it decides whether somebody's standing opens a presale, and an address the browser could
+         * name would be a presale anybody could name their way into.
+         */
+        $signedIn = $request->session()->get('seatmap_buyer')['email'] ?? null;
+
+        /*
          * The door, where this night has one.
          *
          * Checked here and not only on the page, because a page is a suggestion and this is the
@@ -116,6 +125,7 @@ class StoreController extends Controller
                 ['all' => $data['best_available']['ticket_type_id'] ?? null],
                 $data['entry_slot_id'] ?? null,
                 $accessCode,
+                $signedIn,
             )
             : $this->holds->create(
                 $event,
@@ -128,6 +138,7 @@ class StoreController extends Controller
                 $data['area_types'] ?? [],
                 $data['entry_slot_id'] ?? null,
                 $accessCode,
+                $signedIn,
             );
 
         // The token goes in the session, not to the browser as an identifier it could swap: the

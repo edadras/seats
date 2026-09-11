@@ -452,4 +452,13 @@ return [
         'title' => 'A rehearsal.',
         'body' => 'This night is being tested. You can go all the way through, and nothing will be charged — these tickets are not real.',
     ],
+    'points' => [
+        'have' => 'You have :points points',
+        'standing' => 'You are :tier.',
+        'next' => ':points more points and you are :tier.',
+        'turn' => 'Turn them into :amount credit',
+        'notYet' => ':points points turns into credit.',
+        'turned' => 'Done — :amount of credit is on your address, and the checkout will offer it.',
+        'creditNote' => 'Points turned into credit (:points)',
+    ],
 ];

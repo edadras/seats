@@ -448,4 +448,13 @@ return [
         'title' => 'Una prova.',
         'body' => 'Questa serata è in prova. Puoi arrivare fino in fondo e non ti verrà addebitato nulla: questi biglietti non sono reali.',
     ],
+    'points' => [
+        'have' => 'Hai :points punti',
+        'standing' => 'Sei :tier.',
+        'next' => 'Altri :points punti e sei :tier.',
+        'turn' => 'Convertili in :amount di credito',
+        'notYet' => 'Da :points punti in su diventano credito.',
+        'turned' => 'Fatto — :amount di credito è sul tuo indirizzo e la cassa te lo offrirà.',
+        'creditNote' => 'Punti convertiti in credito (:points)',
+    ],
 ];

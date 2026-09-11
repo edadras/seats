@@ -546,6 +546,13 @@ class EventController extends Controller
             'exchange_window_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
             'exchange_fee_amount' => ['sometimes', 'integer', 'min:0'],
             'resale' => ['sometimes', 'boolean'],
+            /*
+             * The tier that gets in early, where a night has one.
+             *
+             * A key rather than an id: the ladder is a setting rewritten whole, and a night
+             * pointing at a rung by id would break the moment somebody reordered it.
+             */
+            'tier_presale' => ['sometimes', 'nullable', 'string', 'max:40'],
             'resale_pays' => ['sometimes', 'in:credit,refund'],
             'refund_policy' => ['sometimes', 'in:release,hold_back'],
             // What the *seat* does on a refund is `refund_policy`; these three are whether the
@@ -675,6 +682,7 @@ class EventController extends Controller
              * that looks like an ordinary night on one screen is how somebody announces one.
              */
             'is_rehearsal' => (bool) $event->is_rehearsal,
+            'tier_presale' => $event->tier_presale,
             'availability_version' => $event->availability_version,
 
             /*

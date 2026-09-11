@@ -448,4 +448,13 @@ return [
         'title' => 'Une répétition.',
         'body' => 'Cette soirée est en test. Vous pouvez aller jusqu\'au bout, rien ne sera débité — ces billets ne sont pas réels.',
     ],
+    'points' => [
+        'have' => 'Vous avez :points points',
+        'standing' => 'Vous êtes :tier.',
+        'next' => 'Encore :points points et vous êtes :tier.',
+        'turn' => 'Les convertir en :amount de crédit',
+        'notYet' => 'À partir de :points points, cela devient du crédit.',
+        'turned' => 'C\'est fait — :amount de crédit est sur votre adresse, la billetterie vous le proposera.',
+        'creditNote' => 'Points convertis en crédit (:points)',
+    ],
 ];

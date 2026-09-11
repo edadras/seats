@@ -60,6 +60,9 @@
 			{ key: 'seasons', icon: 'calendar', needs: 'discounts.manage' },
 			{ key: 'access', icon: 'lock', needs: 'discounts.manage' },
 			{ key: 'vouchers', icon: 'wallet', needs: 'vouchers.manage' },
+			// Points and tiers. Beside the vouchers because that is what a point turns into, and
+			// behind the same permission for the same reason.
+			{ key: 'loyalty', icon: 'target', needs: 'vouchers.manage' },
 		] },
 		{ group: 'venue', items: [
 			{ key: 'maps', icon: 'map', needs: 'maps.view' },
@@ -1079,6 +1082,7 @@
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
 			case 'rehearsal': return window.SeatmapRehearsal.render( this );
 			case 'leaving': return window.SeatmapLeaving.render( this );
+			case 'loyalty': return window.SeatmapLoyalty.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );

@@ -93,6 +93,19 @@ class Chargebacks
                 );
             }
 
+            /*
+             * And the points go with the money.
+             *
+             * A chargeback is not a refund — the organiser did not choose it — but it is the same
+             * fact about the evening: nobody paid for it in the end. `settle()` reads what the
+             * booking is worth now, which is nothing, and writes the difference.
+             */
+            try {
+                app(\App\Domain\Loyalty\Loyalty::class)->settle($order->fresh());
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             return $order->fresh(['allocations.ticket']);
         });
     }

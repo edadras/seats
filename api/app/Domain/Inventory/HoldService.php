@@ -79,6 +79,7 @@ class HoldService
         array $seatTypes = [],
         ?string $entrySlotId = null,
         ?string $accessCode = null,
+        ?string $buyerEmail = null,
     ): Hold {
         $lastFailure = null;
 
@@ -99,7 +100,7 @@ class HoldService
             try {
                 return $this->create(
                     $event, $seatIds, $sessionId, $apiClientId, $ip, [], $types, [], $entrySlotId,
-                    $accessCode
+                    $accessCode, $buyerEmail
                 );
             } catch (ApiException $e) {
                 if ('seat_unavailable' !== $e->errorCode()) {
@@ -130,6 +131,10 @@ class HoldService
      * @param  ?string  $accessCode  A presale code, where the sale is not open to everybody. Spent
      *                               here rather than at the till, because a presale checked at the
      *                               till is a race anybody may join and only lose at the end.
+     * @param  ?string  $buyerEmail  Who is signed in on the organiser's own site, where anybody is.
+     *                               Only ever used to ask whether their standing opens a presale
+     *                               that a code would otherwise open — never believed as identity
+     *                               for anything that moves money.
      */
     public function create(
         Event $event,
@@ -142,6 +147,7 @@ class HoldService
         array $areaTypes = [],
         ?string $entrySlotId = null,
         ?string $accessCode = null,
+        ?string $buyerEmail = null,
     ): Hold {
         if (! $event->isSellable()) {
             throw ApiException::conflict('event_not_sellable', 'This event is not currently on sale.');
@@ -185,7 +191,7 @@ class HoldService
 
         // And whether this buyer may be here at all. Before the seats, so somebody without a code
         // is turned away at the door rather than after choosing where to sit.
-        $code = $this->access->admit($event, $accessCode, $requested);
+        $code = $this->access->admit($event, $accessCode, $requested, $buyerEmail);
 
         // Deterministic ordering, decided before the transaction opens.
         sort($seatIds);

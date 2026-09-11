@@ -43,10 +43,55 @@
 
                 <p class="field__hint">{{ __('site.account.emailHint') }}</p>
             </div>
-        @elseif (! count($orders))
+        @else
+            {{-- Their standing, where this venue keeps one.
+
+                 Above the bookings rather than below them: it is the answer to "what has coming
+                 here got me", and a figure somebody has to scroll past a season of receipts to
+                 find is a figure they never see. --}}
+            @if ($points)
+                <div class="points">
+                    <div class="points__head">
+                        <div>
+                            <span class="eyebrow">{{ $points['name'] }}</span>
+                            <p class="points__balance">{{ __('site.points.have', [
+                                'points' => \App\Support\Locale\Money::number($points['balance']),
+                            ]) }}</p>
+                            @if ($points['standing']['name'])
+                                <p class="muted">{{ __('site.points.standing', [
+                                    'tier' => $points['standing']['name'],
+                                ]) }}</p>
+                            @endif
+                            @if ($points['standing']['next'])
+                                <p class="muted">{{ __('site.points.next', [
+                                    'points' => \App\Support\Locale\Money::number($points['standing']['next']['needs']),
+                                    'tier' => $points['standing']['next']['name'],
+                                ]) }}</p>
+                            @endif
+                        </div>
+
+                        @if ($points['can_redeem'])
+                            <form method="POST" action="/account/points" class="points__turn">
+                                @csrf
+                                <input type="hidden" name="points" value="{{ $points['redeemable'] }}">
+                                <button class="button" type="submit">{{ __('site.points.turn', [
+                                    'amount' => $points['worth'],
+                                ]) }}</button>
+                            </form>
+                        @else
+                            <p class="muted">{{ __('site.points.notYet', [
+                                'points' => \App\Support\Locale\Money::number($points['min_redeem']),
+                            ]) }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        @endif
+
+        @if ($buyer && ! count($orders))
             <p class="prose">{{ __('site.account.nothing') }}</p>
             <p class="muted">{{ __('site.account.nothingBody') }}</p>
-        @else
+        @elseif ($buyer)
             <div class="orders">
                 @foreach ($orders as $order)
                     <article class="order">

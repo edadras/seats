@@ -444,6 +444,34 @@ hr { border: none; }
 }
 
 /*
+ * What coming here has got somebody.
+ *
+ * A card rather than a line in the margin: it is the answer to the question a loyalty scheme is
+ * asking, and an answer nobody can find is a scheme nobody joins.
+ */
+.points {
+	padding: 1.25rem 1.4rem;
+	margin-block-end: 1.5rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.points__head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.points__balance {
+	margin-block: 0.25rem;
+	font-size: 1.35rem;
+	font-weight: 600;
+}
+
+/*
  * A night being rehearsed, said where a visitor cannot miss it.
  *
  * Warm rather than red: nothing is wrong, and an alarm would send an organiser looking for the

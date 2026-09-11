@@ -28,6 +28,7 @@ class Event extends Model
         'presale_starts_at', 'on_sale_at',
         'accessible_sale', 'accessible_release_hours', 'ask_access_needs',
         'demand_pricing', 'price_floor', 'price_ceiling',
+        'tier_presale',
     ];
 
     protected $casts = [

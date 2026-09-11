@@ -72,6 +72,15 @@ Schedule::command('billing:run')->dailyAt('06:15')->withoutOverlapping()->runInB
 Schedule::command('accounts:erase')->dailyAt('03:40')->withoutOverlapping()->runInBackground();
 
 /*
+ * Points that have gone quiet for as long as their scheme allows.
+ *
+ * Daily, and at an hour when nothing else is running: it reads every account's ledger, and the one
+ * thing worse than points expiring is points expiring while somebody is at the checkout spending
+ * them. Accounts whose scheme says points never expire are skipped without being read at all.
+ */
+Schedule::command('loyalty:expire')->dailyAt('04:20')->withoutOverlapping()->runInBackground();
+
+/*
  * The queue for a sold-out night.
  *
  * Every few minutes rather than the instant a refund lands: seats come back in bursts — a party of

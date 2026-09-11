@@ -186,6 +186,15 @@ Route::middleware('site')->group(function () {
     Route::get('account/google/finish', [BuyerAccountController::class, 'finish'])
         ->middleware('throttle:20,1,signin-finish');
     Route::post('account/sign-out', [BuyerAccountController::class, 'signOut']);
+
+    /*
+     * Points turned into credit.
+     *
+     * Throttled because it issues money, and rate-limited per session rather than per address:
+     * whoever is signed in is the only person who can reach it at all.
+     */
+    Route::post('account/points', [BuyerAccountController::class, 'redeemPoints'])
+        ->middleware('throttle:10,1,account-points');
     // A POST because it mints new codes and kills the old ones: a link a browser can prefetch
     // must never be able to invalidate somebody's ticket.
     Route::post('account/orders/{reference}/tickets', [BuyerAccountController::class, 'tickets'])

@@ -232,6 +232,20 @@ A seat is the start of it, not the end. Around the map:
   refunding: a shop's key should be able to sell a ticket without being able to hand money back.
   A key with no scopes may still do everything, because narrowing live keys silently would have
   taken working shops off sale on the day it was deployed.
+- **A reason to come back: points and tiers.** Everything else here is about one night; this is the
+  first thing about the years either side of it. Points are earned from the seats somebody still
+  holds rather than from an order's total, so a refund takes them back with the money, half a refund
+  takes back half, and a chargeback takes them all — one method settles a booking's points whatever
+  has happened to it, which is why there is no separate "take them back" path that could disagree
+  with the giving one. A comp earns nothing. One currency, because a single pool fed by two is
+  arithmetic nobody can explain at a counter. The balance is the sum of the ledger, never a column,
+  like every other running total on this platform. Tiers are read from points earned in a rolling
+  window, so a standing can be lost — which is what makes it mean anything — and spending points
+  never costs somebody their tier. Points turn into ordinary credit on the buyer's own address,
+  which the checkout already knows how to spend: a second kind of money at the checkout would be a
+  second set of edge cases at the one place where an edge case costs somebody their evening. And a
+  tier does one thing a label cannot: during a presale, somebody signed in at or above the named
+  rung is let in without a code.
 - **Best available** — "four together" without a buyer hunting for them, scored by price, by how
   central the run is, and by how many orphan seats it would leave behind.
 - **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
@@ -838,6 +852,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | With single sign-on required, a password is refused — and a wrong password still answers the wrong-password way | `SingleSignOnTest` |
 | Only the platform can let a locked-out account back in | `SingleSignOnTest` |
 | A key that may sell may not refund, and a key from before scopes may still do everything | `SingleSignOnTest`, `sso_smoke` |
+| Points are counted from the seats somebody still holds, so half a refund takes back half | `LoyaltyTest`, `loyalty_smoke` |
+| A chargeback takes the points with the money, and a comp never earned any | `LoyaltyTest` |
+| Settling a booking's points twice gives nothing twice | `LoyaltyTest` |
+| A tier is the highest rung the window reaches, and spending points does not cost it | `LoyaltyTest` |
+| Points turn into credit the checkout already knows how to spend, and the remainder stays theirs | `LoyaltyTest`, `loyalty_smoke` |
+| A tier walks past the presale queue; a standing too low is still asked for a code | `LoyaltyTest` |
+| Points that have gone quiet go, unless the scheme promised they never would | `LoyaltyTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |
