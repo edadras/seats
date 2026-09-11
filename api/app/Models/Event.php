@@ -63,6 +63,14 @@ class Event extends Model
         'presale_starts_at' => 'datetime',
         'on_sale_at' => 'datetime',
         'waiting_room' => 'boolean',
+        /*
+         * A night being rehearsed rather than sold.
+         *
+         * Absent from `$fillable` deliberately: the ordinary event form must not be able to flip
+         * it, because flipping it in either direction has conditions attached and a record to
+         * write. {@see \App\Domain\Rehearsals\Rehearsals} is the only way in.
+         */
+        'is_rehearsal' => 'boolean',
         'waiting_room_capacity' => 'integer',
         'waiting_room_minutes' => 'integer',
     ];

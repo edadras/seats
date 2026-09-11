@@ -321,6 +321,11 @@ class Settlement
     {
         $query->where('o.tenant_id', $this->tenants->idOrFail());
 
+        // A night being rehearsed took no money, so it owes no commission and belongs in no payout.
+        // Said here rather than in each caller: this is the only door into the settlement figures,
+        // and the platform's own invoices are raised from them.
+        $query->where('e.is_rehearsal', false);
+
         if ($filters['event_id'] ?? null) {
             $query->where('e.id', $filters['event_id']);
         }

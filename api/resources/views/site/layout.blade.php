@@ -128,6 +128,19 @@
 </header>
 
 <main id="main">
+    {{-- A night being rehearsed says so, on every page of the path.
+         Said once here rather than in each template: the one thing a rehearsal must never do is
+         look like a real sale, and a banner that three pages remember and the fourth forgets is
+         exactly how somebody ends up believing they have bought a ticket. --}}
+    @if ($rehearsal ?? false)
+        <div class="shell section section--tight">
+            <p class="notice notice--rehearsal">
+                <strong>{{ __('site.rehearsal.title') }}</strong>
+                {{ __('site.rehearsal.body') }}
+            </p>
+        </div>
+    @endif
+
     {{-- Something the last request needs to say — a hold that expired while the buyer was away.
          Rendered here so it is said once, wherever they were sent. --}}
     @if (session('seatmap_message'))

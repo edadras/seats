@@ -20,6 +20,16 @@ class RecordingGateway implements PaymentGateway
     /** @var array<int, array{amount:int, reference:string, order:string}> */
     public array $asked = [];
 
+    /**
+     * Every attempt to take money, in order.
+     *
+     * Recorded so a test can assert the harder thing: not only that the right amount was asked for,
+     * but that nothing was asked for at all — which is the whole claim a rehearsal makes.
+     *
+     * @var array<int, array{amount:int, order:string}>
+     */
+    public array $begun = [];
+
     public function __construct(private readonly string $answer = 'sent') {}
 
     public function key(): string
@@ -39,6 +49,11 @@ class RecordingGateway implements PaymentGateway
 
     public function begin(ExternalOrder $order, array $context): PaymentIntent
     {
+        $this->begun[] = [
+            'amount' => (int) ($context['amount'] ?? 0),
+            'order' => $order->external_order_id,
+        ];
+
         return PaymentIntent::paid('rec_'.$order->external_order_id);
     }
 

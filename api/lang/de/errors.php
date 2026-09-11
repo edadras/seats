@@ -302,4 +302,8 @@ return [
     'renewal_no_seats' => 'Zu dieser Verlängerung gehören keine Plätze.',
     'exchange_closed' => 'Diese Buchung kann nicht mehr umgebucht werden.',
     'exchange_nothing' => 'Diese Plätze sind nicht Ihre zum Umbuchen.',
+    'rehearsal_has_real_bookings' => 'Für diesen Abend wurde schon verkauft, er lässt sich nicht proben. Legen Sie einen neuen Termin an und proben Sie diesen.',
+    'rehearsal_not_cleared' => 'Löschen Sie zuerst die Probe, sonst gehen ihre Buchungen als echte in den Verkauf.',
+    'not_a_rehearsal' => 'Dieser Abend verkauft echt. Seine Buchungen dürfen wir nicht löschen.',
+    'event_rehearsing' => 'Dieser Abend wird geprobt und ist hier nicht im Verkauf. Proben Sie ihn auf Ihrer eigenen Seite, wo nichts berechnet wird.',
 ];

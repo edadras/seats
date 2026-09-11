@@ -61,6 +61,8 @@ class SeatsSoldSource extends BaseSource
     public function query(): Builder
     {
         return Allocation::query()
-            ->leftJoin('events', 'events.id', '=', 'allocations.event_id');
+            ->leftJoin('events', 'events.id', '=', 'allocations.event_id')
+            // A rehearsal is not a sale and has no place in a report about sales.
+            ->where('events.is_rehearsal', false);
     }
 }

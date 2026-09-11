@@ -111,6 +111,8 @@ class SitePageController extends Controller
             'canonical' => $meta['canonical'] ?? null,
             'image' => $meta['image'] ?? Themes::forSite($site)['logo_url'] ?? null,
             'jsonld' => $meta['jsonld'] ?? null,
+            // Only an event page can be a rehearsal: a listing never shows one.
+            'rehearsal' => (bool) ($meta['event']->is_rehearsal ?? false),
             'headerMenu' => $site->menuFor('header'),
             'footerMenu' => $site->menuFor('footer'),
 
@@ -249,6 +251,7 @@ class SitePageController extends Controller
 
         $categories = Event::query()
             ->where('status', 'published')
+            ->where('is_rehearsal', false)
             ->whereNotNull('seat_map_version_id')
             ->whereNotNull('category')
             ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
@@ -275,6 +278,14 @@ class SitePageController extends Controller
 
         $events = Event::with(['venue', 'priceZones'])
             ->where('status', 'published')
+            /*
+             * A night being rehearsed is reachable by its own address and listed nowhere.
+             *
+             * Both halves are wanted. Listing it would put "TEST — do not buy" in front of an
+             * organiser's actual customers, and hiding it altogether would make the one thing a
+             * rehearsal is for — walking the buyer's path on the real site — impossible.
+             */
+            ->where('is_rehearsal', false)
             ->whereNotNull('seat_map_version_id')
             ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
             ->when($filters['category'], fn ($q, $category) => $q->where('category', $category))
@@ -526,6 +537,7 @@ class SitePageController extends Controller
             ->where('series_id', $event->series_id)
             ->whereKeyNot($event->id)
             ->where('status', 'published')
+            ->where('is_rehearsal', false)
             ->whereNotNull('seat_map_version_id')
             ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
             ->orderBy('starts_at')

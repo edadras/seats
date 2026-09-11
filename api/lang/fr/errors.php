@@ -302,4 +302,8 @@ return [
     'renewal_no_seats' => 'Ce renouvellement ne porte sur aucune place.',
     'exchange_closed' => 'Cette réservation ne peut plus être changée.',
     'exchange_nothing' => 'Ces places ne sont pas les vôtres à changer.',
+    'rehearsal_has_real_bookings' => 'Cette soirée a déjà vendu, elle ne peut pas être répétée. Créez une nouvelle date et répétez celle-là.',
+    'rehearsal_not_cleared' => 'Effacez d\'abord la répétition, sinon ses réservations partiraient en vente comme de vraies.',
+    'not_a_rehearsal' => 'Cette soirée est en vente réelle. Ses réservations ne sont pas à nous de supprimer.',
+    'event_rehearsing' => 'Cette soirée est en répétition et n\'est pas en vente ici. Répétez-la sur votre propre site, où rien n\'est débité.',
 ];

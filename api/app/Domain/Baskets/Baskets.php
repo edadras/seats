@@ -64,6 +64,9 @@ class Baskets
                 ->whereColumn('basket_recoveries.external_order_row_id', 'external_orders.id'))
             ->whereHas('event', fn ($query) => $query
                 ->where('status', '!=', 'cancelled')
+                // A rehearsal sends nothing to anybody: the one person it could write to is the
+                // organiser, who is sitting in the panel watching it happen.
+                ->where('is_rehearsal', false)
                 ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '>', now())))
             ->orderBy('created_at')
             ->limit($limit)

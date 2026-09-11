@@ -43,4 +43,8 @@ return [
         'refund_unreachable' => 'The payment gateway could not be reached, so nothing has been refunded. Try again.',
         'nothing_to_refund' => 'There is nothing to send back: this booking was not paid for with money.',
     ],
+    'rehearsal' => [
+        'label' => 'A rehearsal — no money moves',
+        'description' => 'Your booking goes through exactly as a real one would. Nothing is charged to anybody.',
+    ],
 ];

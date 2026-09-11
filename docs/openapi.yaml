@@ -1765,6 +1765,110 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /events/{event}/rehearsal:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: getRehearsal
+      tags: [Events]
+      summary: What a rehearsal has done so far
+      description: |
+        Requires `events.manage` — which a programme manager holds for the nights they were given,
+        because the person putting on the show is exactly the person who should walk its checkout
+        before a stranger does.
+
+        `not_charged` is the figure that says what a rehearsal is: money that was quoted, agreed and
+        never taken from anybody. `link` is the address of the page a buyer would land on, or null
+        when the account has no live site to serve one — a rehearsal is still worth running at the
+        window, so this is an offer rather than a requirement.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Rehearsal" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: setRehearsal
+      tags: [Events]
+      summary: Start or stop rehearsing a night
+      description: |
+        While a night is being rehearsed, two things are true of it and of nothing else on the
+        platform: its checkout never reaches a gateway, and no account-wide figure counts it. The
+        bookings, the seats, the tickets and the scans are all real rows and behave exactly as they
+        would on a live night — which is the only way to find out that they work.
+
+        Two refusals hold the rest of the platform together, and they are the reason no report has to
+        hold an opinion about which of two flags to believe:
+
+        * `rehearsal_has_real_bookings` — a night that has sold something cannot be rehearsed.
+          Flagging it would drop the account's takings by whatever it had already taken, and no
+          amount of clearing afterwards would make those bookings unreal.
+        * `rehearsal_not_cleared` — a rehearsal cannot go back on sale while its bookings are still
+          on it. They hold seats and carry tickets that would scan at the door, and the moment the
+          flag came off they would be counted as takings nobody ever received.
+
+        A rehearsed night is also listed nowhere — not in what's on, not in the sitemap, not among
+        the other dates of a run — and still opens by its own address, because walking the buyer's
+        path on the real site is the one thing a rehearsal is for.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rehearsing]
+              properties:
+                rehearsing: { type: boolean }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Rehearsal" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: The night has sold something, or its rehearsal is not cleared
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      operationId: clearRehearsal
+      tags: [Events]
+      summary: Clear the rehearsal
+      description: |
+        Deletes the rehearsal's bookings and what they consumed: the seats go back, the tickets and
+        the door scans go with them, and the uses a rehearsal spent out of a discount code, a presale
+        code or a gift voucher are handed back. A gift voucher is somebody else's money, so every
+        penny of it returns.
+
+        A `DELETE` on the rehearsal rather than on its bookings, and the distinction is the point:
+        this is not an order-deleting endpoint that happens to be restricted. The only thing it can
+        address is a night that is being rehearsed, and a live one is refused with `not_a_rehearsal`
+        before a single row is read.
+
+        People who joined the waiting list while the night was being rehearsed stay on it. They are
+        not something a rehearsal created — they are strangers who want to come — and the night they
+        queued for is the night that goes on sale.
+      responses:
+        "200":
+          description: Cleared
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/Rehearsal" }
+                  - type: object
+                    properties:
+                      cleared:
+                        type: object
+                        description: What went, counted as it went.
+                        additionalProperties: { type: integer }
+        "403":
+          description: The night is selling for real
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /events/{event}/price-tiers:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -6380,7 +6484,16 @@ paths:
                           a widget that has nowhere to send anybody says so rather than navigating
                           to nothing. A shop that made this hold has its own cart and ignores it.
         "409":
-          description: One or more seats, or an area, are no longer available
+          description: |
+            One or more seats, or an area, are no longer available — or the night is being
+            rehearsed (`event_rehearsing`).
+
+            A rehearsal is refused here deliberately. What happens after this endpoint is somebody
+            else's basket — a WooCommerce shop, a checkout of their own — and that is money this
+            platform neither takes nor can stop. A rehearsal promises that none moves, and the
+            promise is enforced at the edge of what we control rather than quietly broken beyond it.
+            Reading the plan still works: a picker that could not draw the room would look broken to
+            the organiser who is deliberately looking at it.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SeatUnavailableError" }
@@ -12040,6 +12153,27 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    Rehearsal:
+      type: object
+      description: A night being rehearsed, and what the rehearsal has done so far.
+      properties:
+        rehearsing: { type: boolean }
+        bookings: { type: integer, description: "Every booking on the night, whatever its state." }
+        confirmed: { type: integer }
+        seats: { type: integer, description: Places currently held by a live allocation. }
+        tickets: { type: integer }
+        scans: { type: integer, description: "Scans at the door, which a rehearsal is also for." }
+        not_charged:
+          type: integer
+          description: >-
+            Minor units. What would have been charged, had any of it been real — the figure an
+            organiser reads before pressing clear.
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        link:
+          type: [string, "null"]
+          format: uri
+          description: The page a buyer would land on, or null when no site is live yet.
 
     DemandPricing:
       type: object

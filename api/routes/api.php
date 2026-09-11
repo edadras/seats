@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\ProductionController;
 use App\Http\Controllers\Api\V1\Management\ProgrammeManagerController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
+use App\Http\Controllers\Api\V1\Management\RehearsalController;
 use App\Http\Controllers\Api\V1\Management\ReceiptController;
 use App\Http\Controllers\Api\V1\Management\PaymentPlanController;
 use App\Http\Controllers\Api\V1\Management\RiskController;
@@ -172,6 +173,14 @@ Route::prefix('v1')->group(function () {
         // The switch, the ladder and the rails together: turning demand pricing on without a
         // ceiling is the mistake this feature is most able to make.
         Route::put('events/{event}/demand-pricing', [DemandPricingController::class, 'replace']);
+        /*
+         * Rehearsing a night, and sweeping the rehearsal away.
+         *
+         * The clear is a `DELETE` on the rehearsal, not on its bookings: the only night it can
+         * address is one that is being rehearsed, and it refuses any other before reading a row.
+         */
+        Route::put('events/{event}/rehearsal', [RehearsalController::class, 'update']);
+        Route::delete('events/{event}/rehearsal', [RehearsalController::class, 'destroy']);
         // Who the tickets are for. Beside pricing because that is what a concession is: an
         // adjustment to the price the seat already has.
         // What the checkout asks. Beside the ticket types because both are decisions about what a
@@ -254,6 +263,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('events/{event}/price-tiers', [PriceTierController::class, 'index']);
         Route::get('events/{event}/demand-pricing', [DemandPricingController::class, 'show']);
+        Route::get('events/{event}/rehearsal', [RehearsalController::class, 'show']);
         Route::get('events/{event}/seat-prices', [SeatPriceController::class, 'index']);
         Route::put('events/{event}/seat-prices', [SeatPriceController::class, 'update']);
         Route::get('events/{event}/stats', [EventController::class, 'stats']);

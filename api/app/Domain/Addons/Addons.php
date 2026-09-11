@@ -2,6 +2,7 @@
 
 namespace App\Domain\Addons;
 
+use App\Domain\Rehearsals\Live;
 use App\Exceptions\ApiException;
 use App\Models\Addon;
 use App\Models\Event;
@@ -210,6 +211,7 @@ class Addons
 
         return DB::table('order_addons as l')
             ->join('external_orders as o', 'o.id', '=', 'l.external_order_row_id')
+            ->tap(fn ($query) => Live::only($query, 'o.event_id'))
             ->whereIn('l.addon_id', $addonIds)
             ->whereNull('l.refunded_at')
             ->whereIn('o.status', ['pending', 'confirmed', 'partially_refunded'])

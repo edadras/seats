@@ -2,6 +2,7 @@
 
 namespace App\Domain\Customers;
 
+use App\Domain\Rehearsals\Live;
 use App\Models\Allocation;
 use App\Models\ExternalOrder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -111,6 +112,8 @@ class CustomerDirectory
 
         $orders = ExternalOrder::query()
             ->whereRaw(self::ID.' = ?', [$id])
+            // The organiser's own test booking is not part of anybody's history with this venue.
+            ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
             ->with(['event:id,name,starts_at,timezone,currency', 'allocations.ticket:id,allocation_id,status,used_at'])
             ->orderByDesc('created_at')
             ->limit(500)
@@ -201,6 +204,8 @@ class CustomerDirectory
             ->toBase()
             ->leftJoinSub($seats, 'seats', 'seats.external_order_row_id', '=', 'external_orders.id')
             ->whereRaw("nullif(btrim(coalesce(external_orders.buyer->>'email', '')), '') is not null");
+
+        Live::only($query, 'external_orders.event_id');
 
         if (! empty($filters['event_id'])) {
             $query->where('external_orders.event_id', $filters['event_id']);
@@ -315,6 +320,7 @@ class CustomerDirectory
     {
         return ExternalOrder::query()
             ->toBase()
+            ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
             ->selectRaw('external_orders.currency, count(*) as orders')
             ->groupBy('external_orders.currency')
             ->orderByDesc('orders')
@@ -338,6 +344,8 @@ class CustomerDirectory
     {
         $query = ExternalOrder::query()->toBase()
             ->whereRaw("nullif(btrim(coalesce(external_orders.buyer->>'email', '')), '') is null");
+
+        Live::only($query, 'external_orders.event_id');
 
         if (! empty($filters['event_id'])) {
             $query->where('external_orders.event_id', $filters['event_id']);

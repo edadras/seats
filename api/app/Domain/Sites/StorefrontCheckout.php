@@ -6,12 +6,15 @@ use App\Domain\Discounts\DiscountOffer;
 use App\Domain\Discounts\Discounts;
 use App\Domain\Orders\OrderService;
 use App\Domain\Orders\OrderTotals;
+use App\Domain\Rehearsals\RehearsalGateway;
 use App\Domain\Sites\Payments\GatewayRegistry;
+use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
 use App\Domain\Vouchers\VoucherOffer;
 use App\Domain\Vouchers\Vouchers;
 use App\Exceptions\ApiException;
 use App\Models\ApiClient;
+use App\Models\Event;
 use App\Models\ExternalOrder;
 use App\Models\Hold;
 use App\Models\Site;
@@ -128,7 +131,7 @@ class StorefrontCheckout
             $voucher?->isAllowed() ? $voucher->amount : 0,
         );
 
-        $gateway = $expected->payable > 0 ? $this->gateways->get($gatewayKey) : null;
+        $gateway = $expected->payable > 0 ? $this->gatewayFor($hold->event, $gatewayKey) : null;
         $client = $this->clientFor($site);
 
         [$order, $registered] = $this->orders->register(
@@ -301,10 +304,28 @@ class StorefrontCheckout
         return [$order, $intent];
     }
 
+    /**
+     * Which gateway takes this money — decided from the night, not only from the form.
+     *
+     * A night being rehearsed is handed {@see RehearsalGateway} whatever the request asked for, and
+     * that order is the safety property: if the buyer's choice could win, a rehearsal would be one
+     * crafted form field away from taking a real payment into the organiser's real account.
+     *
+     * The reverse is impossible by construction — the rehearsal gateway is not in the registry, so
+     * no live checkout can reach it even if somebody types its key.
+     */
+    private function gatewayFor(Event $event, string $gatewayKey): PaymentGateway
+    {
+        return $event->is_rehearsal
+            ? app(RehearsalGateway::class)
+            : $this->gateways->get($gatewayKey);
+    }
+
     /** Settle a gateway's answer. Safe to call twice: both redirects and webhooks arrive twice. */
     public function settle(ExternalOrder $order, string $gatewayKey, array $payload): ExternalOrder
     {
-        $intent = $this->gateways->get($gatewayKey)->settle($order, $payload);
+        $event = $order->event ?? $order->loadMissing('event')->event;
+        $intent = $this->gatewayFor($event, $gatewayKey)->settle($order, $payload);
 
         if ($intent->isPaid()) {
             return $this->orders->confirm($order, $order->buyer ?? [], now());

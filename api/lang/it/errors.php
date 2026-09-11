@@ -302,4 +302,8 @@ return [
     'renewal_no_seats' => 'Questo rinnovo non riguarda alcun posto.',
     'exchange_closed' => 'Questa prenotazione non può più essere spostata.',
     'exchange_nothing' => 'Questi posti non sono tuoi da spostare.',
+    'rehearsal_has_real_bookings' => 'Questa serata ha già venduto, quindi non può essere provata. Crea una nuova data e prova quella.',
+    'rehearsal_not_cleared' => 'Cancella prima la prova, altrimenti le sue prenotazioni andrebbero in vendita come vere.',
+    'not_a_rehearsal' => 'Questa serata vende per davvero. Le sue prenotazioni non sta a noi cancellarle.',
+    'event_rehearsing' => 'Questa serata è in prova e qui non è in vendita. Provala sul tuo sito, dove non si addebita nulla.',
 ];

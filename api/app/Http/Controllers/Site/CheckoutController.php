@@ -8,6 +8,7 @@ use App\Domain\Discounts\DiscountOffer;
 use App\Domain\Discounts\Discounts;
 use App\Domain\Invoicing\InvoiceIssuer;
 use App\Domain\Questions\CheckoutQuestions;
+use App\Domain\Rehearsals\RehearsalGateway;
 use App\Domain\Sites\Payments\GatewayRegistry;
 use App\Domain\Sites\StorefrontCheckout;
 use App\Domain\Sites\Themes;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Site\Concerns\RendersSitePages;
 use App\Models\ExternalOrder;
 use App\Models\Hold;
+use App\Models\Event;
 use App\Models\Site;
 use App\Support\Locale\Money;
 use App\Support\Pdf\InvoicePdf;
@@ -117,6 +119,8 @@ class CheckoutController extends Controller
             // The night itself, for the one question that is a property of the event rather than
             // of the basket: whether this venue asks what a buyer needs to get in and sit down.
             'event' => $hold->event,
+            // A rehearsal says so above the form, not after the money would have moved.
+            'rehearsal' => (bool) $hold->event->is_rehearsal,
             'lines' => $this->lines($snapshot),
             // The window they chose, read back from the signed snapshot rather than looked up
             // again: it is part of what was reserved, and the page must show what was reserved.
@@ -149,7 +153,7 @@ class CheckoutController extends Controller
             'donation' => app(Donations::class)->prompt($hold->event),
             'currency' => $hold->currency,
             'expires_at' => $hold->expires_at,
-            'gateways' => $this->gateways->enabledFor($site),
+            'gateways' => $this->waysToPay($site, $hold->event),
             // Only asked for where an invoice can actually be issued. A company address field on a
             // site that cannot produce the document is a question with no purpose.
             'invoices' => $site->offersInvoices(),
@@ -475,7 +479,7 @@ class CheckoutController extends Controller
         // A booking a voucher pays for outright never reaches a gateway, so it must not be made to
         // choose one. Everything else must: an unpaid booking with no way to pay is not a booking.
         $freeOfCharge = $voucher && $voucher->amount >= $before->total;
-        $allowed = array_map(fn ($g) => $g->key(), $this->gateways->enabledFor($site));
+        $allowed = array_map(fn ($g) => $g->key(), $this->waysToPay($site, $hold->event));
 
         if (! $freeOfCharge && ! in_array($data['gateway'] ?? '', $allowed, true)) {
             return back()->withInput()->withErrors(['gateway' => __('site.chooseAWayToPay')]);
@@ -640,6 +644,24 @@ class CheckoutController extends Controller
     }
 
     /**
+     * The ways this night can be paid for.
+     *
+     * A night being rehearsed offers exactly one, and it is not one of the organiser's: the whole
+     * point is that no money moves, so the real gateways are not offered and not accepted. The
+     * choice is made here, on the way in, as well as inside the checkout — the screen has to show
+     * the buyer what is going to happen, and a form offering a card field that silently does
+     * something else is worse than no rehearsal at all.
+     *
+     * @return array<int, \App\Domain\Sites\Payments\PaymentGateway>
+     */
+    private function waysToPay(Site $site, Event $event): array
+    {
+        return $event->is_rehearsal
+            ? [app(RehearsalGateway::class)]
+            : $this->gateways->enabledFor($site);
+    }
+
+    /**
      * Where a redirect gateway sends the buyer back to.
      *
      * Nothing in this request is believed. The gateway is asked whether the money moved, over its
@@ -795,6 +817,7 @@ class CheckoutController extends Controller
         return $this->view($site, 'site.order', [
             'title' => 'Your tickets · '.$site->name,
             'order' => $order,
+            'rehearsal' => (bool) ($order->event ?? $order->loadMissing('event')->event)->is_rehearsal,
             'tokens' => $tokens,
             'invoice' => app(InvoiceIssuer::class)->isEligible($site, $order),
             // Offered only where pressing it will actually work: "enabled" is a switch somebody

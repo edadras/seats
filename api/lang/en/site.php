@@ -448,4 +448,8 @@ return [
         'declined' => 'Thank you for letting us know. Your seats have gone back on sale.',
         'over' => 'This offer has closed and the seats are on general sale.',
     ],
+    'rehearsal' => [
+        'title' => 'A rehearsal.',
+        'body' => 'This night is being tested. You can go all the way through, and nothing will be charged — these tickets are not real.',
+    ],
 ];

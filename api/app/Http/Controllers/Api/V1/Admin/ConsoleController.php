@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Domain\Rehearsals\Live;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Allocation;
@@ -53,10 +54,14 @@ class ConsoleController extends Controller
                 'domains_verified' => SiteDomain::whereNotNull('verified_at')->count(),
             ],
             'selling' => [
-                'events' => Event::where('status', 'published')->count(),
-                'tickets_issued' => Ticket::count(),
+                // Nights being rehearsed are left out of all three: they are not on sale, their
+                // tickets are nobody's, and the platform will never invoice a penny of them.
+                'events' => Event::where('status', 'published')->where('is_rehearsal', false)->count(),
+                'tickets_issued' => Ticket::query()
+                    ->tap(fn ($query) => Live::only($query, 'tickets.event_id'))->count(),
                 'seats_sold_this_month' => Allocation::where('status', 'active')
-                    ->where('allocated_at', '>=', $month)->count(),
+                    ->where('allocated_at', '>=', $month)
+                    ->tap(fn ($query) => Live::only($query, 'allocations.event_id'))->count(),
             ],
             /*
              * Takings are grouped by currency rather than added up. A platform serving Tehran and
@@ -65,6 +70,7 @@ class ConsoleController extends Controller
              */
             'takings_this_month' => ExternalOrder::query()
                 ->where('status', 'confirmed')
+                ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
                 ->where('confirmed_at', '>=', $month)
                 ->groupBy('currency')
                 ->select('currency', DB::raw('sum(total_amount) as total'), DB::raw('count(*) as orders'))

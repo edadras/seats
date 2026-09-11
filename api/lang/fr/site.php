@@ -444,4 +444,8 @@ return [
         'declined' => 'Merci de nous avoir prévenus. Vos places sont reparties en vente.',
         'over' => 'Cette offre est close et les places sont en vente libre.',
     ],
+    'rehearsal' => [
+        'title' => 'Une répétition.',
+        'body' => 'Cette soirée est en test. Vous pouvez aller jusqu\'au bout, rien ne sera débité — ces billets ne sont pas réels.',
+    ],
 ];

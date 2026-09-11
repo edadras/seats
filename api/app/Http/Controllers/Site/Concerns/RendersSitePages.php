@@ -29,6 +29,10 @@ trait RendersSitePages
             'canonical' => null,
             'image' => null,
             'jsonld' => null,
+            // Whether the visitor is walking through a rehearsal. False unless a page knows
+            // otherwise, so the banner is opt-in and a page that forgot cannot claim a real sale
+            // is a test one.
+            'rehearsal' => false,
             'headerMenu' => $site->menuFor('header'),
             'footerMenu' => $site->menuFor('footer'),
         ]);

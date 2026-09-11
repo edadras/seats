@@ -40,6 +40,9 @@
 		{ group: 'programme', items: [
 			{ key: 'events', icon: 'calendar', needs: 'events.view' },
 			{ key: 'productions', icon: 'map', needs: 'events.view', notFor: 'manager' },
+			// A dress rehearsal for the buyer's path. Beside the counter because it is the same
+			// act — selling a seat — with nobody's money in it.
+			{ key: 'rehearsal', icon: 'eye', needs: 'events.manage' },
 			{ key: 'counter', icon: 'ticket', needs: 'orders.sell' },
 			{ key: 'tills', icon: 'wallet', needs: 'orders.sell' },
 			{ key: 'agents', icon: 'users', needs: 'agents.manage' },
@@ -976,6 +979,7 @@
 			case 'vouchers': return window.SeatmapVouchers.render( this );
 			case 'wallet': return window.SeatmapWallet.render( this );
 			case 'waitlist': return window.SeatmapWaitlist.render( this );
+			case 'rehearsal': return window.SeatmapRehearsal.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
@@ -1615,7 +1619,12 @@
 					return '<tr><td class="table__primary">' + esc( event.name ) + '</td>' +
 						'<td class="tnum">' + esc( App.date( event.starts_at ) ) + '</td>' +
 						'<td>' + badge( self.t( 'panel.eventStatus.' + event.status ),
-							STATUS_TONE[ event.status ] ) + '</td>' +
+							STATUS_TONE[ event.status ] ) +
+							// Beside the status rather than instead of it: a rehearsal is still
+							// draft or published, and both facts matter.
+							( event.is_rehearsal
+								? ' ' + badge( self.t( 'panel.rehearsal.badge' ), 'warn' )
+								: '' ) + '</td>' +
 						'<td class="tnum">' + priceRange( event ) + '</td>' +
 						'<td><code>' + esc( event.public_id ) + '</code>' +
 						'<button class="icon-btn icon-btn--sm" data-copy="' + esc( event.public_id ) +

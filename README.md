@@ -180,6 +180,23 @@ A seat is the start of it, not the end. Around the map:
   turns it on — a price that moves on its own is a decision a house makes deliberately, and some of
   them are forbidden to — and it never moves under a buyer who already has seats in a basket,
   because the hold carries the price it quoted.
+- **A rehearsal that costs nothing.** Everything an organiser sets up before an onsale — the prices,
+  the fees, the confirmation email, the QR code at the door — used to be first exercised by a
+  stranger with a card. A night can be marked as a rehearsal instead: the checkout is handed a
+  gateway that is not in the registry and cannot be chosen by a site, so no money can move whatever
+  a form asks for; the bookings, tickets and door scans are real rows behaving exactly as they would
+  on a live night, which is the only way to find out that they work; and no account-wide figure
+  counts any of it — not the takings, the payouts, the platform's own invoice, a report, the customer
+  directory, an agency's commission, the drawer at the window or an add-on's stock. Clearing it
+  afterwards puts the seats back and hands back what the rehearsal spent out of a discount code, a
+  presale code or a gift voucher, because a gift card is somebody else's money. The flag lives on the
+  event and nowhere else: a night that has sold something cannot be rehearsed, and a rehearsal cannot
+  go back on sale until it is cleared, so "a booking on a rehearsed night" and "a test booking" are
+  the same set permanently and no figure has to ask twice. A rehearsed night is listed nowhere — not
+  in what's on, not in the sitemap — and still opens by its own address, with a banner on every page
+  of the path saying so. The embedded picker refuses to hold seats for one, because what happens
+  after that endpoint is somebody else's basket and money this platform neither takes nor can stop:
+  the promise is enforced at the edge of what we control rather than quietly broken beyond it.
 - **Best available** — "four together" without a buyer hunting for them, scored by price, by how
   central the run is, and by how many orphan seats it would leave behind.
 - **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
@@ -764,6 +781,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A price that moves does not move under somebody already holding seats | `DemandPricingTest` |
 | Nothing moves until somebody turns it on, and an explicit seat price never moves | `DemandPricingTest` |
 | Rails the wrong way round are refused rather than resolved | `DemandPricingTest` |
+| A rehearsal's checkout never reaches a real gateway, whatever the form asks for | `RehearsalTest`, `rehearsal_smoke` |
+| A night that has sold something cannot be rehearsed, and a rehearsal cannot go back on sale uncleared | `RehearsalTest`, `rehearsal_smoke` |
+| No account-wide figure counts a rehearsal — takings, reports, customers, add-on stock | `RehearsalTest` |
+| Clearing puts the seats back and takes the tickets and the scans with them | `RehearsalTest`, `rehearsal_smoke` |
+| Clearing hands back what a discount code and a gift voucher spent | `RehearsalTest` |
+| A rehearsal is listed nowhere and opens by its own address, saying what it is | `RehearsalTest`, `rehearsal_smoke` |
+| Somebody else's shop cannot hold seats on a rehearsed night, though it can still read the plan | `RehearsalTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

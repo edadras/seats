@@ -668,6 +668,13 @@ class EventController extends Controller
             // What the sale is doing right now, so a screen does not have to work it out from
             // two instants and a clock it may not share.
             'sale_state' => \App\Domain\Access\SaleWindow::state($event),
+            /*
+             * Whether this night is being rehearsed.
+             *
+             * Travels with every event so that every screen showing a list can say so. A rehearsal
+             * that looks like an ordinary night on one screen is how somebody announces one.
+             */
+            'is_rehearsal' => (bool) $event->is_rehearsal,
             'availability_version' => $event->availability_version,
 
             /*

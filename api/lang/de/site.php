@@ -445,4 +445,8 @@ return [
         'declined' => 'Danke für die Nachricht. Ihre Plätze sind wieder im Verkauf.',
         'over' => 'Dieses Angebot ist beendet, die Plätze sind im freien Verkauf.',
     ],
+    'rehearsal' => [
+        'title' => 'Eine Probe.',
+        'body' => 'Dieser Abend wird getestet. Sie können den ganzen Weg gehen, es wird nichts berechnet – diese Tickets sind nicht echt.',
+    ],
 ];

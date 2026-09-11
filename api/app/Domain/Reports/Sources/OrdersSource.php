@@ -62,6 +62,8 @@ class OrdersSource extends BaseSource
          */
         return ExternalOrder::query()
             ->leftJoin('events', 'events.id', '=', 'external_orders.event_id')
-            ->leftJoin('api_clients', 'api_clients.id', '=', 'external_orders.api_client_id');
+            ->leftJoin('api_clients', 'api_clients.id', '=', 'external_orders.api_client_id')
+            // A rehearsal is not a sale and has no place in a report about sales.
+            ->where('events.is_rehearsal', false);
     }
 }

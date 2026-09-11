@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
+use App\Domain\Rehearsals\Live;
 use App\Domain\Attribution\Attribution;
 use App\Http\Controllers\Controller;
 use App\Models\ExternalOrder;
@@ -94,6 +95,8 @@ class PromoterController extends Controller
 
         $orders = ExternalOrder::query()
             ->whereNotNull('promoter_id')
+            // Nobody is owed a commission on a rehearsal.
+            ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
             ->whereIn('status', ['confirmed', 'partially_refunded'])
             ->when($filters['event_id'] ?? null, fn ($q, $id) => $q->where('event_id', $id))
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('confirmed_at', '>=', $from))
@@ -137,6 +140,7 @@ class PromoterController extends Controller
          */
         $campaigns = ExternalOrder::query()
             ->whereNull('promoter_id')
+            ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
             ->whereNotNull('attribution')
             ->whereIn('status', ['confirmed', 'partially_refunded'])
             ->when($filters['event_id'] ?? null, fn ($q, $id) => $q->where('event_id', $id))

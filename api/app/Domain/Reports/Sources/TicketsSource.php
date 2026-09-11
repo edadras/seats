@@ -54,6 +54,8 @@ class TicketsSource extends BaseSource
     {
         return Ticket::query()
             ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
-            ->leftJoin('allocations', 'allocations.id', '=', 'tickets.allocation_id');
+            ->leftJoin('allocations', 'allocations.id', '=', 'tickets.allocation_id')
+            // Tickets printed for a rehearsal scanned at a door nobody stood at.
+            ->where('events.is_rehearsal', false);
     }
 }

@@ -116,6 +116,25 @@ class EmbedController extends Controller
     {
         $event = $this->resolveEvent($publicId);
 
+        /*
+         * A night being rehearsed is not sold through anybody else's shop.
+         *
+         * This endpoint is the one an embedded picker calls, and what happens after it is a
+         * WooCommerce basket, a Shopify checkout, somebody's own payment page — money this platform
+         * neither takes nor can stop. A rehearsal promises that no money moves, and the promise can
+         * only be kept where we are the ones taking it, so the promise is enforced at the edge of
+         * what we control rather than quietly broken beyond it.
+         *
+         * The plan itself still reads: a picker that cannot draw the room would look broken to the
+         * organiser who is deliberately looking at it.
+         */
+        if ($event->is_rehearsal) {
+            throw ApiException::conflict(
+                'event_rehearsing',
+                'This night is being rehearsed and is not on sale here. Rehearse it on your own site, where nothing is charged.'
+            );
+        }
+
         $data = $request->validate([
             'seat_ids' => ['sometimes', 'array', 'max:'.config('seatmap.hold.max_seats')],
             'seat_ids.*' => ['uuid'],

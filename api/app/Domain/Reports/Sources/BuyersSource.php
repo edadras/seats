@@ -80,6 +80,8 @@ class BuyersSource extends BaseSource
         return ExternalOrder::query()
             ->leftJoin('events', 'events.id', '=', 'external_orders.event_id')
             ->leftJoin('api_clients', 'api_clients.id', '=', 'external_orders.api_client_id')
-            ->whereRaw("nullif(btrim(coalesce(external_orders.buyer->>'email', '')), '') is not null");
+            ->whereRaw("nullif(btrim(coalesce(external_orders.buyer->>'email', '')), '') is not null")
+            // The organiser's own address, typed into their own rehearsal, is not a customer.
+            ->where('events.is_rehearsal', false);
     }
 }

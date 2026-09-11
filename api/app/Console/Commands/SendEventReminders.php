@@ -43,6 +43,7 @@ class SendEventReminders extends Command
                 }
 
                 $events = Event::where('status', 'published')
+                    ->where('is_rehearsal', false)
                     ->whereBetween('starts_at', [now(), $until])
                     ->get();
 

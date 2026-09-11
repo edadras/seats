@@ -2,6 +2,7 @@
 
 namespace App\Domain\BoxOffice;
 
+use App\Domain\Rehearsals\Live;
 use App\Exceptions\ApiException;
 use App\Models\Event;
 use App\Models\ExternalOrder;
@@ -108,6 +109,9 @@ class Tills
         $rows = ExternalOrder::query()
             ->toBase()
             ->where('external_orders.shift_id', $shift->id)
+            // A rehearsed sale at the window took no money out of anybody's hand, and counting it
+            // would report a drawer with more in it than the operator ever received.
+            ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
             ->selectRaw(<<<'SQL'
                 count(*) filter (where status in ('confirmed', 'partially_refunded', 'refunded')) as orders,
                 coalesce(sum(total_amount) filter (
@@ -145,6 +149,7 @@ class Tills
         $refunded = (int) DB::table('allocations')
             ->join('external_orders as o', 'o.id', '=', 'allocations.external_order_row_id')
             ->where('o.shift_id', $shift->id)
+            ->tap(fn ($query) => Live::only($query, 'o.event_id'))
             ->whereRaw("o.metadata->>'method' = 'cash'")
             ->whereRaw("o.metadata->>'payment' = 'paid'")
             ->whereIn('allocations.status', ['released', 'void'])

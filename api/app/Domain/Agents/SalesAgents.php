@@ -2,6 +2,7 @@
 
 namespace App\Domain\Agents;
 
+use App\Domain\Rehearsals\Live;
 use App\Exceptions\ApiException;
 use App\Models\AgentCreditEntry;
 use App\Models\Event;
@@ -179,6 +180,8 @@ class SalesAgents
     {
         $orders = ExternalOrder::query()
             ->where('sales_agent_id', $agent->id)
+            // An agency is never invoiced for a rehearsal, whoever's name is on it.
+            ->tap(fn ($query) => Live::only($query, 'external_orders.event_id'))
             ->whereIn('status', ['confirmed', 'partially_refunded', 'refunded', 'charged_back'])
             // A comp is a gift of the organiser's, not a ticket the agent owes for. Told apart by
             // the same marker the till uses, so the two never disagree about what a free seat is.

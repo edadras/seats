@@ -443,6 +443,26 @@ hr { border: none; }
 	color: var(--text-muted);
 }
 
+/*
+ * A night being rehearsed, said where a visitor cannot miss it.
+ *
+ * Warm rather than red: nothing is wrong, and an alarm would send an organiser looking for the
+ * fault. It has to be louder than the page around it all the same, because the whole purpose of
+ * the sentence is that nobody mistakes this page for the real shop.
+ */
+.notice--rehearsal {
+	/* Mixed into the theme's own surface rather than stated outright, so a dark theme or an
+	   organiser's own palette gets a banner that belongs to it. Amber is not a theme token
+	   because no other element on a buyer's page has ever needed one. */
+	border-color: color-mix(in srgb, #b45309 45%, var(--border));
+	background: color-mix(in srgb, #b45309 10%, var(--surface));
+	color: var(--text);
+}
+
+.notice--rehearsal strong {
+	margin-inline-end: 0.35rem;
+}
+
 /* The organiser's own sentence under the refusal above it — an explanation, not a second alarm. */
 .notice--quiet {
 	margin-block-start: 0.6rem;

@@ -60,6 +60,8 @@ class CheckinsSource extends BaseSource
         return Checkin::query()
             ->leftJoin('events', 'events.id', '=', 'checkins.event_id')
             ->leftJoin('checkin_devices', 'checkin_devices.id', '=', 'checkins.checkin_device_id')
-            ->leftJoin('checkin_operators', 'checkin_operators.id', '=', 'checkins.checkin_operator_id');
+            ->leftJoin('checkin_operators', 'checkin_operators.id', '=', 'checkins.checkin_operator_id')
+            // Somebody testing the scanner is not an attendance figure.
+            ->where('events.is_rehearsal', false);
     }
 }

@@ -302,4 +302,8 @@ return [
     'renewal_no_seats' => 'That renewal has no seats on it.',
     'exchange_closed' => 'This booking can no longer be moved.',
     'exchange_nothing' => 'Those seats are not yours to move.',
+    'rehearsal_has_real_bookings' => 'This night has already sold something, so it cannot be rehearsed. Copy it to a new date and rehearse that instead.',
+    'rehearsal_not_cleared' => 'Clear the rehearsal first, or its bookings would go on sale as real ones.',
+    'not_a_rehearsal' => 'This night is selling for real. Its bookings are not ours to delete.',
+    'event_rehearsing' => 'This night is being rehearsed and is not on sale here. Rehearse it on your own site, where nothing is charged.',
 ];

@@ -87,6 +87,7 @@ class SiteFilesController extends Controller
         }
 
         $events = Event::where('status', 'published')
+            ->where('is_rehearsal', false)
             ->whereNotNull('seat_map_version_id')
             ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
             ->orderBy('starts_at')

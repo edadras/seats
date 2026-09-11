@@ -2,6 +2,7 @@
 
 namespace App\Domain\Audience;
 
+use App\Domain\Rehearsals\Live;
 use App\Models\Event;
 use App\Models\ExternalOrder;
 use Illuminate\Database\Query\Builder;
@@ -87,6 +88,9 @@ class Segments
             ->whereIn('external_orders.status', self::PAID)
             ->whereRaw("nullif(btrim(coalesce(external_orders.buyer->>'email', '')), '') is not null")
             ->groupByRaw("lower(btrim(external_orders.buyer->>'email'))");
+
+        // Nobody bought anything on a night being rehearsed, so nobody here is a person to write to.
+        Live::only($query, 'external_orders.event_id');
 
         $this->narrowOrders($query, $rules);
         $this->narrowPeople($query, $rules);

@@ -42,4 +42,8 @@ return [
         'refund_unreachable' => 'La passerelle de paiement était injoignable ; rien n’a été remboursé. Réessayez.',
         'nothing_to_refund' => 'Il n’y a rien à rembourser : cette réservation n’a pas été payée en argent.',
     ],
+    'rehearsal' => [
+        'label' => 'Une répétition — aucun argent ne circule',
+        'description' => 'La réservation se déroule exactement comme une vraie. Personne n\'est débité.',
+    ],
 ];

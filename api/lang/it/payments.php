@@ -42,4 +42,8 @@ return [
         'refund_unreachable' => 'Il gateway di pagamento non era raggiungibile, quindi non è stato rimborsato nulla. Riprova.',
         'nothing_to_refund' => 'Non c’è nulla da restituire: questa prenotazione non è stata pagata in denaro.',
     ],
+    'rehearsal' => [
+        'label' => 'Una prova — nessun denaro si muove',
+        'description' => 'La prenotazione procede esattamente come una vera. Non si addebita nulla a nessuno.',
+    ],
 ];

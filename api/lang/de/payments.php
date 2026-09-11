@@ -42,4 +42,8 @@ return [
         'refund_unreachable' => 'Der Zahlungsdienst war nicht erreichbar, es wurde nichts erstattet. Bitte erneut versuchen.',
         'nothing_to_refund' => 'Es gibt nichts zurückzusenden: diese Buchung wurde nicht mit Geld bezahlt.',
     ],
+    'rehearsal' => [
+        'label' => 'Eine Probe – es fließt kein Geld',
+        'description' => 'Die Buchung läuft genau wie eine echte. Niemandem wird etwas berechnet.',
+    ],
 ];

@@ -57,6 +57,8 @@ class EventsSource extends BaseSource
     {
         return Event::query()
             ->leftJoin('venues', 'venues.id', '=', 'events.venue_id')
-            ->leftJoin('seat_map_versions', 'seat_map_versions.id', '=', 'events.seat_map_version_id');
+            ->leftJoin('seat_map_versions', 'seat_map_versions.id', '=', 'events.seat_map_version_id')
+            // A night being rehearsed is not yet part of the season.
+            ->where('events.is_rehearsal', false);
     }
 }

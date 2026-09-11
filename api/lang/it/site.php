@@ -444,4 +444,8 @@ return [
         'declined' => 'Grazie per averlo detto. I tuoi posti sono tornati in vendita.',
         'over' => 'Questa offerta è chiusa e i posti sono in vendita libera.',
     ],
+    'rehearsal' => [
+        'title' => 'Una prova.',
+        'body' => 'Questa serata è in prova. Puoi arrivare fino in fondo e non ti verrà addebitato nulla: questi biglietti non sono reali.',
+    ],
 ];
