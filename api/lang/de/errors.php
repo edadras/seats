@@ -173,6 +173,8 @@ return [
     'role_exists' => 'Eine Rolle trägt diesen Namen bereits.',
     'unknown_role' => 'Diese Rolle gibt es nicht.',
     'not_your_programme' => 'Diese Seite gehört zum Konto, nicht zu einem Abend, den Sie führen.',
+    'embed_origin_not_allowed' => 'Dieser Saalplan ist auf dieser Website nicht freigegeben. Wenn es Ihre Website ist, tragen Sie sie im Seatmap-Panel unter „Verbindungen“ in die Liste der erlaubten Websites ein.',
+    'embed_origin_invalid' => 'Das sieht nicht nach einer Website-Adresse aus.',
     'unknown_event' => 'Diese Veranstaltung wurde nicht gefunden.',
     'unknown_manager' => 'Diese Programmleitung wurde nicht gefunden.',
     'invitation_unknown' => 'Diese Einladung wurde nicht gefunden.',

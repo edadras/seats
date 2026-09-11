@@ -9576,6 +9576,98 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FirstSteps" }
 
+  /embed-origins:
+    get:
+      operationId: listEmbedOrigins
+      tags: [Connections]
+      summary: The websites this organiser's seat maps may be drawn on
+      description: |
+        Requires `connections.manage`.
+
+        The embed snippet carries no key — that is what makes it usable by somebody with a page and
+        no toolchain, and it is also why anybody who views a venue's booking page can copy it. This
+        list is what decides where a copy works: a request to `/embed/*` whose `Origin` is not on it
+        is refused with `embed_origin_not_allowed`.
+
+        `Origin` is a fact a browser states and will not let a page lie about. It is not proof about
+        a person, and this does not pretend otherwise — see `THREAT_MODEL.md` T9 for why that is
+        sufficient for what these endpoints expose and would not be anywhere else.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmbedOrigin" }
+    post:
+      operationId: allowEmbedOrigin
+      tags: [Connections]
+      summary: Let a website draw this organiser's seat maps
+      description: |
+        Requires `connections.manage`. Send whatever the organiser typed — a bare hostname, a full
+        URL, an origin copied out of a console message. It is reduced to a hostname, a default port
+        for the scheme is dropped because a browser never sends one, and `www` matches the apex
+        either way round.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hostname]
+              properties:
+                hostname: { type: string, maxLength: 255 }
+                label:
+                  type: [string, "null"]
+                  maxLength: 120
+                  description: What the organiser calls it, so a list of eight can be pruned.
+      responses:
+        "201":
+          description: Allowed. The whole list comes back.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmbedOrigin" }
+        "422":
+          description: "`embed_origin_invalid` — that is not a website address."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /embed-origins/{origin}:
+    parameters:
+      - name: origin
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: withdrawEmbedOrigin
+      tags: [Connections]
+      summary: Stop a website drawing this organiser's seat maps
+      description: |
+        Requires `connections.manage`. The picker stops working on that website immediately.
+        Bookings already made through it are untouched.
+      responses:
+        "200":
+          description: Withdrawn. The whole list comes back.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmbedOrigin" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api-clients:
     get:
       operationId: listApiClients
@@ -13310,6 +13402,22 @@ components:
             properties:
               size: { type: integer }
               url: { type: [string, "null"], format: uri }
+
+    EmbedOrigin:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        hostname:
+          type: string
+          description: The hostname as stored — lower-cased, with any default port removed.
+        label: { type: [string, "null"] }
+        last_seen_at:
+          type: [string, "null"]
+          format: date-time
+          description: >-
+            When a page on this host last asked for a hall. Written at most once a day per site, so
+            an on-sale does not turn it into a write per seat map fetched. It is how an organiser
+            finds the entry nobody uses any more.
 
     Overview:
       type: object

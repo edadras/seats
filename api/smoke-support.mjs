@@ -9,7 +9,25 @@
  * you nothing about why.
  */
 
-const login = async (base, device) => {
+/**
+ * The website these checks are standing on when they act as an embed.
+ *
+ * The public embed API now answers only pages the venue has named, and a `fetch` from Node carries
+ * no `Origin` at all — so a check that asks it for availability has to say where it is asking from,
+ * exactly as a browser would. The seeder authorises this host for every demo tenant, which is also
+ * what a real venue's list looks like: the places they actually embed from.
+ */
+export const EMBED_ORIGIN = process.env.SEATMAP_EMBED_ORIGIN || 'http://127.0.0.1:8200';
+
+/**
+ * A staff token for the demo owner.
+ *
+ * Exported because a check sometimes has to set something up as the organiser before driving the
+ * buyer's side of it — naming a website the embed is allowed on, for one — and doing that through
+ * the same endpoint the panel calls is what makes the check about the product rather than about a
+ * row somebody wrote into a table.
+ */
+export const login = async (base, device) => {
 	const response = await fetch(base + '/v1/auth/login', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -41,7 +59,7 @@ export async function seatedEvent(base, device = 'smoke') {
 	for (const event of events.data || []) {
 		const availability = await (await fetch(
 			`${base}/v1/embed/events/${encodeURIComponent(event.public_id)}/availability`,
-			{ headers: { Accept: 'application/json' } }
+			{ headers: { Accept: 'application/json', Origin: EMBED_ORIGIN } }
 		)).json();
 
 		if ((availability.seats || []).length) {

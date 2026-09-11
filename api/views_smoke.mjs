@@ -13,7 +13,7 @@
  *   node views_smoke.mjs
  */
 import { chromium } from 'playwright';
-import { seatedEvent, openASection } from './smoke-support.mjs';
+import { EMBED_ORIGIN, openASection, seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SITE = process.env.SEATMAP_SITE || 'http://northgate.localhost:8123';
@@ -175,7 +175,7 @@ await guest.screenshot( { path: `${ SHOTS }/02-the-view.png`, fullPage: true } )
 
 console.log( 'And the same picture on somebody else’s website' );
 const embedded = await ( await fetch( `${ BASE }/v1/embed/events/${ night.public_id }`, {
-	headers: { Accept: 'application/json' },
+	headers: { Accept: 'application/json', Origin: EMBED_ORIGIN },
 } ) ).json();
 
 check( 'the embed is booted with them too',

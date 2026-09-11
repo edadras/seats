@@ -173,6 +173,8 @@ return [
     'role_exists' => 'Un rôle porte déjà ce nom.',
     'unknown_role' => "Ce rôle n'existe pas.",
     'not_your_programme' => 'Cet écran appartient au compte, pas à une date que vous gérez.',
+    'embed_origin_not_allowed' => 'Ce plan de salle n’est pas autorisé sur ce site. S’il s’agit de votre site, ajoutez-le à la liste des sites autorisés dans votre panneau Seatmap, sous « Connexions ».',
+    'embed_origin_invalid' => 'Cela ne ressemble pas à une adresse de site.',
     'unknown_event' => 'Cet événement est introuvable.',
     'unknown_manager' => 'Ce responsable de programmation est introuvable.',
     'invitation_unknown' => 'Cette invitation est introuvable.',

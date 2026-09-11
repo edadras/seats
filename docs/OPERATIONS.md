@@ -66,6 +66,29 @@ php artisan queue:work --queue=default --tries=3
 * * * * * cd /path/to/api && php artisan schedule:run >> /dev/null 2>&1
 ```
 
+## Upgrading past the embed origin list
+
+The release that added `embed_origins` changes a default from allow to deny: the public widget now
+draws a hall only on websites the organiser has named.
+
+**The migration does not start anybody from empty.** It seeds each tenant from what the platform can
+already prove is theirs — every verified hosted-site domain, and every `site_url` and registered
+origin on their API clients. Nothing that was properly registered stops working.
+
+What does stop working is the case this was built for: a snippet pasted onto a page nobody ever told
+us about. That includes an organiser's own page, if they never registered it. So after upgrading,
+look for tenants with a thin list:
+
+```sql
+SELECT t.name, count(e.id) AS websites
+FROM tenants t LEFT JOIN embed_origins e ON e.tenant_id = t.id
+GROUP BY t.name HAVING count(e.id) = 0;
+```
+
+An account with none uses the embed nowhere, or is about to find out it does. Either way the fix is
+one line on the organiser's own Connections screen, and the widget prints the reason into the page
+rather than failing silently.
+
 ## Behind a proxy
 
 Almost everything this platform limits, it limits **per IP address**: signing in, signing up,

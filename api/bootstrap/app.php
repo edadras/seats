@@ -81,6 +81,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,
             'device' => \App\Http\Middleware\ResolveCheckinDevice::class,
             'site' => \App\Http\Middleware\ResolveSiteFromHost::class,
+            // Where a hall may be drawn. Not authentication — see the class for why that is the
+            // honest description and why it is enough for what is behind the embed API.
+            'embed.origin' => \App\Http\Middleware\AllowEmbedOrigin::class,
             'platform' => \App\Http\Middleware\RequirePlatformAdmin::class,
             // After model binding, which is where the event it scopes comes from.
             'managed' => \App\Http\Middleware\ScopeToManagedEvents::class,

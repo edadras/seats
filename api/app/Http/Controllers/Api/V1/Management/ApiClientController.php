@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1\Management;
 
 use App\Http\Controllers\Controller;
+use App\Domain\Embed\EmbedOrigins;
 use App\Models\ApiClient;
+use App\Models\EmbedOrigin;
 use App\Models\ApiKey;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Http\Request;
@@ -102,6 +104,49 @@ class ApiClientController extends Controller
         $this->audit->record('api_key.revoked', $client, ['key_id' => $keyId]);
 
         return response()->noContent();
+    }
+
+    /* ------------------------------------------------------- where the hall may be drawn */
+
+    /**
+     * The websites this organiser's seat map may be drawn on.
+     *
+     * Behind `connections.manage` and kept beside the API clients rather than on a screen of its
+     * own, because it is the same decision seen from the other side: an API key says which server
+     * may ask, and this says which website may show.
+     */
+    public function origins(Request $request)
+    {
+        $this->authorize($request, 'connections.manage');
+
+        return response()->json(['data' => app(EmbedOrigins::class)->all()]);
+    }
+
+    public function addOrigin(Request $request)
+    {
+        $this->authorize($request, 'connections.manage');
+
+        $data = $request->validate([
+            'hostname' => ['required', 'string', 'max:255'],
+            'label' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $origin = app(EmbedOrigins::class)->add($data['hostname'], $data['label'] ?? null);
+
+        $this->audit->record('embed_origin.allowed', $origin, ['hostname' => $origin->hostname]);
+
+        return response()->json(['data' => app(EmbedOrigins::class)->all()], 201);
+    }
+
+    public function removeOrigin(Request $request, EmbedOrigin $origin)
+    {
+        $this->authorize($request, 'connections.manage');
+
+        $this->audit->record('embed_origin.withdrawn', $origin, ['hostname' => $origin->hostname]);
+
+        app(EmbedOrigins::class)->remove($origin);
+
+        return response()->json(['data' => app(EmbedOrigins::class)->all()]);
     }
 
     private function present(ApiClient $client): array

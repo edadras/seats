@@ -12,7 +12,7 @@
  */
 import { chromium } from 'playwright';
 import { openHall, chooseSeats, startSale } from './counter-hall.mjs';
-import { seatedEvent } from './smoke-support.mjs';
+import { EMBED_ORIGIN, seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SHOTS = process.env.SEATMAP_SHOTS || '/tmp/plans-shots';
@@ -47,7 +47,8 @@ await page.waitForSelector( '.sidebar' );
 /** How many chairs the public plan says are free, asked the way a buyer's browser asks. */
 const free = async () => {
 	const answer = await ( await fetch(
-		`${ BASE }/v1/embed/events/${ night.public_id }/availability`
+		`${ BASE }/v1/embed/events/${ night.public_id }/availability`,
+		{ headers: { Accept: 'application/json', Origin: EMBED_ORIGIN } }
 	) ).json();
 
 	return ( answer.seats || [] ).filter( ( seat ) => 'available' === seat.state ).length;

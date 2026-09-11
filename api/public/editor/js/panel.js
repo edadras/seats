@@ -3057,11 +3057,15 @@
 			// The other half of connecting a shop: a key lets it ask us things, a webhook means it
 			// does not have to. Same screen, because it is the same afternoon's work.
 			window.SeatmapWebhooks.load( this ),
+			// Which websites may draw this organiser's halls. The other half of the snippet below:
+			// copying it is free, and this is what decides where the copy works.
+			this.request( 'GET', '/embed-origins' ).catch( function () { return { data: [] }; } ),
 		] )
 			.then( function ( results ) {
 				var response = results[ 0 ];
 				var events = results[ 1 ].data || [];
 				var hooks = results[ 2 ];
+				var origins = results[ 3 ].data || [];
 				var rows = response.data.map( function ( client ) {
 					var keys = client.keys.map( function ( key ) {
 						return '<div class="row"><code>' + esc( key.key_id ) + '</code>' +
@@ -3115,10 +3119,12 @@
 						rows,
 						emptyState( 'plug', self.t( 'panel.connections.emptyTitle' ),
 							esc( self.t( 'panel.connections.emptyBody' ) ) )
-					) + window.SeatmapWebhooks.markup( self, hooks ) + self.embedMarkup( events ),
+					) + window.SeatmapWebhooks.markup( self, hooks ) +
+						self.embedMarkup( events ) + self.originsMarkup( origins ),
 				} );
 
 				self.bindEmbed( events );
+				self.bindOrigins();
 				window.SeatmapWebhooks.bind( self, hooks );
 
 				document.getElementById( 'add-client' ).addEventListener( 'click', function () {
@@ -3217,6 +3223,125 @@
 				'<pre class="snippet" id="embed-snippet">' +
 					esc( this.embedSnippet( events[ 0 ].public_id ) ) + '</pre>' +
 			'</div>';
+	};
+
+	/**
+	 * The websites this organiser's seat map may be drawn on.
+	 *
+	 * Directly under the snippet, and that placement is the whole design: the snippet is three
+	 * lines with no key in it, which is what makes it usable and also what makes it copyable.
+	 * Somebody reading the thing they are about to paste into a page should read, in the same
+	 * glance, where that paste will and will not work.
+	 */
+	App.originsMarkup = function ( origins ) {
+		var self = this;
+
+		var rows = origins.map( function ( origin ) {
+			return '<tr><td class="table__primary"><code>' + esc( origin.hostname ) + '</code>' +
+				( origin.label
+					? '<span class="muted on-own-line">' + esc( origin.label ) + '</span>'
+					: '' ) +
+				'</td>' +
+				'<td class="muted">' + ( origin.last_seen_at
+					? esc( self.date( origin.last_seen_at ) )
+					: esc( self.t( 'panel.connections.originNeverUsed' ) ) ) + '</td>' +
+				'<td class="table__actions">' +
+					'<button class="btn btn--sm btn--danger" data-origin-remove="' + esc( origin.id ) +
+						'" data-origin-name="' + esc( origin.hostname ) + '">' +
+						esc( self.t( 'panel.common.remove' ) ) + '</button>' +
+				'</td></tr>';
+		} ).join( '' );
+
+		return '<h3 class="subhead">' + esc( this.t( 'panel.connections.originsTitle' ) ) + '</h3>' +
+			// Named, because this screen now carries two tables and anything looking for one of
+			// them by tag alone finds both.
+			'<div class="card card--pad" id="embed-origins">' +
+				'<p class="hint">' + esc( this.t( 'panel.connections.originsHint' ) ) + '</p>' +
+				/*
+				 * Said out loud rather than left to be discovered.
+				 *
+				 * An organiser who has just pasted the snippet onto a page that is not on this list
+				 * sees a refusal and no cause. One sentence here is the difference between that and
+				 * a support ticket.
+				 */
+				( origins.length
+					? ''
+					: '<p class="notice notice--warn">' +
+						esc( this.t( 'panel.connections.originsEmpty' ) ) + '</p>' ) +
+				'<div class="filters spaced">' +
+					'<input class="input" id="origin-host" type="text" placeholder="' +
+						esc( this.t( 'panel.connections.originPlaceholder' ) ) + '">' +
+					'<input class="input" id="origin-label" type="text" placeholder="' +
+						esc( this.t( 'panel.connections.originLabel' ) ) + '">' +
+					'<button class="btn btn--primary" id="origin-add">' +
+						esc( this.t( 'panel.connections.originAdd' ) ) + '</button>' +
+				'</div>' +
+				( origins.length
+					? this.table(
+						[
+							this.t( 'panel.connections.originWebsite' ),
+							this.t( 'panel.connections.originLastDrew' ),
+							'',
+						],
+						rows,
+						''
+					)
+					: '' ) +
+			'</div>';
+	};
+
+	App.bindOrigins = function () {
+		var self = this;
+		var host = document.getElementById( 'origin-host' );
+		var label = document.getElementById( 'origin-label' );
+		var add = document.getElementById( 'origin-add' );
+
+		if ( add && host ) {
+			var submit = function () {
+				if ( ! host.value.trim() ) {
+					return;
+				}
+
+				self.request( 'POST', '/embed-origins', {
+					hostname: host.value.trim(),
+					label: label && label.value.trim() ? label.value.trim() : null,
+				} )
+					.then( function () {
+						self.toast( self.t( 'panel.connections.originAdded' ) );
+						self.renderConnections();
+					} )
+					.catch( function ( error ) { self.error( error ); } );
+			};
+
+			add.addEventListener( 'click', submit );
+			// Typing an address and pressing enter is what somebody does with a one-field form.
+			host.addEventListener( 'keydown', function ( event ) {
+				if ( 'Enter' === event.key ) {
+					event.preventDefault();
+					submit();
+				}
+			} );
+		}
+
+		this.main().querySelectorAll( '[data-origin-remove]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				self.modal( {
+					title: self.t( 'panel.connections.originRemoveTitle', {
+						name: button.dataset.originName,
+					} ),
+					submitLabel: self.t( 'panel.common.remove' ),
+					danger: true,
+					body: '<p>' + esc( self.t( 'panel.connections.originRemoveBody' ) ) + '</p>',
+					onSubmit: function () {
+						return self.request( 'DELETE', '/embed-origins/' + button.dataset.originRemove )
+							.then( function () {
+								self.toast( self.t( 'panel.connections.originRemoved' ) );
+								self.renderConnections();
+							} );
+					},
+				} );
+			} );
+		} );
 	};
 
 	App.embedSnippet = function ( publicId ) {

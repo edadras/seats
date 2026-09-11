@@ -62,13 +62,27 @@
 		} );
 	}
 
+	/**
+	 * Fetch, and read the API's own sentence when it refuses.
+	 *
+	 * A status code in the page helps nobody. The one refusal somebody pasting this in will
+	 * actually meet is "this seat map has not been allowed on this website", which is a thing they
+	 * can act on in one step — and only if it reaches them. So the body is read before the status
+	 * is turned into a failure.
+	 */
 	function json( url ) {
 		return fetch( url, { credentials: 'omit' } ).then( function ( response ) {
-			if ( ! response.ok ) {
-				throw new Error( url + ' → ' + response.status );
-			}
+			return response.json().catch( function () {
+				return null;
+			} ).then( function ( body ) {
+				if ( response.ok ) {
+					return body;
+				}
 
-			return response.json();
+				var said = body && body.error && body.error.message;
+
+				throw new Error( said || ( url + ' → ' + response.status ) );
+			} );
 		} );
 	}
 
@@ -117,6 +131,19 @@
 	function fail( container, message ) {
 		container.textContent = message;
 		container.setAttribute( 'data-seatmap-state', 'error' );
+	}
+
+	/**
+	 * Said in the venue's own words where the API supplied them, and in ours otherwise.
+	 *
+	 * The API's refusals are already whole sentences in the reader's language. Prefixing those with
+	 * a product name turns a clear instruction into a support ticket about a product the person
+	 * reading it has never heard of.
+	 */
+	function complaint( error ) {
+		var said = error && error.message ? error.message : '';
+
+		return /[.!?۔]$/.test( said ) ? said : 'Seatmap: ' + ( said || 'could not load this event.' );
 	}
 
 	function mount( container, index ) {
@@ -183,7 +210,7 @@
 		} ).catch( function ( error ) {
 			// Said in the page rather than only in the console: somebody pasted this in and needs
 			// to know it did not work, and why, without opening developer tools.
-			fail( container, 'Seatmap: ' + ( error && error.message ? error.message : 'could not load this event.' ) );
+			fail( container, complaint( error ) );
 		} );
 	}
 

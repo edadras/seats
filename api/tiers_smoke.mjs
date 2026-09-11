@@ -11,7 +11,7 @@
  *   node tiers_smoke.mjs
  */
 import { chromium } from 'playwright';
-import { seatedEvent } from './smoke-support.mjs';
+import { EMBED_ORIGIN, seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SITE = process.env.SEATMAP_SITE || 'http://northgate.localhost:8123';
@@ -36,7 +36,8 @@ const api = ( method, path, body ) => fetch( BASE + path, {
 } ).then( async ( response ) => ( { status: response.status, body: await response.json() } ) );
 
 const quoted = async () => ( await ( await fetch(
-	`${ BASE }/v1/embed/events/${ night.public_id }/availability`
+	`${ BASE }/v1/embed/events/${ night.public_id }/availability`,
+	{ headers: { Accept: 'application/json', Origin: EMBED_ORIGIN } }
 ) ).json() );
 
 console.log( 'The demo is already selling at an early price' );
@@ -169,7 +170,7 @@ check( 'the plan quotes the new price at once, with nothing run in between',
 // And the hold agrees with the plan, which is the whole point.
 const held = await ( await fetch( `${ BASE }/v1/embed/events/${ night.public_id }/holds`, {
 	method: 'POST',
-	headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+	headers: { 'Content-Type': 'application/json', Accept: 'application/json', Origin: EMBED_ORIGIN },
 	body: JSON.stringify( { seat_ids: [ after.seat_id ], session_id: 'tier-smoke-session' } ),
 } ) ).json();
 

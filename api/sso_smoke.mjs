@@ -93,7 +93,9 @@ console.log( 'And a key is scoped before it exists' );
 await page.click( 'nav button[data-view=connections]' );
 await page.waitForSelector( '[data-rotate]' );
 
-const before = await page.locator( 'tbody' ).innerText();
+// The connections screen carries two tables — the API clients, and the websites the embed is
+// allowed on — so this says which one it is reading rather than trusting there to be one.
+const before = await page.locator( 'tbody' ).first().innerText();
 
 check( 'a key issued before scopes existed may still do everything',
 	/everything/i.test( before ), before.replace( /\s+/g, ' ' ).slice( 0, 120 ) );
@@ -125,7 +127,7 @@ await page.waitForSelector( '.credentials', { state: 'detached', timeout: 20000 
 await page.waitForSelector( '[data-rotate]' );
 await page.waitForTimeout( 800 );
 
-const after = await page.locator( 'tbody' ).innerText();
+const after = await page.locator( 'tbody' ).first().innerText();
 
 check( 'and the screen says what the new one may do',
 	/Read bookings, Sell and cancel/.test( after ),

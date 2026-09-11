@@ -11,7 +11,7 @@
  *   node chargeback_smoke.mjs
  */
 import { chromium } from 'playwright';
-import { seatedEvent, openASection, seatPoint } from './smoke-support.mjs';
+import { EMBED_ORIGIN, openASection, seatPoint, seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SITE = process.env.SEATMAP_SITE || 'http://northgate.localhost:8123';
@@ -67,7 +67,8 @@ check( 'the booking exists', !! reference, reference );
 /** How many chairs the public plan says are free, asked the way a buyer's browser asks. */
 const freeSeats = async () => {
 	const answer = await ( await fetch(
-		`${ BASE }/v1/embed/events/${ night.public_id }/availability`
+		`${ BASE }/v1/embed/events/${ night.public_id }/availability`,
+		{ headers: { Accept: 'application/json', Origin: EMBED_ORIGIN } }
 	) ).json();
 
 	return ( answer.seats || [] ).filter( ( seat ) => 'available' === seat.state ).length;

@@ -173,6 +173,8 @@ return [
     'role_exists' => 'A role already uses that name.',
     'unknown_role' => 'That role does not exist.',
     'not_your_programme' => 'This screen belongs to the account rather than to a night you run.',
+    'embed_origin_not_allowed' => 'This seat map has not been allowed on this website. If it is your website, add it to the list of permitted websites in your Seatmap panel, under Connections.',
+    'embed_origin_invalid' => 'That does not look like a website address.',
     'unknown_event' => 'That event could not be found.',
     'unknown_manager' => 'That programme manager could not be found.',
     'invitation_unknown' => 'That invitation could not be found.',

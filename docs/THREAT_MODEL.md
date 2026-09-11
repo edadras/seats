@@ -121,10 +121,31 @@ another's domain. `BehindAProxyTest` pins it.
 The embed endpoints are unauthenticated by necessity.
 
 *Mitigations.* They expose only a public event id and geometry the venue shows publicly; no buyer
-identity, no ticket tokens, no tenant internals. Registered origins are recorded per API client
-and sent as CORS headers, with the explicit understanding that CORS is a browser convenience and
-**not** the authorisation control. Rate limits are per IP and per event. Availability responses
-are cacheable and cursor-based to keep polling cheap.
+identity, no ticket tokens, no tenant internals. Rate limits are per IP and per event. Availability
+responses are cacheable and cursor-based to keep polling cheap.
+
+*And the snippet is no longer portable.* The embed carries no key — that is what makes it usable by
+somebody with a page and no toolchain, and it is also why anybody who viewed a venue's booking page
+could copy the two tags onto their own site and open that venue's hall there, holding seats out of
+their real inventory. Each tenant now keeps a list of the websites their halls may be drawn on
+(`embed_origins`), and `AllowEmbedOrigin` refuses anything else with `embed_origin_not_allowed`.
+The list is seeded from verified hosted-site domains and registered API client origins, so the
+default is deny without taking working embeds offline on the morning it ships.
+
+**What that is and is not.** `Origin` is a fact a browser states and will not let a page lie about,
+which is exactly what defeats copy-and-paste: a copied snippet runs in a browser, so every instance
+of the threat arrives *with* an origin. It is *not* proof about a person: curl, a scraper or a
+server-side proxy can send whatever they like, and a determined thief will proxy. For that reason a
+request stating **no** origin is let through rather than refused — anything able to omit the header
+is equally able to forge a permitted one, so refusing there would stop only a proxy whose author
+could not be bothered, while breaking every honest integration that is not a browser. That is acceptable
+**here and nowhere else on this platform**, because what is behind these endpoints is a public
+programme and a chart the venue already shows the world — so what is being defended is the venue's
+brand on somebody else's page and their inventory's rate limits, not a secret. Every endpoint that
+guards something secret authenticates properly and does not rely on this.
+
+CORS remains `*` and remains a browser convenience rather than the control: the refusal above is a
+403 with a body, and a widget that cannot read that body cannot tell the organiser what to fix.
 
 ### T10 — Repudiation of state changes (Repudiation)
 A tenant disputes that a seat was blocked or a ticket voided.

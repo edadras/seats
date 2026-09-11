@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\SeatMaps\SeatMapPublisher;
 use App\Domain\Sites\SiteProvisioner;
 use App\Models\ApiClient;
+use App\Models\EmbedOrigin;
 use App\Models\ApiKey;
 use App\Models\CheckinDevice;
 use App\Domain\Checkin\CheckinService;
@@ -305,6 +306,26 @@ class DatabaseSeeder extends Seeder
 
             $issued = ApiKey::issue($client, 'seeded');
 
+            /*
+             * The websites this venue's seat map may be drawn on.
+             *
+             * The hosted site's own domain is added below, once it exists. These two are the
+             * places a demo actually embeds from: the venue's WordPress, and the plugin preview
+             * that the browser checks drive — a real venue's list looks exactly like this, which is
+             * the point of seeding it rather than leaving the demo in the one state no real
+             * account should be in.
+             */
+            foreach ([
+                ["{$tenant->slug}.test", $name.' website'],
+                ['127.0.0.1:8200', 'Plugin preview'],
+                ['localhost:8200', 'Plugin preview'],
+            ] as [$hostname, $label]) {
+                EmbedOrigin::firstOrCreate(
+                    ['tenant_id' => $tenant->id, 'hostname' => $hostname],
+                    ['label' => $label],
+                );
+            }
+
             $scanner = CheckinDevice::firstOrCreate(
                 ['tenant_id' => $tenant->id, 'name' => 'Front door scanner'],
                 [
@@ -326,6 +347,12 @@ class DatabaseSeeder extends Seeder
                 'theme_key' => 'northgate' === $slug ? 'playbill' : 'noir',
                 'brand' => ['tagline' => 'Tickets straight from the box office.'],
             ]);
+
+            // A venue's own shop is always allowed to draw its own hall.
+            EmbedOrigin::firstOrCreate(
+                ['tenant_id' => $tenant->id, 'hostname' => $slug.'.localhost'],
+                ['label' => $name],
+            );
 
             SiteDomain::firstOrCreate(
                 ['hostname' => $slug.'.localhost'],

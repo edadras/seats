@@ -754,6 +754,12 @@ Route::prefix('v1')->group(function () {
         Route::get('api-clients', [ApiClientController::class, 'index']);
         Route::delete('api-clients/{client}/keys/{keyId}', [ApiClientController::class, 'revoke']);
 
+        // Which websites may draw this organiser's halls. The other half of the same decision an
+        // API key makes: a key says which server may ask, this says which page may show.
+        Route::get('embed-origins', [ApiClientController::class, 'origins']);
+        Route::post('embed-origins', [ApiClientController::class, 'addOrigin']);
+        Route::delete('embed-origins/{origin}', [ApiClientController::class, 'removeOrigin']);
+
         /*
          * Webhooks: where an organiser's own systems are told what happened here.
          *
@@ -816,7 +822,12 @@ Route::prefix('v1')->group(function () {
     // ---- Public widget ------------------------------------------------------------------
     // No authentication: the browser has no secret to hold. Rate limits are per IP, and hold
     // creation is limited harder than reads because it consumes inventory (threat T8).
-    Route::prefix('embed')->group(function () {
+    //
+    // `embed.origin` is not authentication either and is not pretending to be. It asks whether the
+    // page drawing this hall is one the venue named, which is the question that stops the snippet
+    // being copied onto somebody else's website — and it is applied to the whole group rather than
+    // to each action, because the action nobody remembers to guard is the next one added.
+    Route::prefix('embed')->middleware('embed.origin')->group(function () {
         Route::middleware('throttle:120,1,embed-read')->group(function () {
             Route::get('events/{public_id}', [EmbedController::class, 'show']);
             Route::get('events/{public_id}/seat-map', [EmbedController::class, 'seatMap']);

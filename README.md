@@ -859,6 +859,26 @@ site that pastes this in never sees a card or a price it could argue with.
 separate origin, all the way to a priced checkout. The panel's Connections screen shows the exact
 snippet with the event already filled in.
 
+**And it only works where the venue said it may.** Having no key is what makes that snippet usable
+by somebody with a page and no toolchain; it is also why anybody who views a venue's booking page
+can copy it. So under the snippet on that same screen is the list of websites the organiser's seat
+maps may be drawn on, and a request from anywhere else is refused with a sentence the widget prints
+into the page: *this seat map has not been allowed on this website*. An organiser who has just
+pasted the snippet somewhere reads exactly what to do; somebody who took it learns nothing they did
+not already know.
+
+The list is seeded from what the platform can already prove is a venue's — verified hosted-site
+domains, registered API client origins — so the default is deny without taking working embeds
+offline. `www` matches the apex either way round, and a default port is dropped, because both are
+ways an organiser ends up staring at a list that says the site is allowed while the site is refused.
+
+Two things this deliberately is not. It is not authentication: `Origin` is a fact a browser states
+and will not let a page lie about, which defeats copy-and-paste and would not stop somebody
+proxying through their own server. And it is not protecting a secret — what is behind those
+endpoints is a programme and a chart the venue already shows the world. What it protects is the
+venue's brand on a page they did not choose, and their inventory's rate limits. `THREAT_MODEL.md`
+T9 says so in those words.
+
 ## The door
 
 `checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and

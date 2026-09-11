@@ -173,6 +173,8 @@ return [
     'role_exists' => 'Un ruolo usa già quel nome.',
     'unknown_role' => 'Quel ruolo non esiste.',
     'not_your_programme' => 'Questa schermata appartiene all’account, non a una serata che gestisci tu.',
+    'embed_origin_not_allowed' => 'Questa pianta della sala non è autorizzata su questo sito. Se il sito è tuo, aggiungilo all’elenco dei siti consentiti nel pannello Seatmap, in «Collegamenti».',
+    'embed_origin_invalid' => 'Non sembra l’indirizzo di un sito.',
     'unknown_event' => 'Questo evento non è stato trovato.',
     'unknown_manager' => 'Questo responsabile di programma non è stato trovato.',
     'invitation_unknown' => 'Questo invito non è stato trovato.',

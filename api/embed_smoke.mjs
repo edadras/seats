@@ -6,16 +6,22 @@
  * different origin by a plain static server, talking cross-origin to the API — and follows it all
  * the way to the organiser's checkout.
  *
- * What it proves, in order: the widget starts from the public API alone, the seats are held by
- * that API, the buyer is sent to the organiser's hosted checkout with nothing but a hold token,
- * and that checkout prices the hold the server made.
+ * What it proves, in order: a page the venue has not named gets no hall at all and is told why;
+ * once the venue names it, the widget starts from the public API alone; the seats are held by that
+ * API; the buyer is sent to the organiser's hosted checkout with nothing but a hold token; and that
+ * checkout prices the hold the server made.
+ *
+ * The first of those is the one worth spelling out. The snippet has no key in it, which is what
+ * makes it usable by somebody with a page and no toolchain — and it is also why anybody who views
+ * a venue's booking page can copy it. This check pastes it onto an origin nobody authorised and
+ * insists the hall stays shut.
  *
  *   php artisan migrate:fresh --seed --force
  *   php artisan serve --port=8123 &
  *   node embed_smoke.mjs
  */
 import { chromium } from 'playwright';
-import { openASection, seatedEvent, seatPoint } from './smoke-support.mjs';
+import { login, openASection, seatedEvent, seatPoint } from './smoke-support.mjs';
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -70,8 +76,13 @@ const tab = await context.newPage();
 const errors = [];
 tab.on( 'pageerror', ( e ) => errors.push( e.message ) );
 tab.on( 'console', ( m ) => {
-	// A browser asking a bare static server for a favicon is not this feature failing.
-	if ( 'error' === m.type() && ! m.location()?.url?.includes( 'favicon' ) ) {
+	// A browser asking a bare static server for a favicon is not this feature failing. Neither is
+	// the 403 the first load below deliberately provokes: this check asks an unauthorised page for
+	// a hall precisely so it can insist the hall stays shut, and the browser logs every refusal it
+	// receives. Counting those would make the check fail when the feature works.
+	const noise = m.location()?.url?.includes( 'favicon' ) || /403/.test( m.text() );
+
+	if ( 'error' === m.type() && ! noise ) {
 		errors.push( m.text() );
 	}
 } );
@@ -86,6 +97,36 @@ tab.on( 'request', ( request ) => {
 } );
 
 try {
+	console.log( 'A website nobody authorised' );
+	await tab.goto( `http://127.0.0.1:${ PORT }/`, { waitUntil: 'networkidle' } );
+	await tab.waitForSelector( '[data-seatmap-state="error"]', { timeout: 15000 } );
+
+	const refusal = await tab.locator( '[data-seatmap-event]' ).innerText();
+
+	check( 'the hall does not open', 0 === await tab.locator( '.seatmap-widget__stage' ).count() );
+	check( 'and the page says why, in a sentence somebody can act on',
+		/allowed on this website/i.test( refusal ), refusal.slice( 0, 80 ) );
+
+	/*
+	 * Now the venue says the site is theirs — which is the whole of the fix, and is done here
+	 * through the same endpoint the Connections screen calls rather than by writing a row.
+	 */
+	console.log( 'The venue names it as one of theirs' );
+
+	const staff = await login( BASE, 'embed-smoke-origins' );
+	const allowed = await fetch( `${ BASE }/v1/embed-origins`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: 'Bearer ' + staff,
+		},
+		body: JSON.stringify( { hostname: `127.0.0.1:${ PORT }`, label: 'Embed check' } ),
+	} );
+
+	check( 'the website is added from the panel\'s own endpoint', 201 === allowed.status,
+		String( allowed.status ) );
+
 	console.log( 'Somebody else\'s website' );
 	await tab.goto( `http://127.0.0.1:${ PORT }/`, { waitUntil: 'networkidle' } );
 	await tab.waitForSelector( '.seatmap-widget__stage', { timeout: 15000 } );
