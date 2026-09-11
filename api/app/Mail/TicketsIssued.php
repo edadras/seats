@@ -29,7 +29,24 @@ class TicketsIssued extends Mailable
 
     public function envelope(): Envelope
     {
+        /*
+         * From the venue, not from the platform.
+         *
+         * This is the one email in the system a buyer is certain to open, so it is the one that
+         * most needs the venue's name on it. The address follows the same rule as everywhere else:
+         * theirs where the operator has authorised the domain, ours with their address in Reply-To
+         * where it has not.
+         */
+        // Fetched rather than read off the relation: lazy loading is off, and this renders in a
+        // worker where nothing has been eager-loaded for it.
+        $from = app(\App\Domain\Messaging\SenderIdentity::class)
+            ->current(\App\Models\Tenant::find($this->site->tenant_id));
+
         return new Envelope(
+            from: new \Illuminate\Mail\Mailables\Address($from['address'], $from['name']),
+            replyTo: $from['reply_to']
+                ? [new \Illuminate\Mail\Mailables\Address($from['reply_to'], $from['name'])]
+                : [],
             subject: __('mail.subject', [
                 'event' => $this->order->event?->name ?? $this->site->name,
             ], $this->locale),

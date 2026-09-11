@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
+use App\Domain\Messaging\SenderIdentity;
+
 use App\Domain\Messaging\Announcements\AnnouncementSender;
 use App\Domain\Messaging\ChannelRegistry;
 use App\Domain\Messaging\MessageDispatcher;
@@ -34,6 +36,87 @@ class MessagingController extends Controller
         private readonly AuditLogger $audit,
         private readonly AnnouncementSender $announcements,
     ) {}
+
+    /**
+     * Who this account's email comes from, and how far along proving it they are.
+     *
+     * On the messaging screen rather than in account settings because it is a fact about messages:
+     * an organiser who has come here to change the wording of a confirmation is exactly the person
+     * wondering why it says somebody else's name at the top.
+     */
+    public function sender(Request $request)
+    {
+        $this->authorize($request, 'account.manage');
+
+        return response()->json(
+            app(SenderIdentity::class)->standing($this->tenant())
+        );
+    }
+
+    /** Set the name, and start proving the address where one was given. */
+    public function saveSender(Request $request)
+    {
+        $this->authorize($request, 'account.manage');
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:190'],
+        ]);
+
+        $tenant = app(SenderIdentity::class)->propose(
+            $this->tenant(),
+            $data['name'] ?? null,
+            $data['email'] ?? null,
+        );
+
+        $this->audit->record('sender.changed', $tenant, [
+            'name' => $tenant->sender_name,
+            'email' => $tenant->sender_email,
+        ]);
+
+        return response()->json(app(SenderIdentity::class)->standing($tenant));
+    }
+
+    /** Another code to the address on file. */
+    public function resendSenderCode(Request $request)
+    {
+        $this->authorize($request, 'account.manage');
+
+        app(SenderIdentity::class)->sendCode($this->tenant());
+
+        return response()->json(app(SenderIdentity::class)->standing($this->tenant()->fresh()));
+    }
+
+    /** Type the code from the email. */
+    public function verifySender(Request $request)
+    {
+        $this->authorize($request, 'account.manage');
+
+        $data = $request->validate(['code' => ['required', 'string', 'max:12']]);
+
+        $tenant = app(SenderIdentity::class)->confirm($this->tenant(), $data['code']);
+
+        $this->audit->record('sender.verified', $tenant, ['email' => $tenant->sender_email]);
+
+        return response()->json(app(SenderIdentity::class)->standing($tenant));
+    }
+
+    /** Back to the platform's own identity. */
+    public function forgetSender(Request $request)
+    {
+        $this->authorize($request, 'account.manage');
+
+        $tenant = app(SenderIdentity::class)->forget($this->tenant());
+
+        $this->audit->record('sender.cleared', $tenant);
+
+        return response()->json(app(SenderIdentity::class)->standing($tenant));
+    }
+
+    private function tenant(): \App\Models\Tenant
+    {
+        return \App\Models\Tenant::findOrFail(app(\App\Support\Tenancy\TenantContext::class)->idOrFail());
+    }
 
     public function index(Request $request)
     {

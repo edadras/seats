@@ -620,6 +620,22 @@ Route::prefix('v1')->group(function () {
         Route::delete('segments/{segment}', [SegmentController::class, 'destroy']);
 
         Route::get('messaging', [MessagingController::class, 'index']);
+
+        /*
+         * Who the buyer's confirmation comes from.
+         *
+         * With messaging rather than in account settings: an organiser who has come here to change
+         * the wording of a confirmation is the same person wondering why it has somebody else's
+         * name at the top of it.
+         */
+        Route::get('messaging/sender', [MessagingController::class, 'sender']);
+        Route::put('messaging/sender', [MessagingController::class, 'saveSender']);
+        Route::delete('messaging/sender', [MessagingController::class, 'forgetSender']);
+        // Both throttled: each one sends an email to an address somebody typed.
+        Route::post('messaging/sender/code', [MessagingController::class, 'resendSenderCode'])
+            ->middleware('throttle:5,1,sender-code');
+        Route::post('messaging/sender/verify', [MessagingController::class, 'verifySender'])
+            ->middleware('throttle:20,1,sender-verify');
         // Ahead of the {kind} routes below, which would otherwise match the word "announcements".
         Route::get('messaging/announcements', [MessagingController::class, 'announcements']);
         Route::get('messaging/announcements/audience', [MessagingController::class, 'audience']);

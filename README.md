@@ -562,6 +562,28 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## Email that comes from the venue
+
+Every message this platform sent used to leave from one address, for every venue on it: a buyer who
+bought from Northgate Theatre got a confirmation from a name they had never heard of, and replying
+to it reached nobody.
+
+The answer is in three parts, and it is three because deliverability makes it three:
+
+- **The name is the venue's at once.** "Northgate Box Office" in the From line is most of what a
+  buyer reads, and a display name is not an identity anybody can receive mail at, so there is
+  nothing to prove. An account that has typed nothing still gets its own name rather than ours.
+- **The reply address is theirs once proved.** A six-digit code goes to the address; typing it back
+  is what turns it into `Reply-To`. Without that, an organiser could point a venue's complaints at
+  a stranger.
+- **The From *address* stays ours unless the operator has authorised the domain**
+  (`SEATMAP_SENDER_DOMAINS`). Sending as `tickets@northgate.example` from a server that domain's SPF
+  does not list, with no DKIM key for it, is how confirmations land in spam — and a ticketing
+  platform that quietly ruins deliverability has done something worse than not offering the option.
+
+The screen says which of the three states an account is in, in those words, and shows the From line
+a buyer will actually see rather than leaving it to be worked out from three fields.
+
 ## Telling your own systems what happened
 
 An organiser's box office is rarely the only system they run. Webhooks are how the others find out:
@@ -684,7 +706,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all fifty-eight, in order
+./smoke.sh                    # all fifty-nine, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -907,6 +929,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A replay is a new delivery, so what happened the first time survives | `WebhookTest`, `webhooks_smoke` |
 | A retry the queue lost is picked up by the sweep rather than owed for ever | `WebhookTest` |
 | An address an organiser types can never point this server at a private network | `WebhookTest` |
+| A venue's name is on its email at once; its address only once a code has come back | `SenderIdentityTest`, `sender_smoke` |
+| The From address is the venue's only where the operator authorised that domain | `SenderIdentityTest` |
+| Changing the address takes the old one out of the header until the new one is proved | `SenderIdentityTest` |
+| The code that proves an address is the one email that cannot be sent from it | `SenderIdentityTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

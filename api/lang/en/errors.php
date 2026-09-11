@@ -325,4 +325,5 @@ return [
     'url_private' => 'That address is on a private network, so this server will not open it.',
     'no_events_chosen' => 'Choose at least one event to be told about.',
     'endpoint_not_active' => 'Switch the endpoint back on before sending anything to it again.',
+    'sender_no_address' => 'There is no address to send a code to. Type one first.',
 ];

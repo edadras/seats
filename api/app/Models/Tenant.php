@@ -20,6 +20,11 @@ class Tenant extends Model
         // {@see \App\Domain\Accounts\AccountClosure} for what sits between the two.
         'closed_at' => 'datetime',
         'erase_after' => 'datetime',
+        // Who this account's email comes from, and how far along proving it they are.
+        // {@see \App\Domain\Messaging\SenderIdentity}.
+        'sender_verified_at' => 'datetime',
+        'sender_code_expires_at' => 'datetime',
+        'sender_code_attempts' => 'integer',
     ];
 
     public function members()

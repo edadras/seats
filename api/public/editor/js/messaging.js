@@ -50,6 +50,8 @@
 			App.request( 'GET', '/messaging/announcements' ).catch( function () { return null; } ),
 			App.request( 'GET', '/events?per_page=100' ).catch( function () { return { data: [] }; } ),
 			App.request( 'GET', '/segments' ).catch( function () { return { data: [] }; } ),
+			// Who these messages come from. Refusable for the same reason as the two above.
+			App.request( 'GET', '/messaging/sender' ).catch( function () { return null; } ),
 		] ).then( function ( results ) {
 			Messaging.kinds = results[ 0 ].kinds || [];
 			Messaging.channels = results[ 0 ].channels || [];
@@ -59,6 +61,7 @@
 			Messaging.announcements = results[ 2 ] ? ( results[ 2 ].data || [] ) : [];
 			Messaging.events = results[ 3 ].data || [];
 			Messaging.segments = results[ 4 ].data || [];
+			Messaging.sender = results[ 5 ];
 			Messaging.kind = Messaging.kind || ( Messaging.kinds[ 0 ] || {} ).key;
 			Messaging.locale = global.SeatmapI18n.locale || 'en';
 			Messaging.paint();
@@ -73,6 +76,7 @@
 			title: App.t( 'messaging.title' ),
 			description: App.t( 'messaging.subtitle' ),
 			body:
+				Messaging.senderMarkup() +
 				'<div class="theme-editor">' +
 					'<div class="theme-editor__controls">' + Messaging.kindsMarkup() + '</div>' +
 					'<div class="theme-editor__preview">' + Messaging.editorMarkup() + '</div>' +
@@ -84,6 +88,132 @@
 		} );
 
 		Messaging.bind();
+	};
+
+	/**
+	 * Who a buyer's confirmation appears to come from.
+	 *
+	 * First on the screen, because it is the first thing anybody notices about a message and the
+	 * last thing they could previously change. Three states, said in words rather than implied by a
+	 * tick: the platform's, the venue's name with replies reaching them, and — where the operator
+	 * has arranged the DNS — the venue's address outright.
+	 */
+	Messaging.senderMarkup = function () {
+		var App = Messaging.App;
+		var sender = Messaging.sender;
+
+		if ( ! sender ) {
+			return '';
+		}
+
+		var state = sender.address_is_theirs
+			? [ 'ok', App.t( 'messaging.sender.fully' ) ]
+			: ( sender.verified
+				? [ 'ok', App.t( 'messaging.sender.replies' ) ]
+				: [ 'neutral', App.t( 'messaging.sender.ours' ) ] );
+
+		return '<div class="card card--pad" id="sender">' +
+			'<div class="card__head">' +
+			'<div><h2 class="card__title">' + esc( App.t( 'messaging.sender.title' ) ) + '</h2>' +
+			'<p class="hint">' + esc( App.t( 'messaging.sender.description' ) ) + '</p></div>' +
+			'<span class="badge badge--' + state[ 0 ] + '">' + esc( state[ 1 ] ) + '</span></div>' +
+
+			// What a buyer will actually see at the top of the message, spelled out rather than
+			// left to be worked out from three fields.
+			'<p class="field__hint spaced">' + esc( App.t( 'messaging.sender.preview', {
+				name: sender.sends_as.name,
+				address: sender.sends_as.address,
+			} ) ) + '</p>' +
+			( sender.reply_to
+				? '<p class="field__hint">' + esc( App.t( 'messaging.sender.replyTo', {
+					address: sender.reply_to,
+				} ) ) + '</p>'
+				: '' ) +
+
+			'<div class="field-duo spaced">' +
+			'<div class="field"><label class="field__label" for="sender-name">' +
+			esc( App.t( 'messaging.sender.name' ) ) + '</label>' +
+			'<input class="input" id="sender-name" maxlength="120" value="' +
+			esc( sender.name || '' ) + '"></div>' +
+			'<div class="field"><label class="field__label" for="sender-email">' +
+			esc( App.t( 'messaging.sender.email' ) ) + '</label>' +
+			'<input class="input" id="sender-email" type="email" maxlength="190" value="' +
+			esc( sender.email || '' ) + '"></div>' +
+			'</div>' +
+
+			( sender.awaiting_code
+				? '<div class="issue spaced">' +
+					'<p>' + esc( App.t( 'messaging.sender.awaiting', { address: sender.email } ) ) + '</p>' +
+					'<div class="row"><input class="input tnum" id="sender-code" maxlength="6" ' +
+					'inputmode="numeric" autocomplete="one-time-code" placeholder="000000">' +
+					'<button class="btn btn--primary" id="sender-verify">' +
+					esc( App.t( 'messaging.sender.verify' ) ) + '</button>' +
+					'<button class="btn" id="sender-again">' +
+					esc( App.t( 'messaging.sender.again' ) ) + '</button></div></div>'
+				: '' ) +
+
+			'<p class="field__hint spaced">' + esc( App.t( 'messaging.sender.domainHint' ) ) + '</p>' +
+
+			'<div class="row spaced">' +
+			'<button class="btn btn--primary" id="sender-save">' +
+			esc( App.t( 'panel.common.save' ) ) + '</button>' +
+			( sender.name || sender.email
+				? '<button class="btn" id="sender-clear">' +
+					esc( App.t( 'messaging.sender.clear' ) ) + '</button>'
+				: '' ) +
+			'</div></div>';
+	};
+
+	Messaging.bindSender = function () {
+		var App = Messaging.App;
+
+		var after = function ( answer ) {
+			Messaging.sender = answer;
+			Messaging.paint();
+		};
+
+		bind( 'sender-save', 'click', function () {
+			App.request( 'PUT', '/messaging/sender', {
+				name: document.getElementById( 'sender-name' ).value,
+				email: document.getElementById( 'sender-email' ).value,
+			} )
+				.then( function ( answer ) {
+					App.toast( App.t( answer.awaiting_code
+						? 'messaging.sender.codeSent'
+						: 'messaging.sender.saved' ) );
+					after( answer );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+
+		bind( 'sender-verify', 'click', function () {
+			App.request( 'POST', '/messaging/sender/verify', {
+				code: document.getElementById( 'sender-code' ).value,
+			} )
+				.then( function ( answer ) {
+					App.toast( App.t( 'messaging.sender.verified' ) );
+					after( answer );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+
+		bind( 'sender-again', 'click', function () {
+			App.request( 'POST', '/messaging/sender/code' )
+				.then( function ( answer ) {
+					App.toast( App.t( 'messaging.sender.codeSent' ) );
+					after( answer );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+
+		bind( 'sender-clear', 'click', function () {
+			App.request( 'DELETE', '/messaging/sender' )
+				.then( function ( answer ) {
+					App.toast( App.t( 'messaging.sender.cleared' ) );
+					after( answer );
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
 	};
 
 	/** Every kind of message, with the channels it goes out on. */
@@ -854,6 +984,8 @@
 
 	Messaging.bind = function () {
 		var App = Messaging.App;
+
+		Messaging.bindSender();
 
 		var announce = document.getElementById( 'announce-new' );
 

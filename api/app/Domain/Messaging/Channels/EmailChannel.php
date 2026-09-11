@@ -35,10 +35,22 @@ class EmailChannel implements MessageChannel
     public function send(string $to, string $body, array $options = []): DeliveryResult
     {
         $subject = (string) ($options['subject'] ?? '');
+        /*
+         * Whose message this is.
+         *
+         * Read from the tenant this send is running inside, so every channel's caller gets it
+         * without passing anything: a buyer's confirmation says the venue's name, and replying to
+         * it reaches the venue rather than a mailbox nobody watches.
+         */
+        $from = app(\App\Domain\Messaging\SenderIdentity::class)->current();
 
         try {
-            Mail::raw($body, function (Message $message) use ($to, $subject) {
-                $message->to($to);
+            Mail::raw($body, function (Message $message) use ($to, $subject, $from) {
+                $message->to($to)->from($from['address'], $from['name']);
+
+                if ($from['reply_to']) {
+                    $message->replyTo($from['reply_to'], $from['name']);
+                }
 
                 if ('' !== $subject) {
                     $message->subject($subject);

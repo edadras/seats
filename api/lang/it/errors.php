@@ -325,4 +325,5 @@ return [
     'url_private' => 'Quell’indirizzo è su una rete privata: questo server non lo aprirà.',
     'no_events_chosen' => 'Scegli almeno un evento di cui essere informato.',
     'endpoint_not_active' => 'Riattiva la destinazione prima di inviarle di nuovo qualcosa.',
+    'sender_no_address' => 'Non c’è nessun indirizzo a cui mandare un codice. Inseriscine uno prima.',
 ];

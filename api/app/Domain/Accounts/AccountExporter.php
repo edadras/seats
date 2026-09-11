@@ -61,6 +61,8 @@ class AccountExporter
     private const REDACT = [
         'secret', 'signing_secret', 'client_secret', 'password', 'credentials',
         'token', 'token_hash', 'verification_token', 'settings',
+        // The one-time code that proves an organiser owns their sender address.
+        'sender_code_hash',
     ];
 
     /** What a redacted column says instead. Said out loud, because silence reads as "nothing here". */

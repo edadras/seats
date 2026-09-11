@@ -70,6 +70,22 @@ return [
      | site domain, so a hostname that is neither is a 404 rather than a panel someone was not
      | meant to reach.
      */
+    /*
+     | Messaging.
+     |
+     | `sender_domains` is the operator's list of domains this installation may put in an email's
+     | From *address* — the ones whose SPF lists this server and whose DKIM key it holds. An
+     | organiser whose address is not under one of them still gets their own name in the From line
+     | and their own address in Reply-To, which is most of the benefit and costs no deliverability.
+     | Sending as a domain we are not authorised for is how a venue's confirmations start going to
+     | spam folders, so this is an operator's decision and never an organiser's.
+     |
+     | Comma-separated. Subdomains of a listed domain count.
+     */
+    'messaging' => [
+        'sender_domains' => env('SEATMAP_SENDER_DOMAINS', ''),
+    ],
+
     'sites' => [
         'panel_hosts' => array_values(array_filter(array_map(
             'trim',

@@ -5574,6 +5574,118 @@ paths:
                 properties:
                   unread: { type: integer }
 
+  /messaging/sender:
+    get:
+      operationId: getSenderIdentity
+      tags: [Messaging]
+      summary: Who this account's email comes from
+      description: |
+        Requires `account.manage`.
+
+        The answer is in three parts because deliverability makes it three. The **name** is the
+        venue's as soon as they type it — there is nothing to prove about a label. The **reply
+        address** is theirs once a code sent to it has been typed back. The **From address** stays
+        the platform's unless the operator has authorised that domain (`SEATMAP_SENDER_DOMAINS`),
+        because sending as a domain whose SPF does not list this server is how confirmations end up
+        in spam folders.
+
+        `sends_as` is what a buyer will actually see, so a client never has to work it out.
+      responses:
+        "200":
+          description: The identity, and how far along proving it this account is
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SenderIdentity" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+    put:
+      operationId: saveSenderIdentity
+      tags: [Messaging]
+      summary: Set the name, and start proving the address
+      description: >-
+        Requires `account.manage`. The name takes effect immediately. A changed address clears the
+        verification and sends a six-digit code to it, so an organiser who mistypes loses the old
+        reply address until they fix it — the header must never point somewhere nobody has answered
+        from.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: [string, "null"], maxLength: 120 }
+                email: { type: [string, "null"], format: email, maxLength: 190 }
+      responses:
+        "200":
+          description: The identity as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SenderIdentity" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+    delete:
+      operationId: clearSenderIdentity
+      tags: [Messaging]
+      summary: Go back to the platform's own identity
+      description: >-
+        Requires `account.manage`. The account's own name is still used in the From line, because it
+        is better than the platform's brand and costs nothing.
+      responses:
+        "200":
+          description: The identity as it now stands
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SenderIdentity" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /messaging/sender/code:
+    post:
+      operationId: resendSenderCode
+      tags: [Messaging]
+      summary: Send the code again
+      description: >-
+        Requires `account.manage`. Throttled to five a minute: it sends an email to an address
+        somebody typed. The code itself always leaves from the platform's own address — it is the
+        message that decides whether the other one may be used.
+      responses:
+        "200":
+          description: The identity, now awaiting a code
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SenderIdentity" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /messaging/sender/verify:
+    post:
+      operationId: verifySenderIdentity
+      tags: [Messaging]
+      summary: Type the code from the email
+      description: >-
+        Requires `account.manage`. Six attempts, then the code is spent — six digits are only
+        unguessable because the guesses run out.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, maxLength: 12, example: "482913" }
+      responses:
+        "200":
+          description: The identity, now proved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SenderIdentity" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
   /messaging:
     get:
       operationId: getMessagingSettings
@@ -10631,6 +10743,36 @@ components:
             email: { type: [string, "null"] }
             status: { type: string }
             total: { type: string, description: "Formatted in the reader's language." }
+
+    SenderIdentity:
+      type: object
+      description: Who a buyer's confirmation appears to come from, and how far along proving it.
+      properties:
+        name:
+          type: [string, "null"]
+          description: The name an organiser typed, where they have typed one.
+        email: { type: [string, "null"], format: email }
+        verified: { type: boolean }
+        verified_at: { type: [string, "null"], format: date-time }
+        awaiting_code:
+          type: boolean
+          description: A code has been sent to the address and has not expired.
+        address_is_theirs:
+          type: boolean
+          description: >-
+            Whether the operator has authorised this domain, which is what decides between "replies
+            reach the venue" and "the email is entirely theirs".
+        sends_as:
+          type: object
+          description: What a buyer will actually see at the top of the message.
+          properties:
+            name: { type: string }
+            address: { type: string, format: email }
+        reply_to:
+          type: [string, "null"]
+          format: email
+          description: Null when it would only repeat the From address.
+        platform_address: { type: string, format: email }
 
     WebhookEndpoint:
       type: object

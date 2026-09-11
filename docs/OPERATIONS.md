@@ -45,6 +45,12 @@ Redis flushed by hand, and a delivery sits `pending` with its moment in the past
 is what makes the delivery table rather than the queue the record of what is still owed to somebody
 else's server. It also prunes the log (`SEATMAP_WEBHOOK_LOG_DAYS`, 30 by default).
 
+**`SEATMAP_SENDER_DOMAINS`** is the list of domains this installation may put in an email's From
+*address* — the ones whose SPF lists this server and whose DKIM key it holds. Adding a domain here
+is a statement that the DNS is in place; adding one that is not is how a venue's confirmations start
+going to spam folders, and the organiser has no way to tell. Leave it empty and every venue still
+gets its own name in the From line and its own address in Reply-To, which costs nothing.
+
 **`SEATMAP_WEBHOOK_VERIFY_DESTINATION` must be `true` in production.** Off, a webhook address is not
 resolved and plain `http` is accepted — which suits a development machine and undoes threat T13's
 mitigation entirely on a real one.

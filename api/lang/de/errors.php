@@ -325,4 +325,5 @@ return [
     'url_private' => 'Diese Adresse liegt in einem privaten Netz; dieser Server ruft sie nicht auf.',
     'no_events_chosen' => 'Wählen Sie mindestens ein Ereignis, über das Sie informiert werden möchten.',
     'endpoint_not_active' => 'Schalten Sie das Ziel wieder ein, bevor erneut etwas gesendet wird.',
+    'sender_no_address' => 'Es gibt keine Adresse, an die ein Code gehen könnte. Tragen Sie zuerst eine ein.',
 ];
