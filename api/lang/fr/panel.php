@@ -1485,7 +1485,19 @@ return [
         'empty' => "Rien n'a été vendu sur cette période.",
         'emptyTitle' => 'Rien à régler',
         'emptyBody' => "Aucune commande n'a été payée sur cette période. Élargissez les dates, ou vérifiez si le comptage se fait par paiement ou par date d'événement.",
-        'note' => "Un remboursement total rend tout ce que l'acheteur a payé ; un remboursement partiel ne rend que les places concernées. La commission porte sur ce que vous conservez, jamais sur la taxe. Le virement lui-même se fait là où vous avez encaissé.",
+        'note' => 'Un remboursement complet rend tout ce que l’acheteur a payé ; un remboursement partiel ne rend que les places nommées. La commission porte sur ce que vous gardez, jamais sur la taxe. L’argent d’une réservation repart par la passerelle qui l’a pris.',
+        'payouts' => 'Versé',
+        'payoutsNote' => 'Les périodes qui ont été réglées. Les chiffres sont ceux qu’elles avaient au départ de l’argent — un remboursement ultérieur ne les réécrit pas.',
+        'paidUpTo' => 'Réglé jusqu’à la veille du :date. Les chiffres sont ceux de chaque période au départ de l’argent ; un remboursement ultérieur ne les réécrit pas.',
+        'period' => 'Période',
+        'periodRange' => 'du :from au :to',
+        'reference' => 'Référence',
+        'eventsCounted' => 'Événements : :count',
+        'payoutStatus' => [
+            'recorded' => 'Enregistré',
+            'paid' => 'Versé',
+            'void' => 'Annulé',
+        ],
     ],
 
     'entrySlots' => [

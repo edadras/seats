@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
+use App\Domain\Settlement\Payouts;
 use App\Domain\Settlement\Settlement;
 use App\Http\Controllers\Controller;
 use App\Support\Audit\AuditLogger;
@@ -29,6 +30,7 @@ class SettlementController extends Controller
         private readonly StatementPdf $pdf,
         private readonly TenantContext $tenants,
         private readonly AuditLogger $audit,
+        private readonly Payouts $payouts,
     ) {}
 
     public function index(Request $request)
@@ -52,6 +54,29 @@ class SettlementController extends Controller
         $this->authorize($request, 'reports.orders.view');
 
         return response()->json($this->settlement->forEvent($event));
+    }
+
+    /**
+     * What has actually been paid out, and what is still owed.
+     *
+     * Read-only here on purpose. A payout is the platform's side of the sentence — an account that
+     * could record its own would be an account that could record one that never happened — but it
+     * is the organiser's money, so nothing about it is hidden from them: the period, the figures as
+     * they were frozen, the bank reference, and a voided one with the reason it was voided.
+     */
+    public function payouts(Request $request)
+    {
+        $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
+
+        $tenant = $this->tenants->idOrFail();
+
+        return response()->json([
+            'data' => $this->payouts->forTenant($tenant),
+            // Where the next one starts if nobody argues — so an organiser can see which days are
+            // still unsettled without counting back through the list themselves.
+            'next_from' => $this->payouts->nextFrom($tenant),
+        ]);
     }
 
     public function export(Request $request): StreamedResponse

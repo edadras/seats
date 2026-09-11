@@ -1485,7 +1485,19 @@ return [
         'empty' => 'In diesem Zeitraum wurde nichts verkauft.',
         'emptyTitle' => 'Nichts abzurechnen',
         'emptyBody' => 'In diesem Zeitraum wurde keine Bestellung bezahlt. Erweitern Sie den Zeitraum oder prüfen Sie, ob nach Zahlung oder nach Veranstaltungsdatum gezählt wird.',
-        'note' => 'Eine vollständige Erstattung gibt alles zurück, was der Käufer gezahlt hat; eine Teilerstattung nur die genannten Plätze. Provision fällt auf das an, was Sie behalten, nie auf die Steuer. Das Geld selbst wird dort zurücküberwiesen, wo Sie es eingenommen haben.',
+        'note' => 'Eine volle Erstattung gibt alles zurück, was der Käufer gezahlt hat; eine teilweise nur die genannten Plätze. Provision fällt auf das an, was Sie behalten, nie auf die Steuer. Das Geld einer Buchung geht über dasselbe Gateway zurück, das es genommen hat.',
+        'payouts' => 'Ausgezahlt',
+        'payoutsNote' => 'Abgerechnete Zeiträume. Die Zahlen sind die, die beim Abgang des Geldes galten — eine spätere Erstattung schreibt sie nicht um.',
+        'paidUpTo' => 'Abgerechnet bis zum Tag vor dem :date. Die Zahlen sind die, die beim Abgang des Geldes galten; eine spätere Erstattung schreibt sie nicht um.',
+        'period' => 'Zeitraum',
+        'periodRange' => ':from bis :to',
+        'reference' => 'Referenz',
+        'eventsCounted' => 'Veranstaltungen: :count',
+        'payoutStatus' => [
+            'recorded' => 'Erfasst',
+            'paid' => 'Ausgezahlt',
+            'void' => 'Storniert',
+        ],
     ],
 
     'entrySlots' => [

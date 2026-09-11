@@ -11,6 +11,7 @@
  */
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SHOTS = process.env.SEATMAP_SHOTS || '/tmp/settlement-shots';
@@ -61,6 +62,42 @@ check( 'counting by the night still finds the run',
 
 await page.selectOption( '#settle-basis', 'paid' );
 await page.waitForTimeout( 800 );
+
+console.log( 'What has already been paid' );
+
+/*
+ * Settled the way the console settles it, rather than by writing a row.
+ *
+ * The point of the block on this screen is that the organiser sees what the platform did, so the
+ * check is worth nothing if the two write different things.
+ */
+const settled = execFileSync( 'php', [ 'artisan', 'tinker', '--execute', `
+	$tenant = \\App\\Models\\Tenant::where('slug', 'northgate')->firstOrFail();
+
+	$made = app(\\App\\Domain\\Settlement\\Payouts::class)->settle(
+		$tenant,
+		now()->subDays(30)->toDateString(),
+		now()->toDateString(),
+		['reference' => 'SEPA-7'],
+	);
+
+	echo count($made);
+` ], { encoding: 'utf8' } ).trim();
+
+check( 'the platform settles the period', settled.endsWith( '1' ), settled );
+
+await page.reload( { waitUntil: 'networkidle' } );
+await page.click( 'nav button[data-view=settlement]' );
+await page.waitForSelector( '#settle-payouts table' );
+
+const paid = await page.locator( '#settle-payouts' ).innerText();
+
+check( 'and the organiser sees it under what they are owed', /SEPA-7/.test( paid ),
+	paid.replace( /\s+/g, ' ' ).slice( 0, 100 ) );
+check( 'with the days it covers, so they know what is still open',
+	/Recorded/i.test( paid ) );
+
+await page.screenshot( { path: `${ SHOTS }/payouts.png`, fullPage: true } );
 
 console.log( 'The files' );
 const csv = await Promise.all( [

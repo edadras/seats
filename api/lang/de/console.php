@@ -21,6 +21,7 @@ return [
     'failed' => 'Anfrage fehlgeschlagen',
     'save' => 'Speichern',
     'none' => '—',
+    'loading' => 'Wird geladen…',
 
     'levels' => [
         'support' => 'Support',
@@ -41,6 +42,9 @@ return [
         'cancelled' => 'Gekündigt',
         'live' => 'Live',
         'draft' => 'Entwurf',
+        'recorded' => 'Erfasst',
+        'paid' => 'Ausgezahlt',
+        'void' => 'Storniert',
     ],
 
     'overview' => [
@@ -145,4 +149,28 @@ return [
         'detail' => 'Detail',
         'from' => 'Von',
     ],
+
+    'payouts' => [
+        'heading' => 'Auszahlungen',
+        'period' => 'Zeitraum',
+        'range' => ':from bis :to',
+        'currency' => 'Währung',
+        'charged' => 'Eingenommen',
+        'refunded' => 'Erstattet',
+        'commission' => 'Provision',
+        'payable' => 'Auszuzahlen',
+        'reference' => 'Referenz',
+        'none' => 'Für diesen Veranstalter wurde noch nichts abgerechnet.',
+        'from' => 'Von',
+        'to' => 'Bis',
+        'preview' => 'Berechnen',
+        'settle' => 'Diesen Zeitraum abrechnen',
+        'markPaid' => 'Als ausgezahlt markieren',
+        'void' => 'Stornieren',
+        'askReference' => 'Bankreferenz für diese Auszahlung (leer lassen, wenn es noch keine gibt):',
+        'whyVoid' => 'Warum wird diese Auszahlung storniert? Der Zeitraum wird wieder frei.',
+        'clash' => 'Diese Tage überschneiden sich mit einer bestehenden Auszahlung: :periods. Stornieren Sie sie oder wählen Sie andere Daten.',
+        'nothing' => 'In diesem Zeitraum wurde nichts eingenommen, also gibt es nichts abzurechnen.',
+    ],
+
 ];

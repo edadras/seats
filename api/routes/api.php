@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Embed\EmbedController;
 use App\Http\Controllers\Api\V1\Integrations\WooCommerceController;
 use App\Http\Controllers\Api\V1\Admin\AuthController as ConsoleAuthController;
 use App\Http\Controllers\Api\V1\Admin\ConsoleController;
+use App\Http\Controllers\Api\V1\Admin\PayoutController;
 use App\Http\Controllers\Api\V1\Admin\PlanController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\SignupController;
@@ -484,6 +485,7 @@ Route::prefix('v1')->group(function () {
         // other route with an `{event}` in it.
         Route::get('events/{event}/settlement', [SettlementController::class, 'forEvent']);
         Route::get('settlement', [SettlementController::class, 'index']);
+        Route::get('settlement/payouts', [SettlementController::class, 'payouts']);
         Route::get('settlement/export', [SettlementController::class, 'export']);
         Route::get('settlement/statement', [SettlementController::class, 'statement']);
 
@@ -601,6 +603,14 @@ Route::prefix('v1')->group(function () {
         Route::post('tenants/{tenant}/impersonate', [ConsoleController::class, 'impersonate']);
         Route::get('sites', [ConsoleController::class, 'sites']);
         Route::get('audit', [ConsoleController::class, 'audit']);
+
+        // Paying organisers. Settling a period is the one thing in this console that moves money
+        // out of the platform, so it is an operator's, not support's — enforced in the controller.
+        Route::get('tenants/{tenant}/payouts', [PayoutController::class, 'index']);
+        Route::get('tenants/{tenant}/payouts/preview', [PayoutController::class, 'preview']);
+        Route::post('tenants/{tenant}/payouts', [PayoutController::class, 'store']);
+        Route::post('payouts/{payout}/paid', [PayoutController::class, 'markPaid']);
+        Route::post('payouts/{payout}/void', [PayoutController::class, 'void']);
 
         Route::get('plans', [PlanController::class, 'index']);
         Route::post('plans', [PlanController::class, 'store']);

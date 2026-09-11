@@ -296,6 +296,17 @@ A seat is the start of it, not the end. Around the map:
   reference the buyer's bank will want.
 - **Settlement** — what was taken, what was handed back, what the platform's commission was, per
   period or per event, as a statement somebody can send to an accountant.
+- **Payouts: a period settled once.** The settlement report would tell anybody who asked what a
+  window was worth, and told nobody whether it had been paid — so the same month could go out twice,
+  a fortnight could fall between two payouts nobody lined up, and a refund in March quietly rewrote
+  what February had appeared to be worth long after the money left. A payout closes a period: the
+  figures are frozen as they stood and never recomputed, the per-event breakdown goes with them so
+  the statement reprints rather than recalculates, and the days can only be settled once — an
+  exclusion constraint in the database, not a check in a controller, because two operators clicking
+  at the same moment arrive as two inserts and neither can see the other. A mistake is voided with a
+  reason, which frees the days and keeps the row: what was sent and what is true stay separately
+  findable. The organiser reads every payout on their own settlement screen; only the platform's
+  operators can make one.
 - **Reports** built by dragging fields, with no SQL box — [ADR-0006](docs/adr/0006-report-engine.md)
   says why.
 - **Two-step sign-in** for staff, and **GDPR export and erasure** for buyers.
@@ -581,6 +592,14 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Credit instead of money never touches the gateway | `RefundToCardTest` |
 | A payment the gateway has already refunded is not refunded twice | `RefundToCardTest`, `StripeGatewayTest` |
 | A buyer's granted request sends money, and a refused one stays pending | `RefundToCardTest` |
+| A period is settled at the figures it had, and a later refund does not rewrite them | `PayoutTest` |
+| The same days cannot be settled twice, nor two periods that merely touch | `PayoutTest` |
+| The database itself refuses an overlap, past every check in the code | `PayoutTest` |
+| The same days in another currency are a different period | `PayoutTest` |
+| Voiding one frees its days and keeps the row | `PayoutTest` |
+| A period with nothing in it is refused rather than recorded as a zero | `PayoutTest` |
+| Support may look at payouts and not send money | `PayoutTest` |
+| An organiser reads their own payouts and nobody else's | `PayoutTest`, `console_smoke` |
 | A refunded booking says on its own screen where the money went | `refund_smoke` |
 | Tenant A cannot reach tenant B's anything | `TenantIsolationTest` |
 | Browser-set prices are ignored | `ApiSecurityTest` |

@@ -1533,7 +1533,19 @@ return [
         'empty' => 'Nothing was sold in this period.',
         'emptyTitle' => 'Nothing to settle',
         'emptyBody' => 'No order was paid in this period. Widen the dates, or check whether you are counting by payment or by event date.',
-        'note' => 'A full refund returns everything the buyer paid; a part refund returns the seats named. Commission is charged on what you keep, never on tax. Moving the money itself happens where you took it.',
+        'note' => 'A full refund returns everything the buyer paid; a part refund returns the seats named. Commission is charged on what you keep, never on tax. Refunding a booking sends the money back through the gateway that took it.',
+        'payouts' => 'Paid out',
+        'payoutsNote' => 'Periods that have been settled. The figures are the ones each period had when the money left — a later refund does not rewrite them.',
+        'paidUpTo' => 'Settled up to the day before :date. The figures are the ones each period had when the money left; a later refund does not rewrite them.',
+        'period' => 'Period',
+        'periodRange' => ':from to :to',
+        'reference' => 'Reference',
+        'eventsCounted' => 'Events: :count',
+        'payoutStatus' => [
+            'recorded' => 'Recorded',
+            'paid' => 'Paid',
+            'void' => 'Voided',
+        ],
     ],
 
     'entrySlots' => [

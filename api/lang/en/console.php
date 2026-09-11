@@ -32,6 +32,7 @@ return [
     'failed' => 'Request failed',
     'save' => 'Save',
     'none' => '—',
+    'loading' => 'Loading…',
 
     'levels' => [
         'support' => 'Support',
@@ -52,6 +53,9 @@ return [
         'cancelled' => 'Cancelled',
         'live' => 'Live',
         'draft' => 'Draft',
+        'recorded' => 'Recorded',
+        'paid' => 'Paid',
+        'void' => 'Voided',
     ],
 
     'overview' => [
@@ -156,4 +160,28 @@ return [
         'detail' => 'Detail',
         'from' => 'From',
     ],
+
+    'payouts' => [
+        'heading' => 'Payouts',
+        'period' => 'Period',
+        'range' => ':from to :to',
+        'currency' => 'Currency',
+        'charged' => 'Charged',
+        'refunded' => 'Refunded',
+        'commission' => 'Commission',
+        'payable' => 'Payable',
+        'reference' => 'Reference',
+        'none' => 'Nothing has been settled for this organiser yet.',
+        'from' => 'From',
+        'to' => 'To',
+        'preview' => 'Work it out',
+        'settle' => 'Settle this period',
+        'markPaid' => 'Mark as paid',
+        'void' => 'Void',
+        'askReference' => 'Bank reference for this payout (leave blank if there is none yet):',
+        'whyVoid' => 'Why is this payout being voided? The period becomes free again.',
+        'clash' => 'Those days overlap a payout that already exists: :periods. Void it, or choose different dates.',
+        'nothing' => 'Nothing was taken in that period, so there is nothing to settle.',
+    ],
+
 ];

@@ -21,6 +21,7 @@ return [
     'failed' => 'Échec de la requête',
     'save' => 'Enregistrer',
     'none' => '—',
+    'loading' => 'Chargement…',
 
     'levels' => [
         'support' => 'Support',
@@ -41,6 +42,9 @@ return [
         'cancelled' => 'Résilié',
         'live' => 'En ligne',
         'draft' => 'Brouillon',
+        'recorded' => 'Enregistré',
+        'paid' => 'Versé',
+        'void' => 'Annulé',
     ],
 
     'overview' => [
@@ -145,4 +149,28 @@ return [
         'detail' => 'Détail',
         'from' => 'Depuis',
     ],
+
+    'payouts' => [
+        'heading' => 'Versements',
+        'period' => 'Période',
+        'range' => 'du :from au :to',
+        'currency' => 'Devise',
+        'charged' => 'Encaissé',
+        'refunded' => 'Remboursé',
+        'commission' => 'Commission',
+        'payable' => 'À verser',
+        'reference' => 'Référence',
+        'none' => 'Rien n’a encore été réglé pour cet organisateur.',
+        'from' => 'Du',
+        'to' => 'Au',
+        'preview' => 'Calculer',
+        'settle' => 'Régler cette période',
+        'markPaid' => 'Marquer comme versé',
+        'void' => 'Annuler',
+        'askReference' => 'Référence bancaire de ce versement (laisser vide s’il n’y en a pas encore) :',
+        'whyVoid' => 'Pourquoi annuler ce versement ? La période redevient libre.',
+        'clash' => 'Ces jours chevauchent un versement qui existe déjà : :periods. Annulez-le, ou choisissez d’autres dates.',
+        'nothing' => 'Rien n’a été encaissé sur cette période, il n’y a donc rien à régler.',
+    ],
+
 ];

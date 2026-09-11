@@ -1484,7 +1484,19 @@ return [
         'empty' => 'In questo periodo non è stato venduto nulla.',
         'emptyTitle' => 'Niente da liquidare',
         'emptyBody' => "In questo periodo non è stato pagato alcun ordine. Allargate le date, oppure controllate se il conteggio è per pagamento o per data dell'evento.",
-        'note' => "Un rimborso totale restituisce tutto ciò che l'acquirente ha pagato; un rimborso parziale restituisce solo i posti indicati. La commissione si applica a ciò che resta a voi, mai all'imposta. Il trasferimento del denaro avviene dove lo avete incassato.",
+        'note' => 'Un rimborso totale restituisce tutto quello che l’acquirente ha pagato; uno parziale solo i posti indicati. La commissione si calcola su quanto tenete, mai sull’imposta. Il denaro di una prenotazione torna dal gateway che lo ha preso.',
+        'payouts' => 'Pagato',
+        'payoutsNote' => 'I periodi che sono stati liquidati. Le cifre sono quelle che avevano quando il denaro è uscito — un rimborso successivo non le riscrive.',
+        'paidUpTo' => 'Liquidato fino al giorno prima del :date. Le cifre sono quelle di ogni periodo all’uscita del denaro; un rimborso successivo non le riscrive.',
+        'period' => 'Periodo',
+        'periodRange' => 'dal :from al :to',
+        'reference' => 'Riferimento',
+        'eventsCounted' => 'Eventi: :count',
+        'payoutStatus' => [
+            'recorded' => 'Registrato',
+            'paid' => 'Pagato',
+            'void' => 'Annullato',
+        ],
     ],
 
     'entrySlots' => [

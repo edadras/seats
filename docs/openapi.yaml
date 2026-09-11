@@ -3751,6 +3751,228 @@ paths:
                     type: array
                     items: { type: object, additionalProperties: true }
 
+  /admin/tenants/{tenant}/payouts:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: consoleListPayouts
+      tags: [Console]
+      summary: What has been paid to one organiser
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Payout" }
+                  next_from:
+                    type: [string, "null"]
+                    format: date
+                    description: The day after the last settled period.
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: consoleSettlePeriod
+      tags: [Console]
+      summary: Settle a period — once
+      description: |
+        Operator only; support may read this list and not write to it, enforced at the server
+        rather than by hiding a button.
+
+        Freezes the settlement figures for these days and writes one payout per currency: an account
+        selling in euro and in rial is owed two different amounts of two different things, and a
+        single row holding their sum would be a number nobody could pay.
+
+        **Days, inclusive at both ends, and never overlapping.** Periods for one account and
+        currency may not touch — 1–31 March and 31 March–5 April is the thirty-first paid twice — and
+        that is an exclusion constraint in the database rather than a check in this endpoint,
+        because two operators clicking at the same moment arrive as two inserts and neither can see
+        the other. An overlap is `period_already_settled` and names the payouts in the way.
+
+        Always counted by when the money moved, never by the date of the event. Settling on an event
+        basis would let two periods that do not overlap by date overlap by money.
+
+        `paid_at` given means the money has already left, so the payout is written as `paid` rather
+        than `recorded`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to]
+              properties:
+                from: { type: string, format: date }
+                to: { type: string, format: date }
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  description: Settle one currency only. Omit for all of them.
+                reference: { type: string, maxLength: 190 }
+                method: { type: string, maxLength: 40 }
+                note: { type: string, maxLength: 2000 }
+                paid_at: { type: string, format: date-time }
+      responses:
+        "201":
+          description: Settled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Payout" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Some of those days have already been settled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Nothing was taken in that period, or it runs backwards
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /admin/tenants/{tenant}/payouts/preview:
+    parameters:
+      - name: tenant
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: consolePreviewPayout
+      tags: [Console]
+      summary: What settling this period would pay, before anything is written
+      description: >
+        The same figures the payout will freeze, and the payouts already in the way if there are
+        any — so an operator about to send money is looking at what is about to be recorded, rather
+        than finding out what the button meant afterwards.
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: object
+                    properties:
+                      from: { type: string, format: date }
+                      to: { type: string, format: date }
+                  currencies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        currency: { type: string }
+                        events: { type: integer }
+                        orders: { type: integer }
+                        charged: { type: integer }
+                        refunded: { type: integer }
+                        kept: { type: integer }
+                        tax_kept: { type: integer }
+                        commission: { type: integer }
+                        payable: { type: integer }
+                        already_paid:
+                          type: integer
+                          description: What has already gone out for days inside this window.
+                  clashes:
+                    type: array
+                    description: Live payouts whose days touch this window, named rather than counted.
+                    items: { $ref: "#/components/schemas/Payout" }
+                  suggested_from: { type: [string, "null"], format: date }
+                  commission_rate: { type: integer }
+                  events: { type: integer }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/payouts/{payout}/paid:
+    parameters:
+      - name: payout
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: consoleMarkPayoutPaid
+      tags: [Console]
+      summary: Record that the money has left
+      description: Operator only. A voided payout cannot be paid.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reference: { type: string, maxLength: 190 }
+                method: { type: string, maxLength: 40 }
+                paid_at: { type: string, format: date-time }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payout" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: The payout has been voided
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /admin/payouts/{payout}/void:
+    parameters:
+      - name: payout
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: consoleVoidPayout
+      tags: [Console]
+      summary: Undo a payout, and free its days
+      description: |
+        Operator only. Not a delete: a payout that was sent to somebody is a thing that happened,
+        and a period that was closed and reopened is worth being able to see. The row stays, marked
+        void with the reason, and the days become settleable again.
+
+        The reason is required rather than optional — a period reopened with no explanation is a
+        question somebody answers from memory months later.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Voided
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payout" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: It was already void
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /admin/plans:
     get:
       operationId: consoleListPlans
@@ -6820,6 +7042,37 @@ paths:
           content:
             text/csv:
               schema: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /settlement/payouts:
+    get:
+      operationId: listMyPayouts
+      tags: [Settlement]
+      summary: The periods that have been settled, and what was paid for each
+      description: |
+        Requires `reports.orders.view`. Read-only, and deliberately so: a payout is the platform's
+        side of the sentence — an account that could record its own could record one that never
+        happened — but it is the organiser's money, so nothing about it is hidden from them.
+
+        The figures are the ones each period had when the money left. A refund a fortnight later
+        does not rewrite them, and must not: what the settlement report says about the same window
+        today is a different question with a different answer, and both are true.
+
+        `next_from` is the day after the last settled period, so an organiser can see which days are
+        still open without counting back through the list themselves. It is null when nothing has
+        been settled yet.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Payout" }
+                  next_from: { type: [string, "null"], format: date }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /settlement/statement:
@@ -11142,6 +11395,58 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    Payout:
+      type: object
+      description: >-
+        One period, settled once. Every figure here was frozen at the moment the payout was made and
+        is never recomputed: what the settlement report says about the same window today is a
+        different question with a different answer, and both are true.
+      properties:
+        id: { type: string, format: uuid }
+        currency: { type: string }
+        from: { type: string, format: date, description: "Inclusive." }
+        to: { type: string, format: date, description: "Inclusive." }
+        charged: { type: integer, description: "Minor units, as they stood." }
+        refunded: { type: integer }
+        kept: { type: integer }
+        tax_kept: { type: integer }
+        commission: { type: integer }
+        commission_rate: { type: integer, description: "Basis points, as the plan stood." }
+        payable:
+          type: integer
+          description: >-
+            Signed, alone among these: a period where more went back out than came in leaves the
+            organiser owing the platform, which is real and not clamped away.
+        orders: { type: integer }
+        events:
+          type: array
+          description: The per-event breakdown as it stood, so the statement reprints rather than recomputes.
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              starts_at: { type: [string, "null"], format: date-time }
+              orders: { type: integer }
+              seats: { type: integer }
+              charged: { type: integer }
+              refunded: { type: integer }
+              commission: { type: integer }
+              payable: { type: integer }
+        status:
+          type: string
+          enum: [recorded, paid, void]
+          description: >-
+            `recorded` — agreed and owed. `paid` — the money has left. `void` — undone, and the days
+            are free again.
+        reference: { type: [string, "null"], description: "The bank's own handle for the transfer." }
+        method: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+        paid_at: { type: [string, "null"], format: date-time }
+        voided_at: { type: [string, "null"], format: date-time }
+        void_reason: { type: [string, "null"] }
+        created_at: { type: [string, "null"], format: date-time }
 
     ConsolePlan:
       type: object

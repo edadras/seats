@@ -21,6 +21,7 @@ return [
     'failed' => 'Richiesta non riuscita',
     'save' => 'Salva',
     'none' => '—',
+    'loading' => 'Caricamento…',
 
     'levels' => [
         'support' => 'Supporto',
@@ -41,6 +42,9 @@ return [
         'cancelled' => 'Cessato',
         'live' => 'In linea',
         'draft' => 'Bozza',
+        'recorded' => 'Registrato',
+        'paid' => 'Pagato',
+        'void' => 'Annullato',
     ],
 
     'overview' => [
@@ -145,4 +149,28 @@ return [
         'detail' => 'Dettaglio',
         'from' => 'Da',
     ],
+
+    'payouts' => [
+        'heading' => 'Pagamenti',
+        'period' => 'Periodo',
+        'range' => 'dal :from al :to',
+        'currency' => 'Valuta',
+        'charged' => 'Incassato',
+        'refunded' => 'Rimborsato',
+        'commission' => 'Commissione',
+        'payable' => 'Da pagare',
+        'reference' => 'Riferimento',
+        'none' => 'Per questo organizzatore non è stato ancora liquidato nulla.',
+        'from' => 'Dal',
+        'to' => 'Al',
+        'preview' => 'Calcola',
+        'settle' => 'Liquida questo periodo',
+        'markPaid' => 'Segna come pagato',
+        'void' => 'Annulla',
+        'askReference' => 'Riferimento bancario di questo pagamento (lascia vuoto se non c’è ancora):',
+        'whyVoid' => 'Perché questo pagamento viene annullato? Il periodo torna libero.',
+        'clash' => 'Quei giorni si sovrappongono a un pagamento che esiste già: :periods. Annullalo, oppure scegli altre date.',
+        'nothing' => 'In quel periodo non è stato incassato nulla, quindi non c’è nulla da liquidare.',
+    ],
+
 ];

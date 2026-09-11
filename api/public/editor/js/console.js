@@ -420,6 +420,172 @@
 		} ).catch( fail );
 	};
 
+	/**
+	 * Paying an organiser, and the record of having paid them.
+	 *
+	 * On the organiser's own screen rather than a list of its own: a payout is about one account,
+	 * and the question that leads to it — "have we settled these people" — is asked while looking
+	 * at them.
+	 *
+	 * The form asks for a window and then shows what it would pay *before* anything is written,
+	 * because the alternative is an operator clicking a button and finding out what it meant
+	 * afterwards. Support sees the list and not the form; that is enforced at the server too,
+	 * since a hidden button does not stop a request.
+	 */
+	Console.payouts = function ( id ) {
+		var host = document.getElementById( 'c-payouts' );
+
+		if ( ! host ) {
+			return;
+		}
+
+		Console.request( 'GET', '/admin/tenants/' + id + '/payouts' ).then( function ( body ) {
+			var operator = 'operator' === Console.level;
+			var rows = ( body.data || [] ).map( function ( row ) {
+				return '<tr' + ( 'void' === row.status ? ' class="is-muted"' : '' ) + '>' +
+					'<td class="table__primary nowrap">' +
+						esc( t( 'console.payouts.range', { from: row.from, to: row.to } ) ) +
+						'<span class="muted on-own-line">' + esc( row.currency ) + '</span></td>' +
+					'<td class="tnum">' + esc( money( row.charged, row.currency ) ) + '</td>' +
+					'<td class="tnum">' + esc( money( row.commission, row.currency ) ) + '</td>' +
+					'<td class="tnum">' + esc( money( row.payable, row.currency ) ) + '</td>' +
+					'<td>' + badge( row.status ) +
+						( row.void_reason
+							? '<span class="muted on-own-line">' + esc( row.void_reason ) + '</span>'
+							: '' ) + '</td>' +
+					'<td>' + esc( row.reference || '—' ) + '</td>' +
+					'<td class="table__actions">' + ( operator && 'void' !== row.status
+						? ( 'paid' === row.status
+							? ''
+							: '<button class="btn btn--sm" data-paid="' + esc( row.id ) + '">' +
+								esc( t( 'console.payouts.markPaid' ) ) + '</button>' ) +
+							' <button class="btn btn--sm btn--danger" data-void="' + esc( row.id ) + '">' +
+								esc( t( 'console.payouts.void' ) ) + '</button>'
+						: '' ) + '</td>' +
+				'</tr>';
+			} ).join( '' );
+
+			host.innerHTML =
+				( rows
+					? Console.table( [
+						t( 'console.payouts.period' ),
+						t( 'console.payouts.charged' ),
+						t( 'console.payouts.commission' ),
+						t( 'console.payouts.payable' ),
+						t( 'console.tenants.status' ),
+						t( 'console.payouts.reference' ),
+						'',
+					], rows )
+					: '<p class="muted">' + esc( t( 'console.payouts.none' ) ) + '</p>' ) +
+				( operator
+					? '<div class="filters spaced">' +
+						'<input class="input" type="date" id="c-pay-from" value="' +
+							esc( body.next_from || '' ) + '" aria-label="' +
+							esc( t( 'console.payouts.from' ) ) + '">' +
+						'<input class="input" type="date" id="c-pay-to" aria-label="' +
+							esc( t( 'console.payouts.to' ) ) + '">' +
+						'<button class="btn" id="c-pay-preview">' +
+							esc( t( 'console.payouts.preview' ) ) + '</button>' +
+					'</div>' +
+					'<div id="c-pay-preview-out"></div>'
+					: '' );
+
+			each( '[data-paid]', function ( button ) {
+				button.addEventListener( 'click', function () {
+					var reference = global.prompt( t( 'console.payouts.askReference' ) );
+
+					if ( null === reference ) {
+						return;
+					}
+
+					Console.request( 'POST', '/admin/payouts/' + button.dataset.paid + '/paid', {
+						reference: reference || null,
+					} ).then( function () { Console.payouts( id ); } ).catch( fail );
+				} );
+			} );
+
+			each( '[data-void]', function ( button ) {
+				button.addEventListener( 'click', function () {
+					// Required, not optional: a period reopened with no explanation is a question
+					// somebody answers from memory months later.
+					var reason = global.prompt( t( 'console.payouts.whyVoid' ) );
+
+					if ( ! reason ) {
+						return;
+					}
+
+					Console.request( 'POST', '/admin/payouts/' + button.dataset.void + '/void', {
+						reason: reason,
+					} ).then( function () { Console.payouts( id ); } ).catch( fail );
+				} );
+			} );
+
+			bind( 'c-pay-preview', function () { Console.previewPayout( id ); } );
+		} ).catch( function () {
+			host.innerHTML = '<p class="muted">' + esc( t( 'console.payouts.none' ) ) + '</p>';
+		} );
+	};
+
+	/** What settling this window would pay — shown before it is written, never after. */
+	Console.previewPayout = function ( id ) {
+		var from = value( 'c-pay-from' );
+		var to = value( 'c-pay-to' );
+		var out = document.getElementById( 'c-pay-preview-out' );
+
+		if ( ! from || ! to || ! out ) {
+			return;
+		}
+
+		Console.request( 'GET', '/admin/tenants/' + id + '/payouts/preview?from=' +
+			encodeURIComponent( from ) + '&to=' + encodeURIComponent( to )
+		).then( function ( body ) {
+			var clashes = body.clashes || [];
+			var currencies = body.currencies || [];
+
+			out.innerHTML =
+				( clashes.length
+					? '<p class="issue issue--error">' + esc( t( 'console.payouts.clash', {
+						periods: clashes.map( function ( clash ) {
+							return t( 'console.payouts.range', { from: clash.from, to: clash.to } );
+						} ).join( ', ' ),
+					} ) ) + '</p>'
+					: '' ) +
+				( currencies.length
+					? Console.table( [
+						t( 'console.payouts.currency' ),
+						t( 'console.payouts.charged' ),
+						t( 'console.payouts.refunded' ),
+						t( 'console.payouts.commission' ),
+						t( 'console.payouts.payable' ),
+					], currencies.map( function ( row ) {
+						return '<tr><td class="table__primary">' + esc( row.currency ) + '</td>' +
+							'<td class="tnum">' + esc( money( row.charged, row.currency ) ) + '</td>' +
+							'<td class="tnum">' + esc( money( row.refunded, row.currency ) ) + '</td>' +
+							'<td class="tnum">' + esc( money( row.commission, row.currency ) ) + '</td>' +
+							'<td class="tnum">' + esc( money( row.payable, row.currency ) ) + '</td></tr>';
+					} ).join( '' ) ) +
+					( clashes.length
+						? ''
+						: '<button class="btn btn--primary spaced" id="c-pay-settle">' +
+							esc( t( 'console.payouts.settle' ) ) + '</button>' )
+					: '<p class="muted">' + esc( t( 'console.payouts.nothing' ) ) + '</p>' );
+
+			bind( 'c-pay-settle', function () {
+				var reference = global.prompt( t( 'console.payouts.askReference' ) );
+
+				if ( null === reference ) {
+					return;
+				}
+
+				Console.request( 'POST', '/admin/tenants/' + id + '/payouts', {
+					from: from,
+					to: to,
+					reference: reference || null,
+				} ).then( function () { Console.payouts( id ); } ).catch( fail );
+			} );
+		} ).catch( fail );
+	};
+
 	Console.tenant = function ( id ) {
 		Console.request( 'GET', '/admin/tenants/' + id ).then( function ( tenant ) {
 			var people = tenant.members.map( function ( person ) {
@@ -460,7 +626,9 @@
 						t( 'console.tenants.siteName' ),
 						t( 'console.tenants.status' ),
 						t( 'console.tenants.addresses' ),
-					], sites ),
+					], sites ) +
+				'<h3 class="subhead">' + esc( t( 'console.payouts.heading' ) ) + '</h3>' +
+					'<div id="c-payouts"><p class="muted">' + esc( t( 'console.loading' ) ) + '</p></div>',
 				'<button class="btn" id="c-back">' + esc( t( 'console.tenants.back' ) ) + '</button>' +
 				( operator
 					? '<button class="btn" id="c-impersonate">' +
@@ -471,6 +639,8 @@
 							: '<button class="btn btn--primary" id="c-reinstate">' +
 								esc( t( 'console.tenants.reinstate' ) ) + '</button>' )
 					: '' ) );
+
+			Console.payouts( id );
 
 			bind( 'c-back', function () { Console.go( 'tenants' ); } );
 
