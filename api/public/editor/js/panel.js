@@ -193,6 +193,20 @@
 				return;
 			}
 
+			/*
+			 * Coming back from the account's own provider.
+			 *
+			 * Ahead of the stored token for the same reason as an invitation: somebody who has just
+			 * signed in somewhere else has said something more recent than whatever this tab
+			 * remembers. The handle is spent immediately and taken out of the address bar either
+			 * way, so a reload is never a second attempt at a handle that is already gone.
+			 */
+			if ( window.location.search.indexOf( 'sso=' ) > -1 ) {
+				self.finishSso( new URLSearchParams( window.location.search ) );
+
+				return;
+			}
+
 			if ( ! self.token ) {
 				self.showLogin();
 
@@ -459,6 +473,55 @@
 		} );
 	};
 
+	/**
+	 * The other half of a sign-in that happened at the account's own provider.
+	 *
+	 * Four outcomes, and three of them are a sign-in screen with a sentence on it. The fourth
+	 * trades a one-time handle for a token — a handle rather than the token itself, because a
+	 * bearer credential in a URL is written into browser history, the next referrer and any proxy
+	 * log between here and there.
+	 */
+	App.finishSso = function ( query ) {
+		var self = this;
+		var outcome = query.get( 'sso' );
+		var handoff = query.get( 'handoff' );
+
+		window.history.replaceState( {}, '', '/' );
+
+		if ( 'ok' !== outcome || ! handoff ) {
+			this.showLogin();
+
+			// "unavailable" is one answer for an account nobody has heard of and an account that
+			// does not sign in this way: telling them apart would answer a question nobody signed
+			// in has any business asking.
+			this.loginProblem( this.t( {
+				unavailable: 'panel.sso.errUnavailable',
+				stranger: 'panel.sso.errStranger',
+			}[ outcome ] || 'panel.sso.errRefused' ) );
+
+			return;
+		}
+
+		this.request( 'POST', '/auth/sso/claim', { handoff: handoff, device_name: 'panel' } )
+			.then( function ( response ) {
+				self.finishSignIn( response, '' );
+			} )
+			.catch( function ( error ) {
+				self.showLogin();
+				self.loginProblem( error.message );
+			} );
+	};
+
+	/** Say something on the sign-in screen, whoever put it there. */
+	App.loginProblem = function ( message ) {
+		var problem = document.getElementById( 'login-error' );
+
+		if ( problem ) {
+			problem.innerHTML = icon( 'alert', { size: 16 } ) + '<span>' + esc( message ) + '</span>';
+			problem.hidden = false;
+		}
+	};
+
 	App.showLogin = function () {
 		var self = this;
 
@@ -478,6 +541,8 @@
 				'<div class="issue issue--error" id="login-error" role="alert" hidden></div>' +
 				'<button class="btn btn--primary btn--lg btn--block" type="submit">' +
 				esc( this.t( 'panel.auth.signIn' ) ) + '</button>' +
+				'<p class="auth__foot"><button type="button" class="link" id="go-sso">' +
+					esc( this.t( 'panel.sso.useYourOwn' ) ) + '</button></p>' +
 				'<p class="auth__foot"><button type="button" class="link" id="go-signup">' +
 					esc( this.t( 'signup.newAccount' ) ) + '</button></p>' +
 			'</form></div>';
@@ -490,6 +555,36 @@
 
 		document.getElementById( 'go-signup' )
 			.addEventListener( 'click', function () { window.SeatmapSignup.render( self ); } );
+
+		/*
+		 * Somebody whose venue signs in through its own provider.
+		 *
+		 * They are asked for their account's address rather than their own: an email typed here
+		 * would have to be answered with "that account uses single sign-on" or "it does not", and
+		 * that is a question about other people's organisations that nobody signed in should be
+		 * able to ask a thousand times.
+		 */
+		document.getElementById( 'go-sso' ).addEventListener( 'click', function () {
+			self.modal( {
+				title: self.t( 'panel.sso.useYourOwn' ),
+				submitLabel: self.t( 'panel.auth.signIn' ),
+				body: '<div class="field"><label class="field__label" for="sso-slug">' +
+					esc( self.t( 'panel.sso.accountAddress' ) ) + '</label>' +
+					'<input class="input" id="sso-slug" name="slug" required autocomplete="off"></div>' +
+					'<p class="field__hint">' + esc( self.t( 'panel.sso.accountAddressHint' ) ) + '</p>',
+				onSubmit: function ( data ) {
+					var slug = String( data.get( 'slug' ) || '' ).trim().toLowerCase();
+
+					if ( ! /^[a-z0-9-]{1,80}$/.test( slug ) ) {
+						return Promise.reject( new Error( self.t( 'panel.sso.accountAddressBad' ) ) );
+					}
+
+					window.location.href = '/sso/' + encodeURIComponent( slug );
+
+					return Promise.resolve();
+				},
+			} );
+		} );
 
 		form.addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
@@ -2772,6 +2867,15 @@
 					var keys = client.keys.map( function ( key ) {
 						return '<div class="row"><code>' + esc( key.key_id ) + '</code>' +
 							'<span class="muted">…' + esc( key.secret_hint || '' ) + '</span>' +
+							// What this one may do. "Everything" in words rather than by listing
+							// the catalogue: the two mean the same today and different tomorrow.
+							'<span class="muted">' + esc( key.scopes
+								? key.scopes.map( function ( scope ) {
+									// The catalogue is keyed by the scope's last word: t() resolves
+									// a dotted path, so "orders.read" could never be one key.
+									return self.t( 'panel.connections.scopes.' + scope.split( '.' ).pop() );
+								} ).join( ', ' )
+								: self.t( 'panel.connections.scopeAll' ) ) + '</span>' +
 							'<button class="icon-btn icon-btn--sm" data-revoke="' + esc( client.id ) +
 							'" data-key="' + esc( key.key_id ) + '" data-tip="' +
 							esc( self.t( 'panel.connections.revoke' ) ) + '" ' +
@@ -2822,11 +2926,7 @@
 				} );
 
 				self.main().querySelectorAll( '[data-rotate]' ).forEach( function ( button ) {
-					button.addEventListener( 'click', function () {
-						self.request( 'POST', '/api-clients/' + button.dataset.rotate + '/keys', {} )
-							.then( function ( credentials ) { self.showCredentials( credentials, true ); } )
-							.catch( function ( error ) { self.toast( error.message, true ); } );
-					} );
+					button.addEventListener( 'click', function () { self.newKey( button.dataset.rotate ); } );
 				} );
 
 				self.main().querySelectorAll( '[data-revoke]' ).forEach( function ( button ) {
@@ -2834,6 +2934,55 @@
 				} );
 			} )
 			.catch( function ( error ) { self.error( error ); } );
+	};
+
+	/**
+	 * A new key, and what it is for.
+	 *
+	 * Asked before the key exists rather than edited afterwards, because a key's powers cannot be
+	 * changed once it is out in the world: the thing holding it is a shop somebody else configured,
+	 * and narrowing it silently is how a working checkout stops taking money on a Friday night. A
+	 * key that needs different powers is a new key and a revoked one.
+	 */
+	App.newKey = function ( clientId ) {
+		var self = this;
+		var scopes = [ 'orders.read', 'orders.write', 'orders.refund' ];
+
+		this.modal( {
+			title: this.t( 'panel.connections.newKey' ),
+			submitLabel: this.t( 'panel.connections.rotate' ),
+			body: '<p>' + esc( this.t( 'panel.connections.newKeyBody' ) ) + '</p>' +
+				'<div class="field"><label class="field__label" for="key-label">' +
+				esc( this.t( 'panel.common.name' ) ) + '</label>' +
+				'<input class="input" id="key-label" name="label" maxlength="100" placeholder="' +
+				esc( this.t( 'panel.connections.keyLabelPlaceholder' ) ) + '"></div>' +
+				scopes.map( function ( scope ) {
+					// Everything ticked to begin with: this is what a key could do before it could
+					// be narrowed, and a dialogue that starts by taking powers away would have
+					// somebody issue a key that cannot sell.
+					return '<label class="perms__row"><input type="checkbox" class="checkbox" ' +
+						'name="scopes" value="' + scope + '" checked>' +
+						'<span>' + esc( self.t( 'panel.connections.scopes.' + scope.split( '.' ).pop() ) ) +
+						'</span></label>';
+				} ).join( '' ) +
+				'<p class="field__hint">' + esc( this.t( 'panel.connections.scopesHint' ) ) + '</p>',
+			onSubmit: function ( data ) {
+				var chosen = data.getAll( 'scopes' );
+
+				if ( ! chosen.length ) {
+					return Promise.reject( new Error( self.t( 'panel.connections.scopesNone' ) ) );
+				}
+
+				return self.request( 'POST', '/api-clients/' + clientId + '/keys', {
+					label: data.get( 'label' ) || undefined,
+					// All three is the same as "no limit", and stored as no limit: the two read the
+					// same today and differently the day a fourth is added.
+					scopes: chosen.length === scopes.length ? undefined : chosen,
+				} ).then( function ( credentials ) {
+					self.showCredentials( credentials, true );
+				} );
+			},
+		} );
 	};
 
 	/**

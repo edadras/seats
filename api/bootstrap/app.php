@@ -54,6 +54,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'api.client' => \App\Http\Middleware\AuthenticateApiClient::class,
+            // What a key is for, checked after who it belongs to.
+            'scope' => \App\Http\Middleware\RequireApiScope::class,
             'locale' => \App\Http\Middleware\ResolveLocale::class,
             'tenant' => \App\Http\Middleware\ResolveTenantFromUser::class,
             'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,

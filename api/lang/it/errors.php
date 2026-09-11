@@ -308,4 +308,12 @@ return [
     'event_rehearsing' => 'Questa serata è in prova e qui non è in vendita. Provala sul tuo sito, dove non si addebita nulla.',
     'closure_has_live_tickets' => 'Ci sono persone che hanno biglietti per serate non ancora avvenute. Annulla prima quelle serate — così vengono rimborsate — e poi chiudi il conto.',
     'closure_not_confirmed' => 'Per confermare, scrivi il nome del conto esattamente come appare.',
+    'sso_required' => 'Questo conto accede tramite la propria organizzazione. Usa il link che ti ha dato il teatro.',
+    'sso_expired' => 'Questo accesso ha richiesto troppo tempo. Ricomincia.',
+    'sso_unavailable' => 'Questo conto non accede in questo modo.',
+    'sso_refused' => 'Il tuo provider non ha confermato chi sei.',
+    'sso_not_a_member' => 'La tua organizzazione ha confermato chi sei, ma qui nessuno ti ha ancora invitato.',
+    'issuer_unreachable' => 'Questo indirizzo non ha risposto. Controllalo e riprova.',
+    'issuer_not_openid' => 'Questo indirizzo ha risposto, ma non è un provider OpenID Connect.',
+    'key_scope' => 'Questa chiave non può farlo.',
 ];

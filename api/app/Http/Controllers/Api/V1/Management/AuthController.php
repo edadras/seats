@@ -75,6 +75,25 @@ class AuthController extends Controller
         $tenant = $this->tenantContext->runUnscoped(fn () => Tenant::find($membership->tenant_id));
 
         /*
+         * This account signs in somewhere else.
+         *
+         * Checked after the password rather than before it, deliberately: answering "that account
+         * uses single sign-on" to anybody who types an address would turn this endpoint into a way
+         * of asking which organisations use which provider. Somebody who got the password right
+         * has already proved they belong to the conversation.
+         *
+         * It applies to everybody, the owner included. A password that still worked for one person
+         * would be the password an attacker goes looking for, and it is the one this account has
+         * decided should not exist.
+         */
+        if ($tenant && app(\App\Domain\Auth\SingleSignOn::class)->forTenant($tenant)?->locksOutPasswords()) {
+            throw ApiException::denied(
+                'sso_required',
+                'This account signs in through its own organisation. Use the link your venue gave you.'
+            );
+        }
+
+        /*
          * The second step, when there is one.
          *
          * The password was right, so the answer is not a refusal — it is a half-finished sign-in
@@ -193,6 +212,83 @@ class AuthController extends Controller
             ),
             'email_verified' => null !== $user->email_verified_at,
             'two_factor' => true,
+            'must_set_up_two_factor' => false,
+        ]);
+    }
+
+    /**
+     * The other half of a sign-in that happened somewhere else.
+     *
+     * The panel arrives holding a handle it was given in a redirect, and trades it for a token. The
+     * handle is worth nothing on its own and worth nothing twice: it is pulled from the cache by
+     * the first request that presents it, and it lasts a minute.
+     *
+     * No second factor is asked for, and that is the point of the feature rather than a gap in it.
+     * The account has decided that its own provider is the authority on who its people are, and
+     * that provider is where multi-factor now lives — asking again here would be this platform
+     * second-guessing a directory it was told to believe.
+     */
+    public function claimSso(Request $request)
+    {
+        $data = $request->validate([
+            'handoff' => ['required', 'string', 'max:200'],
+            'device_name' => ['sometimes', 'string', 'max:100'],
+        ]);
+
+        $key = 'sso:claim:'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 20)) {
+            throw new ApiException('too_many_attempts', 'Too many attempts. Try again shortly.', 429, [], null, [
+                'seconds' => RateLimiter::availableIn($key),
+            ]);
+        }
+
+        $claimed = app(\App\Domain\Auth\SingleSignOn::class)->claimHandoff($data['handoff']);
+
+        if (! $claimed) {
+            RateLimiter::hit($key, 900);
+
+            throw ApiException::unauthorized('sso_expired', 'That sign-in took too long. Please start again.');
+        }
+
+        $user = $this->tenantContext->runUnscoped(fn () => User::find($claimed['user_id']));
+        $tenant = $this->tenantContext->runUnscoped(fn () => Tenant::find($claimed['tenant_id']));
+
+        $membership = $user && $tenant
+            ? $this->tenantContext->runUnscoped(fn () => TenantUser::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where('user_id', $user->id)
+                ->first())
+            : null;
+
+        // Membership is read again rather than carried in the handle: somebody can be removed from
+        // a team between being redirected and coming back, and the answer that counts is now.
+        if (! $user || ! $tenant || ! $tenant->isActive() || ! $membership) {
+            throw ApiException::unauthorized('sso_expired', 'That sign-in took too long. Please start again.');
+        }
+
+        RateLimiter::clear($key);
+
+        return response()->json([
+            'token' => $user->createToken($data['device_name'] ?? 'api')->plainTextToken,
+            'tenant' => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'slug' => $tenant->slug,
+                'status' => $tenant->status,
+                'timezone' => $tenant->timezone,
+                'locale' => $tenant->locale,
+            ],
+            'role' => $membership->role,
+            'permissions' => $this->permissionsFor($membership, $tenant),
+            'agent' => $this->tenantContext->runAs($tenant, fn () => $this->agencyOf($user)),
+            'programme_manager' => $this->tenantContext->runAs(
+                $tenant,
+                fn () => app(\App\Domain\Programme\EventManagers::class)->isOne($user),
+            ),
+            'email_verified' => null !== $user->email_verified_at,
+            'two_factor' => $user->hasTwoFactor(),
+            // Never on this path: the provider is where the second factor lives now.
             'must_set_up_two_factor' => false,
         ]);
     }

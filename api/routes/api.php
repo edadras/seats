@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\V1\Management\ProductionController;
 use App\Http\Controllers\Api\V1\Management\ProgrammeManagerController;
 use App\Http\Controllers\Api\V1\Management\AccountController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
+use App\Http\Controllers\Api\V1\Management\SsoController;
 use App\Http\Controllers\Api\V1\Management\RehearsalController;
 use App\Http\Controllers\Api\V1\Management\ReceiptController;
 use App\Http\Controllers\Api\V1\Management\PaymentPlanController;
@@ -105,6 +106,15 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:20,1,login');
     // The second half of a sign-in. Its own route because the first half returns no token: what it
     // hands back is a challenge that is worth nothing on its own.
+    /*
+     * The second half of a sign-in that happened at somebody else's provider.
+     *
+     * Unauthenticated, because that is what a sign-in is: what it presents is a handle the platform
+     * itself minted a minute ago and will not honour twice.
+     */
+    Route::post('auth/sso/claim', [AuthController::class, 'claimSso'])
+        ->middleware('throttle:20,1,sso-claim');
+
     Route::post('auth/login/two-factor', [AuthController::class, 'twoFactor'])
         ->middleware('throttle:20,1,login-2fa');
 
@@ -273,6 +283,16 @@ Route::prefix('v1')->group(function () {
          * ask for, and the honest place to say "not that often" is in front of the work rather
          * than inside it.
          */
+        /*
+         * Where this account's people really sign in.
+         *
+         * Beside the export and the closure because it is the same kind of decision — who may be
+         * here at all — and behind the same permission.
+         */
+        Route::get('sso', [SsoController::class, 'show']);
+        Route::put('sso', [SsoController::class, 'save'])->middleware('throttle:20,60,sso-save');
+        Route::delete('sso', [SsoController::class, 'destroy']);
+
         Route::get('account/exports', [AccountController::class, 'exports']);
         Route::post('account/exports', [AccountController::class, 'export'])
             ->middleware('throttle:3,60,account-export');
@@ -699,11 +719,23 @@ Route::prefix('v1')->group(function () {
     Route::prefix('integrations/woocommerce')
         ->middleware(['api.client', 'idempotency', 'throttle:300,1,woocommerce'])
         ->group(function () {
-            Route::post('orders', [WooCommerceController::class, 'store']);
-            Route::get('orders/{external_order_id}', [WooCommerceController::class, 'show']);
-            Route::post('orders/{external_order_id}/confirm', [WooCommerceController::class, 'confirm']);
-            Route::post('orders/{external_order_id}/cancel', [WooCommerceController::class, 'cancel']);
-            Route::post('orders/{external_order_id}/refund', [WooCommerceController::class, 'refund']);
+            /*
+             * What a key is for, one scope per kind of act rather than one per endpoint.
+             *
+             * Selling and cancelling are the same power — a shop that can take a booking can undo
+             * the one it just took — and handing money back is not. A key with no scopes may do all
+             * three, which is what every key issued before scopes existed could already do.
+             */
+            Route::post('orders', [WooCommerceController::class, 'store'])
+                ->middleware('scope:orders.write');
+            Route::get('orders/{external_order_id}', [WooCommerceController::class, 'show'])
+                ->middleware('scope:orders.read');
+            Route::post('orders/{external_order_id}/confirm', [WooCommerceController::class, 'confirm'])
+                ->middleware('scope:orders.write');
+            Route::post('orders/{external_order_id}/cancel', [WooCommerceController::class, 'cancel'])
+                ->middleware('scope:orders.write');
+            Route::post('orders/{external_order_id}/refund', [WooCommerceController::class, 'refund'])
+                ->middleware('scope:orders.refund');
         });
 
     // ---- Check-in devices ---------------------------------------------------------------

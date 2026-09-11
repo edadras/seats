@@ -308,4 +308,12 @@ return [
     'event_rehearsing' => 'This night is being rehearsed and is not on sale here. Rehearse it on your own site, where nothing is charged.',
     'closure_has_live_tickets' => 'People are holding tickets for nights that have not happened. Cancel those nights first — that refunds them — and then close the account.',
     'closure_not_confirmed' => 'Type the account’s name exactly as it appears to confirm.',
+    'sso_required' => 'This account signs in through its own organisation. Use the link your venue gave you.',
+    'sso_expired' => 'That sign-in took too long. Please start again.',
+    'sso_unavailable' => 'This account does not sign in that way.',
+    'sso_refused' => 'Your provider did not confirm who you are.',
+    'sso_not_a_member' => 'Your organisation confirmed who you are, but nobody here has invited you yet.',
+    'issuer_unreachable' => 'That address did not answer. Check it and try again.',
+    'issuer_not_openid' => 'That address answered, but it is not an OpenID Connect provider.',
+    'key_scope' => 'This key is not allowed to do that.',
 ];

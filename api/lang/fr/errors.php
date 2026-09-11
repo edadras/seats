@@ -308,4 +308,12 @@ return [
     'event_rehearsing' => 'Cette soirée est en répétition et n\'est pas en vente ici. Répétez-la sur votre propre site, où rien n\'est débité.',
     'closure_has_live_tickets' => 'Des gens détiennent des billets pour des soirées qui n\'ont pas eu lieu. Annulez d\'abord ces soirées — cela les rembourse — puis fermez le compte.',
     'closure_not_confirmed' => 'Tapez le nom du compte exactement tel qu\'il apparaît pour confirmer.',
+    'sso_required' => 'Ce compte se connecte via sa propre organisation. Utilisez le lien que votre salle vous a donné.',
+    'sso_expired' => 'Cette connexion a pris trop de temps. Recommencez.',
+    'sso_unavailable' => 'Ce compte ne se connecte pas de cette façon.',
+    'sso_refused' => 'Votre fournisseur n\'a pas confirmé qui vous êtes.',
+    'sso_not_a_member' => 'Votre organisation a confirmé qui vous êtes, mais personne ici ne vous a encore invité.',
+    'issuer_unreachable' => 'Cette adresse n\'a pas répondu. Vérifiez-la et réessayez.',
+    'issuer_not_openid' => 'Cette adresse a répondu, mais ce n\'est pas un fournisseur OpenID Connect.',
+    'key_scope' => 'Cette clé n\'a pas le droit de faire cela.',
 ];

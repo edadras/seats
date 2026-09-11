@@ -215,6 +215,23 @@ A seat is the start of it, not the end. Around the map:
   against one row, which every table cascades from — and the staff go with it, except anybody who
   also works for another venue, because leaving their names behind would make the promise a
   half-measure.
+- **Sign in the way a large venue already does, and scope a key to what it is for.** Two halves of
+  one idea: who may do what, said once rather than implied. An account can point at its own OpenID
+  Connect provider — the directory where its people are joined on their first day and removed on
+  their last — and staff sign in there instead of holding a hundred passwords on somebody else's
+  platform. The issuer's published configuration is read when the settings are saved, so an
+  organiser types one address rather than three and a typo is caught while they are looking at it.
+  No identity token is ever parsed: the code is exchanged on the back channel with the client
+  secret and PKCE, and the person is read from the issuer's own userinfo endpoint, which is the same
+  choice the buyer-facing Google sign-in made and for the same reason. Signing in creates nobody —
+  an address the provider vouches for gets in only if somebody here already invited it, or a
+  directory of forty thousand students would be forty thousand box office logins. With "required"
+  on, a password is not a way in at all, including for the owner; the way back from a misconfigured
+  provider is the platform switching it off, because a break-glass password is precisely what an
+  attacker goes looking for. And an API key can now be narrowed to reading bookings, selling, or
+  refunding: a shop's key should be able to sell a ticket without being able to hand money back.
+  A key with no scopes may still do everything, because narrowing live keys silently would have
+  taken working shops off sale on the day it was deployed.
 - **Best available** — "four together" without a buyer hunting for them, scored by price, by how
   central the run is, and by how many orphan seats it would leave behind.
 - **Timed entry** — arrival windows with their own capacity, held under the same lock as the seats
@@ -814,6 +831,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The link still works after the door is shut, which is when it is needed | `LeavingTest`, `leaving_smoke` |
 | A closed account is erased when its window runs out, and not before | `LeavingTest` |
 | The staff go with the account, unless they also work for somebody else | `LeavingTest` |
+| Saving a provider reads its published endpoints, and a wrong address is refused there and then | `SingleSignOnTest`, `sso_smoke` |
+| A client secret has no way out, and an empty box keeps the stored one | `SingleSignOnTest` |
+| Somebody the provider vouches for who was never invited does not get in | `SingleSignOnTest` |
+| A sign-in that came back twice works once | `SingleSignOnTest` |
+| With single sign-on required, a password is refused — and a wrong password still answers the wrong-password way | `SingleSignOnTest` |
+| Only the platform can let a locked-out account back in | `SingleSignOnTest` |
+| A key that may sell may not refund, and a key from before scopes may still do everything | `SingleSignOnTest`, `sso_smoke` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

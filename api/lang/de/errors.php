@@ -308,4 +308,12 @@ return [
     'event_rehearsing' => 'Dieser Abend wird geprobt und ist hier nicht im Verkauf. Proben Sie ihn auf Ihrer eigenen Seite, wo nichts berechnet wird.',
     'closure_has_live_tickets' => 'Menschen halten Tickets für Abende, die noch nicht stattgefunden haben. Sagen Sie diese Abende zuerst ab — das erstattet sie — und schließen Sie dann das Konto.',
     'closure_not_confirmed' => 'Tippen Sie zur Bestätigung den Kontonamen genau so, wie er dasteht.',
+    'sso_required' => 'Dieses Konto meldet sich über seine eigene Organisation an. Nutzen Sie den Link, den Ihr Haus Ihnen gegeben hat.',
+    'sso_expired' => 'Diese Anmeldung hat zu lange gedauert. Bitte beginnen Sie neu.',
+    'sso_unavailable' => 'Dieses Konto meldet sich nicht auf diesem Weg an.',
+    'sso_refused' => 'Ihr Anbieter hat nicht bestätigt, wer Sie sind.',
+    'sso_not_a_member' => 'Ihre Organisation hat bestätigt, wer Sie sind, aber hier hat Sie noch niemand eingeladen.',
+    'issuer_unreachable' => 'Diese Adresse hat nicht geantwortet. Prüfen Sie sie und versuchen Sie es erneut.',
+    'issuer_not_openid' => 'Diese Adresse hat geantwortet, ist aber kein OpenID-Connect-Anbieter.',
+    'key_scope' => 'Dieser Schlüssel darf das nicht.',
 ];

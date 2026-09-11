@@ -142,7 +142,31 @@ class ConsoleController extends Controller
             'status' => ['sometimes', 'in:active,suspended,cancelled'],
             'plan' => ['sometimes', 'string', 'max:40'],
             'reason' => ['sometimes', 'nullable', 'string', 'max:200'],
+            /*
+             * The way back into an account that locked itself out.
+             *
+             * Single sign-on that is required and misconfigured leaves nobody able to sign in —
+             * deliberately, because the alternative is a break-glass password, which is precisely
+             * what an attacker would go looking for. So the way back is here, with the platform,
+             * and it is one direction only: off, never on.
+             */
+            'sso' => ['sometimes', 'in:off'],
         ]);
+
+        if ('off' === ($data['sso'] ?? null)) {
+            $provider = app(\App\Domain\Auth\SingleSignOn::class)->forTenant($tenant);
+
+            if ($provider) {
+                $provider->forceFill(['required' => false, 'enabled' => false])->save();
+
+                PlatformAuditLog::write(
+                    $request->user()->id,
+                    'tenant.sso_disabled',
+                    $tenant->id,
+                    ['issuer' => $provider->issuer],
+                );
+            }
+        }
 
         if (isset($data['status'])) {
             /*
@@ -191,6 +215,7 @@ class ConsoleController extends Controller
             array_filter([
                 'status' => $data['status'] ?? null,
                 'plan' => $data['plan'] ?? null,
+                'sso' => $data['sso'] ?? null,
                 'reason' => $data['reason'] ?? null,
             ]),
             $request->ip(),

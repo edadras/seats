@@ -7,6 +7,7 @@ use App\Models\ApiClient;
 use App\Models\ApiKey;
 use App\Support\Audit\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Connected storefronts and their credentials.
@@ -62,13 +63,31 @@ class ApiClientController extends Controller
     {
         $this->authorize($request, 'connections.manage');
 
-        $issued = ApiKey::issue($client, $request->input('label', 'rotated'));
+        $data = $request->validate([
+            'label' => ['sometimes', 'string', 'max:100'],
+            // Absent means everything, which is what a key was before it could be anything else.
+            // An empty list is a different answer — a key that may do nothing — and is refused as
+            // a mistake rather than stored as a curiosity.
+            'scopes' => ['sometimes', 'array', 'min:1'],
+            'scopes.*' => ['string', Rule::in(ApiKey::SCOPES)],
+        ]);
 
-        $this->audit->record('api_key.rotated', $client, ['key_id' => $issued['model']->key_id]);
+        $issued = ApiKey::issue(
+            $client,
+            $data['label'] ?? 'rotated',
+            null,
+            $data['scopes'] ?? null,
+        );
+
+        $this->audit->record('api_key.rotated', $client, [
+            'key_id' => $issued['model']->key_id,
+            'scopes' => $issued['model']->scopes,
+        ]);
 
         return response()->json([
             'key_id' => $issued['model']->key_id,
             'secret' => $issued['secret'],
+            'scopes' => $issued['model']->scopes,
             'note' => 'The previous key stays valid until you revoke it.',
         ], 201);
     }
@@ -100,6 +119,9 @@ class ApiClientController extends Controller
                 'secret_hint' => $key->secret_hint,
                 'last_used_at' => $key->last_used_at?->toIso8601String(),
                 'expires_at' => $key->expires_at?->toIso8601String(),
+                // Null means everything. The screen says so in words rather than by listing the
+                // catalogue, because the two are the same today and different tomorrow.
+                'scopes' => $key->scopes,
             ])->values(),
         ];
     }

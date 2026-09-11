@@ -13,15 +13,29 @@
 
 	var icon = global.SeatmapIcon;
 
-	var Security = { App: null, state: null };
+	var Security = { App: null, state: null, sso: null };
 
 	Security.render = function ( App ) {
 		Security.App = App;
 		App.loading( App.t( 'panel.security.title' ) );
 
-		App.request( 'GET', '/auth/two-factor' )
-			.then( function ( state ) {
-				Security.state = state;
+		/*
+		 * The account's own provider is asked for only by somebody who may change it.
+		 *
+		 * Everything else on this screen is about the person looking at it; this one card is about
+		 * the whole account, so it is fetched and shown under the permission that owns it rather
+		 * than rendered greyed out for everybody else.
+		 */
+		var asks = [ App.request( 'GET', '/auth/two-factor' ) ];
+
+		if ( App.may( 'account.manage' ) ) {
+			asks.push( App.request( 'GET', '/sso' ) );
+		}
+
+		Promise.all( asks )
+			.then( function ( answers ) {
+				Security.state = answers[ 0 ];
+				Security.sso = answers[ 1 ] || null;
 				Security.paint();
 			} )
 			.catch( function ( error ) { App.error( error ); } );
@@ -69,8 +83,12 @@
 						'<span>' + esc( App.t( 'panel.security.requireAll' ) ) + '</span>' +
 					'</label>' +
 					'<p class="hint spaced">' + esc( App.t( 'panel.security.requireHint' ) ) + '</p>' +
-				'</div>',
+				'</div>' +
+
+				Security.ssoMarkup( App ),
 		} );
+
+		Security.bindSso();
 
 		bind( 'sec-on', function () { Security.begin(); } );
 		bind( 'sec-off', function () { Security.turnOff(); } );
@@ -94,6 +112,126 @@
 					} );
 			} );
 		}
+	};
+
+	/**
+	 * Where this account's people really sign in.
+	 *
+	 * The two addresses are the point of the card as much as the form is: one goes into the
+	 * provider's own configuration and the other goes to the staff, and an organiser copying either
+	 * out of a help page gets it wrong once in five.
+	 */
+	Security.ssoMarkup = function ( App ) {
+		var sso = Security.sso;
+
+		if ( ! sso ) {
+			return '';
+		}
+
+		return '<h3 class="subhead">' + esc( App.t( 'panel.sso.title' ) ) + '</h3>' +
+			'<div class="card card--pad">' +
+			'<p>' + esc( App.t( 'panel.sso.description' ) ) + '</p>' +
+
+			( sso.configured
+				? '<div class="stat-strip spaced">' +
+					tile( App.t( 'panel.sso.provider' ), sso.label ) +
+					tile( App.t( 'panel.sso.passwords' ), App.t( sso.required
+						? 'panel.sso.passwordsOff'
+						: 'panel.sso.passwordsOn' ) ) +
+				'</div>'
+				: '' ) +
+
+			'<div class="field"><label class="field__label" for="sso-label">' +
+			esc( App.t( 'panel.sso.label' ) ) + '</label>' +
+			'<input class="input" id="sso-label" maxlength="80" placeholder="' +
+			esc( App.t( 'panel.sso.labelPlaceholder' ) ) + '" value="' +
+			esc( sso.label || '' ) + '"></div>' +
+
+			'<div class="field"><label class="field__label" for="sso-issuer">' +
+			esc( App.t( 'panel.sso.issuer' ) ) + '</label>' +
+			'<input class="input" id="sso-issuer" type="url" placeholder="https://login.example.org" value="' +
+			esc( sso.issuer || '' ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.sso.issuerHint' ) ) + '</span></div>' +
+
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="sso-client">' +
+			esc( App.t( 'panel.sso.clientId' ) ) + '</label>' +
+			'<input class="input" id="sso-client" value="' + esc( sso.client_id || '' ) + '"></div>' +
+			'<div class="field"><label class="field__label" for="sso-secret">' +
+			esc( App.t( 'panel.sso.clientSecret' ) ) + '</label>' +
+			'<input class="input" id="sso-secret" type="password" autocomplete="new-password" placeholder="' +
+			esc( App.t( sso.has_secret ? 'panel.sso.secretKept' : 'panel.sso.secretNeeded' ) ) + '">' +
+			'</div>' +
+			'</div>' +
+
+			// Off until somebody has actually signed in through it. An account that switches this
+			// on before it has tried is an account that has locked itself out.
+			'<label class="perms__row"><input type="checkbox" class="checkbox" id="sso-required"' +
+			( sso.required ? ' checked' : '' ) + '>' +
+			'<span>' + esc( App.t( 'panel.sso.requireIt' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( App.t( 'panel.sso.requireHint' ) ) + '</p>' +
+
+			'<p class="spaced"><button class="btn btn--primary" id="sso-save">' +
+			esc( App.t( 'panel.sso.save' ) ) + '</button>' +
+			( sso.configured
+				? ' <button class="btn btn--danger" id="sso-remove">' +
+					esc( App.t( 'panel.sso.remove' ) ) + '</button>'
+				: '' ) + '</p>' +
+
+			'<div class="field spaced"><label class="field__label" for="sso-redirect">' +
+			esc( App.t( 'panel.sso.redirectUri' ) ) + '</label>' +
+			'<input class="input" id="sso-redirect" readonly value="' + esc( sso.redirect_uri ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.sso.redirectHint' ) ) + '</span></div>' +
+
+			'<div class="field"><label class="field__label" for="sso-link">' +
+			esc( App.t( 'panel.sso.signInUrl' ) ) + '</label>' +
+			'<input class="input" id="sso-link" readonly value="' + esc( sso.sign_in_url ) + '">' +
+			'<span class="field__hint">' + esc( App.t( 'panel.sso.signInHint' ) ) + '</span></div>' +
+			'</div>';
+	};
+
+	Security.bindSso = function () {
+		var App = Security.App;
+
+		bind( 'sso-save', function () {
+			var secret = document.getElementById( 'sso-secret' ).value;
+			var payload = {
+				label: document.getElementById( 'sso-label' ).value,
+				issuer: document.getElementById( 'sso-issuer' ).value,
+				client_id: document.getElementById( 'sso-client' ).value,
+				required: document.getElementById( 'sso-required' ).checked,
+			};
+
+			// An empty box means "keep the one you have", not "replace it with nothing": a secret
+			// that had to be retyped to change a label is a secret that ends up in somebody's notes.
+			if ( secret ) {
+				payload.client_secret = secret;
+			}
+
+			App.request( 'PUT', '/sso', payload )
+				.then( function ( sso ) {
+					Security.sso = sso;
+					App.toast( App.t( 'panel.sso.saved' ) );
+					Security.paint();
+				} )
+				.catch( function ( error ) { App.toast( error.message, true ); } );
+		} );
+
+		bind( 'sso-remove', function () {
+			App.modal( {
+				title: App.t( 'panel.sso.removeTitle' ),
+				submitLabel: App.t( 'panel.sso.remove' ),
+				danger: true,
+				body: '<p>' + esc( App.t( 'panel.sso.removeBody' ) ) + '</p>',
+				onSubmit: function () {
+					return App.request( 'DELETE', '/sso', {} ).then( function ( sso ) {
+						Security.sso = sso;
+						App.toast( App.t( 'panel.sso.removed' ) );
+						Security.paint();
+					} );
+				},
+			} );
+		} );
 	};
 
 	/** A QR code to point a phone at, and the code it produces typed back. */

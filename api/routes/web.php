@@ -5,6 +5,7 @@ use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\GoogleSignInController;
 use App\Http\Controllers\AccountExportController;
 use App\Http\Controllers\ScheduledReportController;
+use App\Http\Controllers\SsoController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\BasketController;
 use App\Http\Controllers\Site\CheckoutController;
@@ -262,6 +263,18 @@ Route::get('accounts/exports/{export}', AccountExportController::class)
     ->name('account.export.download')
     ->middleware('throttle:20,1,account-export');
 
+/*
+ * Signing in with the account an organisation already governs.
+ *
+ * Both ends are unauthenticated browser redirects — being unauthenticated is the whole point — so
+ * both are throttled, and the start route is addressed by the account's own slug so that nobody has
+ * to type an email into a form that would then have to answer whether that email exists.
+ */
+Route::get('sso/return', [SsoController::class, 'return'])
+    ->middleware('throttle:20,1,sso-return');
+Route::get('sso/{slug}', [SsoController::class, 'start'])
+    ->middleware('throttle:20,1,sso-start');
+
 Route::get('console', fn () => view('console'));
 
 // The door scanner. Ahead of the front door because /checkin belongs to the platform on every
@@ -271,4 +284,4 @@ Route::get('checkin/{path}', CheckinAppController::class)->where('path', '.*');
 
 Route::get('/', FrontDoorController::class);
 Route::get('{path}', FrontDoorController::class)
-    ->where('path', '^(?!v1|up|storage|site|checkin|console|reports|accounts).*$');
+    ->where('path', '^(?!v1|up|storage|site|checkin|console|reports|accounts|sso).*$');

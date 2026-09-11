@@ -1765,6 +1765,97 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /sso:
+    get:
+      operationId: getSingleSignOn
+      tags: [Account]
+      summary: Where this account's people really sign in
+      description: |
+        Requires `account.manage`: deciding who may sign in at all is the same kind of decision as
+        deciding who is on the team, and a larger one than either.
+
+        The client secret has no way out, in any shape. There is no reading one back, only replacing
+        it — `has_secret` says whether there is one.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SingleSignOn" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: setSingleSignOn
+      tags: [Account]
+      summary: Set the account's identity provider
+      description: |
+        Saving always rediscovers. The issuer's own well-known document is read here so that a typo
+        is found while somebody is looking at the screen rather than at half past seven on a Friday
+        by a member of staff who cannot fix it — `issuer_unreachable` and `issuer_not_openid` are
+        both refusals of the address rather than of the credentials.
+
+        The secret may be omitted on an update and the stored one is kept: a secret that had to be
+        retyped to change a label is a secret that ends up in somebody's notes.
+
+        `required` is what makes single sign-on mean something: with it on, a password is not a way
+        in to this account at all — including for the owner. Switch it on only after signing in
+        through the provider once. The way back from a misconfigured provider is deliberately not a
+        password; it is the platform, which can switch the provider off. A break-glass password is
+        precisely what an attacker goes looking for.
+
+        Nothing here creates people. An address the provider vouches for gets in only if somebody at
+        this venue already invited it; otherwise a directory of forty thousand students would be
+        forty thousand people with a box office login.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label, issuer, client_id]
+              properties:
+                label:
+                  type: string
+                  maxLength: 80
+                  description: What the button says — "Sign in with Trinity College".
+                issuer:
+                  type: string
+                  format: uri
+                  description: The issuer URL, https only.
+                client_id: { type: string, maxLength: 255 }
+                client_secret:
+                  type: string
+                  maxLength: 500
+                  description: Required the first time; omit to keep the stored one.
+                enabled: { type: boolean }
+                required: { type: boolean }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SingleSignOn" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: The address did not answer, or is not an OpenID Connect provider
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      operationId: removeSingleSignOn
+      tags: [Account]
+      summary: Stop signing in that way
+      description: >-
+        Removes the provider rather than switching it off: "off" and "gone" are different answers to
+        "may we stop paying for this directory". Passwords work again the moment it goes, and nobody
+        loses their place on the team.
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SingleSignOn" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /account/exports:
     get:
       operationId: listAccountExports
@@ -2163,6 +2254,60 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Event" }
+
+  /auth/sso/claim:
+    post:
+      operationId: claimSingleSignOn
+      tags: [Auth]
+      summary: Finish a sign-in that happened at the account's own provider
+      security: []
+      description: |
+        The panel arrives holding a handle it was given in a redirect and trades it for a token. A
+        handle rather than the token itself, because a bearer credential in a URL is written into
+        browser history, the next request's referrer and any proxy log between here and there.
+
+        It is worth nothing on its own and worth nothing twice: pulled from the cache by the first
+        request that presents it, and good for a minute.
+
+        No second factor is asked for, and that is the point of the feature rather than a gap in it.
+        The account has decided that its own provider is the authority on who its people are, and
+        that is where multi-factor now lives.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handoff]
+              properties:
+                handoff: { type: string, maxLength: 200 }
+                device_name: { type: string, maxLength: 100 }
+      responses:
+        "200":
+          description: Signed in — the same answer as a password sign-in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  tenant: { $ref: "#/components/schemas/Tenant" }
+                  role: { type: [string, "null"] }
+                  permissions:
+                    type: array
+                    items: { type: string }
+                  email_verified: { type: boolean }
+                  two_factor: { type: boolean }
+                  must_set_up_two_factor:
+                    type: boolean
+                    description: Never true here — the provider is where the second factor lives.
+
+        "401":
+          description: The handle is spent, expired, or the membership has since gone
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /auth/login/two-factor:
     post:
@@ -6812,6 +6957,12 @@ paths:
         Seats and tickets only. The shop owns the money on this path and has already given it back
         through its own gateway, so asking a second gateway here would refund twice. Refunds that
         move money are `POST /orders/{order}/refund`, for bookings this platform took payment for.
+
+        Needs a key that carries `orders.refund`; the other four endpoints on this path need
+        `orders.read` or `orders.write`. A key without it is refused with `key_scope` — a refusal
+        rather than a 404, because the caller holds a working credential and is being told that
+        this particular key may not do this particular thing, which they can act on by issuing
+        themselves another.
       security:
         - apiKeyAuth: []
           hmacSignature: []
@@ -6833,6 +6984,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ExternalOrder" }
+        "403":
+          description: This key does not carry `orders.refund`
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /tickets/{ticket}:
     parameters:
@@ -8840,6 +8996,23 @@ paths:
               type: object
               properties:
                 label: { type: string, maxLength: 120, default: rotated }
+                scopes:
+                  type: array
+                  minItems: 1
+                  description: |
+                    What this key may do: `orders.read`, `orders.write` (sell and cancel),
+                    `orders.refund`. Absent means everything, which is what a key was before it
+                    could be anything else — every key issued before scopes existed still may do
+                    all three, because narrowing them silently would have taken working shops off
+                    sale on the day it was deployed.
+
+                    An empty list is a different answer — a key that may do nothing — and is
+                    refused as a mistake rather than stored as a curiosity.
+
+                    A key's powers cannot be changed afterwards: the thing holding it is a shop
+                    somebody else configured, and a key that needs different powers is a new key
+                    and a revoked one.
+                  items: { type: string, enum: [orders.read, orders.write, orders.refund] }
       responses:
         "201":
           description: The new credential
@@ -8850,6 +9023,10 @@ paths:
                 properties:
                   key_id: { type: string }
                   secret: { type: string, description: "Shown once." }
+                  scopes:
+                    type: [array, "null"]
+                    description: Null means everything.
+                    items: { type: string }
                   note: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -12297,6 +12474,38 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    SingleSignOn:
+      type: object
+      description: The account's own identity provider, and the two addresses it needs.
+      properties:
+        configured: { type: boolean }
+        label: { type: [string, "null"] }
+        issuer: { type: [string, "null"] }
+        client_id: { type: [string, "null"] }
+        has_secret:
+          type: boolean
+          description: Whether a client secret is stored. The secret itself is never returned.
+        enabled: { type: boolean }
+        required:
+          type: boolean
+          description: With this on, a password is not a way in to this account at all.
+        discovered_at: { type: [string, "null"], format: date-time }
+        endpoints:
+          description: What the issuer published, read when the settings were saved.
+          oneOf:
+            - type: object
+              properties:
+                authorize: { type: string }
+                token: { type: string }
+                userinfo: { type: string }
+            - { type: "null" }
+        redirect_uri:
+          type: string
+          description: Give this to the provider — where it sends people back to.
+        sign_in_url:
+          type: string
+          description: Give this to the staff, or put it on a tile in the provider's dashboard.
 
     AccountExport:
       type: object
