@@ -2791,3 +2791,25 @@
  * clock to see which one is charging money at this moment.
  */
 .is-live > td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+/*
+ * The view from a section, while it is being attached.
+ *
+ * A frame that is always there rather than one that appears when an address is typed: the row does
+ * not jump as somebody pastes a link, and an address that fetches nothing shows an empty frame,
+ * which is the answer. The picture is shown at the size a buyer sees it, not larger.
+ */
+.view-shot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 16 / 9;
+	max-width: 16rem;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: var(--r-md);
+	background: var(--surface-sunken);
+	color: var(--text-muted);
+}
+
+.view-shot img { width: 100%; height: 100%; object-fit: cover; }

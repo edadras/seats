@@ -210,6 +210,7 @@ class Seatmap_Widget {
 							'openSection'    => __( 'Show seats in %s', 'seatmap-connect' ),
 							/* translators: %s: name of the area. */
 							'inSection'      => __( 'In %s', 'seatmap-connect' ),
+							'viewFromHere'   => __( 'The view from %s', 'seatmap-connect' ),
 							// A room sold by the head: areas with a capacity and no chair to click.
 							'chooseTickets'  => __( 'Choose your tickets', 'seatmap-connect' ),
 							'ticketTypes'    => __( 'Tickets', 'seatmap-connect' ),

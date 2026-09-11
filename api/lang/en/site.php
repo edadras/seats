@@ -61,6 +61,7 @@ return [
         'sectionSoldOut' => 'Sold out',
         'openSection' => 'Show seats in %s',
         'inSection' => 'In %s',
+        'viewFromHere' => 'The view from %s',
         'chooseTickets' => 'Choose your tickets',
         'ticketTypes' => 'Tickets',
         'ticketTypeFor' => 'Who is this ticket for?',

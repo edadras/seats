@@ -165,6 +165,16 @@ Route::prefix('v1')->group(function () {
         Route::get('seat-maps/{map}', [SeatMapController::class, 'show']);
         Route::patch('seat-maps/{map}', [SeatMapController::class, 'update']);
         Route::get('seat-maps/{map}/versions', [SeatMapController::class, 'versions']);
+
+        /*
+         * What a buyer would see from each section.
+         *
+         * Its own pair of routes rather than part of the chart, because a photograph is not part of
+         * the seating: changing one must not mean republishing a chart, and republishing must not
+         * lose the photographs.
+         */
+        Route::get('seat-maps/{map}/views', [SeatMapController::class, 'views']);
+        Route::put('seat-maps/{map}/views', [SeatMapController::class, 'saveViews']);
         Route::post('seat-maps/{map}/validate', [SeatMapController::class, 'validateGeometry']);
 
         Route::get('events', [EventController::class, 'index']);

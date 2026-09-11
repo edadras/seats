@@ -58,6 +58,7 @@ return [
         'sectionSoldOut' => 'نفدت التذاكر',
         'openSection' => 'اعرض مقاعد %s',
         'inSection' => 'في %s',
+        'viewFromHere' => 'المنظر من %s',
         'chooseTickets' => 'اختر تذاكرك',
         'ticketTypes' => 'التذاكر',
         'ticketTypeFor' => 'لمن هذه التذكرة؟',

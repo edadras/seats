@@ -194,6 +194,21 @@ return [
         'needVenueBody' => 'Ogni piantina appartiene a un edificio, quindi ce ne vuole uno a cui appenderla.',
     ],
 
+
+    'seatViews' => [
+        'action' => 'Vista',
+        'title' => 'La vista da ogni settore',
+        'hint' => 'Una fotografia per settore, mostrata all’acquirente accanto ai posti che sta scegliendo. Un settore lasciato vuoto non ne mostra alcuna.',
+        'url' => 'Indirizzo della fotografia',
+        'urlHint' => 'Un indirizzo web che finisce in .jpg, .png o .webp. Orizzontale e abbastanza grande da valere la pena aprirla.',
+        'caption' => 'Didascalia',
+        'captionPlaceholder' => 'Fila F, centro',
+        'captionHint' => 'Facoltativa. Senza, all’acquirente viene detto di quale settore si tratta.',
+        'save' => 'Salva le fotografie',
+        'saved' => 'Fotografie salvate.',
+        'noSections' => 'Questa pianta non ha settori',
+        'noSectionsHint' => 'Disegna un settore nell’editor e comparirà qui per allegarvi una fotografia.',
+    ],
     'events' => [
         'description' => 'Incolla l’identificativo pubblico dell’evento in WordPress come <code>[seatmap_event id="evt_…"]</code>, o nel blocco «Piantina».',
         'new' => 'Nuovo evento',

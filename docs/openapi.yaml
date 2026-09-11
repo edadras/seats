@@ -352,6 +352,67 @@ paths:
               schema: { $ref: "#/components/schemas/SeatMapVersion" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /seat-maps/{map}/views:
+    parameters: [ { $ref: "#/components/parameters/MapId" } ]
+    get:
+      operationId: listSeatViews
+      tags: [Seat maps]
+      summary: What a buyer would see from each section
+      description: |
+        Every section of the chart, with the photograph attached to it where there is one. Sections
+        are read from the draft where the map has one, so a section drawn but not yet published can
+        be given a picture. A photograph belongs to the map rather than to a version of it:
+        republishing the chart neither loses the pictures nor is required to change one.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SeatView" }
+    put:
+      operationId: saveSeatViews
+      tags: [Seat maps]
+      summary: Attach photographs to sections
+      description: |
+        Replaces the set, whole. A row whose `url` is empty or null takes that section's photograph
+        away. A `section_key` the chart does not have is ignored rather than refused. Addresses must
+        be `http` or `https`: the address ends up in an `img src` on a page this platform serves.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [views]
+              properties:
+                views:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [section_key]
+                    properties:
+                      section_key: { type: string, maxLength: 120 }
+                      url: { type: [string, "null"], format: uri, maxLength: 500 }
+                      caption: { type: [string, "null"], maxLength: 200 }
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/SeatView" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /seat-maps/{map}/validate:
     parameters: [ { $ref: "#/components/parameters/MapId" } ]
     post:
@@ -11923,6 +11984,18 @@ components:
         seat_count: { type: integer }
         published_at: { type: [string, "null"], format: date-time }
         geometry: { $ref: "#/components/schemas/Geometry" }
+
+    SeatView:
+      type: object
+      description: |
+        One section of a chart and the photograph of what the stage looks like from it. Keyed by the
+        section's own key, which survives republishing the chart; `url` is null where no photograph
+        has been attached, and the picker then shows nothing rather than an empty frame.
+      properties:
+        section_key: { type: string }
+        name: { type: string, description: The section's name as the designer typed it. }
+        url: { type: [string, "null"], format: uri }
+        caption: { type: string }
 
     Geometry:
       type: object

@@ -3281,6 +3281,15 @@
 		 * question rather than an answer. The floating one takes focus the moment a block is
 		 * opened, and Escape does the same thing, so nobody is stranded.
 		 */
+		/*
+		 * What it looks like from here.
+		 *
+		 * Above the chairs, at the one moment it is being asked: somebody has decided where in the
+		 * room to sit and is choosing which seat, and "is the view any good from the balcony" is
+		 * the question a plan and a price together cannot answer.
+		 */
+		this.renderSeatView();
+
 		var disclosure = document.createElement( 'details' );
 		var summary = document.createElement( 'summary' );
 		var body = document.createElement( 'div' );
@@ -3352,6 +3361,49 @@
 				restored.focus();
 			}
 		}
+	};
+
+	/**
+	 * The photograph the venue took from this section, where it took one.
+	 *
+	 * A thumbnail that opens full size in a new tab rather than a picture the size of the plan: it
+	 * is an aid to a decision, not the decision, and a buyer who wants to look properly can. Nothing
+	 * at all where there is no picture — an empty frame saying "no photograph available" answers the
+	 * question worse than silence does.
+	 */
+	SeatmapWidget.prototype.renderSeatView = function () {
+		var block = this.currentBlock();
+		var views = ( this.config.event && this.config.event.views ) || {};
+		var view = block && block.sectionKey ? views[ block.sectionKey ] : null;
+
+		if ( ! view || ! view.url ) {
+			return;
+		}
+
+		var figure = document.createElement( 'figure' );
+		var link = document.createElement( 'a' );
+		var image = document.createElement( 'img' );
+		var caption = document.createElement( 'figcaption' );
+		var said = this.i18n.viewFromHere.replace( '%s', block.name );
+
+		figure.className = 'seatmap-widget__view';
+
+		link.href = view.url;
+		link.target = '_blank';
+		link.rel = 'noopener noreferrer';
+
+		image.src = view.url;
+		// The section's name rather than "a photograph": somebody who cannot see it is told which
+		// part of the room it is of, which is the only useful thing to say about it.
+		image.alt = said;
+		image.loading = 'lazy';
+
+		caption.textContent = view.caption || said;
+
+		link.appendChild( image );
+		figure.appendChild( link );
+		figure.appendChild( caption );
+		this.seatListEl.appendChild( figure );
 	};
 
 	/**

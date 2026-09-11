@@ -205,6 +205,27 @@ return [
         'needVenueBody' => 'A chart belongs to a building, so there has to be one to hang it on.',
     ],
 
+
+    /*
+     * The view from the seat.
+     *
+     * A chart says where a seat is and a price says what it costs. Neither answers the question
+     * somebody choosing between the stalls and the balcony is actually asking.
+     */
+    'seatViews' => [
+        'action' => 'Views',
+        'title' => 'The view from each section',
+        'hint' => 'One photograph per section, shown to a buyer beside the seats they are choosing. Leave a section empty and nothing is shown for it.',
+        'url' => 'Address of the photograph',
+        'urlHint' => 'A web address ending in .jpg, .png or .webp. Landscape, and wide enough to be worth opening.',
+        'caption' => 'Caption',
+        'captionPlaceholder' => 'Row F, centre',
+        'captionHint' => 'Optional. Without one, a buyer is told which section it is of.',
+        'save' => 'Save the photographs',
+        'saved' => 'Photographs saved.',
+        'noSections' => 'This chart has no sections',
+        'noSectionsHint' => 'Draw a section in the designer and it appears here to attach a photograph to.',
+    ],
     'events' => [
         'description' => 'Paste an event’s public ID into WordPress as <code>[seatmap_event id="evt_…"]</code>, or into the Seat map block.',
         'new' => 'New event',

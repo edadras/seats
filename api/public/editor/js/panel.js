@@ -1460,6 +1460,7 @@
 						'<td>' + state + '</td>' +
 						'<td class="tnum">' + places + '</td>' +
 						'<td class="table__actions">' +
+						actionButton( 'map-views', map.id, self.t( 'panel.seatViews.action' ), 'image' ) +
 						actionButton( 'map', map.id, self.t( 'panel.maps.open' ), 'map' ) + '</td></tr>';
 				} ).join( '' );
 
@@ -1495,6 +1496,15 @@
 
 				self.main().querySelectorAll( '[data-map]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () { self.openDesigner( button.dataset.map ); } );
+				} );
+
+				// What the stage looks like from each section. Opened from the list rather than
+				// from inside the designer: it is a property of the room, not of the drawing, and
+				// somebody attaching photographs is not editing the chart.
+				self.main().querySelectorAll( '[data-map-views]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						window.SeatmapSeatViews.open( self, { id: button.dataset.mapViews } );
+					} );
 				} );
 			} )
 			.catch( function ( error ) { self.error( error ); } );

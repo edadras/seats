@@ -2,7 +2,9 @@
 
 namespace App\Domain\Events;
 
+use App\Domain\SeatMaps\SeatViews;
 use App\Models\Event;
+use App\Models\SeatMapVersion;
 use App\Support\Locale\Money;
 
 /**
@@ -18,7 +20,10 @@ use App\Support\Locale\Money;
  */
 class PickerEvent
 {
-    public function __construct(private readonly \App\Domain\Availability\AvailabilityService $availability) {}
+    public function __construct(
+        private readonly \App\Domain\Availability\AvailabilityService $availability,
+        private readonly SeatViews $seatViews,
+    ) {}
 
     /** @return array<string, mixed> */
     public function forEvent(Event $event): array
@@ -53,6 +58,13 @@ class PickerEvent
                 'color' => $zone->color,
             ])->values(),
             'ticket_types' => TicketTypes::forEvent($event),
+            // The photograph attached to each section of the chart, if there is one. Sent with the
+            // event rather than with the geometry on purpose: the geometry response is cached
+            // against a published version, and a picture an organiser adds this afternoon should
+            // appear this afternoon rather than at the next republish.
+            'views' => $this->seatViews->forBoot(
+                SeatMapVersion::find($event->seat_map_version_id)
+            ),
         ];
     }
 }

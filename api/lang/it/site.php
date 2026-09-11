@@ -58,6 +58,7 @@ return [
         'sectionSoldOut' => 'Esaurito',
         'openSection' => 'Mostra i posti in %s',
         'inSection' => 'In %s',
+        'viewFromHere' => 'La vista da %s',
         'chooseTickets' => 'Scegliete i biglietti',
         'ticketTypes' => 'Biglietti',
         'ticketTypeFor' => 'Per chi è questo biglietto?',

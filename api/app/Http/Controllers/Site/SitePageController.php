@@ -6,6 +6,7 @@ use App\Domain\Access\AccessCodes;
 use App\Domain\Access\SaleWindow;
 use App\Domain\Availability\AvailabilityService;
 use App\Domain\SeatMaps\PublishedGeometry;
+use App\Domain\SeatMaps\SeatViews;
 use App\Domain\Sites\Themes;
 use App\Domain\Waitlist\WaitingList;
 use App\Http\Controllers\Controller;
@@ -32,6 +33,7 @@ class SitePageController extends Controller
     public function __construct(
         private readonly AvailabilityService $availability,
         private readonly PublishedGeometry $geometry,
+        private readonly SeatViews $seatViews,
     ) {}
 
     public function show(Request $request, string $path = '')
@@ -665,6 +667,10 @@ class SitePageController extends Controller
                 // Empty on an event that sells one kind of ticket, and the picker then shows no
                 // chooser at all rather than a chooser with one option in it.
                 'ticket_types' => \App\Domain\Events\TicketTypes::forEvent($event),
+                // What the stage looks like from each section, where somebody has taken the
+                // trouble to photograph it. Keyed by section, so the picker can put the right
+                // one beside the seat a buyer is actually looking at.
+                'views' => $this->seatViews->forBoot($event->seatMapVersion),
             ],
             // Enriched with the platform-wide seat ids, not the raw chart: without them the
             // picker has nothing to place a hold against and every seat is inert.

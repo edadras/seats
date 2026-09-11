@@ -998,3 +998,35 @@ body.seatmap-widget-filling {
 	color: var(--seatmap-muted);
 }
 
+
+/*
+ * What it looks like from here.
+ *
+ * A thumbnail above the chairs, at the moment somebody has chosen where in the room to sit and is
+ * choosing which seat. Small on purpose: it is an aid to the decision rather than the decision, and
+ * pressing it opens the photograph properly.
+ */
+.seatmap-widget__view {
+	margin: 0 0 var(--sm-space-3, 0.75rem);
+	border: 1px solid var(--sm-border, #e3e6ec);
+	border-radius: var(--sm-radius, 10px);
+	overflow: hidden;
+	background: var(--sm-surface-sunken, #f6f7f9);
+}
+
+.seatmap-widget__view a { display: block; }
+
+.seatmap-widget__view img {
+	display: block;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	block-size: auto;
+	aspect-ratio: 16 / 9;
+	object-fit: cover;
+}
+
+.seatmap-widget__view figcaption {
+	padding: 0.45rem 0.6rem;
+	font-size: 0.8125rem;
+	color: var(--sm-text-muted, #5f6878);
+}

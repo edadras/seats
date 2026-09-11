@@ -39,6 +39,7 @@
     <script src="{{ asset('editor/js/leaving.js') }}"></script>
     <script src="{{ asset('editor/js/loyalty.js') }}"></script>
     <script src="{{ asset('editor/js/memberships.js') }}"></script>
+    <script src="{{ asset('editor/js/seat-views.js') }}"></script>
     <script src="{{ asset('editor/js/questions.js') }}"></script>
     <script src="{{ asset('editor/js/entry-slots.js') }}"></script>
     <script src="{{ asset('editor/js/security.js') }}"></script>

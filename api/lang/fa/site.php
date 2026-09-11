@@ -58,6 +58,7 @@ return [
         'sectionSoldOut' => 'تمام شد',
         'openSection' => 'نمایش صندلی‌های %s',
         'inSection' => 'در %s',
+        'viewFromHere' => 'نمای سالن از %s',
         'chooseTickets' => 'بلیت‌هایتان را انتخاب کنید',
         'ticketTypes' => 'بلیت‌ها',
         'ticketTypeFor' => 'این بلیت برای چه کسی است؟',

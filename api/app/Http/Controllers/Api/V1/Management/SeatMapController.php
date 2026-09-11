@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1\Management;
 
+use App\Domain\SeatMaps\SeatViews;
+
 use App\Domain\SeatMaps\SeatMapPublisher;
 use App\Domain\SeatMaps\SeatMapValidator;
 use App\Exceptions\ApiException;
@@ -92,6 +94,44 @@ class SeatMapController extends Controller
         ]));
 
         return response()->json($this->present($map->fresh(['publishedVersion', 'versions'])));
+    }
+
+    /**
+     * What a buyer would see from each section of this chart.
+     *
+     * Every section comes back whether or not it has a picture, because the screen is a list of
+     * places to attach one to rather than a list of pictures. Read from the draft where there is
+     * one: an organiser attaching a photograph to a section they have just drawn is exactly the
+     * moment they are thinking about it.
+     */
+    public function views(Request $request, SeatMap $map)
+    {
+        $this->authorize($request, 'maps.view');
+
+        return response()->json(['data' => app(SeatViews::class)->forMap($map)]);
+    }
+
+    public function saveViews(Request $request, SeatMap $map)
+    {
+        $this->authorize($request, 'maps.manage');
+
+        $data = $request->validate([
+            'views' => ['required', 'array', 'max:200'],
+            'views.*.section_key' => ['required', 'string', 'max:120'],
+            // Empty takes the picture away. `url:http,https` rather than `url`, which would accept
+            // javascript: and data: — this address ends up in an `img src` on a page we serve.
+            'views.*.url' => ['nullable', 'string', 'max:500', 'url:http,https'],
+            'views.*.caption' => ['sometimes', 'nullable', 'string', 'max:200'],
+        ]);
+
+        $saved = app(SeatViews::class)->save($map, $data['views']);
+
+        $this->audit->record('seat_map.views_saved', $map, [
+            'name' => $map->name,
+            'pictures' => count(array_filter($saved, fn (array $row) => (bool) $row['url'])),
+        ]);
+
+        return response()->json(['data' => $saved]);
     }
 
     public function versions(Request $request, SeatMap $map)

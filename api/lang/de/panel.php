@@ -195,6 +195,21 @@ return [
         'needVenueBody' => 'Ein Plan gehört zu einem Gebäude, also muss es eines geben, an dem er hängt.',
     ],
 
+
+    'seatViews' => [
+        'action' => 'Blick',
+        'title' => 'Der Blick aus jedem Bereich',
+        'hint' => 'Ein Foto je Bereich, das dem Käufer neben den Plätzen gezeigt wird, die er gerade wählt. Ein leer gelassener Bereich zeigt keines.',
+        'url' => 'Adresse des Fotos',
+        'urlHint' => 'Eine Webadresse auf .jpg, .png oder .webp. Querformat und groß genug, dass sich das Öffnen lohnt.',
+        'caption' => 'Bildunterschrift',
+        'captionPlaceholder' => 'Reihe F, Mitte',
+        'captionHint' => 'Freiwillig. Ohne sie erfährt der Käufer, aus welchem Bereich das Foto stammt.',
+        'save' => 'Fotos speichern',
+        'saved' => 'Fotos gespeichert.',
+        'noSections' => 'Dieser Plan hat keine Bereiche',
+        'noSectionsHint' => 'Zeichnen Sie im Editor einen Bereich, dann erscheint er hier zum Hinterlegen eines Fotos.',
+    ],
     'events' => [
         'description' => 'Fügen Sie die öffentliche ID einer Veranstaltung als <code>[seatmap_event id="evt_…"]</code> in WordPress ein — oder in den Saalplan-Block.',
         'new' => 'Neue Veranstaltung',

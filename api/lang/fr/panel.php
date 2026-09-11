@@ -195,6 +195,21 @@ return [
         'needVenueBody' => 'Un plan appartient à un bâtiment, il en faut donc un auquel le rattacher.',
     ],
 
+
+    'seatViews' => [
+        'action' => 'Vues',
+        'title' => 'La vue depuis chaque zone',
+        'hint' => 'Une photographie par zone, montrée à l’acheteur à côté des places qu’il choisit. Une zone laissée vide n’en affiche aucune.',
+        'url' => 'Adresse de la photographie',
+        'urlHint' => 'Une adresse web en .jpg, .png ou .webp. En paysage, et assez grande pour valoir la peine d’être ouverte.',
+        'caption' => 'Légende',
+        'captionPlaceholder' => 'Rangée F, centre',
+        'captionHint' => 'Facultative. Sans elle, l’acheteur apprend de quelle zone il s’agit.',
+        'save' => 'Enregistrer les photographies',
+        'saved' => 'Photographies enregistrées.',
+        'noSections' => 'Ce plan n’a aucune zone',
+        'noSectionsHint' => 'Dessinez une zone dans l’éditeur et elle apparaîtra ici pour y joindre une photographie.',
+    ],
     'events' => [
         'description' => 'Collez l’identifiant public d’un événement dans WordPress sous la forme <code>[seatmap_event id="evt_…"]</code>, ou dans le bloc « Plan de salle ».',
         'new' => 'Nouvel événement',

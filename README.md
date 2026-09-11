@@ -562,6 +562,26 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## The view from the seat
+
+A chart says where a seat is; a price says what it costs. Neither answers the question somebody
+choosing between the stalls and the balcony is actually asking, which is what the stage looks like
+from there. An organiser attaches one photograph per section — on the **Seat maps** screen, under
+*Views* — and a buyer who opens that section sees it beside the chairs they are about to choose.
+
+A photograph belongs to the **room, not to the drawing of it**. It hangs off the map rather than off
+a version, keyed by the section's own key, so republishing the chart neither loses the pictures nor
+is required to change one: the room did not change, the drawing did. Sections are read from the
+draft where the map has one, so a section just drawn can be given a picture straight away.
+
+The address is checked on the way in and must be `http` or `https` — it ends up in an `img src` on a
+page this platform serves — and it is sent with the **event** payload rather than with the geometry,
+which is cached hard against a published version. A picture added this afternoon appears this
+afternoon, on the hosted site, on the embed on somebody else's website and at the box office window,
+because all three boot the same picker from the same payload. A section with no photograph shows
+nothing at all: an empty frame saying "no photograph available" answers the question worse than
+silence does.
+
 ## The Friends scheme
 
 Loyalty is earned by coming and a season ticket is one run of one production. A membership is
@@ -749,7 +769,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-one, in order
+./smoke.sh                    # all sixty-two, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -986,6 +1006,10 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A Friend walks past the presale door without spending anybody's code | `MembershipTest`, `memberships_smoke` |
 | A scheme people have joined is switched off, never deleted | `MembershipTest` |
 | Nobody who has already renewed is sent a renewal reminder | `MembershipTest` |
+| A photograph hangs off the room, not the drawing: republishing a chart keeps every view | `SeatViewTest` |
+| An address that is not one a browser would fetch never reaches a buyer's page | `SeatViewTest`, `views_smoke` |
+| A buyer who opens a section sees that section's photograph, on every host the picker runs on | `SeatViewTest`, `views_smoke` |
+| A section with no photograph shows nothing rather than an empty frame | `SeatViewTest`, `views_smoke` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |
