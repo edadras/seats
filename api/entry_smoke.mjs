@@ -11,6 +11,7 @@
  *   node entry_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openASection } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SITE = process.env.SEATMAP_SITE || 'http://northgate.localhost:8123';
@@ -89,10 +90,18 @@ const offered = await page.locator( '.seatmap-widget__entry-select option' ).cou
 
 check( 'with every window on it', offered >= 7, `${ offered - 1 } windows plus the prompt` );
 
-// Into a block, then onto a chair — the same route a buyer takes.
-const box = await page.locator( '.seatmap-widget__canvas' ).boundingBox();
-await page.mouse.click( box.x + box.width / 2, box.y + box.height / 2 );
-await page.waitForSelector( '.seatmap-widget__list' );
+/*
+ * Into a block, then onto a chair — the same route a buyer takes.
+ *
+ * Through the section list rather than by clicking the middle of the canvas. The positional click
+ * that used to be here was a bet that a section happened to sit under the geometric centre of the
+ * plan, and it came due the moment the plan was given more width: same hall, same sections, centre
+ * of the canvas now over the gap between two of them. `openASection` presses a real button with a
+ * real label, which is what a buyer does and what cannot drift with the layout.
+ */
+if ( ! await openASection( page ) ) {
+	throw new Error( 'The timed-entry hall drew no sections to open.' );
+}
 
 const seat = await page.evaluate( () => {
 	const widget = document.querySelector( '.seatmap-widget' ).seatmapWidget;
