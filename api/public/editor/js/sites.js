@@ -541,6 +541,37 @@
 			field( label, input );
 		}
 
+		/**
+		 * A switch, for the block settings that are yes or no.
+		 *
+		 * `fallback` is what the block means when the field has never been set, which is not always
+		 * false: terms are folded until somebody unfolds them, and a listing is searchable until
+		 * somebody turns that off. It is written here because the panel draws the control before the
+		 * server has ever seen the block, and a switch that starts in the wrong position is a
+		 * setting an organiser has to toggle twice.
+		 */
+		function check( title, key, fallback ) {
+			var wrap = node( 'label', 'switch switch--row' );
+			var input = document.createElement( 'input' );
+
+			input.type = 'checkbox';
+			input.checked = null == block[ key ] ? !! fallback : !! block[ key ];
+
+			wrap.appendChild( input );
+			wrap.insertAdjacentHTML(
+				'beforeend',
+				'<span class="switch__track"><span class="switch__thumb"></span></span>'
+			);
+			wrap.appendChild( node( 'span', '', title ) );
+
+			input.addEventListener( 'change', function () {
+				block[ key ] = input.checked;
+				Sites.savePage( App );
+			} );
+
+			field( null, wrap, true );
+		}
+
 		function label( key ) {
 			return App.t( 'panel.sites.' + key );
 		}
@@ -589,6 +620,40 @@
 				] );
 				break;
 
+			case 'slideshow':
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				select( label( 'heroHeight' ), 'height', [
+					[ 'short', label( 'heightShort' ) ],
+					[ 'tall', label( 'heightTall' ) ],
+				] );
+				check( label( 'slideshowAutoplay' ), 'autoplay', false );
+				Sites.slidesEditor( App, block, host );
+				host.appendChild( node( 'p', 'hint', label( 'slideshowHint' ) ) );
+				break;
+
+			case 'video':
+				text( label( 'videoUrl' ), 'url', { wide: true, placeholder: 'https://…' } );
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				text( label( 'caption' ), 'caption', { wide: true } );
+				text( label( 'videoPoster' ), 'poster', { wide: true, placeholder: 'https://…' } );
+				host.appendChild( node( 'p', 'hint', label( 'videoHint' ) ) );
+				break;
+
+			case 'specs':
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				Sites.specsEditor( App, block, host );
+				break;
+
+			case 'terms':
+				text( label( 'blockTitle' ), 'title', {
+					wide: true, placeholder: label( 'termsTitlePlaceholder' ),
+				} );
+				text( null, 'text', {
+					multiline: true, rows: 6, placeholder: label( 'termsPlaceholder' ),
+				} );
+				check( label( 'termsCollapsed' ), 'collapsed', true );
+				break;
+
 			case 'buttons':
 				Sites.buttonsEditor( App, block, host );
 				break;
@@ -601,6 +666,7 @@
 					[ 'spotlight', label( 'layoutSpotlight' ) ],
 				] );
 				text( label( 'howMany' ), 'limit' );
+				check( label( 'listSearch' ), 'search', true );
 				break;
 
 			case 'eventDetail':
@@ -611,6 +677,21 @@
 						} )
 					) );
 				host.appendChild( node( 'p', 'hint', label( 'eventDetailHint' ) ) );
+				break;
+
+			case 'buy':
+				select( label( 'whichEvent' ), 'event_public_id',
+					[ [ '', label( 'anyEvent' ) ] ].concat(
+						Sites.state.events.map( function ( event ) {
+							return [ event.public_id, event.name ];
+						} )
+					) );
+				text( label( 'blockTitle' ), 'title', { wide: true } );
+				text( label( 'buyLabel' ), 'label', {
+					wide: true, placeholder: label( 'buyLabelPlaceholder' ),
+				} );
+				text( label( 'buyNote' ), 'note', { wide: true } );
+				host.appendChild( node( 'p', 'hint', label( 'buyHint' ) ) );
 				break;
 
 			case 'faq':
@@ -634,6 +715,148 @@
 		}
 	};
 
+	/**
+	 * The pictures in a slideshow.
+	 *
+	 * One numbered group per slide rather than a row of four inputs: an address, its alt text, its
+	 * caption and where it leads do not fit side by side at panel width, and a venue putting up
+	 * twelve photographs needs to be able to tell which one it is editing.
+	 */
+	Sites.slidesEditor = function ( App, block, host ) {
+		block.items = block.items || [];
+
+		block.items.forEach( function ( item, index ) {
+			var wrap = node( 'div', 'faq-edit' );
+			var head = node( 'div', 'row row--between' );
+
+			head.appendChild( node( 'span', 'overline',
+				App.t( 'panel.sites.slideNumber', { number: App.number( index + 1 ) } ) ) );
+
+			var tools = node( 'div', 'block__tools' );
+
+			[
+				[ 'arrowUp', 'panel.sites.moveUp', index > 0, -1 ],
+				[ 'arrowDown', 'panel.sites.moveDown', index < block.items.length - 1, 1 ],
+			].forEach( function ( entry ) {
+				var button = node( 'button', 'icon-btn icon-btn--sm' );
+				var title = App.t( entry[ 1 ] );
+
+				button.innerHTML = icon( entry[ 0 ], { size: 14 } );
+				button.setAttribute( 'aria-label', title );
+				button.setAttribute( 'data-tip', title );
+				button.disabled = ! entry[ 2 ];
+				button.addEventListener( 'click', function () {
+					// The order is the slideshow: a photograph three places down is the third
+					// thing a visitor sees, so moving one has to be possible without retyping four
+					// addresses.
+					var moved = block.items.splice( index, 1 )[ 0 ];
+
+					block.items.splice( index + entry[ 3 ], 0, moved );
+					Sites.savePage( App, true );
+				} );
+				tools.appendChild( button );
+			} );
+
+			var remove = node( 'button', 'icon-btn icon-btn--sm' );
+			remove.innerHTML = icon( 'trash', { size: 14 } );
+			remove.setAttribute( 'aria-label', App.t( 'panel.sites.removeSlide' ) );
+			remove.setAttribute( 'data-tip', App.t( 'panel.sites.removeSlide' ) );
+			remove.addEventListener( 'click', function () {
+				block.items.splice( index, 1 );
+				Sites.savePage( App, true );
+			} );
+			tools.appendChild( remove );
+
+			head.appendChild( tools );
+			wrap.appendChild( head );
+
+			[
+				[ 'url', 'imageUrl' ],
+				[ 'alt', 'imageAlt' ],
+				[ 'caption', 'caption' ],
+				[ 'href', 'slideHref' ],
+			].forEach( function ( pair ) {
+				var input = document.createElement( 'input' );
+
+				input.className = 'input';
+				input.placeholder = App.t( 'panel.sites.' + pair[ 1 ] );
+				// A placeholder is gone the moment somebody types into the box, so it cannot be the
+				// only name the field has — for a screen reader or for the person looking at four
+				// filled-in boxes trying to remember which one was the caption.
+				input.setAttribute( 'aria-label', input.placeholder );
+				input.title = input.placeholder;
+				input.value = item[ pair[ 0 ] ] || '';
+				input.addEventListener( 'input', function () {
+					item[ pair[ 0 ] ] = input.value;
+					Sites.savePage( App );
+				} );
+
+				wrap.appendChild( input );
+			} );
+
+			host.appendChild( wrap );
+		} );
+
+		if ( block.items.length < 12 ) {
+			var add = node( 'button', 'link-btn' );
+			add.innerHTML = icon( 'plus', { size: 14 } ) + esc( App.t( 'panel.sites.addSlide' ) );
+			add.addEventListener( 'click', function () {
+				block.items.push( { url: '', alt: '', caption: '', href: '' } );
+				Sites.savePage( App, true );
+			} );
+			host.appendChild( add );
+		}
+	};
+
+	/** Label and value, for the panel of facts: doors, running time, interval, age limit. */
+	Sites.specsEditor = function ( App, block, host ) {
+		block.items = block.items || [];
+
+		block.items.forEach( function ( item, index ) {
+			var row = node( 'div', 'row row--wrap' );
+
+			[
+				[ 'label', 'specLabel' ],
+				[ 'value', 'specValue' ],
+			].forEach( function ( pair ) {
+				var input = document.createElement( 'input' );
+
+				input.className = 'input grow';
+				input.placeholder = App.t( 'panel.sites.' + pair[ 1 ] );
+				input.setAttribute( 'aria-label', input.placeholder );
+				input.title = input.placeholder;
+				input.value = item[ pair[ 0 ] ] || '';
+				input.addEventListener( 'input', function () {
+					item[ pair[ 0 ] ] = input.value;
+					Sites.savePage( App );
+				} );
+
+				row.appendChild( input );
+			} );
+
+			var remove = node( 'button', 'icon-btn icon-btn--sm' );
+			remove.innerHTML = icon( 'trash', { size: 14 } );
+			remove.setAttribute( 'aria-label', App.t( 'panel.sites.removeSpec' ) );
+			remove.addEventListener( 'click', function () {
+				block.items.splice( index, 1 );
+				Sites.savePage( App, true );
+			} );
+			row.appendChild( remove );
+
+			host.appendChild( row );
+		} );
+
+		if ( block.items.length < 20 ) {
+			var add = node( 'button', 'link-btn' );
+			add.innerHTML = icon( 'plus', { size: 14 } ) + esc( App.t( 'panel.sites.addSpec' ) );
+			add.addEventListener( 'click', function () {
+				block.items.push( { label: '', value: '' } );
+				Sites.savePage( App, true );
+			} );
+			host.appendChild( add );
+		}
+	};
+
 	Sites.buttonsEditor = function ( App, block, host ) {
 		block.items = block.items || [];
 
@@ -643,6 +866,7 @@
 			var label = document.createElement( 'input' );
 			label.className = 'input grow';
 			label.placeholder = App.t( 'panel.sites.buttonLabel' );
+			label.setAttribute( 'aria-label', label.placeholder );
 			label.value = item.label || '';
 			label.addEventListener( 'input', function () {
 				item.label = label.value;
@@ -652,6 +876,7 @@
 			var href = document.createElement( 'input' );
 			href.className = 'input grow';
 			href.placeholder = App.t( 'panel.sites.buttonHref' );
+			href.setAttribute( 'aria-label', href.placeholder );
 			href.value = item.href || '';
 			href.addEventListener( 'input', function () {
 				item.href = href.value;
@@ -692,6 +917,7 @@
 			var question = document.createElement( 'input' );
 			question.className = 'input';
 			question.placeholder = App.t( 'panel.sites.question' );
+			question.setAttribute( 'aria-label', question.placeholder );
 			question.value = item.question || '';
 			question.addEventListener( 'input', function () {
 				item.question = question.value;
@@ -702,6 +928,7 @@
 			answer.className = 'textarea';
 			answer.rows = 3;
 			answer.placeholder = App.t( 'panel.sites.answer' );
+			answer.setAttribute( 'aria-label', answer.placeholder );
 			answer.value = item.answer || '';
 			answer.addEventListener( 'input', function () {
 				item.answer = answer.value;

@@ -90,6 +90,11 @@ return [
         'venueMap' => 'So finden Sie uns',
         'divider' => 'Trennlinie',
         'html' => 'Eigenes HTML',
+        'slideshow' => 'Diaschau',
+        'video' => 'Video',
+        'specs' => 'Die Angaben',
+        'terms' => 'Bedingungen',
+        'buy' => 'Ticket kaufen',
     ],
 
     'seed' => [
@@ -457,5 +462,18 @@ return [
         'notYet' => 'Ab :points Punkten wird Guthaben daraus.',
         'turned' => 'Erledigt — :amount Guthaben liegt auf Ihrer Adresse, die Kasse bietet es an.',
         'creditNote' => 'Punkte in Guthaben umgewandelt (:points)',
+    ],
+    'seeEvent' => 'Zum Abend',
+    'slides' => [
+        'previous' => 'Vorheriges Bild',
+        'next' => 'Nächstes Bild',
+        'goTo' => 'Bild :number',
+    ],
+    'video' => [
+        'play' => 'Video abspielen',
+        'watch' => 'Video ansehen',
+    ],
+    'terms' => [
+        'title' => 'Allgemeine Geschäftsbedingungen',
     ],
 ];

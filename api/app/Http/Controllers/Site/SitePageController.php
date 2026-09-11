@@ -126,6 +126,18 @@ class SitePageController extends Controller
                 $block['event_public_id'] ?: null,
                 $meta['event'] ?? null
             ),
+            /*
+             * The same night, as little of it as a button needs.
+             *
+             * Separate from `eventFor` on purpose: the detail block's answer carries the picker's
+             * boot payload, the published geometry and the queue's verdict, and a page with a buy
+             * button on it would otherwise load the whole hall to decide what one link should say.
+             */
+            'offerFor' => fn (array $block) => $this->offer(
+                $site,
+                $block['event_public_id'] ?: null,
+                $meta['event'] ?? null
+            ),
         ]);
     }
 
@@ -363,6 +375,59 @@ class SitePageController extends Controller
                 'towns' => (int) ($towns[$event->series_id] ?? 1),
             ];
         })->all();
+    }
+
+    /**
+     * What a buy button needs to know, and nothing else.
+     *
+     * Whether this night is on sale is the server's answer in both places — the same SaleWindow and
+     * the same access code as the detail block reads — so a button that says "on sale" and a page
+     * that says "not yet" cannot both exist. What this deliberately does not do is decide anything
+     * about seats: a buy block is a link to the event's own page, where the picker, the per-buyer
+     * limit and the presale door already live.
+     *
+     * @return array{public_id: string, name: string, venue: ?string, long_when: string, from_price: ?string, on_sale: bool, closed_message: string, opens_at: ?string}|null
+     */
+    private function offer(Site $site, ?string $publicId, ?Event $fallback): ?array
+    {
+        $event = $publicId
+            ? Event::with(['venue', 'priceZones'])->where('public_id', $publicId)->first()
+            : $fallback;
+
+        // A draft is not a thing to sell, and nor is a night a visitor reached by guessing: the
+        // block renders nothing rather than a button to a page that answers 404.
+        if (! $event || 'draft' === $event->status) {
+            return null;
+        }
+
+        $sale = SaleWindow::state($event);
+        $held = request()->session()->get('seatmap_access_code');
+        $unlocked = SaleWindow::OPEN === $sale || (
+            SaleWindow::CLOSED !== $sale
+            && $held
+            && app(AccessCodes::class)->offer($held, $event)->ok
+        );
+        $starts = $event->starts_at?->setTimezone($event->timezone ?: $site->timezone);
+        $cheapest = $event->priceZones->min('amount');
+
+        return [
+            'public_id' => $event->public_id,
+            'name' => $event->nameFor(),
+            'venue' => $event->venue?->name,
+            'long_when' => Dates::longWhen($starts),
+            'from_price' => null === $cheapest ? null : $this->money($cheapest, $event->currency),
+            'on_sale' => SaleWindow::CLOSED !== $sale && $unlocked,
+            'closed_message' => match (true) {
+                'cancelled' === $event->status => __('site.closed.cancelled'),
+                'closed' === $event->status => __('site.closed.closed'),
+                SaleWindow::PRESALE === $sale => __('site.access.presaleOnly'),
+                SaleWindow::WAITING === $sale => __('site.access.notOpenYet'),
+                default => __('site.closed.notYet'),
+            },
+            'opens_at' => SaleWindow::opensAt($event)
+                ? Dates::longWhen(SaleWindow::opensAt($event), app()->getLocale())
+                : null,
+        ];
     }
 
     private function detail(Site $site, ?string $publicId, ?Event $fallback): ?array

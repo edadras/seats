@@ -130,7 +130,7 @@ class SiteProvisioner
             'draft_blocks' => $clean,
             // Published straight away: a new site that is invisible until someone finds a publish
             // button is a new site that gets reported as broken.
-            'published_blocks' => $clean,
+            'published_blocks' => Blocks::tidy($clean),
             'published_at' => now(),
             'position' => $position,
         ]);

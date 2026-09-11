@@ -105,6 +105,8 @@
 		arrowDown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
 		palette: '<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 2-.9 2-1.8 0-.5-.2-.9-.5-1.2-.3-.4-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6h1.5a4.4 4.4 0 0 0 4.4-4.4C20.5 6.6 16.7 3.5 12 3.5Z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10" cy="7.5" r="1.1"/><circle cx="14.5" cy="7.5" r="1.1"/>',
 		list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+		// A play triangle inside its frame: a film, not a button that is already playing.
+		play: '<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6 16 12l-5.8 3.4Z"/>',
 		ticket: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h13A1.5 1.5 0 0 1 20 8.5v2a2 2 0 0 0 0 3v2A1.5 1.5 0 0 1 18.5 17h-13A1.5 1.5 0 0 1 4 15.5v-2a2 2 0 0 0 0-3Z"/><path d="M13.5 7.4v1.4M13.5 11.3v1.4M13.5 15.2v1.4"/>',
 		wallet: '<path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h11a2 2 0 0 1 2 2"/><rect x="3.5" y="7.5" width="17" height="11" rx="2"/><path d="M20.5 11h-3.6a1.5 1.5 0 0 0 0 3h3.6"/>',
 	};

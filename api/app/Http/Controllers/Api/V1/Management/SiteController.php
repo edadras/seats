@@ -346,7 +346,9 @@ class SiteController extends Controller
         $this->assertBelongs($site, $page->site_id);
 
         $page->update([
-            'published_blocks' => $page->draft_blocks ?? [],
+            // Tidied on the way out rather than on the way in: a draft is allowed to hold the row
+            // an organiser has just added and not yet filled in, and a live page is not.
+            'published_blocks' => Blocks::tidy($page->draft_blocks ?? []),
             'published_at' => now(),
         ]);
 

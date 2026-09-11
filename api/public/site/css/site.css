@@ -1759,3 +1759,250 @@ hr { border: none; }
 	block-size: 1.1rem;
 	flex: none;
 }
+
+/* ====================================================== the page modules a venue actually needs */
+
+/*
+ * The slideshow.
+ *
+ * A scroller first: the track is a row of slides with scroll-snap on it, so a phone swipes it and a
+ * browser running no JavaScript at all still gets every picture. The arrows and dots are appended
+ * by the block's own script, which is why nothing here assumes they exist.
+ */
+.slides { padding-block-end: clamp(1rem, 2.5vw, 1.75rem); }
+
+.slides__track {
+	display: flex;
+	gap: 0.75rem;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-behavior: smooth;
+	padding-inline: max(1.25rem, calc((100% - var(--shell)) / 2));
+	/* The scrollbar is the fallback control, so it is left alone rather than hidden: on a browser
+	   where the script did not run it is the only way to reach picture nine. */
+	scrollbar-width: thin;
+}
+
+.slides__track:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.slides__slide {
+	flex: 0 0 min(100%, var(--shell));
+	scroll-snap-align: center;
+	margin: 0;
+}
+
+.slides__track--short .slides__slide img { aspect-ratio: 21 / 9; }
+.slides__track--tall .slides__slide img { aspect-ratio: 16 / 9; }
+
+.slides__slide img {
+	display: block;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	block-size: auto;
+	object-fit: cover;
+	border-radius: var(--radius-lg);
+	background: var(--surface-sunken);
+}
+
+.slides__link { display: block; }
+
+.slides__caption {
+	margin-block-start: 0.6rem;
+	font-size: 0.875rem;
+	color: var(--text-muted);
+}
+
+.slides__nav {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-block-start: 0.9rem;
+}
+
+.slides__arrow {
+	inline-size: 2.25rem;
+	block-size: 2.25rem;
+	flex: none;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-pill);
+	background: var(--surface);
+	color: var(--text);
+	cursor: pointer;
+}
+
+.slides__arrow::before {
+	content: '';
+	display: block;
+	inline-size: 0.5rem;
+	block-size: 0.5rem;
+	margin-inline: auto;
+	border-block-start: 2px solid currentColor;
+	border-inline-end: 2px solid currentColor;
+}
+
+/* Turned by logical direction, so the arrow that means "onwards" points the reader's own way. */
+.slides__arrow--on::before { transform: rotate(45deg); }
+.slides__arrow--back::before { transform: rotate(-135deg); }
+[dir='rtl'] .slides__arrow--on::before { transform: rotate(-135deg); }
+[dir='rtl'] .slides__arrow--back::before { transform: rotate(45deg); }
+
+.slides__arrow:hover { border-color: var(--accent-line); color: var(--accent); }
+
+.slides__dots { display: flex; align-items: center; gap: 0.4rem; }
+
+.slides__dot {
+	inline-size: 0.55rem;
+	block-size: 0.55rem;
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-pill);
+	background: var(--border);
+	cursor: pointer;
+}
+
+.slides__dot.is-here { background: var(--accent); transform: scale(1.25); }
+.slides__dot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/*
+ * The film.
+ *
+ * A still with a play button over it until somebody asks for the film: loading a third party's
+ * player on a page about buying a ticket hands every visitor to them before they have shown any
+ * interest in watching anything, and it is most of a megabyte.
+ */
+.video,
+.video__player {
+	position: relative;
+	display: block;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	aspect-ratio: 16 / 9;
+	border-radius: var(--radius-lg);
+	overflow: hidden;
+	background: var(--surface-sunken) center / cover no-repeat;
+}
+
+.video__player { background-color: #000; }
+
+.video__play {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 100%;
+	block-size: 100%;
+	border: 0;
+	background: color-mix(in srgb, #000 28%, transparent);
+	color: #fff;
+	cursor: pointer;
+}
+
+.video__play svg {
+	inline-size: 4rem;
+	block-size: 4rem;
+	filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+}
+
+.video__play:hover svg { transform: scale(1.08); }
+.video__play:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+
+.video__frame { inline-size: 100%; block-size: 100%; border: 0; }
+
+.video__away {
+	position: absolute;
+	inset-block-end: 1rem;
+	inset-inline-start: 1rem;
+	color: #fff;
+}
+
+.video__caption { margin-block-start: 0.6rem; font-size: 0.875rem; }
+
+/*
+ * The facts.
+ *
+ * Two columns where there is room for two, because somebody reading this is looking for one row —
+ * the age limit, the running time — and a single column of twelve makes them read all twelve.
+ */
+.specs {
+	display: grid;
+	gap: 0.1rem 1.5rem;
+	margin: 0;
+	max-inline-size: 60rem;
+}
+
+.specs__row {
+	display: grid;
+	grid-template-columns: minmax(8rem, 14rem) 1fr;
+	gap: 0.25rem 1rem;
+	padding-block: 0.7rem;
+	border-block-end: 1px solid var(--border);
+}
+
+.specs__row:last-child { border-block-end: 0; }
+.specs__label { margin: 0; color: var(--text-muted); }
+.specs__value { margin: 0; }
+
+@media (max-width: 34rem) {
+	.specs__row { grid-template-columns: 1fr; }
+}
+
+/*
+ * The conditions of sale.
+ *
+ * A `details` rather than a script: it opens for a reader with no JavaScript, it prints open, and
+ * the browser's own find-on-page reaches inside it.
+ */
+.terms {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 0.9rem 1.1rem;
+	background: var(--surface);
+	max-inline-size: var(--shell-narrow);
+}
+
+.terms__summary { cursor: pointer; font-weight: 600; }
+.terms__summary::marker { color: var(--text-muted); }
+.terms__title { margin: 0 0 0.5rem; font-size: 1.15rem; }
+.terms__body { margin-block-start: 0.8rem; font-size: 0.9375rem; }
+.terms--open .terms__body { margin-block-start: 0; }
+
+/*
+ * Buy this one, from anywhere on the site.
+ *
+ * A strip rather than a card, because it is an offer and not an article: the night on one side, the
+ * price and the button on the other, and on a phone the button underneath where a thumb is.
+ */
+.buy {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1.1rem 1.25rem;
+	border: 1px solid var(--accent-line);
+	border-radius: var(--radius-lg);
+	background: var(--accent-soft);
+	box-shadow: var(--shadow);
+}
+
+.buy__what { flex: 1 1 18rem; }
+.buy__title { margin: 0; font-size: clamp(1.1rem, 2.2vw, 1.45rem); }
+.buy__when { margin: 0.3rem 0 0; color: var(--text-muted); }
+.buy__note { margin: 0.4rem 0 0; font-size: 0.9375rem; }
+
+.buy__act {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem 0.9rem;
+}
+
+.buy__price { font-weight: 600; }
+.buy__closed { font-weight: 600; }
+
+@media (max-width: 40rem) {
+	.buy__act { inline-size: 100%; }
+	.buy__act .button { flex: 1 1 auto; text-align: center; }
+}

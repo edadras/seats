@@ -89,6 +89,11 @@ return [
         'venueMap' => 'Nous trouver',
         'divider' => 'Séparateur',
         'html' => 'HTML personnalisé',
+        'slideshow' => 'Diaporama',
+        'video' => 'Vidéo',
+        'specs' => 'Les détails',
+        'terms' => 'Conditions',
+        'buy' => 'Acheter un billet',
     ],
 
     'seed' => [
@@ -456,5 +461,18 @@ return [
         'notYet' => 'À partir de :points points, cela devient du crédit.',
         'turned' => 'C\'est fait — :amount de crédit est sur votre adresse, la billetterie vous le proposera.',
         'creditNote' => 'Points convertis en crédit (:points)',
+    ],
+    'seeEvent' => 'Voir la soirée',
+    'slides' => [
+        'previous' => 'Image précédente',
+        'next' => 'Image suivante',
+        'goTo' => 'Image :number',
+    ],
+    'video' => [
+        'play' => 'Lire la vidéo',
+        'watch' => 'Regarder la vidéo',
+    ],
+    'terms' => [
+        'title' => 'Conditions générales',
     ],
 ];

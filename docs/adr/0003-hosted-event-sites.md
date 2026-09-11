@@ -83,8 +83,12 @@ A site is:
 
 - `sites` — the site itself: theme key, brand (logo, colours, typeface), locale, timezone, status.
 - `site_pages` — a slug, a title and an ordered list of **blocks**. A block is `{type, …}`:
-  `richText`, `heading`, `image`, `eventList`, `eventDetail`, `faq`, `map`, `html`. Rendering is a
-  match on `type`; an unknown type renders nothing rather than breaking the page.
+  `hero`, `heading`, `richText`, `image`, `slideshow`, `video`, `specs`, `terms`, `buttons`, `buy`,
+  `eventList`, `eventDetail`, `faq`, `venueMap`, `divider`, `html`. Rendering is a match on `type`;
+  an unknown type renders nothing rather than breaking the page. A block that names something
+  outside the platform — a picture, a film — resolves it on the way *in*: the `video` block stores a
+  provider and an id rather than the address somebody pasted, so no organiser-supplied string is
+  ever interpolated into an `iframe` src at render time.
 - `site_menus` / `site_menu_items` — a tree of links, each pointing at a page, an event, or a URL.
 
 Themes are first-party Blade layouts plus a token set, chosen by key. A theme cannot execute

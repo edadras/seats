@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Sites\Blocks;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -130,9 +131,17 @@ class SitePage extends Model
         return $this->published_blocks ?? [];
     }
 
+    /**
+     * Whether publishing would change what a visitor sees.
+     *
+     * The draft is compared *tidied*, because that is what publishing would write: a half-written
+     * row an organiser added and abandoned is not an unpublished change, and comparing the raw draft
+     * would leave the page marked dirty for ever with nothing to press that could clear it.
+     */
     public function hasUnpublishedChanges(): bool
     {
-        return json_encode($this->draft_blocks) !== json_encode($this->published_blocks);
+        return json_encode(Blocks::tidy($this->draft_blocks ?? []))
+            !== json_encode($this->published_blocks ?? []);
     }
 
     public function path(): string

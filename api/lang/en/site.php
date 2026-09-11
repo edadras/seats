@@ -92,6 +92,11 @@ return [
         'venueMap' => 'Finding us',
         'divider' => 'Divider',
         'html' => 'Custom HTML',
+        'slideshow' => 'Slideshow',
+        'video' => 'Video',
+        'specs' => 'The details',
+        'terms' => 'Terms',
+        'buy' => 'Buy a ticket',
     ],
 
     /* The starter site every new account is given, written in that site's own language. */
@@ -460,5 +465,18 @@ return [
         'notYet' => ':points points turns into credit.',
         'turned' => 'Done — :amount of credit is on your address, and the checkout will offer it.',
         'creditNote' => 'Points turned into credit (:points)',
+    ],
+    'seeEvent' => 'See the night',
+    'slides' => [
+        'previous' => 'Previous picture',
+        'next' => 'Next picture',
+        'goTo' => 'Picture :number',
+    ],
+    'video' => [
+        'play' => 'Play the video',
+        'watch' => 'Watch the video',
+    ],
+    'terms' => [
+        'title' => 'Terms and conditions',
     ],
 ];

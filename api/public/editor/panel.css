@@ -1181,6 +1181,8 @@
 	border-radius: var(--r-md);
 }
 
+.faq-edit + .faq-edit { margin-block-start: var(--s-2); }
+
 /* ------------------------------------------------------------------------------ themes */
 
 .themes {
@@ -1387,6 +1389,7 @@
 .badge--soft { background: var(--surface-hover); color: var(--text-muted); }
 .req { color: var(--danger); }
 .row--end { justify-content: flex-end; }
+.row--between { justify-content: space-between; }
 
 .notice--warn {
 	margin: 0;

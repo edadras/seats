@@ -543,7 +543,20 @@ address somebody can send to a friend.
 
 Pages have drafts and a published copy, the same discipline seat maps have. Blocks are normalised
 once, on the way in; nothing downstream re-validates, and raw HTML is off unless an organiser has
-deliberately turned it on for their account.
+deliberately turned it on for their account. The one thing a draft is allowed that a published page
+is not is a half-written list row: the editor's "add a picture" has to leave a row on the screen to
+type into, and publishing is where an unfinished one is dropped.
+
+Sixteen kinds of block, and the five that matter most to a venue selling a night are the ones a
+theatre's own home page is actually made of:
+
+| Module | What it is for |
+| --- | --- |
+| Slideshow | The room, in the organiser's own photographs. A scroll-snapping track first, so it swipes on a phone and works with no JavaScript at all; the arrows, the dots and the optional autoplay are added on top, and the autoplay never starts for a reader who has asked their system for less motion. |
+| Video | A trailer from YouTube or Vimeo, or a file the browser plays itself. The address is resolved to a provider and an id **on the way in**, so nothing an organiser typed is ever interpolated into an `iframe` src — and the player is not loaded until somebody presses play, because a page about buying a ticket should not hand every visitor to a third party first. |
+| The details | Doors, running time, interval, age limit — label and value, because somebody is looking for one row rather than for the paragraph it would be buried in. |
+| Terms | The conditions of sale, folded by default. A `details` element rather than a script: it opens without JavaScript, prints open, and the browser's own find reaches inside it. |
+| Buy | The night, its from-price and a button, from anywhere on the site. It reads the same sale state the event's own page reads, so a button saying "on sale" and a page saying "not yet" cannot both exist; where the sale is shut it gives the event's own sentence instead of a link to nothing. |
 
 Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the control panel; every
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
@@ -648,7 +661,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all thirty-eight, in order
+./smoke.sh                    # all fifty-seven, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -859,6 +872,12 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Points turn into credit the checkout already knows how to spend, and the remainder stays theirs | `LoyaltyTest`, `loyalty_smoke` |
 | A tier walks past the presale queue; a standing too low is still asked for a code | `LoyaltyTest` |
 | Points that have gone quiet go, unless the scheme promised they never would | `LoyaltyTest` |
+| A video address becomes a provider and an id, and anything else is not a video | `SiteModulesTest`, `modules_smoke` |
+| The player is absent until a visitor presses play, and carries the address the server resolved | `SiteModulesTest`, `modules_smoke` |
+| A slideshow is a scroller before its script runs, and a carousel after | `modules_smoke` |
+| A row somebody is still typing into survives the save and does not survive publishing | `SiteModulesTest`, `modules_smoke` |
+| A buy button says what the event says, and a presale is not advertised to somebody without a code | `SiteModulesTest` |
+| A buy block cannot name another organiser's night | `SiteModulesTest` |
 | The chair beside a wheelchair space is never sold on its own | `AccessibleBookingTest` |
 | Held-back spaces are off the public plan and still at the counter | `AccessibleBookingTest` |
 | They go on sale because the hour arrived, with nothing run to release them | `AccessibleBookingTest` |

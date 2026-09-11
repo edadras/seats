@@ -9478,9 +9478,13 @@ paths:
                     items:
                       type: object
                       properties:
-                        type: { type: string, enum: [heading, richText, image, buttons, eventList, eventDetail, faq, venueMap, divider, html] }
+                        type: { type: string, enum: [hero, heading, richText, image, slideshow, video, specs, terms, buttons, buy, eventList, eventDetail, faq, venueMap, divider, html] }
                         name: { type: string }
                         icon: { type: string }
+                        words:
+                          type: array
+                          description: Which of the block's fields are prose, and therefore worth another language.
+                          items: { type: string }
 
   /sites:
     get:
@@ -13315,7 +13319,7 @@ components:
           description: Stable across edits, so reordering one block does not break an anchor to another.
         type:
           type: string
-          enum: [heading, richText, image, buttons, eventList, eventDetail, faq, venueMap, divider, html]
+          enum: [hero, heading, richText, image, slideshow, video, specs, terms, buttons, buy, eventList, eventDetail, faq, venueMap, divider, html]
       additionalProperties: true
 
     SiteMenu:
