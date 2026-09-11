@@ -36,6 +36,8 @@ class RefundRequestController extends Controller
             ->with(['order:id,external_order_id,buyer,total_amount,currency,status', 'event:id,name'])
             ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($data['event_id'] ?? null, fn ($query, $id) => $query->where('event_id', $id))
+            // And a programme manager reads the requests against their own nights.
+            ->tap(fn ($query) => app(\App\Domain\Programme\EventManagers::class)->narrow($query, $request->user()))
             // Waiting first: this screen exists so that nobody is left waiting.
             ->orderByRaw("case when status = 'pending' then 0 else 1 end")
             ->orderByDesc('created_at')

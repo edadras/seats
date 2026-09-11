@@ -100,6 +100,7 @@ return [
         'box_office' => 'Kasse',
         'door' => 'Einlasspersonal',
         'agent' => 'Vertriebspartner',
+        'programme_manager' => 'Programmleitung',
         'viewer' => 'Betrachter',
     ],
     'roleDescriptions' => [
@@ -109,6 +110,7 @@ return [
         'box_office' => 'Findet Buchungen, erstattet sie, gibt Plätze wieder frei. Rührt die Saalpläne nicht an.',
         'door' => 'Sieht, wer hereingekommen ist, und koppelt Geräte. Sieht nicht, was der Abend eingebracht hat.',
         'agent' => 'Verkauft die zugeteilten Abende, bis zum zugeteilten Guthaben. Sieht die eigenen Buchungen und nichts vom Haus.',
+        'programme_manager' => 'Führt die zugeteilten Abende — Tickets, Saalplan, Einlass und Einnahmen — und hat für jeden anderen Abend gar nichts.',
         'viewer' => 'Liest. Ändert nichts.',
     ],
     'permissionCount' => ':count Berechtigungen',

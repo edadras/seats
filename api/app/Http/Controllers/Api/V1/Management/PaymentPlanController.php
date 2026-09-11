@@ -107,7 +107,11 @@ class PaymentPlanController extends Controller
         ]);
 
         return response()->json([
-            'data' => $this->plans->outstanding($data['state'] ?? 'all', (int) ($data['limit'] ?? 200)),
+            'data' => $this->plans->outstanding(
+                $data['state'] ?? 'all',
+                (int) ($data['limit'] ?? 200),
+                app(\App\Domain\Programme\EventManagers::class)->eventIdsFor($request->user()),
+            ),
         ]);
     }
 }

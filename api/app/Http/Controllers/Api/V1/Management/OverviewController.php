@@ -36,6 +36,9 @@ class OverviewController extends Controller
          * nights without being shown how the organiser's season is going.
          */
         $this->authorize($request, 'reports.attendance.view');
+        // Every figure below is house-wide. A promoter running four nights is not being shown how
+        // the organiser's season is going, for the same reason an agency is not.
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $gate = app(Gate::class);
         $maySeeMoney = $gate->allows($request, 'reports.orders.view');

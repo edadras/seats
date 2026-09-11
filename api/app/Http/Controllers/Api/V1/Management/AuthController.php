@@ -120,6 +120,10 @@ class AuthController extends Controller
             'role' => $membership->role,
             'permissions' => $this->permissionsFor($membership, $tenant),
             'agent' => $this->tenantContext->runAs($tenant, fn () => $this->agencyOf($user)),
+            'programme_manager' => $this->tenantContext->runAs(
+                $tenant,
+                fn () => app(\App\Domain\Programme\EventManagers::class)->isOne($user),
+            ),
             // So the panel can put the verification bar back for somebody who signed up, closed
             // the tab, and came back a day later without typing the code.
             'email_verified' => null !== $user->email_verified_at,
@@ -183,6 +187,10 @@ class AuthController extends Controller
             'role' => $membership?->role,
             'permissions' => $membership ? $this->permissionsFor($membership, $tenant) : [],
             'agent' => $this->tenantContext->runAs($tenant, fn () => $this->agencyOf($user)),
+            'programme_manager' => $this->tenantContext->runAs(
+                $tenant,
+                fn () => app(\App\Domain\Programme\EventManagers::class)->isOne($user),
+            ),
             'email_verified' => null !== $user->email_verified_at,
             'two_factor' => true,
             'must_set_up_two_factor' => false,
@@ -223,6 +231,15 @@ class AuthController extends Controller
              * and an owner holds every permission there is without being anybody's agency.
              */
             'agent' => $this->agencyOf($user),
+            /*
+             * And whether they run nights rather than the account.
+             *
+             * Not a permission either — a programme manager holds `orders.view` like the box office
+             * does, and the difference is which bookings that reaches. The panel needs to know so
+             * it can leave out the screens that are about the account: the customer directory, the
+             * season's settlement, the report builder.
+             */
+            'programme_manager' => app(\App\Domain\Programme\EventManagers::class)->isOne($user),
             'email_verified' => null !== $user->email_verified_at,
             'two_factor' => $user->hasTwoFactor(),
             'must_set_up_two_factor' => (bool) ($tenant?->require_two_factor) && ! $user->hasTwoFactor(),

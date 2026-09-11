@@ -85,6 +85,12 @@ A seat is the start of it, not the end. Around the map:
   has to go red. Barring the buyer is offered and never automatic. A block is about a person, may
   carry a date that lifts it without anybody acting, and is checked where a booking is registered so
   the refusal arrives before the money — with a sentence, not a silent failure.
+- **Programme managers** — an administrator for one concert rather than for the account. Somebody
+  putting on a run in your venue is given those nights and nothing else: they sell at the window,
+  open and close chairs on the plan, void a ticket, read the door and read what their own night
+  took — and every other night in the programme answers "cannot be found", including the fact that
+  it exists. **The scope is a list of nights, not a level**, checked as middleware on any route that
+  names an event, so it holds for the routes nobody has written yet.
 - **Sales agents** — the shops, bureaux and agencies that sell an organiser's tickets over their own
   counter. Not promoters: a promoter posts a link and is paid a percentage of what it brings in; an
   agent takes cash from the public, so they carry the two things a promoter does not. **What they
@@ -295,15 +301,28 @@ browser check in `api/smoke.sh`.
 
 ## Who may do what
 
-Seven built-in roles — owner, administrator, manager, box office, door staff, sales agent, viewer —
-over a closed catalogue of named permissions, and an organiser can invent their own for a job their
-venue actually has.
+Eight built-in roles — owner, administrator, manager, box office, door staff, sales agent,
+programme manager, viewer — over a closed catalogue of named permissions, and an organiser can
+invent their own for a job their venue actually has.
 
 The separation that matters most is money from operations. A door volunteer sees the head count and
 not the takings; the same `/events/{id}/stats` endpoint answers both questions and only answers the
 second to somebody who may hear it. A box office finds a booking, refunds it and puts a seat back on
 sale, and cannot republish the map that seat is on. A sales agent is not staff at all, so their
 lookup is narrowed to their own book by a permission of its own.
+
+A **programme manager** is the one role shaped differently, and the difference is the point. Every
+other role answers one question — what may this person do. A promoter putting on four nights in
+somebody else's venue needs the other half of the sentence, *to which nights*, and the two are
+multiplied rather than added: holding `tickets.release` and being given the Tuesday means you may
+void a Tuesday ticket, and says nothing whatever about Wednesday. They get everything the site's own
+administrator has for their own concerts — the window, the plan, opening and closing chairs on it,
+the door, the tickets, what the night took — and every other night answers "cannot be found",
+including the fact that it exists. The scope is middleware on any route with a bound event rather
+than a check at each call site, because a scope applied seventy times is a scope forgotten once, and
+the one that is forgotten is the one somebody finds. What is theirs stops at the account: the
+customer directory, the season's settlement, the report builder and the productions belong to the
+organiser, and a promoter is told so rather than shown a quarter of them.
 
 The panel is told what the caller holds — at sign-in, and again from `GET /v1/auth/me` on every boot,
 because a role can be narrowed while somebody has the tab open — and leaves out the screens and the
@@ -690,6 +709,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The window is handed the same hall the buyer is looking at | `BoxOfficeCounterTest`, `counter_smoke` |
 | The counter's availability sees the house seat and says whose it is | `BoxOfficeCounterTest` |
 | Four side by side is a suggestion at a window and a hold on a website | `together_smoke` |
+| A manager runs their own night the way the organiser would | `ProgrammeManagerTest`, `managers_smoke` |
+| A night they were not given cannot be found, by any route | `ProgrammeManagerTest`, `managers_smoke` |
+| A manager with no nights reaches nothing rather than everything | `ProgrammeManagerTest` |
+| The account's own screens are not a manager's | `ProgrammeManagerTest` |
+| Appointing one takes both authorities | `ProgrammeManagerTest` |
 | An agency is never handed the organiser's audience | `SalesAgentTest`, `agents_smoke` |
 | The narrow permission shows nothing to somebody who sells for nobody | `SalesAgentTest` |
 | An agency reads its own statement and reaches no others | `SalesAgentTest`, `agents_smoke` |

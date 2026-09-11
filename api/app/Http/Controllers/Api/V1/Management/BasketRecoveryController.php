@@ -37,6 +37,8 @@ class BasketRecoveryController extends Controller
         $recoveries = BasketRecovery::query()
             ->with(['event:id,name,starts_at,timezone', 'order:id,external_order_id,status', 'recoveredOrder:id,external_order_id'])
             ->when($request->query('event_id'), fn ($q, $id) => $q->where('event_id', $id))
+            // A programme manager sees the baskets left on their own nights and nobody else's.
+            ->tap(fn ($query) => app(\App\Domain\Programme\EventManagers::class)->narrow($query, $request->user()))
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('q'), fn ($q, $term) => $q->where(
                 fn ($w) => $w->where('email', 'ilike', "%{$term}%")

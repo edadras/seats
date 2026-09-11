@@ -100,6 +100,7 @@ return [
         'box_office' => 'Botteghino',
         'door' => 'Personale d’ingresso',
         'agent' => 'Rivenditore',
+        'programme_manager' => 'Responsabile di programma',
         'viewer' => 'Osservatore',
     ],
     'roleDescriptions' => [
@@ -109,6 +110,7 @@ return [
         'box_office' => 'Trova le prenotazioni, le rimborsa, rimette i posti in vendita. Non tocca le piante.',
         'door' => 'Vede chi è entrato e abbina gli scanner. Non vede l’incasso della serata.',
         'agent' => 'Vende le serate che gli sono state assegnate, fino al credito che gli è stato dato. Vede solo le proprie prenotazioni e nulla della sala.',
+        'programme_manager' => 'Gestisce le serate che gli sono state assegnate — biglietti, pianta, ingresso e incassi — e nulla per ogni altra serata.',
         'viewer' => 'Legge. Non cambia nulla.',
     ],
     'permissionCount' => ':count permessi',

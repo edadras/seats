@@ -24,6 +24,7 @@ class ProductionController extends Controller
     public function index(Request $request)
     {
         $this->authorize($request, 'events.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         return response()->json(['data' => $this->productions->all($this->maySeeMoney($request))]);
     }
@@ -31,6 +32,7 @@ class ProductionController extends Controller
     public function show(Request $request, EventSeries $production)
     {
         $this->authorize($request, 'events.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         return response()->json(
             $this->present($production) + $this->productions->summary($production, $this->maySeeMoney($request))
@@ -40,6 +42,7 @@ class ProductionController extends Controller
     public function store(Request $request)
     {
         $this->authorize($request, 'events.manage');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:200'],
@@ -64,6 +67,7 @@ class ProductionController extends Controller
     public function update(Request $request, EventSeries $production)
     {
         $this->authorize($request, 'events.manage');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:200'],
@@ -88,6 +92,7 @@ class ProductionController extends Controller
     public function addDate(Request $request, EventSeries $production)
     {
         $this->authorize($request, 'events.manage');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $data = $request->validate([
             'venue_id' => ['required', 'uuid'],
@@ -135,6 +140,7 @@ class ProductionController extends Controller
     public function destroy(Request $request, EventSeries $production)
     {
         $this->authorize($request, 'events.manage');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         if (Event::where('series_id', $production->id)->exists()) {
             throw ApiException::conflict(

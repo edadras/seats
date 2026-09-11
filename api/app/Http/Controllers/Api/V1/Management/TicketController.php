@@ -37,6 +37,14 @@ class TicketController extends Controller
 
         $tickets = Ticket::with(['allocation.order'])
             ->where('event_id', $data['event_id'])
+            /*
+             * A programme manager sees the tickets for the nights they run.
+             *
+             * The event arrives as a query parameter rather than as a bound route model, so the
+             * middleware that scopes `{event}` never sees it — which is exactly the kind of gap
+             * this narrowing exists to close.
+             */
+            ->tap(fn ($query) => app(\App\Domain\Programme\EventManagers::class)->narrow($query, $request->user()))
             ->when($data['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
             ->when($data['q'] ?? null, function ($query, string $term) {
                 // Escaped for LIKE: a buyer called "100%" should find themselves, not everyone.

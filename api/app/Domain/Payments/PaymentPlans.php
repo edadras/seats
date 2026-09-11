@@ -252,10 +252,22 @@ class PaymentPlans
      *
      * @return list<array<string, mixed>>
      */
-    public function outstanding(string $state = 'all', int $limit = 200): array
+    /**
+     * @param  list<string>|null  $eventIds  the nights to keep to, or null for every night
+     */
+    public function outstanding(string $state = 'all', int $limit = 200, ?array $eventIds = null): array
     {
         $rows = OrderInstalment::query()
             ->whereNull('paid_at')
+            /*
+             * An instalment belongs to a booking, and a booking to a night, so a programme manager's
+             * list is reached through the order rather than off the row. Null is everybody else and
+             * means no restriction; an empty list means they run nothing and see nothing.
+             */
+            ->when(null !== $eventIds, fn ($query) => $query->whereIn(
+                'external_order_row_id',
+                ExternalOrder::whereIn('event_id', $eventIds)->pluck('id')
+            ))
             ->orderBy('due_on')
             ->limit(max(1, min(500, $limit)))
             ->get();

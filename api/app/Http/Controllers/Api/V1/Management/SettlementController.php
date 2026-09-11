@@ -34,13 +34,30 @@ class SettlementController extends Controller
     public function index(Request $request)
     {
         $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         return response()->json($this->settlement->forPeriod($this->filters($request)));
+    }
+
+    /**
+     * What one night took, settled.
+     *
+     * The same arithmetic as the season's statement, bounded to a single event. It exists because
+     * of who reads it: a programme manager runs four nights and is refused the account's settlement,
+     * which is the organiser's whole business — but they are not refused *their* money, and a
+     * promoter who cannot see what their own concert took has not been given the concert.
+     */
+    public function forEvent(Request $request, \App\Models\Event $event)
+    {
+        $this->authorize($request, 'reports.orders.view');
+
+        return response()->json($this->settlement->forEvent($event));
     }
 
     public function export(Request $request): StreamedResponse
     {
         $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $filters = $this->filters($request);
         $settlement = $this->settlement->forPeriod($filters);
@@ -104,6 +121,7 @@ class SettlementController extends Controller
     public function statement(Request $request): Response
     {
         $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $settlement = $this->settlement->forPeriod($this->filters($request));
         $tenant = $this->tenants->get();

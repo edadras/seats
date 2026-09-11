@@ -60,6 +60,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'device' => \App\Http\Middleware\ResolveCheckinDevice::class,
             'site' => \App\Http\Middleware\ResolveSiteFromHost::class,
             'platform' => \App\Http\Middleware\RequirePlatformAdmin::class,
+            // After model binding, which is where the event it scopes comes from.
+            'managed' => \App\Http\Middleware\ScopeToManagedEvents::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

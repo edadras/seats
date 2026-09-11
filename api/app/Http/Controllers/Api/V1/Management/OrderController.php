@@ -47,6 +47,8 @@ class OrderController extends Controller
 
         $orders = ExternalOrder::query()
             ->tap($this->onlyWhatTheyMaySee($request))
+            // And a programme manager's book is the nights they run.
+            ->tap(fn ($query) => app(\App\Domain\Programme\EventManagers::class)->narrow($query, $request->user()))
             ->with(['event:id,name,starts_at,timezone'])
             // One query for the seat counts rather than one per row: a list of fifty orders was
             // fifty extra queries, and with lazy loading off it was fifty errors.
@@ -75,6 +77,11 @@ class OrderController extends Controller
         // Not found rather than forbidden: whether a booking exists is not an agent's business
         // either, and a refusal that distinguishes the two is a way of asking.
         if (! $this->maySee($request, $order)) {
+            throw ApiException::notFound('That booking cannot be found.', 'unknown_order');
+        }
+
+        // A booking on a night this programme manager does not run is a booking they cannot find.
+        if (! app(\App\Domain\Programme\EventManagers::class)->mayReach($request->user(), $order->event_id)) {
             throw ApiException::notFound('That booking cannot be found.', 'unknown_order');
         }
 

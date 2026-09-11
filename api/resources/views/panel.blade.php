@@ -46,6 +46,7 @@
     <script src="{{ asset('editor/js/baskets.js') }}"></script>
     <script src="{{ asset('editor/js/modules.js') }}"></script>
     <script src="{{ asset('editor/js/team.js') }}"></script>
+    <script src="{{ asset('editor/js/managers.js') }}"></script>
     <script src="{{ asset('editor/js/pricing.js') }}"></script>
     <script src="{{ asset('editor/js/themes.js') }}"></script>
     <script src="{{ asset('editor/js/reports.js') }}"></script>

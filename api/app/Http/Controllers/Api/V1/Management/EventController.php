@@ -44,11 +44,22 @@ class EventController extends Controller
          */
         $agent = app(\App\Domain\Agents\SalesAgents::class)->forUser($request->user());
 
+        /*
+         * And a programme manager's programme is the nights they run.
+         *
+         * Null means the question does not apply — anybody who is not a manager sees the whole
+         * list. An empty array means they run nothing, and they see nothing: the safe end to fail
+         * at, because an empty grant list that read as "no restriction" would hand a promoter the
+         * whole season.
+         */
+        $managed = app(\App\Domain\Programme\EventManagers::class)->eventIdsFor($request->user());
+
         $events = Event::with(['venue', 'priceZones', 'seatMapVersion'])
             ->when($agent && ! $agent->all_events, fn ($query) => $query->whereIn(
                 'id',
                 \App\Models\SalesAgentEvent::where('sales_agent_id', $agent->id)->pluck('event_id')
             ))
+            ->when(null !== $managed, fn ($query) => $query->whereIn('id', $managed))
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('starts_at')
             ->paginate(min((int) $request->query('per_page', 25), 100));

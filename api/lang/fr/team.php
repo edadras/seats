@@ -100,6 +100,7 @@ return [
         'box_office' => 'Billetterie',
         'door' => 'Personnel d’entrée',
         'agent' => 'Revendeur',
+        'programme_manager' => 'Responsable de programmation',
         'viewer' => 'Lecteur',
     ],
     'roleDescriptions' => [
@@ -109,6 +110,7 @@ return [
         'box_office' => 'Retrouve les réservations, les rembourse, remet des places en vente. Ne touche pas aux plans.',
         'door' => 'Voit qui est entré et appaire les scanners. Ne voit pas la recette de la soirée.',
         'agent' => 'Vend les dates qui lui ont été confiées, dans la limite de son crédit. Ne voit que ses propres réservations, rien de la salle.',
+        'programme_manager' => 'Gère les dates qui lui sont confiées — billets, plan, entrée et recette — et rien du tout pour les autres.',
         'viewer' => 'Lit. Ne modifie rien.',
     ],
     'permissionCount' => ':count permissions',

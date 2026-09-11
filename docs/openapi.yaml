@@ -6719,6 +6719,25 @@ paths:
               schema: { type: string }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /events/{event}/settlement:
+    parameters:
+      - { name: event, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: eventSettlement
+      tags: [Reports]
+      summary: What one night took, settled
+      description: >
+        The same arithmetic as the season's statement, bounded to a single event. It exists because
+        of who reads it: a programme manager runs a handful of nights and is refused the account's
+        settlement, which is the organiser's whole business — but they are not refused *their* money,
+        and a promoter who cannot see what their own concert took has not been given the concert.
+      responses:
+        "200":
+          description: One night's settlement
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+
   /settlement:
     get:
       operationId: getSettlement
@@ -7074,6 +7093,124 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /programme-managers:
+    get:
+      operationId: listProgrammeManagers
+      tags: [Team]
+      summary: Who runs which nights
+      description: >
+        An administrator for one concert rather than for the account. Every permission this platform
+        has answers "what may this person do"; a programme manager needs the other half of the
+        sentence — "to which nights" — and the two are multiplied rather than added. The grants below
+        are that second half, and they are checked on every route that names an event.
+      responses:
+        "200":
+          description: The managers, with the nights each of them runs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_id: { type: string, format: uuid }
+                        name: { type: [string, "null"] }
+                        email: { type: [string, "null"] }
+                        status: { type: string }
+                        last_seen_at: { type: [string, "null"], format: date-time }
+                        events:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: { type: string, format: uuid }
+                              name: { type: [string, "null"] }
+                              starts_at: { type: [string, "null"], format: date-time }
+                              status: { type: [string, "null"] }
+    post:
+      operationId: appointProgrammeManager
+      tags: [Team]
+      summary: Appoint one, with a way in
+      description: |
+        Takes both `team.manage` and `events.manage`: this makes a member of the account, and what
+        it hands over is nights. An organiser who may add people but not run the programme has no
+        business deciding who runs the Tuesday, and the other way round.
+
+        The password exists in plaintext exactly once — on this response — the same bargain the
+        platform makes with an API secret. The address is marked verified as it is made, because the
+        organiser typed it and the password goes to them to pass on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name: { type: string, maxLength: 120 }
+                email: { type: string, format: email }
+                event_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Appointed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string, format: email }
+                  password:
+                    type: string
+                    description: Shown on this response and never again.
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+        "409":
+          description: "`already_a_member`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /programme-managers/{manager}/events:
+    parameters:
+      - { name: manager, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      operationId: grantProgrammeManagerEvents
+      tags: [Team]
+      summary: Change which nights a manager runs
+      description: >
+        The list replaces what was there. Replaced rather than added to, because the screen is a set
+        of tick boxes and what comes back is what the organiser meant — a grant that survived being
+        unticked would be a grant nobody could take away.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_ids]
+              properties:
+                event_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+        "404":
+          description: "`unknown_manager`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /team:
     get:

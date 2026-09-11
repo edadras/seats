@@ -53,6 +53,7 @@ return [
         'connections' => 'Connections',
         'modules' => 'Modules',
         'team' => 'Team',
+        'managers' => 'Programme managers',
         'security' => 'Security',
         'wallet' => 'Wallet passes',
         'audit' => 'Activity',
@@ -1090,6 +1091,21 @@ return [
      | two parties and the second is what is left to sell against, and an agent with a line of
      | credit has two different numbers that a single word would collapse into a wrong one.
      */
+    'managers' => [
+        'subtitle' => 'An administrator for one concert rather than for the account. They run the nights you give them, and nothing else exists for them.',
+        'add' => 'New programme manager',
+        'addHint' => 'They get a sign-in of their own. Tick the nights they run — you can change them later.',
+        'nights' => 'Nights they run',
+        'nightsHint' => 'What is ticked here is everything they can reach. Untick a night and it is gone from their panel.',
+        'chooseNights' => 'Choose nights',
+        'noNights' => 'No nights yet',
+        'noEvents' => 'There are no events to give yet.',
+        'saved' => 'Saved.',
+        'emptyTitle' => 'No programme managers yet',
+        'emptyBody' => 'Somebody putting on a run in your venue can be given those nights and nothing else — the tickets, the plan, the door and the takings, for their concert only.',
+        'signInTitle' => 'Their way in',
+        'signInBody' => 'Pass these on. The password is shown once.',
+    ],
     'agents' => [
         'subtitle' => 'Shops and bureaux that sell your tickets. What each may sell, what they have paid in, and where their account stands.',
         'statement' => 'Statement',

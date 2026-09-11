@@ -36,10 +36,10 @@
 	 * to one caller and a wide one to another.
 	 */
 	var NAV = [
-		{ group: null, items: [ { key: 'overview', icon: 'grid', needs: 'reports.attendance.view' } ] },
+		{ group: null, items: [ { key: 'overview', icon: 'grid', needs: 'reports.attendance.view', notFor: 'manager' } ] },
 		{ group: 'programme', items: [
 			{ key: 'events', icon: 'calendar', needs: 'events.view' },
-			{ key: 'productions', icon: 'map', needs: 'events.view' },
+			{ key: 'productions', icon: 'map', needs: 'events.view', notFor: 'manager' },
 			{ key: 'counter', icon: 'ticket', needs: 'orders.sell' },
 			{ key: 'tills', icon: 'wallet', needs: 'orders.sell' },
 			{ key: 'agents', icon: 'users', needs: 'agents.manage' },
@@ -63,22 +63,23 @@
 			{ key: 'venues', icon: 'building', needs: 'venues.view' },
 		] },
 		{ group: 'audience', items: [
-			{ key: 'customers', icon: 'users', needs: 'orders.view' },
+			{ key: 'customers', icon: 'users', needs: 'orders.view', notFor: 'manager' },
 			{ key: 'waitlist', icon: 'clock', needs: 'orders.view' },
 			{ key: 'sites', icon: 'globe', needs: 'sites.view' },
 			{ key: 'themes', icon: 'palette', needs: 'sites.view' },
 			{ key: 'messaging', icon: 'mail', needs: 'messages.send' },
 		] },
 		{ group: 'insight', items: [
-			{ key: 'promoters', icon: 'users', needs: 'reports.orders.view' },
+			{ key: 'promoters', icon: 'users', needs: 'reports.orders.view', notFor: 'manager' },
 			{ key: 'baskets', icon: 'list', needs: 'orders.view' },
-			{ key: 'reports', icon: 'chart', needs: 'reports.attendance.view' },
-			{ key: 'settlement', icon: 'wallet', needs: 'reports.orders.view' },
+			{ key: 'reports', icon: 'chart', needs: 'reports.attendance.view', notFor: 'manager' },
+			{ key: 'settlement', icon: 'wallet', needs: 'reports.orders.view', notFor: 'manager' },
 		] },
 		{ group: 'account', items: [
 			{ key: 'connections', icon: 'plug', needs: 'connections.manage' },
 			{ key: 'modules', icon: 'puzzle', needs: 'modules.manage' },
 			{ key: 'team', icon: 'users', needs: 'team.view' },
+			{ key: 'managers', icon: 'users', needs: 'team.view' },
 			{ key: 'security', icon: 'lock' },
 			{ key: 'wallet', icon: 'ticket', needs: 'account.manage' },
 			{ key: 'audit', icon: 'history', needs: 'audit.view' },
@@ -270,6 +271,15 @@
 	App.request = function ( method, path, body, options ) {
 		var self = this;
 		var raw = !! ( options && options.raw );
+		/*
+		 * Which screen asked.
+		 *
+		 * Reads only: a mutation's answer is about something the reader *did*, and dropping it would
+		 * lose a booking reference or leave a dialog spinning for ever. `options.keep` is the other
+		 * exception — a read that belongs to the shell rather than to a screen, like the bell, which
+		 * is filled once at sign-in and is still wanted three screens later.
+		 */
+		var visit = 'GET' === method && ! ( options && options.keep ) ? this.visit : null;
 		var headers = { Accept: raw ? '*/*' : 'application/json' };
 
 		// The panel's language travels with every call, so a message the *server* composes — a
@@ -312,6 +322,18 @@
 					error.status = response.status;
 
 					throw error;
+				}
+
+				/*
+				 * The reader moved on while this was in the air.
+				 *
+				 * Never settled rather than rejected: the caller's `.then()` would paint over the
+				 * screen they are looking at now, and its `.catch()` would show them an error about
+				 * a screen they have left. Letting the chain stop is the honest answer to "this is
+				 * no longer wanted".
+				 */
+				if ( null !== visit && self.visit !== visit ) {
+					return new Promise( function () {} );
 				}
 
 				return data;
@@ -532,6 +554,7 @@
 			must_set_up_two_factor: !! response.must_set_up_two_factor,
 			permissions: this.permissions,
 			agent: response.agent || null,
+			programme_manager: !! response.programme_manager,
 		};
 
 		window.sessionStorage.setItem( STORE.profile, JSON.stringify( this.profile ) );
@@ -562,6 +585,17 @@
 	App.offers = function ( entry ) {
 		if ( 'agent' === entry.when ) {
 			return !! ( this.profile || {} ).agent;
+		}
+
+		/*
+		 * A screen about the account rather than about a night.
+		 *
+		 * A programme manager holds `orders.view` exactly as the box office does — the difference is
+		 * which bookings it reaches, and there is no honest way to show a promoter a quarter of the
+		 * customer directory. The server refuses these; this stops them being offered.
+		 */
+		if ( 'manager' === entry.notFor && ( this.profile || {} ).programme_manager ) {
+			return false;
 		}
 
 		return this.may( entry.needs );
@@ -743,7 +777,9 @@
 	App.loadNotices = function () {
 		var self = this;
 
-		return this.request( 'GET', '/notifications' )
+		// `keep`: the bell belongs to the shell, not to whichever screen happened to be open when it
+		// was asked for, so its answer survives the reader moving on.
+		return this.request( 'GET', '/notifications', null, { keep: true } )
 			.then( function ( response ) {
 				self.noticeList = response.data || [];
 				self.paintBell( response.unread || 0 );
@@ -897,6 +933,15 @@
 		}
 
 		this.current = view;
+		/*
+		 * Which screen the reader is on, counted rather than named.
+		 *
+		 * A screen paints when its answer comes back, and an answer can come back after the reader
+		 * has gone somewhere else — click the overview, click the baskets before it lands, and the
+		 * overview paints over the baskets. Counting the moves lets a stale answer be dropped; see
+		 * `request()`, which is the one place that knows an answer is late.
+		 */
+		this.visit = ( this.visit || 0 ) + 1;
 		this.renderNav();
 
 		switch ( view ) {
@@ -913,6 +958,7 @@
 			case 'messaging': return window.SeatmapMessaging.render( this );
 			case 'modules': return window.SeatmapModules.render( this );
 			case 'team': return window.SeatmapTeam.render( this );
+			case 'managers': return window.SeatmapManagers.render( this );
 			case 'audit': return window.SeatmapAudit.render( this );
 			case 'tickets': return window.SeatmapTickets.render( this );
 			case 'customers': return window.SeatmapCustomers.render( this );

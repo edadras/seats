@@ -115,6 +115,7 @@ class ReportController extends Controller
     public function store(Request $request)
     {
         $this->authorize($request, 'reports.build');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -146,6 +147,7 @@ class ReportController extends Controller
     public function update(Request $request, Report $report)
     {
         $this->authorize($request, 'reports.build');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
         $this->assertReadable($request, $report);
 
         $data = $request->validate([
@@ -167,6 +169,7 @@ class ReportController extends Controller
     public function destroy(Request $request, Report $report)
     {
         $this->authorize($request, 'reports.build');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
         $this->assertReadable($request, $report);
 
         $name = $report->name;

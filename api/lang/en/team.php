@@ -101,6 +101,7 @@ return [
         'box_office' => 'Box office',
         'door' => 'Door staff',
         'agent' => 'Sales agent',
+        'programme_manager' => 'Programme manager',
         'viewer' => 'Viewer',
     ],
     'roleDescriptions' => [
@@ -110,6 +111,7 @@ return [
         'box_office' => 'Finds bookings, refunds them, puts seats back on sale. Cannot touch the seat maps.',
         'door' => 'Sees who has come in and pairs scanners. Cannot see what the evening took.',
         'agent' => 'Sells the nights they were given, up to the credit they were given. Sees their own bookings and nothing of the house.',
+        'programme_manager' => 'Runs the nights they were given — the tickets, the plan, the door and the takings — and nothing at all for any other night.',
         'viewer' => 'Reads. Changes nothing.',
     ],
     'permissionCount' => ':count permissions',

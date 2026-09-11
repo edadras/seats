@@ -178,6 +178,32 @@ final class Permissions
             'orders.sell',
         ],
 
+        /*
+         * An administrator for one concert rather than for the account.
+         *
+         * A promoter puts on four nights in somebody else's venue, and needs everything the venue's
+         * own administrator has *for those four nights*: sell at the window, open and close seats
+         * on the plan, void a ticket, read the door, read the takings. What keeps that from being
+         * an administrator is not this list — it is the list of nights they were given, checked on
+         * every route that names one. Permissions say what; the grants say to which, and the two
+         * are multiplied rather than added.
+         *
+         * What is missing is everything that is not about a night: no team, no billing, no seat
+         * maps to redraw (they may read one, because they are opening and closing chairs on it),
+         * no vouchers, no customer directory, no websites — and no discount codes or saved report
+         * pages, both of which are written once and apply to a whole season. Those belong to the
+         * account, and the account is not what they were handed.
+         */
+        'programme_manager' => [
+            'events.view', 'events.manage', 'events.publish',
+            'pricing.manage',
+            'venues.view', 'maps.view',
+            'tickets.view', 'tickets.release',
+            'orders.view', 'orders.refund', 'orders.sell',
+            'checkins.view', 'devices.manage',
+            'reports.attendance.view', 'reports.orders.view',
+        ],
+
         'viewer' => [
             'events.view', 'venues.view', 'maps.view', 'sites.view',
             'reports.attendance.view',
@@ -185,7 +211,9 @@ final class Permissions
     ];
 
     /** The keys nobody may take for a custom role. */
-    public const RESERVED_ROLE_KEYS = ['owner', 'admin', 'manager', 'box_office', 'door', 'agent', 'viewer'];
+    public const RESERVED_ROLE_KEYS = [
+        'owner', 'admin', 'manager', 'box_office', 'door', 'agent', 'programme_manager', 'viewer',
+    ];
 
     public static function exists(string $permission): bool
     {

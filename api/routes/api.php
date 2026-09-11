@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\Management\SalesAgentController;
 use App\Http\Controllers\Api\V1\Management\SeatMapController;
 use App\Http\Controllers\Api\V1\Management\PriceTierController;
 use App\Http\Controllers\Api\V1\Management\ProductionController;
+use App\Http\Controllers\Api\V1\Management\ProgrammeManagerController;
 use App\Http\Controllers\Api\V1\Management\PromoterController;
 use App\Http\Controllers\Api\V1\Management\ReceiptController;
 use App\Http\Controllers\Api\V1\Management\PaymentPlanController;
@@ -110,7 +111,15 @@ Route::prefix('v1')->group(function () {
     Route::post('team/invitations/accept', [TeamController::class, 'acceptInvitation'])
         ->middleware('throttle:10,1,invite-accept');
 
-    Route::middleware(['auth:sanctum', 'tenant', 'throttle:240,1,panel'])->group(function () {
+    /*
+     * `managed` sits on the whole panel group rather than on the event routes.
+     *
+     * It only does anything on a route that has a bound `{event}`, and putting it here means every
+     * such route is covered — including the ones written next year by somebody who has never heard
+     * of a programme manager. A scope applied route by route is a scope that gets forgotten at one
+     * of them, and the one that is forgotten is the one somebody finds.
+     */
+    Route::middleware(['auth:sanctum', 'tenant', 'managed', 'throttle:240,1,panel'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         // Who this token belongs to and what it may do: the panel asks on every boot so the screens
         // it offers are the screens the server will still open.
@@ -439,6 +448,17 @@ Route::prefix('v1')->group(function () {
         Route::post('team/invitations', [TeamController::class, 'invite']);
         Route::delete('team/invitations/{invitation}', [TeamController::class, 'revokeInvitation']);
 
+        /*
+         * Programme managers: an administrator for one concert rather than for the account.
+         *
+         * Beside the team rather than beside the events, because appointing one makes a member of
+         * the account — what is unusual about them is not that they exist but how far they reach,
+         * and that is decided by the grants below.
+         */
+        Route::get('programme-managers', [ProgrammeManagerController::class, 'index']);
+        Route::post('programme-managers', [ProgrammeManagerController::class, 'store']);
+        Route::put('programme-managers/{manager}/events', [ProgrammeManagerController::class, 'grant']);
+
         Route::get('roles', [TeamController::class, 'roles']);
         Route::post('roles', [TeamController::class, 'storeRole']);
         Route::patch('roles/{role}', [TeamController::class, 'updateRole']);
@@ -460,6 +480,9 @@ Route::prefix('v1')->group(function () {
         // What the organiser is owed, and what the platform kept. Its own screen rather than a
         // report definition: the arithmetic of a refund and a commission is not a sum over a
         // column, and a builder that could express it would be a query box.
+        // One night's takings, for whoever is running that night. Scoped by `managed` like every
+        // other route with an `{event}` in it.
+        Route::get('events/{event}/settlement', [SettlementController::class, 'forEvent']);
         Route::get('settlement', [SettlementController::class, 'index']);
         Route::get('settlement/export', [SettlementController::class, 'export']);
         Route::get('settlement/statement', [SettlementController::class, 'statement']);

@@ -34,6 +34,7 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $this->authorize($request, 'orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $filters = $this->filters($request);
         $perPage = min(100, max(5, (int) $request->query('per_page', 25)));
@@ -58,6 +59,7 @@ class CustomerController extends Controller
     public function show(Request $request, string $customer)
     {
         $this->authorize($request, 'orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $found = $this->directory->find($customer);
 
@@ -86,6 +88,7 @@ class CustomerController extends Controller
     public function consent(Request $request, string $customer)
     {
         $this->authorize($request, 'messages.send');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $found = $this->directory->find($customer);
 
@@ -129,6 +132,7 @@ class CustomerController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $this->authorize($request, 'orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $filters = $this->filters($request);
         $result = $this->directory->all($filters);
@@ -195,6 +199,7 @@ class CustomerController extends Controller
     public function personalData(Request $request, string $customer)
     {
         $this->authorize($request, 'account.manage');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $person = $this->directory->find($customer);
 
@@ -223,6 +228,7 @@ class CustomerController extends Controller
     public function erase(Request $request, string $customer)
     {
         $this->authorize($request, 'account.manage');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         // Typed back rather than clicked through: this cannot be undone, and a confirmation
         // dialogue is not a decision.

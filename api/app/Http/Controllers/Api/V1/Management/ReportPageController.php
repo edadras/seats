@@ -40,6 +40,7 @@ class ReportPageController extends Controller
     public function index(Request $request)
     {
         $this->authorize($request, 'reports.attendance.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         return response()->json([
             'data' => ReportPage::orderBy('name')->get()->map(fn (ReportPage $page) => [
@@ -56,6 +57,7 @@ class ReportPageController extends Controller
     public function show(Request $request, ReportPage $page)
     {
         $this->authorize($request, 'reports.attendance.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $widgets = [];
 
@@ -74,6 +76,7 @@ class ReportPageController extends Controller
     public function store(Request $request)
     {
         $this->authorize($request, 'reports.build');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -95,6 +98,7 @@ class ReportPageController extends Controller
     public function update(Request $request, ReportPage $page)
     {
         $this->authorize($request, 'reports.build');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:120'],
@@ -118,6 +122,7 @@ class ReportPageController extends Controller
     public function destroy(Request $request, ReportPage $page)
     {
         $this->authorize($request, 'reports.build');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
 
         $name = $page->name;
         $page->delete();

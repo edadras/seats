@@ -19,7 +19,8 @@
 	Signup.render = function ( App ) {
 		Signup.App = App;
 
-		App.request( 'GET', '/plans' ).then( function ( body ) {
+		// `keep`: the plans are for the sign-up screen's own chrome and outlive a route change.
+		App.request( 'GET', '/plans', null, { keep: true } ).then( function ( body ) {
 			Signup.plans = body.data || [];
 			Signup.paint();
 		} ).catch( function () {
