@@ -5,6 +5,7 @@ namespace Modules\Seatmap\Stripe;
 use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Sites\Payments\RefundOutcome;
 use App\Models\ExternalOrder;
 use App\Modules\ModuleContext;
 
@@ -115,7 +116,79 @@ class StripeGateway implements PaymentGateway
         return PaymentIntent::pending($session);
     }
 
+    /**
+     * Send money back, through the payment behind the checkout session.
+     *
+     * Stripe refunds a PaymentIntent, and what this platform wrote down at the start was the
+     * Checkout Session — so the session is read again to find the payment under it. That is the
+     * same request `settle()` makes, for the same reason: the session is the handle a buyer's
+     * return carries, and the payment is the thing money moved through.
+     *
+     * The idempotency key is the order and the amount together. A clerk who refunds two seats,
+     * then two more, is making two different refunds and both must go through; a double-clicked
+     * button is the same refund twice and must not.
+     */
+    public function refund(ExternalOrder $order, int $amount, string $reference): RefundOutcome
+    {
+        $session = $this->strip($reference);
+        $payment = $this->paymentBehind($session);
+
+        if (null === $payment) {
+            return RefundOutcome::failed(__('payments.errors.no_reference'));
+        }
+
+        $response = $this->http()->postForm(self::BASE.'refunds', [
+            'payment_intent' => $payment,
+            'amount' => $amount,
+            'metadata[order]' => $order->external_order_id,
+        ], $this->headers([
+            'Idempotency-Key' => 'refund-'.$order->external_order_id.'-'.$amount,
+        ]));
+
+        if ($response->successful()) {
+            return RefundOutcome::sent('stripe:'.(string) $response->json('id', $payment));
+        }
+
+        /*
+         * Stripe's own word for "there is nothing left to give back".
+         *
+         * Reported as sent rather than as a failure: the money is already where the refund was
+         * trying to put it, and refusing here would leave a booking that can never be closed.
+         */
+        if ('charge_already_refunded' === (string) $response->json('error.code', '')) {
+            return RefundOutcome::sent('stripe:'.$payment);
+        }
+
+        return RefundOutcome::failed($this->reason($response->json()));
+    }
+
     /* --------------------------------------------------------------------------- internals */
+
+    /** The PaymentIntent under a Checkout Session, or null if Stripe will not say. */
+    private function paymentBehind(string $session): ?string
+    {
+        // Already a payment intent — a booking settled by a webhook rather than by a return.
+        if (str_starts_with($session, 'pi_')) {
+            return $session;
+        }
+
+        $response = $this->http()->getJson(self::BASE.'checkout/sessions/'.$session, [], $this->headers());
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $payment = (string) $response->json('payment_intent', '');
+
+        return '' === $payment ? null : $payment;
+    }
+
+    /** References are written down with the gateway's name on them; the API wants only the id. */
+    private function strip(string $reference): string
+    {
+        return str_starts_with($reference, 'stripe:') ? substr($reference, 7) : $reference;
+    }
+
 
     private function http(): OutboundHttp
     {

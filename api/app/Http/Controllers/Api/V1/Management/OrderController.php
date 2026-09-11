@@ -32,6 +32,7 @@ class OrderController extends Controller
         private readonly TicketMailer $mail,
         private readonly AuditLogger $audit,
         private readonly \App\Domain\Vouchers\Vouchers $vouchers,
+        private readonly \App\Domain\Payments\Refunds $refunds,
     ) {}
 
     public function index(Request $request)
@@ -133,6 +134,9 @@ class OrderController extends Controller
                     'reason' => $delivery->reason,
                     'created_at' => $delivery->created_at?->toIso8601String(),
                 ])->values(),
+            // Every attempt to send money back on this booking, and what the gateway said. A box
+            // office that has to answer "where is my refund" needs the reference, not a status.
+            'refunds' => $this->refunds->history($order),
             'can_resend' => $order->allocations->contains(
                 fn ($allocation) => 'issued' === $allocation->ticket?->status
             ),
@@ -158,10 +162,15 @@ class OrderController extends Controller
     /**
      * Refund the whole order, or the seats named.
      *
-     * The money is not moved here and this does not pretend to: a refund releases the seats, voids
-     * the tickets and records what happened. Sending the money back is the gateway's business and
-     * an organiser does it where they took it — a platform that ticked "refunded" while the card
-     * was never credited would be worse than one that says plainly which half it did.
+     * The money goes back first, then the seats. For a long time this endpoint did only the second
+     * half — released the seats, voided the tickets, wrote the books — and somebody had to open the
+     * gateway's own dashboard afterwards and credit the card from memory. Now the gateway that took
+     * the payment is asked before anything else happens, and one that refuses stops everything:
+     * a booking cancelled while the money stayed put is the worst of the outcomes available,
+     * because the buyer has neither their seat nor their money and nobody finds out for weeks.
+     *
+     * Money no gateway took — cash at the window, a transfer, a school's invoice — is recorded as
+     * owed in person and the seats still go back on sale, which is what a box office does anyway.
      */
     public function refund(Request $request, ExternalOrder $order)
     {
@@ -219,6 +228,26 @@ class OrderController extends Controller
                     'This booking has no email address, so there is nobody to give credit to.'
                 );
             }
+        }
+
+        /*
+         * The money goes back before the seats do.
+         *
+         * A booking cancelled while the money stayed put is the worst of the three outcomes
+         * available — the buyer has neither their seat nor their money, and the organiser finds
+         * out weeks later from a complaint. So a gateway that refuses throws here, and nothing
+         * below it has happened yet.
+         *
+         * Credit is the exception and was settled above: that money is not going back to a card at
+         * all, it is becoming a voucher, and sending it twice would give the same money away twice.
+         */
+        if (! $asCredit) {
+            $this->refunds->give(
+                $order,
+                $this->refunds->worthOf($order, $data['seat_ids'] ?? null),
+                ($data['reason'] ?? null) ?: 'refunded_in_panel',
+                $request->user(),
+            );
         }
 
         $refunded = $this->orders->refund(

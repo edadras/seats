@@ -358,6 +358,7 @@
 
 				Orders.breakdown( App, order ) +
 				Orders.plan( App, order ) +
+				Orders.refunds( App, order ) +
 				Orders.answers( App, order ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'panel.orders.whatWasBought' ) ) + '</h3>' +
@@ -737,6 +738,51 @@
 								'">' + esc( App.t( 'panel.plans.states.' + step.state ) ) + '</span>' +
 								' <button class="btn btn--sm" data-pay="' + esc( step.id ) + '">' +
 								esc( App.t( 'panel.plans.record' ) ) + '</button>' ) + '</td>' +
+					'</tr>';
+				} ).join( '' )
+			);
+	};
+
+	/**
+	 * Money sent back, and what the gateway called it.
+	 *
+	 * The question a box office is actually asked is "where is my refund", and the answer is a
+	 * reference somebody can quote at their bank — not a status. So the table shows the gateway's
+	 * own handle, and a row that says the money is owed in person says that in words rather than
+	 * looking like a refund that worked.
+	 */
+	Orders.refunds = function ( App, order ) {
+		var rows = order.refunds || [];
+
+		if ( ! rows.length ) {
+			return '';
+		}
+
+		return '<h3 class="subhead">' + esc( App.t( 'panel.orders.moneyBack' ) ) + '</h3>' +
+			App.table(
+				[
+					App.t( 'panel.orders.when' ),
+					{ label: App.t( 'panel.orders.total' ), numeric: true },
+					App.t( 'panel.common.status' ),
+					App.t( 'panel.orders.reference' ),
+				],
+				rows.map( function ( row ) {
+					var badge = 'sent' === row.status
+						? 'badge--ok'
+						: ( 'failed' === row.status ? 'badge--danger' : '' );
+
+					return '<tr>' +
+						'<td class="muted nowrap tnum">' + esc( App.date( row.at ) ) + '</td>' +
+						'<td class="tnum">' + esc( App.money( row.amount, row.currency ) ) + '</td>' +
+						'<td><span class="badge ' + badge + '">' +
+							esc( App.t( 'panel.orders.refundStatus.' + row.status ) ) + '</span>' +
+							( row.message
+								? '<span class="muted on-own-line">' + esc( row.message ) + '</span>'
+								: '' ) + '</td>' +
+						'<td>' + esc( row.reference || '—' ) +
+							( row.gateway
+								? '<span class="muted on-own-line">' + esc( row.gateway ) + '</span>'
+								: '' ) + '</td>' +
 					'</tr>';
 				} ).join( '' )
 			);

@@ -284,6 +284,16 @@ A seat is the start of it, not the end. Around the map:
   was settled. Applied last, to the amount payable, and a booking a voucher covers outright
   finishes with no gateway involved at all. The balance is the sum of the movements, never a
   column — and a refund can be taken as credit rather than back to a card.
+- **Refunds that reach the card.** A refund used to be bookkeeping here: the seats went back on
+  sale, the tickets were voided, every report agreed, and nobody's card was ever credited — somebody
+  had to open the gateway's own dashboard afterwards and do it from memory. Now the money goes back
+  *first*, through the gateway that took it, and the seats move only if it did: a booking cancelled
+  while the money stayed put is the worst outcome available, because the buyer has neither their
+  seat nor their money and the organiser hears about it weeks later from a complaint. A gateway that
+  refuses stops everything and says why. Money that no gateway took — cash at the window, a transfer,
+  a school's invoice — is recorded as owed in person, which is what a box office does anyway; what is
+  new is that it is written down. Every attempt is kept, the refused ones included, with the
+  reference the buyer's bank will want.
 - **Settlement** — what was taken, what was handed back, what the platform's commission was, per
   period or per event, as a statement somebody can send to an accountant.
 - **Reports** built by dragging fields, with no SQL box — [ADR-0006](docs/adr/0006-report-engine.md)
@@ -563,6 +573,15 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A seat returns to sale the moment its TTL passes | `PurchaseFlowTest` |
 | Retried confirm makes one allocation and one ticket | `OrderLifecycleTest` |
 | A refund releases seats and voids tickets | `OrderLifecycleTest` |
+| The money goes back through the gateway that took it | `RefundToCardTest`, `StripeGatewayTest`, `PayPalGatewayTest` |
+| A gateway that refuses leaves the seats sold and says why | `RefundToCardTest` |
+| A gateway that does not answer at all is a refusal, not permission | `RefundToCardTest` |
+| Seat-by-seat refunds add up to exactly what was charged | `RefundToCardTest` |
+| Money taken at the window is recorded as owed in person | `RefundToCardTest` |
+| Credit instead of money never touches the gateway | `RefundToCardTest` |
+| A payment the gateway has already refunded is not refunded twice | `RefundToCardTest`, `StripeGatewayTest` |
+| A buyer's granted request sends money, and a refused one stays pending | `RefundToCardTest` |
+| A refunded booking says on its own screen where the money went | `refund_smoke` |
 | Tenant A cannot reach tenant B's anything | `TenantIsolationTest` |
 | Browser-set prices are ignored | `ApiSecurityTest` |
 | Replay, tampering and key rotation | `ApiSecurityTest` |

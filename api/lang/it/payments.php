@@ -38,5 +38,8 @@ return [
         'not_configured' => ':gateway non è ancora configurato. Scegli un altro modo di pagare.',
         'no_reference' => 'Non troviamo questo pagamento. Se è uscito denaro dal tuo conto, contatta la biglietteria con il numero d’ordine.',
         'cancelled_by_buyer' => 'Il pagamento è stato annullato. I tuoi posti sono stati liberati.',
+        'refund_by_hand' => 'Questo pagamento non può essere restituito automaticamente. I posti sono liberati e il denaro è dovuto all’acquirente di persona.',
+        'refund_unreachable' => 'Il gateway di pagamento non era raggiungibile, quindi non è stato rimborsato nulla. Riprova.',
+        'nothing_to_refund' => 'Non c’è nulla da restituire: questa prenotazione non è stata pagata in denaro.',
     ],
 ];

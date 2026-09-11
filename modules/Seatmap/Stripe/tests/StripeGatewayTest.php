@@ -106,6 +106,66 @@ class StripeGatewayTest extends TestCase
     }
 
     #[Test]
+    public function a_refund_goes_against_the_payment_under_the_session(): void
+    {
+        Http::fake([
+            '*checkout/sessions/cs_1' => Http::response(['payment_intent' => 'pi_9']),
+            '*refunds' => Http::response(['id' => 're_1']),
+        ]);
+
+        $outcome = $this->gateway()->refund($this->order(), 1500, 'stripe:cs_1');
+
+        $this->assertTrue($outcome->wasSent());
+        $this->assertSame('stripe:re_1', $outcome->reference);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/refunds')) {
+                return false;
+            }
+
+            // The payment, not the session — Stripe will not refund a Checkout Session — and the
+            // amount in minor units, because that is what the platform holds.
+            return 'pi_9' === $request->data()['payment_intent']
+                && '1500' === (string) $request->data()['amount']
+                && 'refund-ORD-1-1500' === $request->header('Idempotency-Key')[0];
+        });
+    }
+
+    #[Test]
+    public function a_payment_settled_by_a_webhook_is_refunded_without_a_second_lookup(): void
+    {
+        Http::fake(['*refunds' => Http::response(['id' => 're_2'])]);
+
+        // The reference is already a payment intent, so there is no session to read.
+        $this->assertTrue($this->gateway()->refund($this->order(), 4500, 'stripe:pi_7')->wasSent());
+
+        Http::assertSentCount(1);
+    }
+
+    #[Test]
+    public function a_payment_stripe_has_already_refunded_is_not_refunded_again(): void
+    {
+        Http::fake([
+            '*refunds' => Http::response(['error' => ['code' => 'charge_already_refunded']], 400),
+        ]);
+
+        // Reported as sent rather than as a failure: the money is already where the refund was
+        // trying to put it, and refusing would leave a booking nobody can ever close.
+        $this->assertTrue($this->gateway()->refund($this->order(), 4500, 'stripe:pi_7')->wasSent());
+    }
+
+    #[Test]
+    public function a_refund_stripe_refuses_is_reported_as_a_refusal(): void
+    {
+        Http::fake(['*refunds' => Http::response(['error' => ['code' => 'charge_disputed']], 400)]);
+
+        $outcome = $this->gateway()->refund($this->order(), 4500, 'stripe:pi_7');
+
+        $this->assertTrue($outcome->hasFailed());
+        $this->assertStringContainsString('charge_disputed', (string) $outcome->message);
+    }
+
+    #[Test]
     public function the_provider_contributes_one_gateway(): void
     {
         $this->assertCount(1, (new Provider($this->moduleContext()))->payments());

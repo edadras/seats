@@ -4,8 +4,10 @@ info:
   version: "1.0.0"
   summary: Multi-tenant seating inventory, holds, allocations, ticketing and check-in.
   description: |
-    The API owns venue seating inventory. It does **not** own carts, payments, tax or refunds —
-    those stay in the tenant's own storefront (see `docs/adr/0001-saas-woocommerce-boundary.md`).
+    The API owns venue seating inventory. Over the `/integrations/*` surface it does **not** own
+    carts, payments, tax or refunds — those stay in the tenant's own storefront (see
+    `docs/adr/0001-saas-woocommerce-boundary.md`). On a **hosted site** it does: ADR-0003 moved the
+    shop inside the boundary, so checkout, payment and refund to the card all happen here.
 
     ## Authentication
     Three separate schemes, deliberately not interchangeable:
@@ -5914,6 +5916,10 @@ paths:
       operationId: refundOrder
       tags: [WooCommerce]
       summary: Void tickets and apply the event's seat release policy
+      description: >
+        Seats and tickets only. The shop owns the money on this path and has already given it back
+        through its own gateway, so asking a second gateway here would refund twice. Refunds that
+        move money are `POST /orders/{order}/refund`, for bookings this platform took payment for.
       security:
         - apiKeyAuth: []
           hmacSignature: []
@@ -6006,9 +6012,9 @@ paths:
       tags: [Orders]
       summary: One booking, with its seats and what the buyer was told
       description: >
-        The seats and their tickets, and the delivery log for this order — because the question a
-        box office is actually asked is "did they get it", and the answer is a row rather than an
-        inference about whether a provider was up.
+        The seats and their tickets, the delivery log, and every attempt to send money back —
+        because the questions a box office is actually asked are "did they get it" and "where is my
+        refund", and the answers are rows rather than inferences about whether a provider was up.
       responses:
         "200":
           description: OK
@@ -6029,12 +6035,25 @@ paths:
       tags: [Orders]
       summary: Refund all of a booking, or the seats named
       description: |
-        Requires `orders.refund`. The seats go back on sale (or are held back, per the event's
-        refund policy) and the tickets are voided.
+        Requires `orders.refund`. **The money goes back first, and the seats move only if it
+        did.** A booking cancelled while the money stayed put is the worst outcome available: the
+        buyer has neither their seat nor their money, and the organiser hears about it weeks later
+        from a complaint. So the gateway that took the payment is asked before anything else
+        happens, and one that refuses returns `refund_refused` with the booking untouched.
 
-        **This does not move money**, and does not pretend to: the organiser refunds where they
-        took the payment. A platform that marked an order refunded while the card was never
-        credited would be worse than one that says plainly which half it did.
+        The amount sent is what was charged — the total less anything a voucher settled — minus
+        whatever has already gone back. Named seats send their share of that remainder, so
+        refunding a booking seat by seat adds up to exactly what was charged and never more.
+
+        Where there was no gateway to ask — cash at the window, a bank transfer, an invoice — the
+        refund is recorded as owed in person and the seats still go back on sale. That is what a
+        box office does anyway; what is new is that it is written down rather than assumed.
+
+        Every attempt is kept, the refused ones included, and comes back on `GET /orders/{order}`
+        as `refunds`.
+
+        Then the seats go back on sale (or are held back, per the event's refund policy) and the
+        tickets are voided.
 
         Omitting `seat_ids` refunds everything, which is also the only way to refund a standing
         place — those have no seat id to name.
@@ -6071,7 +6090,9 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422":
-          description: Credit was asked for on a booking with no email address to give it to
+          description: >-
+            The gateway would not send the money back (`refund_refused`), or credit was asked for on
+            a booking with no email address to give it to
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -10184,6 +10205,34 @@ components:
                   status: { type: string }
                   reason: { type: [string, "null"] }
                   created_at: { type: string, format: date-time }
+            refunds:
+              type: array
+              description: >-
+                Every attempt to send money back on this booking, newest first — the refused ones
+                too, because "it has failed three times and here is what the gateway said" is the
+                only thing somebody can act on.
+              items:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  amount: { type: integer, description: "Minor units." }
+                  currency: { type: string }
+                  status:
+                    type: string
+                    enum: [sent, manual, failed]
+                    description: >-
+                      `sent` — the gateway took it back. `manual` — there was no gateway to ask, so
+                      somebody hands it over. `failed` — the gateway said no, and nothing else
+                      happened either.
+                  gateway: { type: [string, "null"] }
+                  reference:
+                    type: [string, "null"]
+                    description: "What the gateway calls this refund — the handle to quote at a bank."
+                  reason: { type: [string, "null"] }
+                  message:
+                    type: [string, "null"]
+                    description: "What the gateway said, on a refusal or on money owed in person."
+                  at: { type: [string, "null"], format: date-time }
 
     DiscountCode:
       type: object

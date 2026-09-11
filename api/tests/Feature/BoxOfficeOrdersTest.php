@@ -24,6 +24,9 @@ use Tests\TestCase;
  * over the signed integration API, which is right for a shop that owns the money and no use to an
  * organiser selling from their own site. These are the checks that the panel's own path does the
  * same thing that path does — releases the seats, voids the tickets — and refuses the same things.
+ *
+ * The money half lives in `RefundToCardTest`: these bookings came in over the integration API and
+ * carry no payment handle, so nothing here has a gateway to ask.
  */
 class BoxOfficeOrdersTest extends TestCase
 {
@@ -70,8 +73,8 @@ class BoxOfficeOrdersTest extends TestCase
         $this->assertSame('refunded', $body['status']);
 
         app(TenantContext::class)->runAs($fixture['tenant'], function () use ($order) {
-            // The seats are back on sale and the tickets do not work — which is what a refund is
-            // on this platform. The money is the organiser's own gateway's business.
+            // The seats are back on sale and the tickets do not work. A booking registered by a
+            // shop has already had its money handed back on that side, so nothing is sent here.
             $this->assertSame(0, Allocation::where('external_order_row_id', $order->id)
                 ->where('status', 'active')->count());
             $this->assertSame(2, Ticket::where('status', 'void')->count());

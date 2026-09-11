@@ -39,5 +39,8 @@ return [
         'not_configured' => ':gateway has not been set up yet. Choose another way to pay.',
         'no_reference' => 'We could not find this payment. If money left your account, contact the box office and quote your order number.',
         'cancelled_by_buyer' => 'The payment was cancelled. Your seats have been released.',
+        'refund_by_hand' => 'This payment cannot be sent back automatically. The seats are released and the money is owed to the buyer in person.',
+        'refund_unreachable' => 'The payment gateway could not be reached, so nothing has been refunded. Try again.',
+        'nothing_to_refund' => 'There is nothing to send back: this booking was not paid for with money.',
     ],
 ];

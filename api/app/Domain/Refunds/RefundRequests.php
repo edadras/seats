@@ -28,6 +28,7 @@ class RefundRequests
         private readonly OrderService $orders,
         private readonly AuditLogger $audit,
         private readonly Notifier $notifier,
+        private readonly \App\Domain\Payments\Refunds $refunds,
     ) {}
 
     /**
@@ -97,6 +98,15 @@ class RefundRequests
 
         $order = $request->order()->with(['event', 'allocations'])->firstOrFail();
         $seatIds = $this->seatIds($order, $request);
+
+        /*
+         * The money first, then the seats.
+         *
+         * A buyer who asked for their money back and got a cancelled booking instead is worse off
+         * than one who was told no. So a gateway that refuses throws out of here with the request
+         * still pending, which is the state somebody can act on.
+         */
+        $this->refunds->give($order, $this->refunds->worthOf($order, $seatIds), 'refund_requested', $by);
 
         $this->orders->refund($order, $seatIds, 'refund_requested');
 

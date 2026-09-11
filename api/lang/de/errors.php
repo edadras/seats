@@ -64,6 +64,8 @@ return [
     'entry_slot_closed' => 'Diese Einlasszeit wird nicht mehr angeboten.',
     'invalid_transition' => 'Eine Bestellung im Zustand :status kann nicht bestätigt werden.',
     'order_not_confirmed' => 'Es gibt noch keine Tickets zum Versenden.',
+    'refund_refused' => 'Das Zahlungsgateway hat die Rückzahlung abgelehnt. Die Bestellung ist unverändert.',
+    'refund_exceeds_payment' => 'Das ist mehr, als für diese Bestellung berechnet wurde.',
     'order_not_refundable' => 'Nur eine bestätigte Bestellung kann erstattet werden.',
     'nothing_to_refund' => 'Auf dieser Buchung gibt es nichts zurückzugeben.',
     'nothing_to_send' => 'Jedes Ticket dieser Buchung wurde benutzt oder storniert.',

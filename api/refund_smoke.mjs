@@ -115,6 +115,27 @@ check( 'the granted booking reads as refunded',
 
 await page.screenshot( { path: `${ SHOTS }/04-orders.png` } );
 
+console.log( 'And the booking says where the money went' );
+
+// The refunded one, whichever row it landed on.
+const refunded = page.locator( '#order-results tbody tr' ).filter( { hasText: /Refunded/i } ).first();
+
+await refunded.locator( '[data-order]' ).click();
+await page.waitForSelector( '#order-back' );
+await page.waitForTimeout( 600 );
+
+const detail = await page.locator( '.page-body' ).innerText();
+
+check( 'the booking carries a money-back table', /Money sent back/i.test( detail ) );
+
+// The seed pays through the offline gateway — cash, a transfer — which cannot send anything back,
+// so the honest answer is that somebody owes this buyer money in person. Said in words on the row,
+// not left looking like a refund that silently worked.
+check( 'and says plainly that it is owed in person rather than sent',
+	/Owed in person/i.test( detail ) );
+
+await page.screenshot( { path: `${ SHOTS }/05-money-back.png`, fullPage: true } );
+
 check( 'no console errors', 0 === errors.length, errors.join( ' / ' ) );
 
 await browser.close();

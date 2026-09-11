@@ -64,6 +64,8 @@ return [
     'entry_slot_closed' => "That arrival time is no longer offered.",
     'invalid_transition' => 'An order that is :status cannot be confirmed.',
     'order_not_confirmed' => 'There are no tickets to send yet.',
+    'refund_refused' => 'The payment gateway would not send that money back. The booking has not been changed.',
+    'refund_exceeds_payment' => 'That is more than this booking was charged.',
     'order_not_refundable' => 'Only a confirmed order can be refunded.',
     'nothing_to_refund' => 'There is nothing on this booking to hand back.',
     'nothing_to_send' => 'Every ticket on this booking has been used or voided.',

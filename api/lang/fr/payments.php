@@ -38,5 +38,8 @@ return [
         'not_configured' => ':gateway n’est pas encore configuré. Choisissez un autre moyen de paiement.',
         'no_reference' => 'Ce paiement est introuvable. Si de l’argent a quitté votre compte, contactez la billetterie avec votre numéro de commande.',
         'cancelled_by_buyer' => 'Le paiement a été annulé. Vos places ont été libérées.',
+        'refund_by_hand' => 'Ce paiement ne peut pas être remboursé automatiquement. Les places sont libérées et l’argent est dû à l’acheteur en personne.',
+        'refund_unreachable' => 'La passerelle de paiement était injoignable ; rien n’a été remboursé. Réessayez.',
+        'nothing_to_refund' => 'Il n’y a rien à rembourser : cette réservation n’a pas été payée en argent.',
     ],
 ];

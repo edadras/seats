@@ -38,5 +38,8 @@ return [
         'not_configured' => ':gateway ist noch nicht eingerichtet. Bitte anders bezahlen.',
         'no_reference' => 'Diese Zahlung ist nicht auffindbar. Falls Geld abgebucht wurde, wenden Sie sich mit Ihrer Bestellnummer an die Kasse.',
         'cancelled_by_buyer' => 'Die Zahlung wurde abgebrochen. Ihre Plätze sind wieder frei.',
+        'refund_by_hand' => 'Diese Zahlung lässt sich nicht automatisch zurücksenden. Die Plätze sind frei, und das Geld wird der Käuferin persönlich geschuldet.',
+        'refund_unreachable' => 'Der Zahlungsdienst war nicht erreichbar, es wurde nichts erstattet. Bitte erneut versuchen.',
+        'nothing_to_refund' => 'Es gibt nichts zurückzusenden: diese Buchung wurde nicht mit Geld bezahlt.',
     ],
 ];

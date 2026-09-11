@@ -64,6 +64,8 @@ return [
     'entry_slot_closed' => "Cette heure d'arrivée n'est plus proposée.",
     'invalid_transition' => "Une commande dont l'état est :status ne peut pas être confirmée.",
     'order_not_confirmed' => "Il n'y a pas encore de billets à envoyer.",
+    'refund_refused' => 'La passerelle de paiement a refusé ce remboursement. La commande est inchangée.',
+    'refund_exceeds_payment' => "C'est plus que ce qui a été facturé pour cette commande.",
     'order_not_refundable' => 'Seule une commande confirmée peut être remboursée.',
     'nothing_to_refund' => "Il n'y a rien à rendre sur cette réservation.",
     'nothing_to_send' => 'Chaque billet de cette réservation a été utilisé ou annulé.',

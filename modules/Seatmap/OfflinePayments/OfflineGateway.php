@@ -4,6 +4,7 @@ namespace Modules\Seatmap\OfflinePayments;
 
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Sites\Payments\RefundOutcome;
 use App\Models\ExternalOrder;
 use App\Modules\ModuleContext;
 
@@ -49,5 +50,18 @@ class OfflineGateway implements PaymentGateway
     public function settle(ExternalOrder $order, array $payload): PaymentIntent
     {
         return PaymentIntent::paid('offline:'.$order->external_order_id);
+    }
+
+    /**
+     * There was never anything to send back.
+     *
+     * This gateway is cash in a drawer, a transfer into the venue's account, an invoice a school
+     * will pay in March. None of it moved through anything this platform can reach, so a refund is
+     * a person handing money to another person. Said as `unsupported`, which releases the seats
+     * and writes down that the money is owed — the two things a box office actually needs.
+     */
+    public function refund(ExternalOrder $order, int $amount, string $reference): RefundOutcome
+    {
+        return RefundOutcome::unsupported(__('payments.errors.refund_by_hand'));
     }
 }

@@ -5,6 +5,7 @@ namespace Modules\Seatmap\IdPay;
 use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Sites\Payments\RefundOutcome;
 use App\Models\ExternalOrder;
 use App\Modules\ModuleContext;
 
@@ -90,6 +91,18 @@ class IdPayGateway implements PaymentGateway
         // Anything under 100 is IDPay saying the payment did not happen: cancelled, failed, or
         // reversed. It is a refusal, not a wait.
         return PaymentIntent::failed($this->reason($response->json()));
+    }
+
+    /**
+     * IdPay refunds are made from the merchant's own panel, not through the API.
+     *
+     * So this says so, and says it as `unsupported`: the booking is refunded, the seats go back on
+     * sale, and the row in the refund ledger records that somebody owes this buyer money in
+     * person. Calling an endpoint that does not exist would be a worse answer than an honest one.
+     */
+    public function refund(ExternalOrder $order, int $amount, string $reference): RefundOutcome
+    {
+        return RefundOutcome::unsupported(__('payments.errors.refund_by_hand'));
     }
 
     /* --------------------------------------------------------------------------- internals */

@@ -64,6 +64,8 @@ return [
     'entry_slot_closed' => "Questo orario d'ingresso non è più offerto.",
     'invalid_transition' => 'Un ordine che è :status non può essere confermato.',
     'order_not_confirmed' => 'Non ci sono ancora biglietti da inviare.',
+    'refund_refused' => 'Il gateway di pagamento ha rifiutato questo rimborso. L’ordine non è stato modificato.',
+    'refund_exceeds_payment' => 'È più di quanto è stato addebitato per questo ordine.',
     'order_not_refundable' => 'Solo un ordine confermato può essere rimborsato.',
     'nothing_to_refund' => "Su questa prenotazione non c'è nulla da restituire.",
     'nothing_to_send' => 'Ogni biglietto di questa prenotazione è stato usato o annullato.',

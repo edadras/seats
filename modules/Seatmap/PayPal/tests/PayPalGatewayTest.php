@@ -109,6 +109,59 @@ class PayPalGatewayTest extends TestCase
     }
 
     #[Test]
+    public function a_refund_goes_against_the_capture_that_took_the_money(): void
+    {
+        $this->fakePayPal([
+            '*v2/checkout/orders/X1' => Http::response([
+                'purchase_units' => [['payments' => ['captures' => [['id' => '3C679366HH908993F']]]]],
+            ]),
+            '*refund' => Http::response(['id' => '1JU08902781691411', 'status' => 'COMPLETED']),
+        ]);
+
+        $outcome = $this->gateway()->refund($this->order(), 1500, 'paypal:X1');
+
+        $this->assertTrue($outcome->wasSent());
+        $this->assertSame('paypal:1JU08902781691411', $outcome->reference);
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/refund')) {
+                return true;
+            }
+
+            // Against the capture, in the currency's own places, with a request id that makes a
+            // double-clicked button one refund rather than two.
+            return str_contains($request->url(), 'captures/3C679366HH908993F/refund')
+                && '15.00' === $request['amount']['value']
+                && 'refund-ORD-1-1500' === $request->header('PayPal-Request-Id')[0];
+        });
+    }
+
+    #[Test]
+    public function a_refund_paypal_has_accepted_but_not_moved_yet_still_counts(): void
+    {
+        $this->fakePayPal([
+            '*v2/checkout/orders/X1' => Http::response([
+                'purchase_units' => [['payments' => ['captures' => [['id' => 'C1']]]]],
+            ]),
+            '*refund' => Http::response(['id' => 'R1', 'status' => 'PENDING']),
+        ]);
+
+        // PENDING is PayPal saying it has the refund and is moving the money. Waiting for
+        // COMPLETED would hold a seat off sale on an answer that is already yes.
+        $this->assertTrue($this->gateway()->refund($this->order(), 4500, 'paypal:X1')->wasSent());
+    }
+
+    #[Test]
+    public function an_order_with_no_capture_under_it_cannot_be_refunded(): void
+    {
+        $this->fakePayPal(['*v2/checkout/orders/X1' => Http::response(['purchase_units' => [[]]])]);
+
+        $outcome = $this->gateway()->refund($this->order(), 4500, 'paypal:X1');
+
+        $this->assertTrue($outcome->hasFailed(), 'Not "unsupported": PayPal can refund, this one just has nothing to.');
+    }
+
+    #[Test]
     public function the_provider_contributes_one_gateway(): void
     {
         $this->assertCount(1, (new Provider($this->moduleContext()))->payments());

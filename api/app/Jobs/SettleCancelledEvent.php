@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Domain\Messaging\OrderMessages;
+use App\Domain\Payments\Refunds;
 use App\Domain\Orders\OrderService;
 use App\Models\Event;
 use App\Models\ExternalOrder;
@@ -42,6 +43,7 @@ class SettleCancelledEvent implements ShouldQueue
         OrderService $orders,
         OrderMessages $messages,
         AuditLogger $audit,
+        Refunds $refunds,
     ): void {
         $tenant = $tenants->runUnscoped(fn () => Tenant::find($this->tenantId));
 
@@ -49,7 +51,7 @@ class SettleCancelledEvent implements ShouldQueue
             return;
         }
 
-        $tenants->runAs($tenant, function () use ($orders, $messages, $audit) {
+        $tenants->runAs($tenant, function () use ($orders, $messages, $audit, $refunds) {
             $event = Event::find($this->eventId);
 
             if (! $event) {
@@ -64,11 +66,22 @@ class SettleCancelledEvent implements ShouldQueue
                 ->whereIn('status', ['confirmed', 'partially_refunded'])
                 ->orderBy('id')
                 ->chunkById(100, function ($batch) use (
-                    $orders, $messages, $event, &$refunded, &$told, &$failed
+                    $orders, $messages, $refunds, $event, &$refunded, &$told, &$failed
                 ) {
                     foreach ($batch as $order) {
                         try {
                             if ($this->refund) {
+                                /*
+                                 * The money, then the seats — the same order as everywhere else.
+                                 *
+                                 * On a cancelled night this is the whole booking, and a gateway
+                                 * that refuses throws into the catch below: that one booking is
+                                 * counted as failed and named in the log, and the other four
+                                 * hundred still get their money. A night called off is the last
+                                 * place to stop at the first refusal.
+                                 */
+                                $refunds->give($order, $refunds->worthOf($order, null), 'event_cancelled');
+
                                 $orders->refund($order, null, 'event_cancelled');
                                 $refunded++;
                             }

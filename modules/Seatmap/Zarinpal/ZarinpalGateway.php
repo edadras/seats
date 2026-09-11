@@ -5,6 +5,7 @@ namespace Modules\Seatmap\Zarinpal;
 use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Sites\Payments\RefundOutcome;
 use App\Models\ExternalOrder;
 use App\Modules\ModuleContext;
 
@@ -106,6 +107,24 @@ class ZarinpalGateway implements PaymentGateway
         }
 
         return PaymentIntent::failed($this->reason($response->json()));
+    }
+
+    /**
+     * Zarinpal does not give money back through this API.
+     *
+     * Refunding a Zarinpal payment is done from the merchant's own panel, against a settlement
+     * that may not have reached the merchant's account yet, and the endpoint that exists for it is
+     * gated on an agreement most venues do not have. Rather than call something that will answer
+     * 404 in production and leave a booking half-refunded, this says plainly that the money is
+     * owed in person — which is what actually happens at an Iranian box office — and the seats go
+     * back on sale.
+     *
+     * Written as `unsupported` rather than `failed` deliberately: nothing went wrong, and a
+     * refusal here would stop a refund that the organiser is perfectly able to complete.
+     */
+    public function refund(ExternalOrder $order, int $amount, string $reference): RefundOutcome
+    {
+        return RefundOutcome::unsupported(__('payments.errors.refund_by_hand'));
     }
 
     /* --------------------------------------------------------------------------- internals */

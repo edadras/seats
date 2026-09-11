@@ -5,6 +5,7 @@ namespace Modules\Seatmap\PayPal;
 use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Sites\Payments\RefundOutcome;
 use App\Models\ExternalOrder;
 use App\Modules\ModuleContext;
 use App\Support\Locale\Money;
@@ -122,7 +123,96 @@ class PayPalGateway implements PaymentGateway
         return PaymentIntent::failed($this->reason($response->json()));
     }
 
+    /**
+     * Send money back, through the capture that took it.
+     *
+     * PayPal refunds a capture, and what this platform wrote down at the start was the order — so
+     * the order is read again to find the capture under it. A partial refund carries the amount;
+     * a whole one could omit it, but sending it either way means one path rather than two, and the
+     * arithmetic is the platform's already.
+     *
+     * The request id is the order and the amount together: two seats, then two more, are two
+     * refunds and both must go through, while a double-clicked button is one and must not.
+     */
+    public function refund(ExternalOrder $order, int $amount, string $reference): RefundOutcome
+    {
+        $token = $this->token();
+
+        if (! $token) {
+            return RefundOutcome::failed(__('payments.errors.not_configured', ['gateway' => $this->label()]));
+        }
+
+        $capture = $this->captureUnder($this->strip($reference), $token);
+
+        if (null === $capture) {
+            return RefundOutcome::failed(__('payments.errors.no_reference'));
+        }
+
+        $response = $this->http()->postJson(
+            $this->base().'v2/payments/captures/'.$capture.'/refund',
+            [
+                'amount' => [
+                    'currency_code' => mb_strtoupper((string) $order->currency),
+                    'value' => $this->decimal($amount, (string) $order->currency),
+                ],
+                'note_to_payer' => __('payments.orderDescription', [
+                    'reference' => $order->external_order_id,
+                ]),
+            ],
+            $this->headers($token) + ['PayPal-Request-Id' => 'refund-'.$order->external_order_id.'-'.$amount],
+        );
+
+        $status = (string) $response->json('status', '');
+
+        if ('COMPLETED' === $status || 'PENDING' === $status) {
+            // PENDING is PayPal saying it has accepted the refund and is moving the money. The
+            // seats should go back on sale on the strength of that: it is their answer, not ours.
+            return RefundOutcome::sent('paypal:'.(string) $response->json('id', $capture));
+        }
+
+        return RefundOutcome::failed($this->reason($response->json()));
+    }
+
     /* --------------------------------------------------------------------------- internals */
+
+    /** The capture under a PayPal order, which is the thing a refund is made against. */
+    private function captureUnder(string $orderId, string $token): ?string
+    {
+        $response = $this->http()->getJson(
+            $this->base().'v2/checkout/orders/'.$orderId,
+            [],
+            $this->headers($token),
+        );
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $capture = $response->json('purchase_units.0.payments.captures.0.id');
+
+        return is_string($capture) && '' !== $capture ? $capture : null;
+    }
+
+    /**
+     * PayPal is paid in the currency's major unit, written out.
+     *
+     * The rest of this platform counts in the smallest unit, so this is the one place the division
+     * happens — and it asks how many places the currency has rather than assuming two, because a
+     * yen has none and getting that wrong is a hundredfold error in somebody's refund.
+     */
+    private function decimal(int $minorUnits, string $currency): string
+    {
+        $places = \App\Support\Locale\Money::exponent($currency);
+
+        return number_format($minorUnits / (10 ** $places), $places, '.', '');
+    }
+
+    /** References are written down with the gateway's name on them; the API wants only the id. */
+    private function strip(string $reference): string
+    {
+        return str_starts_with($reference, 'paypal:') ? substr($reference, 7) : $reference;
+    }
+
 
     private function http(): OutboundHttp
     {

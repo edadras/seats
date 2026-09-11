@@ -5,6 +5,7 @@ namespace Modules\Seatmap\NextPay;
 use App\Modules\OutboundHttp;
 use App\Domain\Sites\Payments\PaymentGateway;
 use App\Domain\Sites\Payments\PaymentIntent;
+use App\Domain\Sites\Payments\RefundOutcome;
 use App\Models\ExternalOrder;
 use App\Modules\ModuleContext;
 
@@ -88,6 +89,18 @@ class NextPayGateway implements PaymentGateway
         }
 
         return PaymentIntent::failed($this->reason($response->json()));
+    }
+
+    /**
+     * NextPay has no refund in its gateway API.
+     *
+     * The same honest answer as the others that cannot: the money is owed in person, it is written
+     * down as owed, and the seats are released. A gateway that pretended otherwise would leave a
+     * booking marked refunded with nothing behind it.
+     */
+    public function refund(ExternalOrder $order, int $amount, string $reference): RefundOutcome
+    {
+        return RefundOutcome::unsupported(__('payments.errors.refund_by_hand'));
     }
 
     /* --------------------------------------------------------------------------- internals */
