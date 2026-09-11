@@ -52,6 +52,7 @@ return [
         'billing' => 'Fatturazione',
         'audit' => 'Attività',
         'memberships' => 'Tessere',
+        'webapp' => 'App sulla schermata home',
     ],
 
     'promoters' => [
@@ -111,6 +112,79 @@ return [
         'nothingOnBody' => 'Un evento va in vendita quando è pubblicato su una pianta pubblicata.',
         'recent' => 'Attività recente',
         'nothingYet' => 'Non è ancora successo nulla.',
+    ],
+
+    'firstSteps' => [
+        'title' => 'Primi passi',
+        'subtitle' => 'Che cosa separa da qui la tua prima vendita vera, nell’ordine in cui deve accadere.',
+        'progress' => ':done di :total',
+        'next' => 'Prossimo',
+        'open' => 'Apri',
+        'done' => 'Fatto',
+        'allDone' => 'Sei pronto a vendere',
+        'allDoneHint' => 'Tutto l’elenco è completo. Questa scheda sparirà per sempre appena arriva la prima prenotazione.',
+        'steps' => [
+            'venue' => [
+                'title' => 'Aggiungi il locale',
+                'hint' => 'Dove il pubblico si presenta davvero: nome, indirizzo e il fuso orario in cui aprono le porte.',
+            ],
+            'plan' => [
+                'title' => 'Disegna la pianta e pubblicala',
+                'hint' => 'Una serata si vende su una pianta pubblicata. Un disegno ancora in bozza non lo è, per quanto finito sembri.',
+            ],
+            'night' => [
+                'title' => 'Metti una serata in calendario',
+                'hint' => 'Una data, un orario e la pianta su cui viene venduta.',
+            ],
+            'prices' => [
+                'title' => 'Metti i prezzi',
+                'hint' => 'Una zona di prezzo, un prezzo per un’area in piedi, o un tipo di biglietto a tariffa fissa. Un posto senza prezzo si vende per niente.',
+            ],
+            'payment' => [
+                'title' => 'Decidi come vieni pagato',
+                'hint' => 'Accendi un gateway di pagamento — oppure continua a incassare al botteghino, e scrivi come.',
+            ],
+            'shopfront' => [
+                'title' => 'Dai alla gente un posto dove comprare',
+                'hint' => 'Pubblica il sito che ti è stato dato, o collega il plugin a quello che hai già.',
+            ],
+            'rehearsal' => [
+                'title' => 'Prova tutto quanto una volta',
+                'hint' => 'Compra un posto per la tua stessa serata, leggi l’email, falla scansionare all’ingresso — e poi cancella tutto. Nessuno dovrebbe trovare il tuo primo errore al posto tuo.',
+            ],
+            'onsale' => [
+                'title' => 'Mettila in vendita',
+                'hint' => 'Pubblica la serata. Da quel momento i posti sono davvero in vendita.',
+            ],
+        ],
+    ],
+
+    'webapp' => [
+        'title' => 'App sulla schermata home',
+        'subtitle' => 'Che cosa diventa il tuo sito quando qualcuno se lo tiene sul telefono.',
+        'site' => 'Sito',
+        'preview' => 'Su una schermata home',
+        'previewHint' => 'La mattonella è disegnata dalle iniziali del nome e dal colore d’accento del tema. Cambia uno dei due e cambia anche questa.',
+        'nameLabel' => 'Nome sotto l’icona',
+        'nameHint' => 'Un telefono mostra circa undici caratteri e taglia il resto. Lascia vuoto per usare «:name».',
+        'namePlaceholder' => 'per es. :name',
+        'save' => 'Salva il nome',
+        'saved' => 'Salvato. Chi la installa da adesso vede il nome nuovo.',
+        'installable' => 'Pronta da installare',
+        'installableHint' => 'A chi visita da telefono viene proposto «Aggiungi alla schermata Home», e quello che aggiunge è questo.',
+        'notInstallable' => 'Non ancora installabile',
+        'notLive' => 'Il sito non è pubblicato, quindi nessuno può installarlo.',
+        'noDomain' => 'Il sito non ha ancora un indirizzo verificato, quindi non c’è nulla da cui installare.',
+        'facts' => 'Che cosa fa una volta lì',
+        'factOffline' => 'Un biglietto aperto una volta si riapre senza alcun segnale — ed è tutto il punto, in fila all’ingresso.',
+        'factShortcut' => 'Tenendo premuta l’icona compare «:name», dritto ai biglietti già comprati.',
+        'factNoShortcut' => 'L’accesso è spento per questo sito, quindi l’icona non offre scorciatoie ai biglietti di chi compra.',
+        'factColour' => 'La barra del browser stessa prende il colore :colour sopra la pagina.',
+        'manifest' => 'Che cosa legge un browser',
+        'icons' => 'La mattonella, in ogni misura che un telefono chiede',
+        'openSite' => 'Apri il sito',
+        'none' => 'Ancora nessun sito',
+        'noneHint' => 'Crea un sito e diventerà qualcosa che la gente si tiene sul telefono.',
     ],
 
     'notices' => [

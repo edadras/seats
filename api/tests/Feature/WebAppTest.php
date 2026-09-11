@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Sites\SiteProvisioner;
+use App\Domain\Sites\SiteResolver;
 use App\Domain\Sites\WebApp;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -253,6 +254,103 @@ class WebAppTest extends TestCase
         foreach (['/manifest.webmanifest', '/sw.js', '/app-icon-192.png', '/offline'] as $path) {
             $this->get('http://panel.test'.$path)->assertNotFound();
         }
+    }
+
+    /**
+     * The one piece of the app the organiser can overrule.
+     *
+     * A home screen truncates at about eleven characters, so the derived answer is a guess — a good
+     * one, but only the venue knows whether its audience calls the place "Northgate" or "The Arts".
+     */
+    #[Test]
+    public function the_install_name_can_be_chosen_and_falls_back_to_the_site_name(): void
+    {
+        $site = $this->makeSite('northgate.test');
+
+        $this->assertSame(
+            $site->name,
+            $this->get('http://northgate.test/manifest.webmanifest')->json('short_name'),
+        );
+
+        app(TenantContext::class)->runAs(
+            \App\Models\Tenant::findOrFail($site->tenant_id),
+            fn () => $site->update(['brand' => ($site->brand ?? []) + ['app_name' => 'Northgate']]),
+        );
+
+        // The resolver keeps a site by hostname for the length of a request and beyond; the panel
+        // drops it on every save, and so must a test that edits the row underneath it.
+        SiteResolver::forget('northgate.test');
+
+        $this->assertSame(
+            'Northgate',
+            $this->get('http://northgate.test/manifest.webmanifest')->json('short_name'),
+        );
+    }
+
+    #[Test]
+    public function the_panel_is_told_what_a_home_screen_will_show(): void
+    {
+        $site = $this->makeSite('northgate.test');
+        $tenant = \App\Models\Tenant::findOrFail($site->tenant_id);
+
+        $answer = $this->asMember($this->makeUser($tenant, 'owner'))
+            ->getJson('/v1/sites/'.$site->id.'/app')
+            ->assertOk()
+            ->json();
+
+        $this->assertSame($site->name, $answer['name']);
+        $this->assertSame($site->name, $answer['install_name']);
+        // Null rather than the derived answer, so a form can offer the derivation as a placeholder
+        // instead of pre-filling a value nobody typed.
+        $this->assertNull($answer['chosen_name']);
+        $this->assertSame($site->name, $answer['suggested_name']);
+        $this->assertNotSame('', $answer['initials']);
+        $this->assertTrue($answer['installable']);
+        $this->assertSame([180, 192, 512], array_column($answer['icons'], 'size'));
+
+        foreach ($answer['icons'] as $iconFile) {
+            $this->assertStringContainsString('northgate.test', $iconFile['url']);
+        }
+    }
+
+    /**
+     * A site nobody can reach is a site nobody can install, and the screen has to say so rather
+     * than offer a link that 404s.
+     */
+    #[Test]
+    public function a_site_with_no_address_is_reported_as_not_installable(): void
+    {
+        $tenant = $this->makeTenant();
+
+        $site = app(TenantContext::class)->runAs(
+            $tenant,
+            fn () => app(\App\Domain\Sites\SiteProvisioner::class)->create($tenant->name),
+        );
+
+        $answer = $this->asMember($this->makeUser($tenant, 'owner'))
+            ->getJson('/v1/sites/'.$site->id.'/app')
+            ->assertOk()
+            ->json();
+
+        $this->assertFalse($answer['installable']);
+        $this->assertNull($answer['url']);
+        $this->assertNull($answer['manifest_url']);
+        $this->assertSame([null, null, null], array_column($answer['icons'], 'url'));
+        // Still enough to draw a preview with, which is the point: this is exactly when somebody
+        // wants to see what they are working towards.
+        $this->assertNotSame('', $answer['initials']);
+        $this->assertNotNull($answer['accent']);
+    }
+
+    #[Test]
+    public function the_web_app_screen_is_refused_to_somebody_without_the_websites(): void
+    {
+        $site = $this->makeSite('northgate.test');
+        $tenant = \App\Models\Tenant::findOrFail($site->tenant_id);
+
+        $this->asMember($this->makeUser($tenant, 'door'))
+            ->getJson('/v1/sites/'.$site->id.'/app')
+            ->assertForbidden();
     }
 
     /* --------------------------------------------------------------------------- helpers */

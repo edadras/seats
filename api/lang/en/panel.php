@@ -63,6 +63,7 @@ return [
         'billing' => 'Billing',
         'audit' => 'Activity',
         'memberships' => 'Memberships',
+        'webapp' => 'Home-screen app',
     ],
 
     'promoters' => [
@@ -122,6 +123,92 @@ return [
         'nothingOnBody' => 'An event goes on sale once it is published against a chart.',
         'recent' => 'Recent activity',
         'nothingYet' => 'Nothing has happened yet.',
+    ],
+
+    /*
+     * The first afternoon.
+     *
+     * Written as instructions to a person rather than as names of screens: "Draw the seating and
+     * publish it" is something somebody can go and do, where "Seat maps" is a place they have to
+     * work out what to do in.
+     */
+    'firstSteps' => [
+        'title' => 'First steps',
+        'subtitle' => 'What stands between here and your first real sale, in the order it has to happen.',
+        'progress' => ':done of :total done',
+        'next' => 'Next',
+        'open' => 'Open',
+        'done' => 'Done',
+        'allDone' => 'You are ready to sell',
+        'allDoneHint' => 'Everything on the list is done. This disappears for good once your first booking arrives.',
+        'steps' => [
+            'venue' => [
+                'title' => 'Add the venue',
+                'hint' => 'Where the audience actually turns up: its name, its address and the time zone its doors open in.',
+            ],
+            'plan' => [
+                'title' => 'Draw the seating and publish it',
+                'hint' => 'A night is sold against a published plan. A drawing still in draft is not one, however finished it looks.',
+            ],
+            'night' => [
+                'title' => 'Put a night in the calendar',
+                'hint' => 'A date, a time, and the plan it is sold against.',
+            ],
+            'prices' => [
+                'title' => 'Price it',
+                'hint' => 'A price zone, a price on a standing area, or a fixed ticket type. A seat at nothing sells for nothing.',
+            ],
+            'payment' => [
+                'title' => 'Decide how you are paid',
+                'hint' => 'Switch on a payment gateway — or keep taking money at the box office and write down how.',
+            ],
+            'shopfront' => [
+                'title' => 'Give people somewhere to buy',
+                'hint' => 'Publish the website you were given, or connect the plugin to the one you already have.',
+            ],
+            'rehearsal' => [
+                'title' => 'Rehearse the whole thing',
+                'hint' => 'Buy a seat on your own night, read the email, scan it at the door — then sweep it away. Nobody should find your first mistake on your behalf.',
+            ],
+            'onsale' => [
+                'title' => 'Put it on sale',
+                'hint' => 'Publish the night. From that moment the seats are genuinely for sale.',
+            ],
+        ],
+    ],
+
+    /*
+     * The web app, shown to the person who owns it.
+     *
+     * This screen exists because until now it was visible only to buyers: they were offered a tile
+     * and a name that the organiser had neither chosen nor ever seen.
+     */
+    'webapp' => [
+        'title' => 'Home-screen app',
+        'subtitle' => 'What your website becomes when somebody keeps it on their phone.',
+        'site' => 'Website',
+        'preview' => 'On a home screen',
+        'previewHint' => 'The tile is drawn from the first letters of the name and the accent colour of the theme. Change either and this changes with it.',
+        'nameLabel' => 'Name under the icon',
+        'nameHint' => 'A phone shows about eleven characters and cuts the rest. Leave it empty to use “:name”.',
+        'namePlaceholder' => 'e.g. :name',
+        'save' => 'Save the name',
+        'saved' => 'Saved. Anyone who installs it from now on gets the new name.',
+        'installable' => 'Ready to install',
+        'installableHint' => 'Somebody visiting on a phone is offered “Add to home screen”, and what they add is this.',
+        'notInstallable' => 'Not installable yet',
+        'notLive' => 'The website is not live, so nobody can install it.',
+        'noDomain' => 'The website has no verified address yet, so there is nothing to install from.',
+        'facts' => 'What it does once it is there',
+        'factOffline' => 'A ticket opened once opens again with no signal at all — which is the whole point, in a queue at a door.',
+        'factShortcut' => 'Holding the icon offers “:name”, straight to the tickets somebody already bought.',
+        'factNoShortcut' => 'Sign-in is off for this site, so the icon offers no shortcut to a buyer’s own tickets.',
+        'factColour' => 'The browser’s own bar takes the colour :colour above the page.',
+        'manifest' => 'What a browser reads',
+        'icons' => 'The tile, at each size a phone asks for',
+        'openSite' => 'Open the website',
+        'none' => 'No website yet',
+        'noneHint' => 'Create a website and it becomes something people can keep on a phone.',
     ],
 
     'notices' => [

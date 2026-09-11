@@ -53,6 +53,7 @@ return [
         'billing' => 'Abrechnung',
         'audit' => 'Aktivität',
         'memberships' => 'Mitgliedschaften',
+        'webapp' => 'App auf dem Homescreen',
     ],
 
     'promoters' => [
@@ -112,6 +113,79 @@ return [
         'nothingOnBody' => 'Eine Veranstaltung geht in den Verkauf, sobald sie gegen einen Saalplan veröffentlicht ist.',
         'recent' => 'Letzte Aktivität',
         'nothingYet' => 'Bisher ist nichts passiert.',
+    ],
+
+    'firstSteps' => [
+        'title' => 'Erste Schritte',
+        'subtitle' => 'Was zwischen hier und Ihrem ersten echten Verkauf steht, in der Reihenfolge, in der es passieren muss.',
+        'progress' => ':done von :total erledigt',
+        'next' => 'Als Nächstes',
+        'open' => 'Öffnen',
+        'done' => 'Erledigt',
+        'allDone' => 'Sie können verkaufen',
+        'allDoneHint' => 'Alles auf der Liste ist erledigt. Mit der ersten Buchung verschwindet diese Karte endgültig.',
+        'steps' => [
+            'venue' => [
+                'title' => 'Spielstätte anlegen',
+                'hint' => 'Wo das Publikum tatsächlich auftaucht: Name, Adresse und die Zeitzone, in der die Türen aufgehen.',
+            ],
+            'plan' => [
+                'title' => 'Bestuhlung zeichnen und veröffentlichen',
+                'hint' => 'Ein Abend wird gegen einen veröffentlichten Plan verkauft. Ein Entwurf ist keiner, so fertig er auch aussieht.',
+            ],
+            'night' => [
+                'title' => 'Einen Abend in den Kalender setzen',
+                'hint' => 'Ein Datum, eine Uhrzeit und der Plan, gegen den verkauft wird.',
+            ],
+            'prices' => [
+                'title' => 'Preise setzen',
+                'hint' => 'Eine Preiszone, ein Preis für eine Stehfläche oder eine Ticketart zum Festpreis. Ein Platz ohne Preis verkauft sich für nichts.',
+            ],
+            'payment' => [
+                'title' => 'Entscheiden, wie Sie bezahlt werden',
+                'hint' => 'Ein Zahlungsmodul einschalten — oder weiter an der Kasse kassieren und aufschreiben, wie.',
+            ],
+            'shopfront' => [
+                'title' => 'Den Leuten einen Ort zum Kaufen geben',
+                'hint' => 'Veröffentlichen Sie die mitgelieferte Website oder verbinden Sie das Plugin mit der, die Sie schon haben.',
+            ],
+            'rehearsal' => [
+                'title' => 'Das Ganze einmal proben',
+                'hint' => 'Kaufen Sie einen Platz für Ihren eigenen Abend, lesen Sie die E-Mail, scannen Sie sie an der Tür — und räumen Sie danach alles weg. Niemand sollte Ihren ersten Fehler für Sie finden.',
+            ],
+            'onsale' => [
+                'title' => 'In den Verkauf geben',
+                'hint' => 'Den Abend veröffentlichen. Ab diesem Moment sind die Plätze wirklich zu haben.',
+            ],
+        ],
+    ],
+
+    'webapp' => [
+        'title' => 'App auf dem Homescreen',
+        'subtitle' => 'Was aus Ihrer Website wird, wenn jemand sie auf dem Telefon behält.',
+        'site' => 'Website',
+        'preview' => 'Auf einem Homescreen',
+        'previewHint' => 'Die Kachel entsteht aus den Anfangsbuchstaben des Namens und der Akzentfarbe des Themes. Ändern Sie eines davon, ändert sich das hier mit.',
+        'nameLabel' => 'Name unter dem Symbol',
+        'nameHint' => 'Ein Telefon zeigt etwa elf Zeichen und schneidet den Rest ab. Leer lassen, um „:name“ zu verwenden.',
+        'namePlaceholder' => 'z. B. :name',
+        'save' => 'Namen speichern',
+        'saved' => 'Gespeichert. Wer die App ab jetzt installiert, bekommt den neuen Namen.',
+        'installable' => 'Bereit zur Installation',
+        'installableHint' => 'Wer mit dem Telefon vorbeikommt, bekommt „Zum Startbildschirm hinzufügen“ angeboten — und hinzugefügt wird genau das hier.',
+        'notInstallable' => 'Noch nicht installierbar',
+        'notLive' => 'Die Website ist nicht veröffentlicht, also kann sie niemand installieren.',
+        'noDomain' => 'Die Website hat noch keine bestätigte Adresse, also gibt es nichts zu installieren.',
+        'facts' => 'Was sie tut, wenn sie erst einmal da ist',
+        'factOffline' => 'Ein einmal geöffnetes Ticket öffnet sich wieder, ganz ohne Empfang — und darum geht es, in der Schlange an der Tür.',
+        'factShortcut' => 'Langes Drücken auf das Symbol bietet „:name“ an, direkt zu den bereits gekauften Tickets.',
+        'factNoShortcut' => 'Die Anmeldung ist für diese Website aus, also bietet das Symbol keine Abkürzung zu den eigenen Tickets.',
+        'factColour' => 'Die Leiste des Browsers selbst nimmt über der Seite die Farbe :colour an.',
+        'manifest' => 'Was ein Browser liest',
+        'icons' => 'Die Kachel, in jeder Größe, die ein Telefon verlangt',
+        'openSite' => 'Website öffnen',
+        'none' => 'Noch keine Website',
+        'noneHint' => 'Legen Sie eine Website an, und sie wird zu etwas, das Leute auf dem Telefon behalten.',
     ],
 
     'notices' => [

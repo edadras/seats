@@ -9553,6 +9553,29 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Overview" }
 
+  /first-steps:
+    get:
+      operationId: firstSteps
+      tags: [Audit]
+      summary: What still stands between this account and its first real sale
+      description: |
+        Requires `account.manage`, and refused to a programme manager: it is an account-wide answer
+        and it is advice to whoever is setting the account up.
+
+        Every step is read from the account on each request rather than from a stored tick-list, so
+        it cannot drift from what is actually there — delete the venue and the first step un-ticks
+        itself. The order is the order of dependence, and `next` is the first step not done.
+
+        `settled` is true once the account has a confirmed booking on a night that is not being
+        rehearsed. The panel hides the whole checklist when it is, which is what keeps this from
+        being shown to an established venue for ever.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FirstSteps" }
+
   /api-clients:
     get:
       operationId: listApiClients
@@ -10313,6 +10336,32 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /sites/{site}/app:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    get:
+      operationId: getSiteWebApp
+      tags: [Sites]
+      summary: The site as a home screen sees it
+      description: |
+        Requires `sites.view`. Every hosted site is installable — a manifest, a tile drawn from the
+        brand colours, and a service worker that keeps an already-opened ticket readable with no
+        signal. This is the same thing described back to the organiser, who otherwise never sees it.
+
+        `install_name` is what will appear under the icon, whether chosen or derived; `chosen_name`
+        is only the organiser's own override, so a form can show the derived answer as a placeholder
+        instead of pre-filling a value nobody typed. Change it by patching `brand.app_name`.
+
+        Icon URLs are `null` until the site has a verified address, because that is where they are
+        served from. `initials`, `accent` and `on_accent` are given so a preview can be drawn
+        without them.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SiteWebApp" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /sites/{site}/pages:
     parameters:
       - $ref: "#/components/parameters/SiteId"
@@ -13197,6 +13246,71 @@ components:
                     status: { type: string }
                     used_at: { type: [string, "null"], format: date-time }
 
+    FirstSteps:
+      type: object
+      properties:
+        done: { type: integer, description: How many steps are finished. }
+        total: { type: integer }
+        complete: { type: boolean }
+        settled:
+          type: boolean
+          description: >-
+            Whether this account has ever taken a real booking. Once true, the checklist has done
+            its job and the panel stops showing it.
+        next:
+          type: [string, "null"]
+          description: The key of the first step not done, or null when all of them are.
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                enum: [venue, plan, night, prices, payment, shopfront, rehearsal, onsale]
+              done: { type: boolean }
+              view:
+                type: string
+                description: The panel screen that finishes this step.
+
+    SiteWebApp:
+      type: object
+      properties:
+        name: { type: string, description: "The site's full name, as the manifest carries it." }
+        install_name:
+          type: string
+          description: What appears under the icon — the organiser's choice, or one derived from the name.
+        chosen_name:
+          type: [string, "null"]
+          description: Only the override, so a form can distinguish "chosen" from "worked out".
+        suggested_name:
+          type: string
+          description: What would be used with no override. Good as a placeholder.
+        initials: { type: string, description: "Up to two letters, as drawn on the tile." }
+        accent: { type: [string, "null"] }
+        on_accent: { type: [string, "null"] }
+        theme_color:
+          type: string
+          description: The colour a browser paints its own bar above the page.
+        lang: { type: string }
+        dir: { type: string, enum: [ltr, rtl] }
+        shortcut:
+          type: [string, "null"]
+          description: The one home-screen shortcut, where sign-in is on. Null where it is not.
+        status: { type: string, enum: [draft, live] }
+        installable:
+          type: boolean
+          description: Live and reachable at a verified address. A browser offers nothing otherwise.
+        url: { type: [string, "null"], format: uri }
+        manifest_url: { type: [string, "null"], format: uri }
+        icons:
+          type: array
+          items:
+            type: object
+            properties:
+              size: { type: integer }
+              url: { type: [string, "null"], format: uri }
+
     Overview:
       type: object
       properties:
@@ -14405,6 +14519,12 @@ components:
         radius: { type: string }
         logo_url: { type: string, format: uri }
         tagline: { type: string, maxLength: 160 }
+        app_name:
+          type: string
+          maxLength: 30
+          description: >-
+            What the site installs under on a phone's home screen. Empty or absent means it is
+            derived from the site's name, which is what most organisers should leave it as.
         gateways:
           type: array
           description: Payment drivers the storefront offers. Defaults to `offline` — pay at the box office.

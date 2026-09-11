@@ -99,6 +99,10 @@
 			{ key: 'messaging', icon: 'mail', needs: 'messages.send' },
 			{ key: 'sites', icon: 'globe', needs: 'sites.view' },
 			{ key: 'themes', icon: 'palette', needs: 'sites.view' },
+			// The same website, as a thing on a phone's home screen. Beside the site rather than
+			// under the account, because it *is* the site — one tile, one name, one question about
+			// whether a browser will offer it.
+			{ key: 'webapp', icon: 'ticket', needs: 'sites.view' },
 		] },
 		{ group: 'insight', items: [
 			{ key: 'reports', icon: 'chart', needs: 'reports.attendance.view', notFor: 'manager' },
@@ -1181,6 +1185,7 @@
 			case 'loyalty': return window.SeatmapLoyalty.render( this );
 			case 'memberships': return window.SeatmapMemberships.render( this );
 			case 'scanners': return window.SeatmapScanners.render( this );
+			case 'webapp': return window.SeatmapWebApp.render( this );
 			case 'orders': return window.SeatmapOrders.render( this );
 			case 'plans': return window.SeatmapPlans.render( this );
 			case 'discounts': return window.SeatmapDiscounts.render( this );
@@ -1651,12 +1656,27 @@
 
 		this.loading( this.t( 'panel.nav.overview' ) );
 
-		this.request( 'GET', '/overview' )
-			.then( function ( data ) {
+		/*
+		 * Two requests, and the second one is allowed to fail.
+		 *
+		 * The checklist is behind `account.manage`, which most of the people who open this screen
+		 * do not hold — so it is asked for only when they do, and a refusal or an outage on it
+		 * still leaves the overview itself perfectly usable. A first-run aid that can take down the
+		 * first screen is a bad trade.
+		 */
+		var steps = this.may( 'account.manage' )
+			? this.request( 'GET', '/first-steps' ).catch( function () { return null; } )
+			: Promise.resolve( null );
+
+		Promise.all( [ this.request( 'GET', '/overview' ), steps ] )
+			.then( function ( answers ) {
+				var data = answers[ 0 ];
+
 				self.page( {
 					title: self.t( 'panel.nav.overview' ),
 					description: self.t( 'panel.overview.description' ),
-					body: '<div class="stat-strip">' + overviewStats( self, data ) + '</div>' +
+					body: firstSteps( self, answers[ 1 ] ) +
+						'<div class="stat-strip">' + overviewStats( self, data ) + '</div>' +
 						'<div class="split">' +
 							'<section class="card card--pad">' +
 								'<h2 class="card__title">' + esc( self.t( 'panel.overview.nextUp' ) ) + '</h2>' +
@@ -1677,6 +1697,69 @@
 			} )
 			.catch( function ( error ) { self.error( error ); } );
 	};
+
+	/**
+	 * The first afternoon, as a list of eight things with the next one marked.
+	 *
+	 * Above the numbers rather than below them, and only for as long as it is true: an account that
+	 * has taken a real booking never sees this again. That rule is the difference between a
+	 * checklist and a nag — and it is decided by the server, from whether a live confirmed order
+	 * exists, so it cannot be dismissed into a state that disagrees with the account.
+	 *
+	 * Each row is a button into the screen that finishes it, because a checklist you cannot act on
+	 * from where you are reading it is homework.
+	 */
+	function firstSteps( app, steps ) {
+		if ( ! steps || steps.settled ) {
+			return '';
+		}
+
+		if ( steps.complete ) {
+			return '<section class="card card--pad first-steps first-steps--done">' +
+				'<h2 class="card__title">' + esc( app.t( 'panel.firstSteps.allDone' ) ) + '</h2>' +
+				'<p class="hint">' + esc( app.t( 'panel.firstSteps.allDoneHint' ) ) + '</p>' +
+				'</section>';
+		}
+
+		var rows = ( steps.steps || [] ).map( function ( step ) {
+			var isNext = step.key === steps.next;
+
+			return '<li class="first-step' + ( step.done ? ' is-done' : '' ) +
+				( isNext ? ' is-next' : '' ) + '">' +
+				// The number is drawn by CSS from a counter, and a tick replaces it once the step
+				// is done — so the word "done" is said here for anybody who is being read to.
+				'<span class="first-step__mark">' + ( step.done
+					? '<span class="sr-only">' + esc( app.t( 'panel.firstSteps.done' ) ) + '</span>' +
+						icon( 'check', { size: 14 } )
+					: '' ) + '</span>' +
+				'<span class="first-step__text">' +
+					'<span class="first-step__title">' +
+						esc( app.t( 'panel.firstSteps.steps.' + step.key + '.title' ) ) +
+						( isNext ? ' <span class="badge badge--ok">' +
+							esc( app.t( 'panel.firstSteps.next' ) ) + '</span>' : '' ) +
+					'</span>' +
+					'<span class="first-step__hint">' +
+						esc( app.t( 'panel.firstSteps.steps.' + step.key + '.hint' ) ) + '</span>' +
+				'</span>' +
+				( step.done || ! app.mayOpen( step.view )
+					? ''
+					: '<button type="button" class="btn btn--sm" data-goto="' + esc( step.view ) + '">' +
+						esc( app.t( 'panel.firstSteps.open' ) ) + '</button>' ) +
+				'</li>';
+		} ).join( '' );
+
+		return '<section class="card card--pad first-steps">' +
+			'<div class="row--between">' +
+				'<h2 class="card__title">' + esc( app.t( 'panel.firstSteps.title' ) ) + '</h2>' +
+				'<span class="muted tnum">' + esc( app.t( 'panel.firstSteps.progress', {
+					done: app.number( steps.done ),
+					total: app.number( steps.total ),
+				} ) ) + '</span>' +
+			'</div>' +
+			'<p class="hint">' + esc( app.t( 'panel.firstSteps.subtitle' ) ) + '</p>' +
+			'<ol class="first-steps__list">' + rows + '</ol>' +
+			'</section>';
+	}
 
 	/** A number worth walking across the room for, and the word that says what it is. */
 	function statTile( app, value, label, meta, view ) {

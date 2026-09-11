@@ -562,7 +562,48 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
-## Finding your way around thirty-five screens
+## A first day that leads somewhere
+
+Signing up builds an account, a website and a seating plan to draw on, and then leaves somebody in
+front of thirty-six screens with no indication which of them matters this afternoon. That is the
+particular way a complete product still fails a new customer: not by missing a feature, but by
+never saying what to do next.
+
+So the overview opens with **eight steps, in the order they have to happen** — a venue, a published
+plan, a night, a price on it, a way to be paid, somewhere to buy, a rehearsal, and then the onsale.
+Each row is a button into the screen that finishes it. Three things make it a checklist rather than
+a nag:
+
+**Every step is a fact, never a stored tick.** Nothing here is marked done by visiting a screen;
+each step asks the database whether the thing exists. Delete the venue and the first step un-ticks
+itself. A checklist with state of its own drifts from the account it describes, and then it is worse
+than no checklist, because it is confidently wrong.
+
+**Two of the steps are deliberately harder to satisfy than they look.** A seating plan still in
+draft does not count, because a night cannot be sold against one. And "pay at the box office" is
+switched on for every new account before the organiser has decided anything — so it counts only once
+its instructions are written, which is the point at which somebody actually decided. Any other
+payment module being on at all is the decision, since somebody had to go and switch it on.
+
+**It ends at a rehearsal, and then it leaves.** The last two steps are *walk your own checkout* and
+*put it on sale*, in that order: nobody's first genuine customer should be the test. The rehearsal
+step is read from the audit log rather than from the events table, because a rehearsal ends by being
+swept away — by the time it has been done properly there is nothing left to look at. And once the
+account has a confirmed booking on a night that is not being rehearsed, the whole thing disappears
+for good. An established venue being shown a beginners' checklist is a product that does not know
+who it is talking to.
+
+**And the app the organiser had never seen.** Every hosted site has been installable for a while —
+a manifest, a tile, a service worker that keeps an already-opened ticket readable with no signal —
+and all of it was visible only to buyers. There is a **Home-screen app** screen now: the tile as a
+launcher will draw it, the name it installs under, and a plain answer to whether a browser will
+offer the install at all, with the reason where it will not. The preview is drawn from the colours
+and the initials rather than by loading the real PNG, so it works *before* the site has an address
+to load one from — which is exactly when somebody is looking at this screen. The one editable piece
+is the name: a home screen shows about eleven characters and cuts the rest, so the derived answer is
+a guess, and only the venue knows whether its audience calls the place "Northgate" or "The Arts".
+
+## Finding your way around thirty-six screens
 
 Two corrections to the panel, both of which were the same mistake: a menu grouped by the table a
 screen reads rather than by the question somebody arrived with.
@@ -893,7 +934,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-five, in order
+./smoke.sh                    # all sixty-six, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code

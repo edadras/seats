@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\Management\EntrySlotController;
 use App\Http\Controllers\Api\V1\Management\EventController;
 use App\Http\Controllers\Api\V1\Management\EventQuestionController;
 use App\Http\Controllers\Api\V1\Management\MessagingController;
+use App\Http\Controllers\Api\V1\Management\OnboardingController;
 use App\Http\Controllers\Api\V1\Management\OverviewController;
 use App\Http\Controllers\Api\V1\Management\ModuleController;
 use App\Http\Controllers\Api\V1\Management\NotificationController;
@@ -643,6 +644,10 @@ Route::prefix('v1')->group(function () {
         // not a first impression. What it may include is decided permission by permission inside.
         Route::get('overview', [OverviewController::class, 'index']);
 
+        // What is still standing between this account and its first real sale. Read from the
+        // account itself every time rather than from a stored tick-list, so it cannot be wrong.
+        Route::get('first-steps', [OnboardingController::class, 'firstSteps']);
+
         // Where an organiser puts their own Apple and Google credentials. Nothing secret comes
         // back out: the screen says whether each half is configured, never what it holds.
         Route::get('wallet', [WalletController::class, 'show']);
@@ -728,6 +733,9 @@ Route::prefix('v1')->group(function () {
         Route::get('sites', [SiteController::class, 'index']);
         Route::get('sites/{site}', [SiteController::class, 'show']);
         Route::patch('sites/{site}', [SiteController::class, 'update']);
+        // The site as a home screen sees it: the tile, the name under it, and whether a browser
+        // will offer to install it at all.
+        Route::get('sites/{site}/app', [SiteController::class, 'app']);
 
         Route::post('sites/{site}/pages', [SiteController::class, 'storePage']);
         Route::patch('sites/{site}/pages/{page}', [SiteController::class, 'updatePage']);

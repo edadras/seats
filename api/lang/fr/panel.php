@@ -53,6 +53,7 @@ return [
         'billing' => 'Facturation',
         'audit' => 'Activité',
         'memberships' => 'Adhésions',
+        'webapp' => 'Application sur l’écran d’accueil',
     ],
 
     'promoters' => [
@@ -112,6 +113,79 @@ return [
         'nothingOnBody' => 'Un événement part en vente une fois publié sur un plan publié.',
         'recent' => 'Activité récente',
         'nothingYet' => 'Rien ne s’est encore passé.',
+    ],
+
+    'firstSteps' => [
+        'title' => 'Premiers pas',
+        'subtitle' => 'Ce qui vous sépare de votre première vraie vente, dans l’ordre où cela doit se faire.',
+        'progress' => ':done sur :total',
+        'next' => 'Ensuite',
+        'open' => 'Ouvrir',
+        'done' => 'Fait',
+        'allDone' => 'Vous pouvez vendre',
+        'allDoneHint' => 'Tout est fait. Cette carte disparaîtra définitivement dès la première réservation.',
+        'steps' => [
+            'venue' => [
+                'title' => 'Ajouter la salle',
+                'hint' => 'Là où le public se présente vraiment : son nom, son adresse et le fuseau horaire où les portes s’ouvrent.',
+            ],
+            'plan' => [
+                'title' => 'Dessiner le plan de salle et le publier',
+                'hint' => 'Une soirée se vend sur un plan publié. Un dessin encore en brouillon n’en est pas un, aussi fini qu’il paraisse.',
+            ],
+            'night' => [
+                'title' => 'Mettre une soirée au calendrier',
+                'hint' => 'Une date, une heure et le plan sur lequel elle se vend.',
+            ],
+            'prices' => [
+                'title' => 'Fixer les prix',
+                'hint' => 'Une zone tarifaire, un prix pour un espace debout ou un type de billet à tarif fixe. Une place sans prix se vend pour rien.',
+            ],
+            'payment' => [
+                'title' => 'Décider comment vous êtes payé',
+                'hint' => 'Activez une passerelle de paiement — ou continuez d’encaisser au guichet, et écrivez comment.',
+            ],
+            'shopfront' => [
+                'title' => 'Donner aux gens un endroit où acheter',
+                'hint' => 'Publiez le site qui vous a été fourni, ou reliez l’extension à celui que vous avez déjà.',
+            ],
+            'rehearsal' => [
+                'title' => 'Répéter l’ensemble une fois',
+                'hint' => 'Achetez une place pour votre propre soirée, lisez le courriel, scannez-le à l’entrée — puis effacez tout. Personne ne devrait découvrir votre première erreur à votre place.',
+            ],
+            'onsale' => [
+                'title' => 'Mettre en vente',
+                'hint' => 'Publiez la soirée. À partir de là, les places sont vraiment en vente.',
+            ],
+        ],
+    ],
+
+    'webapp' => [
+        'title' => 'Application sur l’écran d’accueil',
+        'subtitle' => 'Ce que devient votre site quand quelqu’un le garde sur son téléphone.',
+        'site' => 'Site',
+        'preview' => 'Sur un écran d’accueil',
+        'previewHint' => 'La tuile est dessinée à partir des initiales du nom et de la couleur d’accent du thème. Changez l’un ou l’autre et elle change avec.',
+        'nameLabel' => 'Nom sous l’icône',
+        'nameHint' => 'Un téléphone affiche une dizaine de caractères et coupe le reste. Laissez vide pour utiliser « :name ».',
+        'namePlaceholder' => 'par ex. :name',
+        'save' => 'Enregistrer le nom',
+        'saved' => 'Enregistré. Toute installation à partir de maintenant portera le nouveau nom.',
+        'installable' => 'Prêt à être installé',
+        'installableHint' => 'Un visiteur sur téléphone se voit proposer « Ajouter à l’écran d’accueil », et ce qu’il ajoute, c’est ceci.',
+        'notInstallable' => 'Pas encore installable',
+        'notLive' => 'Le site n’est pas en ligne, personne ne peut donc l’installer.',
+        'noDomain' => 'Le site n’a pas encore d’adresse vérifiée : il n’y a rien à installer.',
+        'facts' => 'Ce qu’elle fait une fois installée',
+        'factOffline' => 'Un billet ouvert une fois s’ouvre de nouveau sans aucun réseau — et c’est tout l’intérêt, dans la file à l’entrée.',
+        'factShortcut' => 'Un appui long sur l’icône propose « :name », directement vers les billets déjà achetés.',
+        'factNoShortcut' => 'La connexion est désactivée pour ce site : l’icône n’offre donc aucun raccourci vers les billets de l’acheteur.',
+        'factColour' => 'La barre du navigateur elle-même prend la couleur :colour au-dessus de la page.',
+        'manifest' => 'Ce que lit un navigateur',
+        'icons' => 'La tuile, dans chaque taille qu’un téléphone réclame',
+        'openSite' => 'Ouvrir le site',
+        'none' => 'Pas encore de site',
+        'noneHint' => 'Créez un site et il deviendra une chose que les gens gardent sur leur téléphone.',
     ],
 
     'notices' => [

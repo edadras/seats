@@ -41,7 +41,7 @@ class WebApp
         $manifest = [
             'id' => '/',
             'name' => $name,
-            'short_name' => $this->shortName($name),
+            'short_name' => $this->installName($site),
             'start_url' => '/',
             'scope' => '/',
             'display' => 'standalone',
@@ -134,6 +134,44 @@ class WebApp
     }
 
     /**
+     * The name that goes under the icon.
+     *
+     * A home screen gives a label about eleven characters before it truncates it, and what gets cut
+     * is the end — so "Northgate Arts Centre" becomes "Northgate A…" and a venue whose name begins
+     * with the city it is in becomes indistinguishable from every other venue in that city. The
+     * derived answer is a decent guess and nothing more, which is why an organiser can overrule it:
+     * only they know whether their audience calls the place "Northgate" or "The Arts".
+     *
+     * Stored on the brand rather than as a column, beside the accent and the logo, because it is
+     * the same kind of fact — how this venue presents itself — and it is read at exactly the same
+     * two moments.
+     */
+    public function installName(Site $site): string
+    {
+        $chosen = trim((string) ($site->brand['app_name'] ?? ''));
+
+        return '' !== $chosen ? $chosen : $this->derivedName($site);
+    }
+
+    /**
+     * What the name would be with nothing chosen: one word where there is one, cut where there is
+     * not. Worth asking for on its own — a form offers it as the placeholder, so an empty field
+     * still says what will happen.
+     */
+    public function derivedName(Site $site): string
+    {
+        $name = trim($site->name) ?: 'Tickets';
+
+        if (mb_strlen($name) <= 12) {
+            return $name;
+        }
+
+        $first = preg_split('/\s+/u', $name, -1, PREG_SPLIT_NO_EMPTY)[0] ?? $name;
+
+        return mb_strlen($first) <= 12 ? $first : mb_substr($name, 0, 12);
+    }
+
+    /**
      * Up to two letters from the venue's own name.
      *
      * Not restricted to ASCII, unlike the wallet's tile: this one is drawn with a real face, so
@@ -152,18 +190,6 @@ class WebApp
     }
 
     /* --------------------------------------------------------------------------- internals */
-
-    /** A short name is what fits under an icon: one word where there is one, cut where there is not. */
-    private function shortName(string $name): string
-    {
-        if (mb_strlen($name) <= 12) {
-            return $name;
-        }
-
-        $first = preg_split('/\s+/u', $name, -1, PREG_SPLIT_NO_EMPTY)[0] ?? $name;
-
-        return mb_strlen($first) <= 12 ? $first : mb_substr($name, 0, 12);
-    }
 
     private function letter(\GdImage $image, int $size, string $letters, int $ink): void
     {

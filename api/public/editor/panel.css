@@ -2872,3 +2872,126 @@
 }
 
 .statement-lines li:last-child { border-block-end: 0; }
+
+/*
+ * The first-run checklist, above the numbers on the overview.
+ *
+ * Numbered by the list itself rather than by a counter we draw, because the order is the whole
+ * content: these eight things happen in this sequence and no other, and a set of unnumbered ticks
+ * would read as a set of independent suggestions.
+ *
+ * Only one row is emphasised at a time — the next one — and the emphasis is a left edge in the
+ * accent rather than a filled panel: a checklist where every outstanding row shouts is a checklist
+ * with no next step in it.
+ */
+.first-steps { margin-block-end: var(--s-5); }
+
+.first-steps__list {
+	margin: var(--s-3) 0 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: first-step;
+}
+
+.first-step {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--s-3);
+	padding: var(--s-3);
+	border-block-end: 1px solid var(--border-subtle);
+	border-inline-start: 2px solid transparent;
+}
+
+.first-step:last-child { border-block-end: 0; }
+
+.first-step.is-next {
+	border-inline-start-color: var(--accent);
+	background: var(--surface-sunken);
+	border-radius: var(--r-sm);
+}
+
+/* The tick, or the number of the step that has not been done yet. */
+.first-step__mark {
+	counter-increment: first-step;
+	flex: none;
+	inline-size: 1.5rem;
+	block-size: 1.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	border: 1px solid var(--border);
+	color: var(--text-muted);
+	font-size: 0.75rem;
+	line-height: 1;
+}
+
+.first-step__mark::before { content: counter(first-step); }
+
+.first-step.is-done .first-step__mark {
+	border-color: var(--ok);
+	background: var(--ok);
+	color: var(--on-accent);
+}
+
+.first-step.is-done .first-step__mark::before { content: none; }
+
+.first-step__text { flex: 1 1 auto; min-inline-size: 0; }
+
+.first-step__title {
+	display: block;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.first-step__title .badge { margin-inline-start: var(--s-2); }
+
+.first-step.is-done .first-step__title { color: var(--text-muted); }
+
+.first-step__hint {
+	display: block;
+	margin-block-start: 2px;
+	font-size: 0.8125rem;
+	color: var(--text-muted);
+}
+
+.first-step .btn { flex: none; }
+
+/*
+ * A tile as a home screen draws it.
+ *
+ * Drawn in CSS rather than by loading the real PNG so the preview works before the site has an
+ * address to load it from — which is precisely when somebody is looking at this screen. The label
+ * is clipped at a realistic width instead of being cut in JavaScript, so what is shown here is the
+ * truncation a launcher will actually perform.
+ */
+.homescreen {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--s-2);
+	inline-size: 6rem;
+	margin-block: var(--s-3);
+}
+
+.homescreen__tile {
+	inline-size: 4.5rem;
+	block-size: 4.5rem;
+	border-radius: 1.125rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.75rem;
+	font-weight: 700;
+	box-shadow: var(--shadow-sm);
+}
+
+.homescreen__label {
+	max-inline-size: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.75rem;
+	color: var(--text);
+	text-align: center;
+}

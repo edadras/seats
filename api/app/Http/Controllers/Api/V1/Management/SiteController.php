@@ -188,6 +188,60 @@ class SiteController extends Controller
 
     /* ------------------------------------------------------------------------------ pages */
 
+    /**
+     * The site as it will look on somebody's home screen.
+     *
+     * This exists because the web app was, until now, invisible to the person who owns it. A buyer
+     * is offered an install prompt with a tile and a name on it; the organiser who chose neither
+     * had no screen anywhere that showed them what the two were, and no way to change the name. A
+     * thing your customers see and you cannot is not a feature you own.
+     *
+     * Composed from {@see WebApp} rather than restated, so what this reports is what a browser will
+     * actually read — the derivation lives in one class and this is a view of it. The icon URLs are
+     * absolute on the site's own host because that is where they are served from, and they are null
+     * before a domain is verified, which is the honest answer: the panel draws the tile from the
+     * colours and initials below instead of showing a broken image.
+     */
+    public function app(Request $request, Site $site)
+    {
+        $this->authorize($request, 'sites.view');
+
+        $brand = Themes::forSite($site);
+        $webApp = app(\App\Domain\Sites\WebApp::class);
+        $locale = $site->locale ?: (string) config('app.locale');
+        $manifest = $webApp->manifest($site, $brand, $locale);
+        $tokens = $brand['tokens'] ?? [];
+        $host = $site->canonicalHost();
+
+        return response()->json([
+            'name' => $manifest['name'],
+            // What will be under the icon, whether it was chosen or derived.
+            'install_name' => $manifest['short_name'],
+            // The organiser's own choice, or null where there is none. Kept apart from the line
+            // above so the field can be shown empty with the derived answer as its placeholder,
+            // rather than pre-filled with a value nobody typed.
+            'chosen_name' => $site->brand['app_name'] ?? null,
+            'suggested_name' => $webApp->derivedName($site),
+            'initials' => $webApp->initials($site->name),
+            'accent' => $tokens['accent'] ?? null,
+            'on_accent' => $tokens['on_accent'] ?? null,
+            'theme_color' => $manifest['theme_color'],
+            'lang' => $manifest['lang'],
+            'dir' => $manifest['dir'],
+            'shortcut' => isset($manifest['shortcuts'][0]) ? $manifest['shortcuts'][0]['name'] : null,
+            'status' => $site->status,
+            // Both conditions, because both are needed and an organiser stuck on one of them needs
+            // to be told which. A browser offers no install for a site nobody can reach.
+            'installable' => 'live' === $site->status && null !== $host,
+            'url' => $host ? $site->url('/') : null,
+            'manifest_url' => $host ? $site->url('/manifest.webmanifest') : null,
+            'icons' => array_map(fn (int $size) => [
+                'size' => $size,
+                'url' => $host ? $site->url('/app-icon-'.$size.'.png') : null,
+            ], \App\Domain\Sites\WebApp::SIZES),
+        ]);
+    }
+
     public function storePage(Request $request, Site $site)
     {
         $this->authorize($request, 'sites.manage');
@@ -615,6 +669,13 @@ class SiteController extends Controller
             'radius' => isset(Themes::RADII[$brand['radius'] ?? '']) ? $brand['radius'] : null,
             'logo_url' => Themes::url($brand['logo_url'] ?? null),
             'tagline' => isset($brand['tagline']) ? mb_substr((string) $brand['tagline'], 0, 160) : null,
+            // What the site installs under on a home screen. Thirty characters rather than the
+            // eleven a launcher shows, because the cut belongs to the launcher: a venue that wants
+            // its full name there and accepts the ellipsis is entitled to it. Blank means "work it
+            // out from the site's name", which is what `array_filter` below turns it back into.
+            'app_name' => isset($brand['app_name'])
+                ? (mb_substr(trim((string) $brand['app_name']), 0, 30) ?: null)
+                : null,
             'gateways' => $gateways ?: ['offline'],
         ], fn ($value) => null !== $value);
     }
