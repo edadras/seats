@@ -3,6 +3,7 @@
 use App\Http\Controllers\CheckinAppController;
 use App\Http\Controllers\FrontDoorController;
 use App\Http\Controllers\GoogleSignInController;
+use App\Http\Controllers\ScheduledReportController;
 use App\Http\Controllers\Site\BuyerAccountController;
 use App\Http\Controllers\Site\BasketController;
 use App\Http\Controllers\Site\CheckoutController;
@@ -237,6 +238,18 @@ Route::get('sitemap.xml', [SiteFilesController::class, 'sitemap']);
  * membership of `platform_admins` — this route serves the shell to anybody, and the shell can do
  * nothing without a token that passes that check.
  */
+/*
+ * The spreadsheet behind a scheduled report.
+ *
+ * Ahead of the front door, and on every host, for the same reason the door scanner is: the link
+ * goes out in an email and gets clicked from wherever, and a site is a place to buy a ticket rather
+ * than a place that answers for one of the platform's own links. The signature is the whole of the
+ * authorisation — see the controller for why that is the right trade and what bounds it.
+ */
+Route::get('reports/scheduled/{schedule}', ScheduledReportController::class)
+    ->name('reports.scheduled.download')
+    ->middleware('throttle:20,1,scheduled-report');
+
 Route::get('console', fn () => view('console'));
 
 // The door scanner. Ahead of the front door because /checkin belongs to the platform on every
@@ -246,4 +259,4 @@ Route::get('checkin/{path}', CheckinAppController::class)->where('path', '.*');
 
 Route::get('/', FrontDoorController::class);
 Route::get('{path}', FrontDoorController::class)
-    ->where('path', '^(?!v1|up|storage|site|checkin|console).*$');
+    ->where('path', '^(?!v1|up|storage|site|checkin|console|reports).*$');

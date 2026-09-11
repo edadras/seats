@@ -77,6 +77,8 @@ return [
     'invoice_is_void' => 'A voided invoice cannot be paid.',
     'invoice_already_void' => 'That invoice has already been voided.',
     'unknown_invoice' => 'That invoice cannot be found.',
+    'unknown_report' => 'That report cannot be found.',
+    'unknown_schedule' => 'That schedule cannot be found.',
     'cards_not_taken' => 'This platform does not take cards. Invoices are paid by transfer.',
     'card_setup_unavailable' => 'The card could not be set up just now. Try again shortly.',
     'card_setup_unfinished' => 'That card was not finished. Start again and complete the page at the end.',

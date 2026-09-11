@@ -44,6 +44,15 @@ Schedule::command('messages:announce')->everyMinute()->withoutOverlapping()->run
 Schedule::command('events:watch-capacity')->hourly()->withoutOverlapping()->runInBackground();
 
 /*
+ * Reports that arrive rather than waiting to be opened.
+ *
+ * Hourly, which is as fine as a schedule goes: each one knows the timezone it was made in, so
+ * "eight in the morning" means eight where the venue is. A report that could fire every ten minutes
+ * would not be a report, it would be an alert.
+ */
+Schedule::command('reports:send')->hourly()->withoutOverlapping()->runInBackground();
+
+/*
  * The platform's own bill.
  *
  * Daily, because an account's period ends on the day it signed up: on any given day a few are due

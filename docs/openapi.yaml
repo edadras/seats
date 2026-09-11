@@ -5100,6 +5100,157 @@ paths:
                 properties:
                   reset: { type: boolean }
 
+  /report-schedules:
+    get:
+      operationId: listReportSchedules
+      tags: [Reports]
+      summary: The saved reports that go out on their own
+      description: >
+        The permission is each report's own source, checked when the list is read rather than when
+        a schedule was made: roles change, and a report scheduled last year by somebody since moved
+        to the door should stop appearing on their screen. A schedule whose report this caller may
+        not read is not listed at all — showing it would leak the report's name and the fact that
+        somebody is receiving it.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReportSchedule" }
+    post:
+      operationId: scheduleReport
+      tags: [Reports]
+      summary: Put a saved report on a timer
+      description: |
+        Requires the permission of the report's own source, so scheduling is never a way to be sent
+        a report you may not open. A report the caller cannot read comes back as not found rather
+        than forbidden.
+
+        The recipients are addresses, not accounts: the people who want Monday's figures are often a
+        marketing agency, a board member or an auditor. Whoever sets the schedule is vouching for
+        them, and the audit log records who did it.
+
+        The hour is read in `timezone`, which is copied from the account when the schedule is made
+        and then frozen — a venue that moves its account timezone has not asked for the Monday
+        report to start arriving at a different hour.
+
+        `day_of_month` stops at 28 on purpose: a schedule set for the 31st would skip February
+        entirely and half the other months besides, and "it did not arrive and nobody knows why" is
+        the worst failure a scheduled report has.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [report_id, cadence, recipients]
+              properties:
+                report_id: { type: string, format: uuid }
+                name: { type: [string, "null"], maxLength: 120 }
+                cadence: { type: string, enum: [daily, weekly, monthly] }
+                hour: { type: integer, minimum: 0, maximum: 23, default: 8 }
+                weekday: { type: [integer, "null"], minimum: 1, maximum: 7, description: "Weekly only. 1 is Monday." }
+                day_of_month: { type: [integer, "null"], minimum: 1, maximum: 28 }
+                timezone: { type: string }
+                locale: { type: string, maxLength: 12 }
+                recipients:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { type: string, format: email }
+                include_link: { type: boolean, default: true }
+                paused: { type: boolean, default: false }
+      responses:
+        "201":
+          description: Scheduled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportSchedule" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /report-schedules/{schedule}:
+    parameters:
+      - name: schedule
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateReportSchedule
+      tags: [Reports]
+      summary: Change when it goes, or who to
+      description: >
+        The next run is recomputed on every edit: an hour changed at four in the afternoon must not
+        leave yesterday's slot sitting in `next_run_at`, which would fire the moment the hourly
+        command next ran.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: [string, "null"], maxLength: 120 }
+                cadence: { type: string, enum: [daily, weekly, monthly] }
+                hour: { type: integer, minimum: 0, maximum: 23 }
+                weekday: { type: [integer, "null"], minimum: 1, maximum: 7 }
+                day_of_month: { type: [integer, "null"], minimum: 1, maximum: 28 }
+                recipients:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { type: string, format: email }
+                include_link: { type: boolean }
+                paused: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportSchedule" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: unscheduleReport
+      tags: [Reports]
+      summary: Stop sending it
+      description: The report itself stays; only the schedule goes.
+      responses:
+        "204": { description: Stopped }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /report-schedules/{schedule}/send:
+    parameters:
+      - name: schedule
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: sendReportNow
+      tags: [Reports]
+      summary: Send it now, without waiting for its hour
+      description: >
+        Also requires `messages.send`, because it writes to people. For somebody who has just built
+        a schedule and wants to see what will arrive rather than waiting a week to find out they
+        typed the wrong address. It does not move the timer — this is an extra send, not a
+        substitute for the scheduled one.
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ReportSchedule"
+                  - type: object
+                    properties:
+                      sent: { type: integer, description: "How many messages actually went." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /reports/sources:
     get:
       operationId: listReportSources
@@ -11802,6 +11953,42 @@ components:
         sites:
           type: integer
           description: How many — not which. The list of them is `websites`.
+
+    ReportSchedule:
+      type: object
+      description: >-
+        A saved report, a cadence and the people it goes to. Never a result: the report is re-run at
+        the moment it is sent, so a schedule cannot become a cache of numbers that have since been
+        corrected (ADR-0006 §2), and a timer does not get an exception to that.
+      properties:
+        id: { type: string, format: uuid }
+        report_id: { type: string, format: uuid }
+        report: { type: [string, "null"], description: "The saved report's own name." }
+        name: { type: [string, "null"] }
+        cadence: { type: string, enum: [daily, weekly, monthly] }
+        hour: { type: integer }
+        weekday: { type: [integer, "null"] }
+        day_of_month: { type: [integer, "null"] }
+        timezone:
+          type: string
+          description: "Frozen when the schedule was made, so the hour survives an account moving."
+        locale: { type: string }
+        recipients:
+          type: array
+          items: { type: string, format: email }
+        include_link:
+          type: boolean
+          description: >-
+            Whether the email carries a signed link to the full spreadsheet, good for seven days and
+            openable without signing in. Not an attachment: that would be the stale copy this engine
+            exists to avoid, and it is also how a mailbox quota becomes a reporting outage.
+        paused: { type: boolean }
+        next_run_at: { type: [string, "null"], format: date-time }
+        last_sent_at: { type: [string, "null"], format: date-time }
+        last_rows: { type: [integer, "null"] }
+        last_error:
+          type: [string, "null"]
+          description: "Why the last one did not go — a schedule that quietly stopped arriving is the failure nobody notices."
 
     PlatformInvoice:
       type: object

@@ -111,8 +111,48 @@ const firstSection = await page.locator( '#report-result tbody tr td' ).first().
 check( 'the file says what the screen said', csv.includes( firstSection ),
 	`${ firstSection } / ${ csv.split( '\n' )[ 1 ] }` );
 
-console.log( 'On a page' );
+console.log( 'Putting it on a timer' );
 await page.click( '#report-back' );
+await page.waitForSelector( '[data-schedule]' );
+await page.locator( '[data-schedule]' ).first().click();
+await page.waitForSelector( '#sch-cadence' );
+
+// Weekly is the default, so the weekday box is the one that is showing and the monthly one is not.
+check( 'the form asks only what the chosen cadence needs',
+	await page.locator( '#sch-weekday-field' ).isVisible()
+		&& ! ( await page.locator( '#sch-day-field' ).isVisible() ) );
+
+await page.selectOption( '#sch-cadence', 'monthly' );
+await page.waitForTimeout( 200 );
+
+check( 'and swaps them when it changes',
+	await page.locator( '#sch-day-field' ).isVisible()
+		&& ! ( await page.locator( '#sch-weekday-field' ).isVisible() ) );
+
+await page.selectOption( '#sch-cadence', 'weekly' );
+await page.fill( '#sch-name', 'Monday figures' );
+await page.fill( '#sch-to', 'board@example.test\nmarketing@example.test' );
+await page.click( '.modal button[type=submit]' );
+await page.waitForSelector( '.modal', { state: 'detached' } );
+await page.waitForTimeout( 1400 );
+
+const scheduled = await page.locator( '.page-body' ).innerText();
+
+check( 'the schedule is listed with when it goes and to whom',
+	/Monday figures/.test( scheduled ) && /board@example\.test/.test( scheduled ),
+	scheduled.replace( /\s+/g, ' ' ).slice( 0, 120 ) );
+
+await page.screenshot( { path: `${ process.env.SEATMAP_SHOTS || '/tmp' }/schedules.png`, fullPage: true } );
+
+// Sent by hand, because somebody who has just set one up wants to see what will arrive rather than
+// waiting a week to find out they typed the wrong address.
+await page.locator( '[data-schedule-send]' ).first().click();
+await page.waitForTimeout( 1800 );
+
+check( 'and it can be sent straight away', /2/.test( await page.locator( '.toast' ).innerText() ),
+	await page.locator( '.toast' ).innerText() );
+
+console.log( 'On a page' );
 await page.waitForSelector( '#report-new-page' );
 await page.click( '#report-new-page' );
 await page.waitForSelector( '.modal' );

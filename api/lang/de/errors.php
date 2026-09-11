@@ -77,6 +77,8 @@ return [
     'invoice_is_void' => 'Eine stornierte Rechnung kann nicht bezahlt werden.',
     'invoice_already_void' => 'Diese Rechnung wurde bereits storniert.',
     'unknown_invoice' => 'Diese Rechnung wurde nicht gefunden.',
+    'unknown_report' => 'Dieser Bericht wurde nicht gefunden.',
+    'unknown_schedule' => 'Dieser Zeitplan wurde nicht gefunden.',
     'cards_not_taken' => 'Diese Plattform nimmt keine Karten. Rechnungen werden per Überweisung bezahlt.',
     'card_setup_unavailable' => 'Die Karte konnte gerade nicht hinterlegt werden. Bitte gleich noch einmal versuchen.',
     'card_setup_unfinished' => 'Diese Karte wurde nicht fertig hinterlegt. Bitte neu beginnen und die letzte Seite abschließen.',

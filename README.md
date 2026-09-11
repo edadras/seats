@@ -329,7 +329,16 @@ A seat is the start of it, not the end. Around the map:
   findable. The organiser reads every payout on their own settlement screen; only the platform's
   operators can make one.
 - **Reports** built by dragging fields, with no SQL box — [ADR-0006](docs/adr/0006-report-engine.md)
-  says why.
+  says why — **and reports that arrive rather than waiting to be opened.** The builder could always
+  answer any question somebody thought to ask it, which was the whole of the problem: somebody had
+  to think to ask, and the reports nobody opened were the ones worth reading. A schedule is a timer
+  on a definition and never a cache: it is re-run at the moment it is sent, so it cannot hand
+  anybody numbers that have since been corrected. The email carries the first rows as text and a
+  signed link to the spreadsheet, good for a week and openable without signing in — because the
+  people who want Monday's figures are often a board member or an agency with no account here.
+  Scheduling something needs the permission of the report's own source, so it is never a way to be
+  sent a report you may not open, and the check is made when the list is read as well as when the
+  schedule is set, because roles change.
 - **Two-step sign-in** for staff, and **GDPR export and erasure** for buyers.
 - **One hall, both sides of the glass.** The box office does not draw a seating plan of its own: it
   runs the buyer's picker — the same file, the same plan, the same zoom, the same room in three
@@ -613,6 +622,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Credit instead of money never touches the gateway | `RefundToCardTest` |
 | A payment the gateway has already refunded is not refunded twice | `RefundToCardTest`, `StripeGatewayTest` |
 | A buyer's granted request sends money, and a refused one stays pending | `RefundToCardTest` |
+| A scheduled report is re-run when it is sent, never a remembered copy | `ScheduledReportTest` |
+| The link in the email works from an inbox, and stops working after a week | `ScheduledReportTest` |
+| A link nobody signed is not found rather than refused | `ScheduledReportTest` |
+| Scheduling is not a way to be sent a report you may not open | `ScheduledReportTest` |
+| The hour is read in the schedule's own clock, frozen when it was made | `ScheduledReportTest` |
+| A schedule that will not run says why and moves its timer on | `ScheduledReportTest` |
+| A monthly report never lands on a day some months do not have | `ScheduledReportTest` |
 | A finished period becomes an invoice; an unfinished one does not | `PlatformBillingTest` |
 | The commission on what they sold is on the same invoice, with what it was taken of | `PlatformBillingTest` |
 | Four missed months are four invoices, numbered per year and never reused | `PlatformBillingTest` |

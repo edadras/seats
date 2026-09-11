@@ -153,4 +153,67 @@ return [
             'description' => 'Was läuft, in welchem Zustand, in welchem Haus. Ohne Geld.',
         ],
     ],
+
+    'scheduled' => [
+        'subject' => '{name} — :date',
+        'nothing' => 'Heute passte nichts zu diesem Bericht.',
+        'andMore' => '…und :count weitere Zeilen.',
+        'download' => 'Die vollständige Tabelle, für die nächsten :days Tage:',
+    ],
+
+    'errors' => [
+        'report_gone' => 'Der Bericht, auf dem dieser Zeitplan beruhte, wurde gelöscht.',
+        'source_gone' => 'Die Daten, die dieser Bericht liest (:source), sind nicht mehr verfügbar — womöglich wurde das Modul dafür abgeschaltet.',
+    ],
+
+
+    'schedule' => 'Planen',
+
+
+    'edit' => 'Bearbeiten',
+    'schedules' => 'Geplante Berichte',
+    'scheduleTitle' => 'Diesen Bericht regelmäßig senden',
+    'scheduleEditTitle' => 'Diesen Zeitplan ändern',
+    'scheduleBody' => 'Er wird jedes Mal neu ausgeführt und an die Adressen unten geschickt — nie eine gespeicherte Kopie alter Zahlen.',
+    'scheduleName' => 'Name',
+    'when' => 'Wann',
+    'hour' => 'Um',
+    'weekday' => 'Tag',
+    'dayOfMonth' => 'Tag im Monat',
+    'dayOfMonthHint' => '1 bis 28. Spätere Tage würden die kurzen Monate ganz überspringen.',
+    'recipients' => 'Senden an',
+    'recipientsHint' => 'Eine Adresse pro Zeile. Ein Konto hier brauchen sie nicht.',
+    'includeLink' => 'Link zur vollständigen Tabelle mitschicken',
+    'includeLinkHint' => 'Eine Woche gültig und ohne Anmeldung zu öffnen — schicken Sie ihn also nur an Leute, denen Sie den Bericht zeigen würden.',
+    'pauseIt' => 'Vorerst pausieren',
+    'paused' => 'Pausiert',
+    'nextOne' => 'Nächster',
+    'sendNow' => 'Jetzt senden',
+    'sentNow' => 'An :count gesendet.',
+    'unschedule' => 'Beenden',
+    'unscheduleTitle' => 'Diesen Bericht nicht mehr senden?',
+    'unscheduleBody' => 'Der Bericht selbst bleibt; nur der Zeitplan geht.',
+    'unscheduled' => 'Beendet.',
+    'scheduled' => 'Gespeichert.',
+    'atHour' => 'um :hour:00',
+    'everyDay' => 'Täglich',
+    'everyWeekday' => 'Jeden :day',
+    'everyMonth' => 'Am :day. des Monats',
+
+    'cadences' => [
+        'daily' => 'Täglich',
+        'weekly' => 'Wöchentlich',
+        'monthly' => 'Monatlich',
+    ],
+
+    'weekdays' => [
+        1 => 'Montag',
+        2 => 'Dienstag',
+        3 => 'Mittwoch',
+        4 => 'Donnerstag',
+        5 => 'Freitag',
+        6 => 'Samstag',
+        7 => 'Sonntag',
+    ],
+
 ];

@@ -57,6 +57,9 @@
 			App.request( 'GET', '/reports/sources' ),
 			App.request( 'GET', '/reports' ),
 			App.request( 'GET', '/report-pages' ),
+			// Schedules, quietly: a listing that failed would be an error on a screen whose real
+			// business is the reports above it.
+			App.request( 'GET', '/report-schedules' ).catch( function () { return { data: [] }; } ),
 			// The events an event filter offers. Fetched rather than typed: an id in a box is a
 			// way to point a report at something that is not yours and be told off for it.
 			App.request( 'GET', '/events?per_page=100' ).catch( function () { return { data: [] }; } ),
@@ -65,9 +68,200 @@
 			Reports.maxRows = results[ 0 ].max_rows || 1000;
 			Reports.saved = results[ 1 ].data || [];
 			Reports.pages = results[ 2 ].data || [];
-			Reports.events = results[ 3 ].data || [];
+			Reports.schedules = results[ 3 ].data || [];
+			Reports.events = results[ 4 ].data || [];
 			Reports.paintList();
 		} ).catch( function ( error ) { App.error( error ); } );
+	};
+
+	/**
+	 * The reports that go out on their own.
+	 *
+	 * Under the saved ones rather than on a screen of their own: a schedule is a property of a
+	 * report, and an organiser deciding whether Monday's figures are arriving is looking at the
+	 * report it came from. Hidden entirely when there are none — an empty table of a thing most
+	 * accounts never use is furniture.
+	 */
+	Reports.schedulesMarkup = function ( App ) {
+		var rows = Reports.schedules || [];
+
+		if ( ! rows.length ) {
+			return '';
+		}
+
+		return '<h3 class="subhead">' + esc( App.t( 'reports.schedules' ) ) + '</h3>' +
+			App.table(
+				[
+					App.t( 'reports.name' ),
+					App.t( 'reports.when' ),
+					App.t( 'reports.recipients' ),
+					App.t( 'reports.nextOne' ),
+					'',
+				],
+				rows.map( function ( row ) {
+					return '<tr' + ( row.paused ? ' class="is-muted"' : '' ) + '>' +
+						'<td class="table__primary">' + esc( row.name || row.report || '—' ) +
+							( row.paused
+								? ' <span class="badge">' + esc( App.t( 'reports.paused' ) ) + '</span>'
+								: '' ) +
+							// What went wrong last time, on the row it went wrong on. A schedule
+							// that quietly stopped arriving is the failure nobody notices.
+							( row.last_error
+								? '<span class="muted on-own-line">' + esc( row.last_error ) + '</span>'
+								: '' ) + '</td>' +
+						'<td>' + esc( Reports.cadenceLabel( App, row ) ) + '</td>' +
+						'<td class="muted">' + esc( ( row.recipients || [] ).join( ', ' ) ) + '</td>' +
+						'<td class="muted nowrap tnum">' + esc( row.next_run_at
+							? App.date( row.next_run_at )
+							: '—' ) + '</td>' +
+						'<td class="table__actions">' +
+							'<button class="btn btn--sm" data-schedule-send="' + esc( row.id ) + '">' +
+								esc( App.t( 'reports.sendNow' ) ) + '</button>' +
+							'<button class="btn btn--sm" data-schedule-edit="' + esc( row.id ) + '">' +
+								esc( App.t( 'reports.edit' ) ) + '</button>' +
+							'<button class="btn btn--sm" data-schedule-delete="' + esc( row.id ) + '">' +
+								esc( App.t( 'reports.unschedule' ) ) + '</button>' +
+						'</td>' +
+					'</tr>';
+				} ).join( '' )
+			);
+	};
+
+	/** "Every Monday at 08:00", in as many words as it takes to be unambiguous. */
+	Reports.cadenceLabel = function ( App, row ) {
+		var hour = String( row.hour === null || row.hour === undefined ? 8 : row.hour );
+		var at = App.t( 'reports.atHour', { hour: ( '0' + hour ).slice( -2 ) } );
+
+		if ( 'weekly' === row.cadence ) {
+			return App.t( 'reports.everyWeekday', {
+				day: App.t( 'reports.weekdays.' + ( row.weekday || 1 ) ),
+			} ) + ' ' + at;
+		}
+
+		if ( 'monthly' === row.cadence ) {
+			return App.t( 'reports.everyMonth', { day: App.number( row.day_of_month || 1 ) } ) + ' ' + at;
+		}
+
+		return App.t( 'reports.everyDay' ) + ' ' + at;
+	};
+
+	/**
+	 * Put a report on a timer, or change one that is already on it.
+	 *
+	 * The recipients are typed as addresses rather than picked from the team, and that is the
+	 * point: the people who want Monday's figures are often a marketing agency, a board member or
+	 * an auditor, none of whom have an account here. Whoever sets it is vouching for them, which is
+	 * why the audit log records who did it.
+	 */
+	Reports.scheduleReport = function ( reportId, existing ) {
+		var App = Reports.App;
+		var row = existing || {};
+		var cadence = row.cadence || 'weekly';
+
+		App.modal( {
+			title: App.t( existing ? 'reports.scheduleEditTitle' : 'reports.scheduleTitle' ),
+			submitLabel: App.t( 'reports.save' ),
+			body:
+				'<div class="stack">' +
+					'<p class="muted">' + esc( App.t( 'reports.scheduleBody' ) ) + '</p>' +
+					'<div class="field"><label class="field__label" for="sch-name">' +
+						esc( App.t( 'reports.scheduleName' ) ) + '</label>' +
+						'<input class="input" id="sch-name" maxlength="120" value="' +
+							esc( row.name || '' ) + '"></div>' +
+					'<div class="field-duo">' +
+						'<div class="field"><label class="field__label" for="sch-cadence">' +
+							esc( App.t( 'reports.when' ) ) + '</label>' +
+							'<select class="select" id="sch-cadence">' +
+								[ 'daily', 'weekly', 'monthly' ].map( function ( key ) {
+									return '<option value="' + key + '"' +
+										( key === cadence ? ' selected' : '' ) + '>' +
+										esc( App.t( 'reports.cadences.' + key ) ) + '</option>';
+								} ).join( '' ) +
+							'</select></div>' +
+						'<div class="field"><label class="field__label" for="sch-hour">' +
+							esc( App.t( 'reports.hour' ) ) + '</label>' +
+							'<select class="select" id="sch-hour">' +
+								Array.apply( null, { length: 24 } ).map( function ( ignored, hour ) {
+									return '<option value="' + hour + '"' +
+										( hour === ( row.hour === undefined ? 8 : row.hour ) ? ' selected' : '' ) +
+										'>' + ( '0' + hour ).slice( -2 ) + ':00</option>';
+								} ).join( '' ) +
+							'</select></div>' +
+					'</div>' +
+					'<div class="field-duo">' +
+						'<div class="field" id="sch-weekday-field"><label class="field__label" for="sch-weekday">' +
+							esc( App.t( 'reports.weekday' ) ) + '</label>' +
+							'<select class="select" id="sch-weekday">' +
+								[ 1, 2, 3, 4, 5, 6, 7 ].map( function ( day ) {
+									return '<option value="' + day + '"' +
+										( day === ( row.weekday || 1 ) ? ' selected' : '' ) + '>' +
+										esc( App.t( 'reports.weekdays.' + day ) ) + '</option>';
+								} ).join( '' ) +
+							'</select></div>' +
+						'<div class="field" id="sch-day-field"><label class="field__label" for="sch-day">' +
+							esc( App.t( 'reports.dayOfMonth' ) ) + '</label>' +
+							'<input class="input" id="sch-day" type="number" min="1" max="28" value="' +
+								esc( row.day_of_month || 1 ) + '">' +
+							// 28 rather than 31: a report set for the 31st would skip February and
+							// half the year besides, and "it never arrived" is the worst failure a
+							// scheduled report has.
+							'<span class="field__hint">' + esc( App.t( 'reports.dayOfMonthHint' ) ) + '</span></div>' +
+					'</div>' +
+					'<div class="field"><label class="field__label" for="sch-to">' +
+						esc( App.t( 'reports.recipients' ) ) + '</label>' +
+						'<textarea class="input" id="sch-to" rows="3">' +
+							esc( ( row.recipients || [] ).join( '\n' ) ) + '</textarea>' +
+						'<span class="field__hint">' + esc( App.t( 'reports.recipientsHint' ) ) + '</span></div>' +
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="sch-link"' +
+						( false === row.include_link ? '' : ' checked' ) + '>' +
+						'<span>' + esc( App.t( 'reports.includeLink' ) ) +
+							'<span class="muted on-own-line">' +
+							esc( App.t( 'reports.includeLinkHint' ) ) + '</span></span></label>' +
+					'<label class="perms__row"><input type="checkbox" class="checkbox" id="sch-paused"' +
+						( row.paused ? ' checked' : '' ) + '>' +
+						'<span>' + esc( App.t( 'reports.pauseIt' ) ) + '</span></label>' +
+				'</div>',
+			onSubmit: function () {
+				var payload = {
+					cadence: value( 'sch-cadence' ),
+					hour: Number( value( 'sch-hour' ) ),
+					weekday: Number( value( 'sch-weekday' ) ),
+					day_of_month: Number( value( 'sch-day' ) ),
+					name: value( 'sch-name' ) || null,
+					recipients: value( 'sch-to' ).split( /[\n,;]+/ ).map( function ( one ) {
+						return one.trim();
+					} ).filter( Boolean ),
+					include_link: checked( 'sch-link' ),
+					paused: checked( 'sch-paused' ),
+				};
+
+				var request = existing
+					? App.request( 'PATCH', '/report-schedules/' + existing.id, payload )
+					: App.request( 'POST', '/report-schedules', Object.assign( payload, {
+						report_id: reportId,
+						// The clock the venue works in, taken from the browser rather than asked
+						// for: nobody sets up a Monday report thinking about UTC.
+						timezone: App.timezone(),
+					} ) );
+
+				return request.then( function () {
+					App.toast( App.t( 'reports.scheduled' ) );
+					Reports.render( App );
+				} );
+			},
+		} );
+
+		// Only the field the chosen cadence actually uses. A weekday box on a daily report is a
+		// question with no answer.
+		var showRelevant = function () {
+			var chosen = value( 'sch-cadence' );
+
+			document.getElementById( 'sch-weekday-field' ).hidden = 'weekly' !== chosen;
+			document.getElementById( 'sch-day-field' ).hidden = 'monthly' !== chosen;
+		};
+
+		document.getElementById( 'sch-cadence' ).addEventListener( 'change', showRelevant );
+		showRelevant();
 	};
 
 	Reports.paintList = function () {
@@ -92,12 +286,16 @@
 								'<td class="table__actions">' +
 									'<button class="btn btn--sm" data-open="' + esc( report.id ) + '">' +
 										esc( App.t( 'reports.open' ) ) + '</button>' +
+									'<button class="btn btn--sm" data-schedule="' + esc( report.id ) + '">' +
+										esc( App.t( 'reports.schedule' ) ) + '</button>' +
 									'<button class="btn btn--sm" data-delete="' + esc( report.id ) + '">' +
 										esc( App.t( 'reports.delete' ) ) + '</button>' +
 								'</td></tr>';
 						} ).join( '' )
 					)
 					: App.emptyState( 'chart', App.t( 'reports.noReports' ), App.t( 'reports.noReportsHint' ) ) ) +
+
+				Reports.schedulesMarkup( App ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'reports.pages' ) ) + '</h3>' +
 				( Reports.pages.length
@@ -115,6 +313,46 @@
 
 		each( '[data-open]', function ( button ) {
 			button.addEventListener( 'click', function () { Reports.openSaved( button.dataset.open ); } );
+		} );
+
+		each( '[data-schedule]', function ( button ) {
+			button.addEventListener( 'click', function () { Reports.scheduleReport( button.dataset.schedule ); } );
+		} );
+
+		each( '[data-schedule-send]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				App.request( 'POST', '/report-schedules/' + button.dataset.scheduleSend + '/send' )
+					.then( function ( body ) {
+						App.toast( App.t( 'reports.sentNow', { count: App.number( body.sent ) } ) );
+						Reports.render( App );
+					} )
+					.catch( function ( error ) { App.toast( error.message, true ); } );
+			} );
+		} );
+
+		each( '[data-schedule-edit]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				Reports.scheduleReport( null, Reports.schedules.filter( function ( row ) {
+					return row.id === button.dataset.scheduleEdit;
+				} )[ 0 ] );
+			} );
+		} );
+
+		each( '[data-schedule-delete]', function ( button ) {
+			button.addEventListener( 'click', function () {
+				App.modal( {
+					title: App.t( 'reports.unscheduleTitle' ),
+					submitLabel: App.t( 'reports.unschedule' ),
+					body: '<p>' + esc( App.t( 'reports.unscheduleBody' ) ) + '</p>',
+					onSubmit: function () {
+						return App.request( 'DELETE', '/report-schedules/' + button.dataset.scheduleDelete )
+							.then( function () {
+								App.toast( App.t( 'reports.unscheduled' ) );
+								Reports.render( App );
+							} );
+					},
+				} );
+			} );
 		} );
 
 		each( '[data-delete]', function ( button ) {
@@ -1430,6 +1668,18 @@
 	};
 
 	/* --------------------------------------------------------------------------- helpers */
+
+	function value( id ) {
+		var element = document.getElementById( id );
+
+		return element ? String( element.value ).trim() : '';
+	}
+
+	function checked( id ) {
+		var element = document.getElementById( id );
+
+		return !! ( element && element.checked );
+	}
 
 	function each( selector, visit ) {
 		Array.prototype.forEach.call( document.querySelectorAll( selector ), visit );

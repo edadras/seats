@@ -153,4 +153,67 @@ return [
             'description' => 'Ce qui est à l’affiche, dans quel état, dans quel lieu. Sans argent.',
         ],
     ],
+
+    'scheduled' => [
+        'subject' => '{name} — :date',
+        'nothing' => 'Rien ne correspondait à ce rapport aujourd’hui.',
+        'andMore' => '…et :count lignes de plus.',
+        'download' => 'Le tableau complet, pendant :days jours :',
+    ],
+
+    'errors' => [
+        'report_gone' => 'Le rapport sur lequel reposait cette programmation a été supprimé.',
+        'source_gone' => 'Les données que lit ce rapport (:source) ne sont plus disponibles — le module qui les fournit a peut-être été désactivé.',
+    ],
+
+
+    'schedule' => 'Programmer',
+
+
+    'edit' => 'Modifier',
+    'schedules' => 'Rapports programmés',
+    'scheduleTitle' => 'Envoyer ce rapport régulièrement',
+    'scheduleEditTitle' => 'Modifier cette programmation',
+    'scheduleBody' => 'Il est réexécuté à chaque fois et envoyé aux adresses ci-dessous — jamais une copie figée de vieux chiffres.',
+    'scheduleName' => 'Nom',
+    'when' => 'Quand',
+    'hour' => 'À',
+    'weekday' => 'Jour',
+    'dayOfMonth' => 'Jour du mois',
+    'dayOfMonthHint' => 'De 1 à 28. Au-delà, les mois courts seraient purement sautés.',
+    'recipients' => 'Envoyer à',
+    'recipientsHint' => 'Une adresse par ligne. Pas besoin de compte ici.',
+    'includeLink' => 'Joindre un lien vers le tableau complet',
+    'includeLinkHint' => 'Valable une semaine et ouvrable sans connexion — ne l’envoyez donc qu’à des gens à qui vous montreriez le rapport.',
+    'pauseIt' => 'Mettre en pause',
+    'paused' => 'En pause',
+    'nextOne' => 'Prochain',
+    'sendNow' => 'Envoyer maintenant',
+    'sentNow' => 'Envoyé à :count.',
+    'unschedule' => 'Arrêter',
+    'unscheduleTitle' => 'Arrêter l’envoi de ce rapport ?',
+    'unscheduleBody' => 'Le rapport lui-même reste ; seule la programmation disparaît.',
+    'unscheduled' => 'Arrêté.',
+    'scheduled' => 'Enregistré.',
+    'atHour' => 'à :hour h 00',
+    'everyDay' => 'Tous les jours',
+    'everyWeekday' => 'Chaque :day',
+    'everyMonth' => 'Le :day du mois',
+
+    'cadences' => [
+        'daily' => 'Tous les jours',
+        'weekly' => 'Chaque semaine',
+        'monthly' => 'Chaque mois',
+    ],
+
+    'weekdays' => [
+        1 => 'lundi',
+        2 => 'mardi',
+        3 => 'mercredi',
+        4 => 'jeudi',
+        5 => 'vendredi',
+        6 => 'samedi',
+        7 => 'dimanche',
+    ],
+
 ];

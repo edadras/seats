@@ -77,6 +77,8 @@ return [
     'invoice_is_void' => 'Una fattura annullata non può essere pagata.',
     'invoice_already_void' => 'Questa fattura è già stata annullata.',
     'unknown_invoice' => 'Questa fattura non è stata trovata.',
+    'unknown_report' => 'Questo report non è stato trovato.',
+    'unknown_schedule' => 'Questa pianificazione non è stata trovata.',
     'cards_not_taken' => 'Questa piattaforma non accetta carte. Le fatture si pagano con bonifico.',
     'card_setup_unavailable' => 'La carta non si è potuta registrare in questo momento. Riprovate tra poco.',
     'card_setup_unfinished' => 'La registrazione di quella carta non è stata completata. Ricominciate e finite l’ultima pagina.',

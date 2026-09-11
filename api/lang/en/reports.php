@@ -153,4 +153,67 @@ return [
             'description' => 'What is on, in what state, in which house. No money.',
         ],
     ],
+
+    'scheduled' => [
+        'subject' => '{name} — :date',
+        'nothing' => 'Nothing matched this report today.',
+        'andMore' => '…and :count more rows.',
+        'download' => 'The whole spreadsheet, for the next :days days:',
+    ],
+
+    'errors' => [
+        'report_gone' => 'The report this schedule was built on has been deleted.',
+        'source_gone' => 'The data this report reads (:source) is no longer available — the module that provides it may have been switched off.',
+    ],
+
+
+    'schedule' => 'Schedule',
+
+
+    'edit' => 'Edit',
+    'schedules' => 'Scheduled reports',
+    'scheduleTitle' => 'Send this report on a schedule',
+    'scheduleEditTitle' => 'Change this schedule',
+    'scheduleBody' => 'It is run fresh each time and sent to the addresses below — never a stored copy of old figures.',
+    'scheduleName' => 'Call it',
+    'when' => 'When',
+    'hour' => 'At',
+    'weekday' => 'Day',
+    'dayOfMonth' => 'Day of the month',
+    'dayOfMonthHint' => '1 to 28. Later days would skip the short months entirely.',
+    'recipients' => 'Send it to',
+    'recipientsHint' => 'One address per line. They do not need an account here.',
+    'includeLink' => 'Include a link to the full spreadsheet',
+    'includeLinkHint' => 'Good for a week, and it works without signing in — so only send it to people you would show the report to.',
+    'pauseIt' => 'Pause it for now',
+    'paused' => 'Paused',
+    'nextOne' => 'Next one',
+    'sendNow' => 'Send now',
+    'sentNow' => 'Sent to :count.',
+    'unschedule' => 'Stop',
+    'unscheduleTitle' => 'Stop sending this report?',
+    'unscheduleBody' => 'The report itself stays; only the schedule goes.',
+    'unscheduled' => 'Stopped.',
+    'scheduled' => 'Saved.',
+    'atHour' => 'at :hour:00',
+    'everyDay' => 'Every day',
+    'everyWeekday' => 'Every :day',
+    'everyMonth' => 'On day :day of the month',
+
+    'cadences' => [
+        'daily' => 'Every day',
+        'weekly' => 'Every week',
+        'monthly' => 'Every month',
+    ],
+
+    'weekdays' => [
+        1 => 'Monday',
+        2 => 'Tuesday',
+        3 => 'Wednesday',
+        4 => 'Thursday',
+        5 => 'Friday',
+        6 => 'Saturday',
+        7 => 'Sunday',
+    ],
+
 ];

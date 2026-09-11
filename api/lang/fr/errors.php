@@ -77,6 +77,8 @@ return [
     'invoice_is_void' => 'Une facture annulée ne peut pas être payée.',
     'invoice_already_void' => 'Cette facture a déjà été annulée.',
     'unknown_invoice' => 'Cette facture est introuvable.',
+    'unknown_report' => 'Ce rapport est introuvable.',
+    'unknown_schedule' => 'Cette programmation est introuvable.',
     'cards_not_taken' => 'Cette plateforme n’accepte pas les cartes. Les factures se règlent par virement.',
     'card_setup_unavailable' => 'La carte n’a pas pu être enregistrée pour l’instant. Réessayez dans un moment.',
     'card_setup_unfinished' => 'Cette carte n’a pas été enregistrée jusqu’au bout. Recommencez et terminez la dernière page.',

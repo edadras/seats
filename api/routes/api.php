@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\V1\Management\PaymentPlanController;
 use App\Http\Controllers\Api\V1\Management\RiskController;
 use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\BillingController;
+use App\Http\Controllers\Api\V1\Management\ReportScheduleController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
@@ -470,6 +471,14 @@ Route::prefix('v1')->group(function () {
         // ---- Reports (ADR-0006) --------------------------------------------------------
         // There is no query box here and there will not be one: a definition names fields a
         // source declared, and anything else is refused before a query is built.
+        // A saved report on a timer. The permission is the report's own source, so scheduling
+        // something is never a way to be sent a report you may not open.
+        Route::get('report-schedules', [ReportScheduleController::class, 'index']);
+        Route::post('report-schedules', [ReportScheduleController::class, 'store']);
+        Route::patch('report-schedules/{schedule}', [ReportScheduleController::class, 'update']);
+        Route::delete('report-schedules/{schedule}', [ReportScheduleController::class, 'destroy']);
+        Route::post('report-schedules/{schedule}/send', [ReportScheduleController::class, 'sendNow']);
+
         Route::get('reports/sources', [ReportController::class, 'sources']);
         Route::post('reports/run', [ReportController::class, 'run']);
         Route::get('reports', [ReportController::class, 'index']);
