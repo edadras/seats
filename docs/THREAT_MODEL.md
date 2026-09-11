@@ -103,6 +103,20 @@ An attacker holds every seat repeatedly so nobody can buy.
 limits on hold creation, a cap on seats per hold and on concurrent holds per session, and a
 bounded number of extends per hold. Abnormal hold-to-confirm ratios are surfaced to the tenant.
 
+*The per-IP half of that depends on a deployment decision.* Signing in, signing up, claiming an SSO
+account, the per-person seat cap and the picker's bot defence all key on `$request->ip()`, so
+`SEATMAP_TRUSTED_PROXIES` decides whether they work at all. Left empty behind a reverse proxy, every
+request arrives as the proxy and the limits become one global bucket — which is not only useless
+against an attacker but actively harmful, because the first hundred honest buyers at an on-sale
+exhaust it for everyone. Set to a catch-all on a directly exposed server, any client can vary
+`X-Forwarded-For` per attempt and evade the same limits from one machine. `seatmap:preflight` reports
+which of the two the installation is currently in.
+
+`X-Forwarded-Host` is not honoured even from a trusted proxy (`bootstrap/app.php`). This application
+resolves a tenant's site from the request's hostname, so a forwarded Host a client could set is a
+cross-tenant takeover: one organiser's pages served, and one organiser's checkout answered, on
+another's domain. `BehindAProxyTest` pins it.
+
 ### T9 — Widget abuse of the public API (Information disclosure, DoS)
 The embed endpoints are unauthenticated by necessity.
 
