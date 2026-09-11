@@ -7111,10 +7111,13 @@ paths:
         number a buyer sees cannot disagree. `waiting_places` is what those people actually want,
         which is not the same as how many of them there are: eleven people wanting twenty-three
         places is the sentence an organiser is trying to form.
+
+        Reading this closes any turn that has run out, so a row never says "told" twenty minutes
+        after its window shut — acting on such a row would be acting on nothing.
       parameters:
         - name: status
           in: query
-          schema: { type: string, enum: [waiting, notified, converted, left] }
+          schema: { type: string, enum: [waiting, notified, converted, lapsed, left] }
         - name: per_page
           in: query
           schema: { type: integer, minimum: 10, maximum: 200, default: 50 }
@@ -7142,6 +7145,16 @@ paths:
                       waiting: { type: integer }
                       waiting_places: { type: integer }
                       notified: { type: integer }
+                      converted:
+                        type: integer
+                        description: >-
+                          How many of these people the queue turned into a sale — the only figure
+                          that says whether keeping the list was worth anything.
+                      lapsed:
+                        type: integer
+                        description: >-
+                          Told their turns and never answered. Still on the list and no longer
+                          written to.
                       left: { type: integer }
                       free_places: { type: integer }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -10635,9 +10648,24 @@ components:
         email: { type: string }
         phone: { type: [string, "null"] }
         quantity: { type: integer, description: "How many places they want." }
-        status: { type: string, enum: [waiting, notified, converted, left] }
+        status:
+          type: string
+          enum: [waiting, notified, converted, lapsed, left]
+          description: >-
+            `waiting` — in the queue. `notified` — told a seat is free, with a window to buy it in;
+            when that window shuts without a sale they go back to `waiting`, behind anybody who has
+            not had a turn. `converted` — they bought, set automatically when an order confirms
+            under the address they joined with. `lapsed` — told their turns and never answered, so
+            the platform has stopped writing to them; the row stays and joining again resets it.
+            `left` — they asked to come off.
         joined_at: { type: string, format: date-time }
         notified_at: { type: [string, "null"], format: date-time }
+        converted_at: { type: [string, "null"], format: date-time }
+        times_told:
+          type: integer
+          description: >-
+            How many turns they have had. A name on its third is a name that has had three emails
+            and answered none.
         claiming:
           type: boolean
           description: >

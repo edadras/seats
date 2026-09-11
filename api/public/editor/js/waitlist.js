@@ -61,7 +61,7 @@
 						'</select>' +
 						'<select class="select" id="wait-status" aria-label="' +
 							esc( App.t( 'panel.waitlist.anyStatus' ) ) + '">' +
-							[ '', 'waiting', 'notified', 'left' ].map( function ( status ) {
+							[ '', 'waiting', 'notified', 'converted', 'lapsed', 'left' ].map( function ( status ) {
 								return '<option value="' + status + '"' +
 									( status === Wait.status ? ' selected' : '' ) + '>' +
 									esc( App.t( 'panel.waitlist.statuses.' + ( status || 'any' ) ) ) +
@@ -120,6 +120,10 @@
 				App.t( 'panel.waitlist.wantPlaces', { count: App.number( summary.waiting_places ) } ) ) +
 			tile( App.t( 'panel.waitlist.freeNow' ), App.number( summary.free_places ) ) +
 			tile( App.t( 'panel.waitlist.told' ), App.number( summary.notified ) ) +
+			// The only figure that says whether keeping the list was worth anything. Beside the
+			// ones who went quiet, because the two together are the shape of the queue.
+			tile( App.t( 'panel.waitlist.bought' ), App.number( summary.converted || 0 ),
+				App.t( 'panel.waitlist.quiet', { count: App.number( summary.lapsed || 0 ) } ) ) +
 			tile( App.t( 'panel.waitlist.gone' ), App.number( summary.left ) ) +
 		'</div>';
 	};
@@ -143,17 +147,27 @@
 						'<span class="muted on-own-line">' + esc( entry.email ) + '</span></td>' +
 					'<td class="tnum">' + esc( App.number( entry.quantity ) ) + '</td>' +
 					'<td class="tnum muted">' + esc( App.date( entry.joined_at ) ) + '</td>' +
-					'<td>' + Wait.badge( App, entry ) + '</td>' +
+					'<td>' + Wait.badge( App, entry ) +
+						// A name that keeps coming round is worth telling apart from a new one:
+						// somebody on their third turn has had three emails and answered none.
+						( entry.times_told > 1
+							? '<span class="muted on-own-line">' +
+								esc( App.t( 'panel.waitlist.turns', {
+									count: App.number( entry.times_told ),
+								} ) ) + '</span>'
+							: '' ) + '</td>' +
 				'</tr>';
 			} ).join( '' )
 		);
 	};
 
 	/**
-	 * Told and still able to act, told and out of time, waiting, or gone.
+	 * Told and still able to act, told and out of time, waiting, bought, quiet, or gone.
 	 *
 	 * "Notified" on its own would be a half-truth an hour later: their turn has a window, and an
 	 * organiser deciding whether to release more seats needs to know which of those two it is.
+	 * A turn that has run out is now momentary — the next round puts that person back in the queue
+	 * — so the badge for it exists for exactly the minutes in between.
 	 */
 	Wait.badge = function ( App, entry ) {
 		if ( 'notified' === entry.status ) {
@@ -162,7 +176,12 @@
 				: '<span class="badge badge--neutral">' + esc( App.t( 'panel.waitlist.missed' ) ) + '</span>';
 		}
 
-		var tone = { waiting: 'ok', converted: 'ok', left: 'neutral' }[ entry.status ] || 'neutral';
+		var tone = {
+			waiting: 'ok',
+			converted: 'ok',
+			lapsed: 'neutral',
+			left: 'neutral',
+		}[ entry.status ] || 'neutral';
 
 		return '<span class="badge badge--' + tone + '">' +
 			esc( App.t( 'panel.waitlist.statuses.' + entry.status ) ) + '</span>';

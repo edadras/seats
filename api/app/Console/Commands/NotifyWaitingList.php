@@ -18,8 +18,13 @@ use Illuminate\Console\Command;
  * per released seat would send one person six emails in a minute. A few minutes' delay costs a
  * waiting buyer nothing and makes each message mean something.
  *
- * Only events that somebody is actually waiting for are examined, so an account with no waiting
- * lists does no work at all.
+ * Only events somebody is actually queueing for are examined, so an account with no waiting lists
+ * does no work at all.
+ *
+ * Each round also closes the turns that have run out: somebody told two hours ago who never
+ * answered goes back into the queue behind anybody who has not had a turn, and after a few
+ * unanswered ones the platform stops writing to them. {@see \App\Domain\Waitlist\WaitingList}
+ * has the reasoning.
  */
 class NotifyWaitingList extends Command
 {
@@ -41,7 +46,15 @@ class NotifyWaitingList extends Command
                     return;
                 }
 
-                $eventIds = WaitingListEntry::where('status', 'waiting')
+                /*
+                 * `notified` as well as `waiting`, and that "as well as" is load-bearing.
+                 *
+                 * A night where everybody on the list has been told and nobody has answered has no
+                 * `waiting` rows at all. Looking only for those would skip the event entirely — and
+                 * skipping it is exactly what leaves those people at `notified` for ever, which is
+                 * the bug this command's own promise was written against.
+                 */
+                $eventIds = WaitingListEntry::whereIn('status', ['waiting', 'notified'])
                     ->distinct()
                     ->pluck('event_id');
 

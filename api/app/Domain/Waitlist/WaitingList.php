@@ -21,13 +21,30 @@ use Illuminate\Support\Facades\DB;
  * reservation, because holding seats for somebody who may never open the email is how a sold-out
  * night ends up half empty, but long enough that a link in an email is worth following.
  *
- * Nobody is thrown off the list for missing their turn. A window that runs out simply passes them
- * by; they stay where they are and come round again on the next release.
+ * Nobody is thrown off the list for missing their turn. A window that runs out puts them back in
+ * the queue, behind anybody who has not had a turn yet, and they come round again on the next
+ * release.
+ *
+ * That last sentence used to be a comment rather than a behaviour. The notifier only ever read
+ * rows marked `waiting`, so somebody told once and asleep at three in the morning stayed at
+ * `notified` for ever and was never told again — and `converted`, which the API would let an
+ * organiser filter by, was set by nothing at all. {@see reopen()} and {@see bought()} are those
+ * two states made real.
  */
 class WaitingList
 {
     /** How long a place stays open once somebody has been told about it. */
     public const CLAIM_MINUTES = 120;
+
+    /**
+     * How many unanswered turns somebody gets before the platform stops writing to them.
+     *
+     * Coming round again cannot be unlimited. One person on a list, one seat free and nobody buying
+     * it would otherwise be an email every two hours until the doors open, which is not a waiting
+     * list, it is a nuisance. Three is enough to cover a night's sleep and a working day; after
+     * that the entry goes quiet rather than away, and the organiser can see exactly why.
+     */
+    public const MAX_TURNS = 3;
 
     public function __construct(
         private readonly AvailabilityService $availability,
@@ -62,11 +79,15 @@ class WaitingList
                 ->where('email', $email)
                 ->firstOrFail();
 
-            // Somebody who left and came back is asking again, and that is a new request.
-            if ('left' === $existing->status) {
+            // Somebody who left, or who went quiet and has come back of their own accord, is
+            // asking again — and that is a new request, with its turns back.
+            if (in_array($existing->status, ['left', 'lapsed'], true)) {
                 $existing->forceFill([
                     'status' => 'waiting',
                     'left_at' => null,
+                    'lapsed_at' => null,
+                    'times_told' => 0,
+                    'claim_expires_at' => null,
                     'quantity' => max(1, min(20, (int) ($person['quantity'] ?? 1))),
                 ])->save();
             }
@@ -101,6 +122,81 @@ class WaitingList
     }
 
     /**
+     * Put everybody whose turn has run out back in the queue.
+     *
+     * Run before anybody new is told, because the two are the same question: a window that closed
+     * without a sale released nothing, but it did free the *promise*, and the person it was made
+     * to is owed another turn rather than silence.
+     *
+     * They keep their place — the queue is still ordered by when they asked — but they go behind
+     * anybody who has not had a turn at all, because a first turn is worth more than a fourth.
+     * After {@see MAX_TURNS} unanswered ones the entry goes quiet: it stays on the list and on the
+     * organiser's screen, and the platform stops writing to it.
+     *
+     * @return int how many came back into the queue
+     */
+    public function reopen(Event $event): int
+    {
+        $lapsed = WaitingListEntry::where('event_id', $event->id)
+            ->where('status', 'notified')
+            ->whereNotNull('claim_expires_at')
+            ->where('claim_expires_at', '<=', now())
+            ->get();
+
+        $back = 0;
+
+        foreach ($lapsed as $entry) {
+            $spent = $entry->times_told >= self::MAX_TURNS;
+
+            $entry->forceFill($spent
+                ? ['status' => 'lapsed', 'lapsed_at' => now(), 'claim_expires_at' => null]
+                : ['status' => 'waiting', 'claim_expires_at' => null])->save();
+
+            $back += $spent ? 0 : 1;
+        }
+
+        return $back;
+    }
+
+    /**
+     * They bought a seat, so they are off the queue without ever having to say so.
+     *
+     * Matched on the address they joined with, which is the only handle a waiting list has: a
+     * booking carries an email and nothing that points back at a queue. Somebody who bought under
+     * a different address stays waiting, and that is the right way round — the platform should not
+     * guess that two addresses are one person.
+     *
+     * Called when an order confirms. `converted` was a status this platform would let an organiser
+     * filter by and set nowhere, so the honest answer to "who on my list actually bought" was
+     * always an empty page.
+     */
+    public function bought(Event $event, ?string $email): ?WaitingListEntry
+    {
+        $email = mb_strtolower(trim((string) $email));
+
+        if ('' === $email) {
+            return null;
+        }
+
+        $entry = WaitingListEntry::where('event_id', $event->id)
+            ->where('email', $email)
+            ->whereIn('status', ['waiting', 'notified', 'lapsed'])
+            ->first();
+
+        if (! $entry) {
+            return null;
+        }
+
+        $entry->forceFill([
+            'status' => 'converted',
+            'converted_at' => now(),
+            'claim_expires_at' => null,
+        ])->save();
+
+        return $entry;
+    }
+
+    /**
      * Tell as many people as there are places for, oldest first.
      *
      * Places already promised to somebody whose window is still open are subtracted before anybody
@@ -111,6 +207,10 @@ class WaitingList
      */
     public function notify(Event $event, Site $site, ?int $limit = null): int
     {
+        // Before anything else, and whether or not there is a seat to offer: a turn that has run
+        // out has run out, and leaving those rows at `notified` is what made them unreachable.
+        $this->reopen($event);
+
         $free = $this->freePlaces($event);
 
         if ($free < 1) {
@@ -130,6 +230,9 @@ class WaitingList
 
         $queue = WaitingListEntry::where('event_id', $event->id)
             ->where('status', 'waiting')
+            // Somebody who has never been told comes before somebody on their third turn, and
+            // within each of those it is still first asked, first told.
+            ->orderBy('times_told')
             ->orderBy('created_at')
             ->limit($limit ?: 100)
             ->get();
@@ -149,6 +252,7 @@ class WaitingList
                 'status' => 'notified',
                 'notified_at' => now(),
                 'claim_expires_at' => now()->addMinutes(self::CLAIM_MINUTES),
+                'times_told' => $entry->times_told + 1,
             ])->save();
 
             $this->tell($event, $site, $entry);

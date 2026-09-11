@@ -164,9 +164,115 @@ class WaitingListTest extends TestCase
             $this->assertSame(1, app(WaitingList::class)->notify($fixture['event'], $site),
                 'The next person gets a turn.');
 
-            // And the one who slept through it is still there, not thrown off for being asleep.
-            $this->assertSame('notified', WaitingListEntry::where('email', 'asleep@example.test')
-                ->value('status'));
+            /*
+             * And the one who slept through it is back in the queue.
+             *
+             * This assertion used to read `notified`, which looked like "still on the list" and was
+             * really "stuck": the notifier reads only `waiting` rows, so that person would never
+             * have been told again. Their turn is over, so they are waiting again — with the turn
+             * they had counted against them, so the next release goes to somebody who has had none.
+             */
+            $asleep = WaitingListEntry::where('email', 'asleep@example.test')->firstOrFail();
+
+            $this->assertSame('waiting', $asleep->status);
+            $this->assertSame(1, $asleep->times_told);
+        });
+    }
+
+    #[Test]
+    public function somebody_who_slept_through_one_turn_gets_another(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 2);
+        $site = $this->makeSite($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'asleep@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+            $this->assertSame(1, app(WaitingList::class)->notify($fixture['event'], $site));
+        });
+
+        $this->travel(WaitingList::CLAIM_MINUTES + 5)->minutes();
+
+        // Nobody else is on the list, and the seat is still free. They are the next person again.
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+            $this->assertSame(1, app(WaitingList::class)->notify($fixture['event'], $site),
+                'A second turn, which is what "comes round again" has to mean.');
+
+            $this->assertSame(2, WaitingListEntry::where('email', 'asleep@example.test')
+                ->value('times_told'));
+        });
+    }
+
+    #[Test]
+    public function after_three_unanswered_turns_the_platform_stops_writing(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 2);
+        $site = $this->makeSite($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'asleep@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        // Three turns, each slept through.
+        for ($turn = 0; $turn < WaitingList::MAX_TURNS; $turn++) {
+            app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+                app(WaitingList::class)->notify($fixture['event'], $site);
+            });
+
+            $this->travel(WaitingList::CLAIM_MINUTES + 5)->minutes();
+        }
+
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+            $this->assertSame(0, app(WaitingList::class)->notify($fixture['event'], $site),
+                'An email every two hours until the doors open is not a waiting list.');
+
+            $entry = WaitingListEntry::where('email', 'asleep@example.test')->firstOrFail();
+
+            // Quiet, not gone: the row is still there and the organiser can see exactly why.
+            $this->assertSame('lapsed', $entry->status);
+            $this->assertNotNull($entry->lapsed_at);
+        });
+    }
+
+    #[Test]
+    public function asking_again_after_going_quiet_puts_somebody_back_in_the_queue(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 2);
+        $site = $this->makeSite($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'asleep@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        for ($turn = 0; $turn < WaitingList::MAX_TURNS; $turn++) {
+            app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+                app(WaitingList::class)->notify($fixture['event'], $site);
+            });
+
+            $this->travel(WaitingList::CLAIM_MINUTES + 5)->minutes();
+        }
+
+        app(TenantContext::class)->runAs($fixture['tenant'], fn () => app(WaitingList::class)
+            ->notify($fixture['event'], $site));
+
+        // They come back of their own accord, which is a new request and not a continuation.
+        $this->join($fixture, 'asleep@example.test', 1);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+            $entry = WaitingListEntry::where('email', 'asleep@example.test')->firstOrFail();
+
+            $this->assertSame('waiting', $entry->status);
+            $this->assertSame(0, $entry->times_told, 'Their turns are back.');
+
+            $this->assertSame(1, app(WaitingList::class)->notify($fixture['event'], $site));
         });
     }
 
@@ -231,6 +337,153 @@ class WaitingListTest extends TestCase
     }
 
     /* ------------------------------------------------------------------------------ helpers */
+
+    #[Test]
+    public function somebody_who_buys_comes_off_the_queue_without_saying_so(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 2);
+        $site = $this->makeSite($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'patient@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], fn () => app(WaitingList::class)
+            ->notify($fixture['event'], $site));
+
+        // They follow the link and buy the seat that came back, under the same address.
+        $this->buy($fixture, 'patient@example.test', 0);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], function () {
+            $entry = WaitingListEntry::where('email', 'patient@example.test')->firstOrFail();
+
+            /*
+             * `converted` used to be a status the API would let an organiser filter by and that
+             * nothing anywhere ever set, so "who on my list actually bought" was an empty page
+             * every time.
+             */
+            $this->assertSame('converted', $entry->status);
+            $this->assertNotNull($entry->converted_at);
+        });
+    }
+
+    #[Test]
+    public function somebody_who_bought_is_never_told_about_another_seat(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 3);
+        $site = $this->makeSite($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'patient@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], fn () => app(WaitingList::class)
+            ->notify($fixture['event'], $site));
+
+        $this->buy($fixture, 'patient@example.test', 0);
+
+        // Another seat comes back, and they are the only name on the list.
+        app(TenantContext::class)->runAs($fixture['tenant'], function () use ($fixture, $site) {
+            app(\App\Domain\Orders\OrderService::class)->refund(
+                \App\Models\ExternalOrder::where('status', 'confirmed')
+                    ->orderBy('created_at')->firstOrFail(),
+                [$fixture['seats'][1]->id],
+                'another change of plan',
+            );
+
+            $this->assertSame(0, app(WaitingList::class)->notify($fixture['event'], $site),
+                'They have their seat. Writing to them again is writing to the wrong person.');
+        });
+    }
+
+    #[Test]
+    public function the_organiser_can_see_who_bought_and_who_went_quiet(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 2);
+        $site = $this->makeSite($fixture['tenant']);
+        $owner = $this->makeUser($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'patient@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], fn () => app(WaitingList::class)
+            ->notify($fixture['event'], $site));
+
+        $this->buy($fixture, 'patient@example.test', 0);
+
+        $body = $this->actingAs($owner)
+            ->getJson('/v1/events/'.$fixture['event']->id.'/waiting-list')
+            ->assertOk()
+            ->json();
+
+        $this->assertSame(1, $body['summary']['converted']);
+        $this->assertSame(0, $body['summary']['waiting']);
+        $this->assertSame(1, $body['data'][0]['times_told']);
+        $this->assertNotNull($body['data'][0]['converted_at']);
+
+        // And the filter that answered nothing now answers.
+        $filtered = $this->actingAs($owner)
+            ->getJson('/v1/events/'.$fixture['event']->id.'/waiting-list?status=converted')
+            ->assertOk()
+            ->json();
+
+        $this->assertCount(1, $filtered['data']);
+    }
+
+    #[Test]
+    public function the_scheduled_round_reaches_a_queue_where_everybody_has_already_been_told(): void
+    {
+        Mail::fake();
+
+        $fixture = $this->makeSellableEvent(rows: 1, perRow: 2);
+        $site = $this->makeSite($fixture['tenant']);
+
+        $this->sellOut($fixture);
+        $this->join($fixture, 'asleep@example.test', 1);
+        $this->freeOneSeat($fixture);
+
+        app(TenantContext::class)->runAs($fixture['tenant'], fn () => app(WaitingList::class)
+            ->notify($fixture['event'], $site));
+
+        $this->travel(WaitingList::CLAIM_MINUTES + 5)->minutes();
+
+        /*
+         * Nobody on this list is `waiting` — the only person on it is stuck at `notified`.
+         *
+         * A round that looked only for `waiting` rows would find no event to examine and leave
+         * them there for ever, which is the shape of the original bug.
+         */
+        $this->artisan('waitlist:notify')->assertSuccessful();
+
+        app(TenantContext::class)->runAs($fixture['tenant'], function () {
+            $entry = WaitingListEntry::where('email', 'asleep@example.test')->firstOrFail();
+
+            $this->assertSame('notified', $entry->status, 'Told again, on a fresh turn.');
+            $this->assertSame(2, $entry->times_told);
+        });
+    }
+
+    /** They follow the link and buy the seat, under the address they joined the list with. */
+    private function buy(array $fixture, string $email, int $seat): void
+    {
+        $this->postJson('http://northgate.test/_store/hold', [
+            'event_public_id' => $fixture['event']->public_id,
+            'seat_ids' => [$fixture['seats'][$seat]->id],
+        ])->assertCreated();
+
+        $this->post('http://northgate.test/checkout', [
+            'name' => explode('@', $email)[0],
+            'email' => $email,
+            'gateway' => 'offline',
+        ])->assertRedirect();
+    }
 
     private function join(array $fixture, string $email, int $quantity): void
     {

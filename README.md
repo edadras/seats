@@ -174,7 +174,13 @@ A seat is the start of it, not the end. Around the map:
   so the window cannot oversell while a basket is open.
 - **Multi-date events and seasons**, so a run of nights is one thing to manage and one thing to buy
   from.
-- **A waiting list** for a sold-out night, told automatically when seats come back.
+- **A waiting list** for a sold-out night, told automatically when seats come back — and a queue
+  whose states actually move. First asked, first told, each person with a window to buy in. A window
+  that closes without a sale puts them back in the queue behind anybody who has not had a turn, and
+  after three unanswered turns the platform stops writing to them: the row stays and the organiser
+  can see why it went quiet, because an email every two hours until the doors open is not a waiting
+  list. Buying takes somebody off the queue without their having to say so, matched on the address
+  they joined with, whichever counter or website sold the seat.
 - **The counter** — a box office selling at the window, taking cash, and giving seats away as
   comps, with a reason recorded against each.
 - **The door list** and its export, for the venue that would rather hold paper than a phone.
@@ -646,6 +652,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Only a submitted checkout becomes an abandoned basket, and only once | `BasketRecoveryTest` |
 | A recovery link takes the same seats again, or says plainly that it cannot | `BasketRecoveryTest` |
 | Nothing is written to a buyer until the organiser switches the message on | `BasketRecoveryTest` |
+| First asked, first told, and a promised place is not offered twice | `WaitingListTest` |
+| A turn that runs out puts somebody back in the queue, not out of it | `WaitingListTest`, `waitlist_smoke` |
+| Three unanswered turns and the platform stops writing; asking again resets it | `WaitingListTest` |
+| Buying takes somebody off the queue without their saying so | `WaitingListTest`, `waitlist_smoke` |
+| The scheduled round reaches a queue where everybody has already been told | `WaitingListTest` |
 | Arriving early at a queue buys nothing: the waiting are drawn, not sorted | `WaitingRoomTest` |
 | The door is on the hold, not only on the page | `WaitingRoomTest` |
 | A lapsed admission gives its place away | `WaitingRoomTest` |

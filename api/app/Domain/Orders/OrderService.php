@@ -317,6 +317,22 @@ class OrderService
                 'total_amount' => $order->total_amount,
             ]);
 
+            /*
+             * If they were waiting for this night, they are not waiting any more.
+             *
+             * Matched on the address they joined the list with, which is the only handle a queue
+             * has. Doing it here rather than on the waiting-list side is what makes it true however
+             * the seat was sold — the website, the counter, a shop over the integration API — since
+             * all three arrive at this one method.
+             */
+            try {
+                app(\App\Domain\Waitlist\WaitingList::class)->bought($event, $buyer['email'] ?? null);
+            } catch (\Throwable $e) {
+                // A queue that could not be tidied is not a reason to fail a sale somebody has
+                // already paid for. Reported and carried past, like the messages below.
+                report($e);
+            }
+
             // The buyer is told, on whatever channels this organiser has turned on. Failures are
             // recorded and swallowed inside: an order that fails because a text message could not
             // be sent is a worse outcome than a text message that arrives late.

@@ -29,9 +29,18 @@ class WaitingListController extends Controller
         $this->authorize($request, 'orders.view');
 
         $data = $request->validate([
-            'status' => ['nullable', 'in:waiting,notified,converted,left'],
+            'status' => ['nullable', 'in:waiting,notified,converted,lapsed,left'],
             'per_page' => ['nullable', 'integer', 'min:10', 'max:200'],
         ]);
+
+        /*
+         * Put anybody whose turn has run out back in the queue before counting.
+         *
+         * The notifier does this too, but it runs every five minutes and this screen is read in
+         * between: a row still saying "told" twenty minutes after its window closed is a row an
+         * organiser would act on, and acting on it would be acting on nothing.
+         */
+        $this->list->reopen($event);
 
         $entries = WaitingListEntry::where('event_id', $event->id)
             ->when($data['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
@@ -60,6 +69,13 @@ class WaitingListController extends Controller
                 'waiting' => (int) ($counts['waiting']->total ?? 0),
                 'waiting_places' => (int) ($counts['waiting']->places ?? 0),
                 'notified' => (int) ($counts['notified']->total ?? 0),
+                // How many of these people the queue actually turned into a sale, which is the
+                // only number that says whether keeping the list was worth anything.
+                'converted' => (int) ($counts['converted']->total ?? 0),
+                // Told their three times and never answered. Still on the list and no longer
+                // written to — said out loud, because a queue that quietly stops writing to people
+                // is a queue nobody can explain.
+                'lapsed' => (int) ($counts['lapsed']->total ?? 0),
                 'left' => (int) ($counts['left']->total ?? 0),
                 // What there actually is to offer, asked of the same code the site asks.
                 'free_places' => $this->list->freePlaces($event),
@@ -95,6 +111,10 @@ class WaitingListController extends Controller
             'status' => $entry->status,
             'joined_at' => $entry->created_at?->toIso8601String(),
             'notified_at' => $entry->notified_at?->toIso8601String(),
+            'converted_at' => $entry->converted_at?->toIso8601String(),
+            // How many turns they have had. An organiser looking at a name that keeps coming back
+            // round wants to know it is the third time, not the first.
+            'times_told' => $entry->times_told,
             // Whether their turn is still live, rather than making a screen work it out from a date.
             'claiming' => $entry->isClaiming(),
         ];

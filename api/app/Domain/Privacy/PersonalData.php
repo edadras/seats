@@ -114,6 +114,10 @@ class PersonalData
                     'quantity' => $entry->quantity,
                     'status' => $entry->status,
                     'joined_at' => $entry->created_at?->toIso8601String(),
+                    // How many times they were written to about this night. Somebody asking what
+                    // is held about them is entitled to know how often they were contacted.
+                    'times_told' => $entry->times_told,
+                    'last_told_at' => $entry->notified_at?->toIso8601String(),
                 ])->values()->all(),
             'tickets_given_away' => TicketTransfer::where('from_email', $email)
                 ->orWhere('to_email', $email)
