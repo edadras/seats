@@ -1,5 +1,55 @@
 # Running this in production
 
+## Installing it on a server
+
+Seven commands and one question. The question is the seventh.
+
+```bash
+# 1. The code, and only what production needs.
+composer install --no-dev --optimize-autoloader
+
+# 2. Settings. Copy the example and read it — every key in it has a comment saying what
+#    breaks when it is wrong, which is faster than finding out.
+cp .env.example .env
+php artisan key:generate            # APP_KEY. Back it up separately from the database.
+php artisan seatmap:generate-signing-key
+
+# 3. The schema.
+php artisan migrate --force
+
+# 4. The door scanner. It is a build artefact, not source, so a fresh checkout has none —
+#    and without this step /checkin is a 404 and no volunteer can pair a phone.
+../checkin-app/build.sh
+
+# 5. Compile the settings, the routes and the views.
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+
+# 6. Point the web server's root at api/public, and run these two for ever:
+#      php artisan queue:work --queue=default --tries=3
+#      * * * * * cd /path/to/api && php artisan schedule:run >/dev/null 2>&1
+
+# 7. Ask whether any of that is actually true.
+php artisan seatmap:preflight
+```
+
+**There is no asset build and no `storage:link`.** The panel, the designer and the hosted sites are
+plain files under `public/`, and nothing is written to a public disk. An operator who assumes a
+JavaScript toolchain is involved will spend an afternoon on a step that does not exist.
+
+### The question at the end
+
+`php artisan seatmap:preflight` reads the installation and reports three kinds of thing: a
+**failure**, which means something will not work and which sets a non-zero exit status so a deploy
+script can stop; a **warning**, which means a decision has not been made and a default has been
+taken; and a **note**, which is a fact worth reading once. `--strict` treats the warnings as
+failures, for a deployment that wants every decision made deliberately.
+
+It exists because the failures that matter here are all quiet. The application starts, the panel
+loads, a seat can be held — and mail is going to a log file, or every buyer is sharing one rate-limit
+bucket, or expired holds are never swept. None of that shows up on a request to the home page.
+
+Run it again after a deploy, not only during one: most of what it reads can drift afterwards.
+
 ## What has to be true
 
 | Requirement | Why it is not optional |
@@ -15,6 +65,27 @@
 php artisan queue:work --queue=default --tries=3
 * * * * * cd /path/to/api && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+## Behind a proxy
+
+Almost everything this platform limits, it limits **per IP address**: signing in, signing up,
+claiming an SSO account, how many seats one person may hold, the bot defence on the picker. Every
+audit row records one too.
+
+So `SEATMAP_TRUSTED_PROXIES` is not a detail. Behind nginx, Caddy, a load balancer or a CDN with it
+empty, `$request->ip()` is the proxy's address on *every* request — a hundred buyers at an on-sale
+share one throttle bucket, so the tenth to try is refused on everyone else's behalf, and the audit
+log says the same thing on every line. Set it to the proxy's own address (`127.0.0.1,::1` for nginx
+on the same host, or the load balancer's range).
+
+The opposite mistake is as bad and less obvious: setting it to `*` on a server that is *also*
+reachable directly lets any client put whatever it likes in `X-Forwarded-For` and walk past those
+same limits from one machine. Name the proxy rather than wildcarding it.
+
+`X-Forwarded-Host` is deliberately **not** honoured, from any proxy. This application routes by
+Host — a hostname is looked up as a tenant's site — so a forwarded Host a client could set would be
+one organiser serving their pages on another's domain. If a deployment genuinely needs it, that is a
+change to `bootstrap/app.php` made on purpose, with that consequence understood.
 
 ## Secrets
 
@@ -44,6 +115,11 @@ job lives in the queue rather than in the database: a worker restarted at the wr
 Redis flushed by hand, and a delivery sits `pending` with its moment in the past for ever. The sweep
 is what makes the delivery table rather than the queue the record of what is still owed to somebody
 else's server. It also prunes the log (`SEATMAP_WEBHOOK_LOG_DAYS`, 30 by default).
+
+**`MAIL_MAILER` has no safe default.** Unset, the framework uses `log`, which writes every message
+to `storage/logs` and sends nothing: no tickets, no invitations, no password resets, and no error
+anywhere. It is the quietest way this installation can be broken, and `seatmap:preflight` treats it
+as a failure rather than a warning for that reason.
 
 **`SEATMAP_SENDER_DOMAINS`** is the list of domains this installation may put in an email's From
 *address* — the ones whose SPF lists this server and whose DKIM key it holds. Adding a domain here

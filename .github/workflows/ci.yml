@@ -116,6 +116,30 @@ jobs:
           REDIS_HOST: 127.0.0.1
         run: ./vendor/bin/phpunit
 
+      - name: The deployment check still runs, and still refuses a broken installation
+        if: matrix.php == '8.4'
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: seatmap_test
+          DB_USERNAME: seatmap
+          DB_PASSWORD: seatmap
+          REDIS_HOST: 127.0.0.1
+        run: |
+          # `PreflightTest` pins what each check decides. This pins the thing a unit test cannot:
+          # that the command itself boots and runs end to end against a real database and a real
+          # Redis. A deployment check that throws on the one machine it was written for is worse
+          # than none, because the deploy script reads the non-zero status as a finding.
+          php artisan seatmap:preflight || true
+
+          # And that it does not pass an installation with nowhere to send a ticket. CI's mailer is
+          # `log`, which is exactly the failure this is here to catch, so a zero exit means the
+          # check has stopped checking.
+          if php artisan seatmap:preflight > /dev/null 2>&1; then
+            echo "::error::seatmap:preflight passed an installation that sends no mail"
+            exit 1
+          fi
+
       - name: The contract describes the API
         if: matrix.php == '8.4'
         working-directory: .

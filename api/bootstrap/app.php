@@ -22,6 +22,26 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        /*
+         * What a proxy is believed about, which is less than the framework's default.
+         *
+         * Who the proxies are is in `config/trustedproxy.php`; this is the other half — which
+         * forwarded headers are honoured once one is trusted. Three of them, and the omission is
+         * the point: `X-Forwarded-Host` is left out because this application *routes by Host*.
+         * Every request's hostname is looked up as a tenant's site, so a Host header a client
+         * could set would be one tenant serving their page on another's domain — and on a
+         * deployment that has to trust a shared load balancer, the header is exactly that.
+         * `X-Forwarded-Prefix` is out for the same kind of reason: nothing here is served under a
+         * path prefix, so believing one only moves URLs somewhere nobody asked for.
+         *
+         * What is honoured is what the platform genuinely cannot work without: the client's
+         * address, because every per-IP limit depends on it, and the scheme and port, so a request
+         * that arrived over TLS is not treated as plain HTTP by the session cookie.
+         */
+        $middleware->trustProxies(headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO);
+
         $middleware->api(prepend: [
             \App\Http\Middleware\AssignRequestId::class,
         ]);

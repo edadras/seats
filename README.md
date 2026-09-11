@@ -896,8 +896,34 @@ php artisan migrate --seed
 php artisan serve
 ```
 
-Requires PHP 8.3+, PostgreSQL 14+ and Redis. Postgres is not optional: the correctness guarantees
-use partial unique indexes and `SELECT … FOR UPDATE`.
+Requires PHP 8.3+ with `intl`, `gd` and `pdo_pgsql`, PostgreSQL 14+ and Redis. Postgres is not
+optional: the correctness guarantees use partial unique indexes and `SELECT … FOR UPDATE`. The three
+extensions are declared in `composer.json`, so a server missing one is refused at install rather
+than at the moment somebody looks at a price.
+
+## Putting it on a server
+
+`docs/OPERATIONS.md` has the sequence. The part worth knowing before you read it is the last step:
+
+```bash
+php artisan seatmap:preflight
+```
+
+It reads the installation and says whether it is fit to take money — a **failure** means something
+will not work and sets a non-zero exit status, so a deploy script can stop on it; a **warning**
+means a decision has not been made and a default has been taken; `--strict` treats the second as
+the first.
+
+It exists because the deployment failures that matter here are quiet ones. The application starts,
+the panel loads, a seat can be held — and `MAIL_MAILER` is unset so every ticket goes to a log file;
+or no proxy is trusted, so every buyer at an on-sale shares one rate-limit bucket and the tenth of
+them is refused on everyone else's behalf; or the queue is `sync`, so expired holds are never swept
+and seats nobody bought stay sold. None of those shows up on a request to the home page, and each of
+them is a full house finding out instead.
+
+Two things it will tell you that are easy to assume the other way round: there is **no asset build**
+and **no `storage:link`** — the panel and the sites are plain files under `public/` — and the door
+scanner **is** a build step, because `api/public/checkin` is an artefact rather than source.
 
 `php artisan migrate --seed` creates two demo organisers with a hosted site each, four priced
 events across two published maps — a theatre with named chairs and a warehouse sold by the head,
