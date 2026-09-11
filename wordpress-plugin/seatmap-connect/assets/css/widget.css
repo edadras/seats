@@ -44,7 +44,7 @@
  * than a class the theme may or may not set.
  */
 @media (prefers-color-scheme: dark) {
-	.seatmap-widget {
+	.seatmap-widget:not([data-seatmap-theme='light']) {
 		--seatmap-surface: #171a24;
 		--seatmap-surface-sunken: #101219;
 		--seatmap-surface-hover: #232838;
@@ -64,6 +64,36 @@
 		--seatmap-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.35);
 		--seatmap-ring: 0 0 0 3px rgba(233, 236, 243, 0.22);
 	}
+}
+
+/*
+ * A host that has already decided.
+ *
+ * The rule above is right for a picker on somebody's shop: follow the reader. It is wrong inside a
+ * host with a switch of its own — the panel has a light/dark toggle, and a clerk who set it to dark
+ * on a machine whose system is light was getting a white hall inside a dark screen. `data-seatmap-
+ * theme` on the container is that host saying which one, and it beats the preference in both
+ * directions. The canvas needs no rule of its own: it measures the box it is drawn in.
+ */
+.seatmap-widget[data-seatmap-theme='dark'] {
+	--seatmap-surface: #171a24;
+	--seatmap-surface-sunken: #101219;
+	--seatmap-surface-hover: #232838;
+	--seatmap-border: #2c3244;
+	--seatmap-border-strong: #3b4256;
+
+	--seatmap-text: #e9ecf3;
+	--seatmap-muted: #a8b0c3;
+
+	--seatmap-accent: #e9ecf3;
+	--seatmap-on-accent: #12151f;
+
+	--seatmap-danger: #f0736a;
+	--seatmap-danger-soft: rgba(240, 115, 106, 0.12);
+	--seatmap-ok: #4ac585;
+
+	--seatmap-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.35);
+	--seatmap-ring: 0 0 0 3px rgba(233, 236, 243, 0.22);
 }
 
 .seatmap-widget *,

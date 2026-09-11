@@ -349,6 +349,14 @@ Route::prefix('v1')->group(function () {
         // ---- The counter -------------------------------------------------------------------
         // Selling to the person in front of you: cash, an invoice to a school, or a comp.
         Route::get('events/{event}/counter', [BoxOfficeController::class, 'counter']);
+        /*
+         * The same hall the buyer sees, for the window. The panel runs the buyer's own picker
+         * against these two rather than drawing a grid of its own, so a clerk on the telephone and
+         * the caller with the website open are looking at one room.
+         */
+        Route::get('events/{event}/hall', [BoxOfficeController::class, 'hall']);
+        Route::get('events/{event}/hall/availability', [BoxOfficeController::class, 'hallAvailability'])
+            ->middleware('throttle:240,1,counter-availability');
         Route::post('events/{event}/sell', [BoxOfficeController::class, 'sell'])
             ->middleware('throttle:60,1,sell');
 

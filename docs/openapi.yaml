@@ -820,7 +820,7 @@ paths:
               type: object
               required: [kind, amount]
               properties:
-                kind: { type: string, enum: [topup, settlement, adjustment] }
+                kind: { type: string, enum: [topup, settlement, deduction, adjustment] }
                 amount: { type: integer, description: "In the account's minor unit." }
                 currency: { type: string, minLength: 3, maxLength: 3 }
                 method: { type: [string, "null"], enum: [cash, card, transfer, null] }
@@ -6351,6 +6351,77 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/hall:
+    parameters:
+      - { name: event, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: counterHall
+      tags: [Orders]
+      summary: The same hall the buyer sees, for the person at the window
+      description: >
+        The panel runs the buyer's own seat picker at the box office rather than drawing a grid of
+        its own, so a clerk on the telephone and the caller with the website open are looking at one
+        room. This is what feeds it: the same event and the same geometry the embed API serves,
+        from the same presenter.
+      responses:
+        "200":
+          description: The hall
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event: { type: object, additionalProperties: true }
+                  seat_map_version_id: { type: string, format: uuid }
+                  geometry: { type: object, additionalProperties: true }
+        "409":
+          description: "`map_not_published`"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /events/{event}/hall/availability:
+    parameters:
+      - { name: event, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: counterHallAvailability
+      tags: [Orders]
+      summary: What is free right now, as the counter sees it
+      description: >
+        The picker polls this the way it polls the public one, and it differs in exactly the two
+        ways the counter does: a house seat is on sale here and blocked to the website, and each
+        one carries the name it is being kept under. That name is never on the public answer.
+      parameters:
+        - name: since
+          in: query
+          schema: { type: string }
+          description: The cursor from a previous answer. An unchanged cursor answers cheaply.
+      responses:
+        "200":
+          description: Availability
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor: { type: string }
+                  full: { type: boolean }
+                  seats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        seat_id: { type: string, format: uuid }
+                        state: { type: string }
+                        amount: { type: [integer, "null"] }
+                        zone_key: { type: [string, "null"] }
+                        held_for:
+                          type: [string, "null"]
+                          description: Who this chair is being kept for. Counter only.
+                  areas: { type: array, items: { type: object, additionalProperties: true } }
+                  entry_slots: { type: array, items: { type: object, additionalProperties: true } }
+                  price_tier: { type: [object, "null"], additionalProperties: true }
+
   /events/{event}/counter:
     parameters: [ { $ref: "#/components/parameters/EventId" } ]
     get:
@@ -8470,12 +8541,18 @@ components:
     AgentAccount:
       type: object
       description: >
-        Where an agent stands. Only `paid_in`, `settled_out` and `adjustments` are rows; everything
-        else is counted from the allocations at the moment of reading.
+        Where an agent stands. Only `paid_in`, `settled_out`, `deducted` and `adjustments` are rows;
+        everything else is counted from the allocations at the moment of reading.
       properties:
         currency: { type: string }
         paid_in: { type: integer }
-        settled_out: { type: integer, description: "Negative: money out to the agent." }
+        settled_out: { type: integer, description: "Negative: what the agency has handed over." }
+        deducted:
+          type: integer
+          description: >
+            Negative: credit the organiser took back — a returned float, a penalty, a correction.
+            Its own total rather than part of the settlements, because the two land in the same
+            direction and mean different things, and only one of them matches a bank statement.
         adjustments: { type: integer }
         sold: { type: integer, description: "Face value of the seats they have sold that are still live." }
         refunded: { type: integer }
@@ -8495,7 +8572,7 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [topup, settlement, adjustment] }
+        kind: { type: string, enum: [topup, settlement, deduction, adjustment] }
         amount: { type: integer }
         currency: { type: string }
         method: { type: [string, "null"] }

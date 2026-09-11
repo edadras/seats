@@ -11,6 +11,7 @@
  *   node agents_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openHall, chooseSeats, startSale } from './counter-hall.mjs';
 import { seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
@@ -170,8 +171,7 @@ check( 'so the screen they land on is one they may use',
 await theirs.screenshot( { path: `${ SHOTS }/04-their-whole-panel.png` } );
 
 await theirs.click( 'nav button[data-view=counter]' );
-await theirs.waitForSelector( '#counter-event', { timeout: 20000 } );
-await theirs.waitForTimeout( 1200 );
+await openHall( theirs );
 
 const offered = await theirs.locator( '#counter-event option' ).allInnerTexts();
 
@@ -185,18 +185,14 @@ check( 'and shows what they have left to sell against', /50[.,]00/.test( strip )
 
 await theirs.screenshot( { path: `${ SHOTS }/05-agent-counter.png` } );
 
-await theirs.waitForSelector( '.counter__blocks', { timeout: 20000 } );
-await theirs.locator( '.counter__block:not([disabled])' ).first().click();
-await theirs.waitForSelector( '.counter__seat' );
-await theirs.locator( '.counter__seat:not([disabled])' ).first().click();
-await theirs.waitForTimeout( 600 );
+await chooseSeats( theirs, 1 );
+
 
 // A sale in progress, as the agency sees it: the chair taken, the total beside it, and the credit
 // they are selling against at the top of their own screen.
 await theirs.screenshot( { path: `${ SHOTS }/06-agent-selling.png` } );
 
-await theirs.click( '#counter-sell' );
-await theirs.waitForSelector( '.modal' );
+await startSale( theirs );
 await theirs.fill( '#c-name', 'Walk-up buyer' );
 
 // And the money asked for: a seat chosen, the money asked for, and the credit they are
@@ -222,13 +218,8 @@ check( 'and the strip says so without being reloaded by hand',
 for ( let round = 0; round < 8; round++ ) {
 	// Every sale returns the counter to the blocks, the way it does for anybody: the hall is
 	// re-read because seats have just been taken out of it.
-	await theirs.waitForSelector( '.counter__blocks', { timeout: 20000 } );
-	await theirs.locator( '.counter__block:not([disabled])' ).first().click();
-	await theirs.waitForSelector( '.counter__seat', { timeout: 20000 } );
-	await theirs.locator( '.counter__seat:not([disabled])' ).first().click();
-	await theirs.waitForTimeout( 300 );
-	await theirs.click( '#counter-sell' );
-	await theirs.waitForSelector( '.modal' );
+	await chooseSeats( theirs, 1 );
+	await startSale( theirs );
 	await theirs.fill( '#c-name', 'Walk-up buyer' );
 	await theirs.click( '.modal button[type=submit]' );
 	await theirs.waitForTimeout( 2500 );

@@ -91,8 +91,8 @@ A seat is the start of it, not the end. Around the map:
   may sell is a list, not a level** — a bureau is handed the summer festival and not the members'
   evening, and the refusal happens when they open the night rather than after four seats and
   somebody's money. **Credit is money that moved, and everything else is counted**: only a payment
-  in, a settlement out and an adjustment somebody signed are written down, while what has been
-  sold, refunded and earned in commission is read from the allocations every time — so a refunded
+  in, a settlement out, credit taken back and an adjustment somebody signed are written down, while
+  what has been sold, refunded and earned in commission is read from the allocations every time — so a refunded
   ticket hands its credit straight back and no two columns can drift apart. A sale that would take
   an agent past their limit is refused before a seat is held, and prepaid is the default: nought
   means they sell what they have paid for and not a ticket more. The commission rate is stamped on
@@ -283,6 +283,12 @@ A seat is the start of it, not the end. Around the map:
 - **Reports** built by dragging fields, with no SQL box — [ADR-0006](docs/adr/0006-report-engine.md)
   says why.
 - **Two-step sign-in** for staff, and **GDPR export and erasure** for buyers.
+- **One hall, both sides of the glass.** The box office does not draw a seating plan of its own: it
+  runs the buyer's picker — the same file, the same plan, the same zoom, the same room in three
+  dimensions — pointed at the counter's own availability. A clerk on the telephone and the caller
+  with the website open are looking at the same room. The window keeps the two things that make it
+  a window: a house seat is on sale here and blocked online, with the name it is being kept under on
+  the chair, and the sale happens in one movement with no cart and no hold left behind.
 
 Every one of these is behind a named permission, translated into all six languages, and driven by a
 browser check in `api/smoke.sh`.
@@ -676,10 +682,14 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | What they owe is counted from the seats, so a refund returns the credit | `SalesAgentTest` |
 | The rate agreed today does not rewrite what was owed last season | `SalesAgentTest` |
 | A top-up is money in whichever way its sign was typed | `SalesAgentTest` |
+| Credit can be taken back as well as paid in, and counted apart from a settlement | `SalesAgentTest` |
 | An agent sees their own bookings and nobody else's | `SalesAgentTest` |
 | The statement bounds the sales and never the balance | `SalesAgentTest`, `agents_smoke` |
 | An agent who has sold something is switched off rather than deleted | `SalesAgentTest` |
 | A comp costs an agent nothing and is still theirs | `SalesAgentTest` |
+| The window is handed the same hall the buyer is looking at | `BoxOfficeCounterTest`, `counter_smoke` |
+| The counter's availability sees the house seat and says whose it is | `BoxOfficeCounterTest` |
+| Four side by side is a suggestion at a window and a hold on a website | `together_smoke` |
 | An agency is never handed the organiser's audience | `SalesAgentTest`, `agents_smoke` |
 | The narrow permission shows nothing to somebody who sells for nobody | `SalesAgentTest` |
 | An agency reads its own statement and reaches no others | `SalesAgentTest`, `agents_smoke` |

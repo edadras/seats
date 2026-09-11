@@ -11,6 +11,7 @@
  *   node counter_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openHall, chooseSeats, startSale } from './counter-hall.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SHOTS = process.env.SEATMAP_SHOTS || '/tmp/counter-shots';
@@ -37,33 +38,31 @@ await page.waitForSelector( '.sidebar' );
 
 console.log( 'The hall' );
 await page.click( 'nav button[data-view=counter]' );
-await page.waitForSelector( '#counter-event' );
-await page.selectOption( '#counter-event', { label: 'Opening night' } );
-await page.waitForSelector( '.counter__blocks' );
+await openHall( page, 'Opening night' );
 
-check( 'the sections are offered', ( await page.locator( '.counter__block' ).count() ) > 0 );
-
-// Index zero is a section like any other — a truth test here would send the clerk back to the list.
-await page.locator( '.counter__block:not([disabled])' ).first().click();
-await page.waitForSelector( '.counter__seat' );
-
-check( 'the chairs are there', ( await page.locator( '.counter__seat' ).count() ) > 0 );
-check( 'and a seat that has gone says so, rather than being missing',
-	( await page.locator( '.counter__seat.is-gone' ).count() ) > 0 );
+/*
+ * The room, not a grid of buttons.
+ *
+ * The counter runs the buyer's own picker now, so what a clerk is looking at is the plan the caller
+ * on the telephone has open: the stage where the stage is, the blocks where the blocks are, and the
+ * same chairs in the same places.
+ */
+check( 'the counter is looking at the hall itself',
+	1 === await page.locator( '#counter-picker canvas' ).count() );
+check( 'with the blocks the buyer sees',
+	( await page.locator( '#counter-picker .seatmap-widget__block' ).count() ) > 0 );
 
 console.log( 'A sale' );
-await page.locator( '.counter__seat:not([disabled])' ).first().click();
-await page.locator( '.counter__seat:not([disabled])' ).nth( 1 ).click();
-await page.waitForTimeout( 300 );
+const chosen = await chooseSeats( page, 2 );
 
-check( 'both seats are in the basket', 2 === await page.locator( '.counter__lines li' ).count() );
-check( 'and they add up', /\d/.test( await page.locator( '.counter__total' ).innerText() ),
-	( await page.locator( '.counter__total' ).innerText() ).replace( /\n/g, ' ' ) );
+check( 'two chairs go into the selection', 2 === chosen );
+check( 'and the picker adds them up',
+	/\d/.test( await page.locator( '#counter-picker .seatmap-widget__total' ).innerText() ),
+	( await page.locator( '#counter-picker .seatmap-widget__total' ).innerText() ).replace( /\n/g, ' ' ) );
 
 await page.screenshot( { path: `${ SHOTS }/01-counter.png` } );
 
-await page.click( '#counter-sell' );
-await page.waitForSelector( '.modal' );
+await startSale( page );
 await page.fill( '#c-name', 'Walk-up buyer' );
 await page.selectOption( '#c-payment', 'comp' );
 await page.screenshot( { path: `${ SHOTS }/02-sell.png` } );

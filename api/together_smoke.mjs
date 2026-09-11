@@ -10,6 +10,7 @@
  *   node together_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openHall } from './counter-hall.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
 const SITE = process.env.SEATMAP_SITE || 'http://northgate.localhost:8123';
@@ -70,18 +71,24 @@ await page.click( '#login button[type=submit]' );
 await page.waitForSelector( '.sidebar' );
 
 await page.click( 'nav button[data-view=counter]' );
-await page.waitForSelector( '#counter-event' );
-await page.selectOption( '#counter-event', { label: 'Opening night' } );
-await page.waitForSelector( '#counter-find' );
+await openHall( page, 'Opening night' );
 
-await page.fill( '#counter-together', '3' );
-await page.click( '#counter-find' );
-await page.waitForTimeout( 1200 );
+/*
+ * The same question the website asks, answered differently at a window.
+ *
+ * On a site the server chooses and holds in one movement. Here the seats land on the plan, chosen
+ * and visible, because the clerk is going to read them out to somebody before anything is sold.
+ */
+await page.selectOption( '#counter-picker .seatmap-widget__together-count', '3' );
+await page.click( '#counter-picker .seatmap-widget__together-go' );
+await page.waitForTimeout( 2000 );
 
-const basket = await page.locator( '.counter__lines li' ).allInnerTexts();
+const basket = await page.locator( '#counter-picker .seatmap-widget__selection li' ).allInnerTexts();
 
-check( 'the counter fills the basket in one press', 3 === basket.length,
+check( 'the counter puts three side by side on the plan in one press', 3 === basket.length,
 	basket.map( ( line ) => line.split( '\n' )[ 0 ] ).join( ' | ' ) );
+check( 'and they are chosen, not sold',
+	3 === await page.locator( '#counter-picker .seatmap-widget__seat.is-selected' ).count() );
 
 await page.screenshot( { path: `${ SHOTS }/03-counter.png` } );
 

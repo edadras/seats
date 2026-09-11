@@ -1595,159 +1595,33 @@
 /* ---- the counter -------------------------------------------------------------------------- */
 
 /*
- * A hall on one side, the basket on the other.
+ * The counter draws no hall of its own any more.
  *
- * A window sale is a two-handed job — find the seat, say who it is for — and a clerk who has to
- * scroll between the two halves is a clerk keeping a queue waiting.
+ * It runs the buyer's picker — the same file, the same plan, the same zoom — so everything that
+ * was here (a grid of section cards, rows of numbered buttons, a basket beside them) now lives in
+ * the picker's own stylesheet, which the panel loads. What is left is the fitting: how the picker
+ * sits inside a panel screen rather than inside somebody's shop.
  */
-.counter {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 20rem;
-	gap: var(--s-6);
-	align-items: start;
+.counter__picker {
+	margin-block-start: var(--s-4);
+	/*
+	 * The picker paints itself against its own surface colour, which it reads off this box. Given
+	 * the panel's rather than left to the widget's default, so a hall at the window is the same
+	 * shade as the screen around it in both themes.
+	 */
+	--seatmap-surface: var(--surface);
+	--seatmap-ink: var(--text);
 }
 
-@media (max-width: 60rem) {
-	.counter { grid-template-columns: minmax(0, 1fr); }
-}
-
-.counter__blocks {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-	gap: var(--s-3);
-}
-
-.counter__block {
-	display: flex;
-	flex-direction: column;
-	gap: var(--s-1);
-	padding: var(--s-4);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	background: var(--surface);
-	text-align: start;
-	cursor: pointer;
-}
-
-.counter__block:hover:not(:disabled) { border-color: var(--accent); }
-.counter__block:disabled { opacity: 0.5; cursor: default; }
-.counter__block-name { font-weight: 600; }
-.counter__block-free { font-size: var(--text-xs); color: var(--text-muted); }
-
-.counter__rows { display: flex; flex-direction: column; gap: var(--s-2); }
-
-.counter__row { display: flex; align-items: center; gap: var(--s-1); flex-wrap: wrap; }
-
-.counter__row-name {
-	inline-size: 3rem;
-	flex: none;
-	font-size: var(--text-xs);
-	color: var(--text-muted);
-}
-
-.counter__seat {
-	min-inline-size: 2rem;
-	block-size: 2rem;
-	padding-inline: var(--s-1);
-	border: 1px solid var(--border);
-	border-radius: calc(var(--radius) * 0.6);
-	background: var(--surface);
-	font-size: var(--text-xs);
-	font-variant-numeric: tabular-nums;
-	cursor: pointer;
-}
-
-.counter__seat:hover:not(:disabled) { border-color: var(--accent); }
-
-.counter__seat.is-chosen {
-	background: var(--accent);
-	border-color: var(--accent);
-	color: var(--accent-ink, #fff);
-	font-weight: 600;
-}
-
-/* Kept back for somebody, and sellable here and nowhere else. Dashed, like the chip on the
-   seats screen that put it there, so the two screens describe one thing the same way. */
-.counter__seat--house {
+/*
+ * A chair somebody's name is on, in the list under the plan.
+ *
+ * Only the box office ever sees one: the buyer's availability does not carry the name. The ring on
+ * the plan says the same thing in the same place — this is the version for a keyboard.
+ */
+.seatmap-widget__seat.is-house {
 	border-style: dashed;
-	border-color: color-mix(in srgb, var(--warn, #b8860b) 55%, var(--border));
-	background: color-mix(in srgb, var(--warn, #b8860b) 12%, var(--surface));
-}
-
-/* Sold or in somebody's cart. Shown, not hidden: "A5 has gone" is the answer a clerk needs. */
-.counter__seat.is-gone {
-	opacity: 0.35;
-	cursor: default;
-	text-decoration: line-through;
-}
-
-.counter__area {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--s-3);
-	padding: var(--s-3);
-	border: 1px solid var(--hairline);
-	border-radius: var(--radius);
-}
-
-.counter__area + .counter__area { margin-block-start: var(--s-2); }
-.counter__count { min-inline-size: 2rem; text-align: center; font-weight: 600; }
-
-.counter__basket {
-	position: sticky;
-	top: var(--s-4);
-	padding: var(--s-4);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	background: var(--surface);
-}
-
-/* "Four together, please" — the first thing asked at a window, so the first thing in the basket. */
-.counter__together {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: var(--s-2);
-	margin-block-end: var(--s-4);
-	padding-block-end: var(--s-4);
-	border-block-end: 1px solid var(--border-subtle);
-}
-
-.counter__together-label {
-	flex: 1 1 100%;
-	font-size: var(--text-xs);
-	font-weight: 600;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: var(--text-muted);
-}
-
-.counter__together .input { flex: 0 0 5rem; }
-.counter__together .btn { flex: 1 1 auto; }
-
-.counter__lines { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
-
-.counter__lines li {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	gap: var(--s-2);
-	padding-block: var(--s-2);
-	border-block-end: 1px solid var(--hairline);
-	font-size: var(--text-sm);
-}
-
-.counter__lines li:last-child { border-block-end: none; }
-
-.counter__total {
-	display: flex;
-	justify-content: space-between;
-	gap: var(--s-2);
-	margin: 0 0 var(--s-3);
-	padding-block-start: var(--s-2);
-	border-block-start: 1px solid var(--border);
-	font-weight: 700;
+	border-width: 2px;
 }
 
 .select--sm { display: block; margin-block-start: var(--s-1); font-size: var(--text-xs); }

@@ -54,6 +54,71 @@ class BoxOfficeCounterTest extends TestCase
     }
 
     #[Test]
+    public function the_window_is_handed_the_same_hall_the_buyer_is_looking_at(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $owner = $this->makeUser($fixture['tenant']);
+        $event = $fixture['event'];
+
+        $counter = $this->actingAs($owner)
+            ->getJson("/v1/events/{$event->id}/hall")
+            ->assertOk()
+            ->json();
+
+        $public = $this->getJson("/v1/embed/events/{$event->public_id}")->assertOk()->json();
+        $publicMap = $this->getJson("/v1/embed/events/{$event->public_id}/seat-map")->assertOk()->json();
+
+        /*
+         * The same room, from the same presenter.
+         *
+         * This is the whole claim: the panel does not draw a hall of its own, it runs the buyer's
+         * picker. Two presenters that drifted would be two halls — a zone missing from one, a
+         * ticket type present in the other — and a window that quietly disagrees with the website
+         * about what a seat costs.
+         */
+        $this->assertSame($public, $counter['event']);
+        $this->assertSame($publicMap['geometry'], $counter['geometry']);
+    }
+
+    #[Test]
+    public function the_counters_availability_sees_the_house_seat_and_says_whose_it_is(): void
+    {
+        $fixture = $this->makeSellableEvent();
+        $owner = $this->makeUser($fixture['tenant']);
+        $event = $fixture['event'];
+        $kept = $fixture['seats'][0];
+
+        app(TenantContext::class)->runAs($fixture['tenant'], fn () => \App\Models\EventSeatOverride::create([
+            'tenant_id' => $fixture['tenant']->id,
+            'event_id' => $event->id,
+            'seat_id' => $kept->id,
+            // Blocked to the website, which is what a house seat is: on sale at one window only.
+            'blocked' => true,
+            'held_for' => 'The director’s mother',
+        ]));
+
+        $atTheWindow = collect(
+            $this->actingAs($owner)
+                ->getJson("/v1/events/{$event->id}/hall/availability")
+                ->assertOk()
+                ->json('seats')
+        )->firstWhere('seat_id', $kept->id);
+
+        // On sale here, with the name on it. That is what holding a seat back is *for*: somebody is
+        // going to be handed it on the night, and the person handing it over works at this window.
+        $this->assertSame('available', $atTheWindow['state']);
+        $this->assertSame('The director’s mother', $atTheWindow['held_for']);
+
+        $online = collect(
+            $this->getJson("/v1/embed/events/{$event->public_id}/availability")->assertOk()->json('seats')
+        )->firstWhere('seat_id', $kept->id);
+
+        // And to the public it is gone, with no name and no hint that there is one.
+        $this->assertNotSame('available', $online['state']);
+        $this->assertArrayNotHasKey('held_for', $online);
+    }
+
+    #[Test]
     public function a_window_sale_allocates_seats_and_issues_tickets(): void
     {
         $fixture = $this->makeSellableEvent(amount: 3000);

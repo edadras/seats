@@ -128,22 +128,100 @@
 		var App = Counter.App;
 
 		Counter.eventId = eventId;
-		Counter.section = null;
-		Counter.selected = {};
-		Counter.areas = {};
-		Counter.types = {};
 
-		App.request( 'GET', '/events/' + eventId + '/counter' )
+		// The hall on screen belongs to the night that was on screen. Taken down before the next
+		// one is asked for, so an afternoon of switching between three events is not three pickers
+		// polling three halls out of sight of each other.
+		Counter.takeDown();
+
+		App.request( 'GET', '/events/' + eventId + '/hall' )
 			.then( function ( hall ) {
 				Counter.hall = hall;
-				Counter.paintHall();
+				Counter.mount();
 			} )
-			.catch( function ( error ) { App.toast( error.message, true ); } );
+			.catch( function ( error ) {
+				Counter.hall = null;
+				var host = document.getElementById( 'counter-hall' );
+
+				if ( host ) {
+					host.innerHTML = '<div class="issue issue--error" role="alert">' +
+						icon( 'alert', { size: 16 } ) + '<span>' + esc( error.message ) + '</span></div>';
+				}
+			} );
+	};
+
+	/**
+	 * Follow the panel's own switch.
+	 *
+	 * The picker follows the reader's system preference wherever it is a guest. Here it is not a
+	 * guest: the panel has a light/dark toggle, and a clerk who set it to dark on a machine whose
+	 * system is light was getting a white hall inside a dark screen. Repainting afterwards because
+	 * the plan is a canvas, which takes its palette from the colour of the box it is drawn in.
+	 */
+	Counter.syncTheme = function () {
+		var host = document.getElementById( 'counter-picker' );
+
+		if ( ! host || ! Counter.App ) {
+			return;
+		}
+
+		host.setAttribute( 'data-seatmap-theme', Counter.App.theme() );
+
+		if ( host.seatmapWidget ) {
+			host.seatmapWidget.paint();
+		}
+	};
+
+	Counter.takeDown = function () {
+		var host = document.getElementById( 'counter-hall' );
+		var mounted = host && host.firstElementChild && host.firstElementChild.seatmapWidget;
+
+		if ( mounted ) {
+			mounted.destroy();
+		}
+
+		Counter.picker = null;
+	};
+
+	/**
+	 * Repaint the agent's own numbers, and nothing else.
+	 *
+	 * Not a repaint of the screen: the picker is on it, holding a zoom, a floor and a place in the
+	 * room, and taking the hall down to change three figures in a strip above it would cost the
+	 * clerk their position between one customer and the next.
+	 */
+	Counter.refreshStrip = function () {
+		var strip = document.querySelector( '.page-body > .stat-strip' );
+
+		if ( ! strip ) {
+			return;
+		}
+
+		var replacement = document.createElement( 'div' );
+
+		replacement.innerHTML = Counter.agentStrip();
+
+		if ( replacement.firstElementChild ) {
+			strip.replaceWith( replacement.firstElementChild );
+		}
 	};
 
 	/* ------------------------------------------------------------------------------ the hall */
 
-	Counter.paintHall = function () {
+	/**
+	 * The buyer's own picker, at the window.
+	 *
+	 * The counter used to draw its own thing: a grid of numbered buttons in rows, no plan, no zoom,
+	 * no idea where in the room anything was. A clerk taking a booking over the telephone was
+	 * describing a hall from a screen that looked nothing like the one the caller had open, and the
+	 * seat kept for the director's mother looked exactly like every other free chair.
+	 *
+	 * So the panel runs the picker the buyer runs — the same file, the same plan, the same zoom,
+	 * the same room in three dimensions — pointed at the counter's own availability, which sees the
+	 * house seats and says whose they are. What the window keeps is what makes it a window: the sale
+	 * happens here, in one dialog, with no cart and no hold left behind.
+	 */
+	Counter.mount = function () {
 		var App = Counter.App;
 		var host = document.getElementById( 'counter-hall' );
 		var hall = Counter.hall;
@@ -152,348 +230,110 @@
 			return;
 		}
 
-		host.innerHTML =
-			'<div class="counter">' +
-				'<div class="counter__hall">' +
-					// `null !==`, not a truth test: the first section is index 0, and a falsy check
-					// would send a clerk who clicked it straight back to the list of sections.
-					( null !== Counter.section
-						? Counter.sectionMarkup( App )
-						: Counter.blocksMarkup( App ) ) +
-					Counter.areasMarkup( App ) +
-				'</div>' +
-				'<aside class="counter__basket">' + Counter.togetherMarkup( App ) +
-					Counter.basketMarkup( App ) + '</aside>' +
-			'</div>';
+		host.innerHTML = '<div class="seatmap-widget counter__picker" id="counter-picker" ' +
+			'data-seatmap-theme="' + esc( App.theme() ) + '"></div>';
 
-		Counter.bindHall();
+		var currency = hall.event.currency;
+
+		global.seatmapBoot.push( {
+			containerId: 'counter-picker',
+			eventPublicId: hall.event.public_id,
+			event: hall.event,
+			geometry: hall.geometry,
+			// The counter's own availability: it sees a house seat the website may not sell, and
+			// carries the name each one is being kept under.
+			availabilityUrl: App.api + '/events/' + Counter.eventId + '/hall/availability',
+			// Signed in as the clerk. The picker puts whatever this is on every call it makes.
+			headers: { Authorization: 'Bearer ' + App.token },
+			currency: {
+				code: currency,
+				symbol: App.currencySymbol( currency ),
+				decimals: hall.event.currency_decimals,
+				position: 'left',
+			},
+			// Given the reader's own locale, the picker formats its prices the way the rest of the
+			// panel does rather than approximating with a symbol and a dot.
+			locale: App.locale(),
+			isRtl: 'rtl' === document.documentElement.dir,
+			i18n: Counter.pickerStrings( App ),
+			/*
+			 * Where the two sides part, and the only place they do.
+			 *
+			 * A buyer's picker posts a hold and goes to a cart. There is no cart at a window and
+			 * nobody to come back later, so the chosen seats come back here instead and the sale is
+			 * made in one movement — hold and confirm together, the way the counter always has.
+			 */
+			onReserve: function ( chosen, widget ) {
+				Counter.picker = widget;
+
+				/*
+				 * "Four together, please" — the commonest request at a window.
+				 *
+				 * On a website the server chooses and holds in one movement, because a suggestion
+				 * the buyer had to confirm is a suggestion somebody else can take in between. At a
+				 * window it is the other way round: the clerk is looking at the person, not at a
+				 * clock, and a hold taken on their behalf is one somebody has to remember to
+				 * release when the conversation goes another way. So the seats are put on the plan
+				 * where they can be read out, and nothing is committed until the sale is.
+				 */
+				if ( chosen.best_available ) {
+					Counter.suggest( App, chosen.best_available.quantity, widget );
+
+					return;
+				}
+
+				Counter.sell( App, chosen, widget );
+			},
+		} );
+	};
+
+	/** Ask for n seats side by side and put them on the plan, chosen. */
+	Counter.suggest = function ( App, quantity, widget ) {
+		App.request( 'GET', '/events/' + Counter.eventId + '/best-available?quantity=' + quantity )
+			.then( function ( response ) {
+				var seats = response.data || [];
+
+				if ( ! seats.length ) {
+					widget.stumbled( App.t( 'panel.boxOffice.noneTogether' ) );
+
+					return;
+				}
+
+				widget.chooseByIds( seats.map( function ( seat ) { return seat.seat_id; } ) );
+			} )
+			.catch( function ( error ) { widget.stumbled( error.message ); } );
 	};
 
 	/**
-	 * "Four together, please."
+	 * The picker's vocabulary, in the reader's language.
 	 *
-	 * The commonest request at a window, and until now the clerk had to find them by eye on a plan
-	 * three-quarters full. This asks the same code the website asks and drops the answer into the
-	 * basket, where it can still be changed before anything is sold.
+	 * Taken from the same catalogue the hosted site hands it — one picker, one set of words — with
+	 * the handful of sentences that are about buying swapped for the ones that are about selling.
+	 * "Reserve and add to cart" is not what the button in front of a clerk does.
 	 */
-	Counter.togetherMarkup = function ( App ) {
-		if ( ! ( Counter.hall.sections || [] ).length ) {
-			return '';
-		}
+	Counter.pickerStrings = function ( App ) {
+		var strings = App.catalogue( 'site.picker' );
 
-		return '<div class="counter__together">' +
-			'<label class="counter__together-label" for="counter-together">' +
-				esc( App.t( 'panel.boxOffice.together' ) ) + '</label>' +
-			'<input class="input tnum" id="counter-together" type="number" min="1" max="10" value="2">' +
-			'<button class="btn btn--sm" id="counter-find">' +
-				esc( App.t( 'panel.boxOffice.findSeats' ) ) + '</button>' +
-		'</div>';
-	};
-
-	Counter.blocksMarkup = function ( App ) {
-		var hall = Counter.hall;
-
-		if ( ! hall.sections.length ) {
-			return '';
-		}
-
-		return '<h3 class="subhead">' + esc( App.t( 'panel.boxOffice.pickSection' ) ) + '</h3>' +
-			'<div class="counter__blocks">' +
-				hall.sections.map( function ( section, index ) {
-					var free = 0;
-
-					section.rows.forEach( function ( row ) {
-						row.seats.forEach( function ( seat ) {
-							if ( 'available' === seat.state ) {
-								free++;
-							}
-						} );
-					} );
-
-					return '<button class="counter__block" data-section="' + index + '"' +
-						( free ? '' : ' disabled' ) + '>' +
-						'<span class="counter__block-name">' + esc( section.name ) + '</span>' +
-						'<span class="counter__block-free">' +
-							esc( free
-								? App.t( 'panel.boxOffice.freeSeats', { count: App.number( free ) } )
-								: App.t( 'panel.boxOffice.sectionFull' ) ) +
-						'</span>' +
-					'</button>';
-				} ).join( '' ) +
-			'</div>';
-	};
-
-	Counter.sectionMarkup = function ( App ) {
-		var section = Counter.hall.sections[ Counter.section ];
-
-		return '<div class="row row--wrap spaced">' +
-				'<button class="btn" id="counter-back">' + icon( 'back', { size: 15 } ) +
-					esc( App.t( 'panel.boxOffice.allSections' ) ) + '</button>' +
-				'<strong>' + esc( section.name ) + '</strong>' +
-			'</div>' +
-			'<div class="counter__rows">' +
-				section.rows.map( function ( row ) {
-					return '<div class="counter__row">' +
-						'<span class="counter__row-name">' + esc( row.name ) + '</span>' +
-						row.seats.map( function ( seat ) {
-							var free = 'available' === seat.state;
-							var chosen = !! Counter.selected[ seat.id ];
-							/*
-							 * A chair the website is not allowed to sell and this window is.
-							 *
-							 * Marked rather than merely offered: a clerk who hands out the seat
-							 * kept for the director's mother because it looked like any other free
-							 * chair has made exactly the mistake holding it back was meant to
-							 * prevent. The name is on the seat, in its tooltip and its label.
-							 */
-							var house = free && seat.held_for;
-
-							return '<button class="counter__seat' +
-								( chosen ? ' is-chosen' : '' ) +
-								( house ? ' counter__seat--house' : '' ) +
-								( free ? '' : ' is-gone' ) + '"' +
-								( free ? '' : ' disabled' ) +
-								' data-seat="' + esc( seat.id ) + '"' +
-								' data-amount="' + esc( seat.amount === null ? '' : seat.amount ) + '"' +
-								' data-label="' + esc( [ section.name, row.name, seat.label ].join( ' · ' ) ) + '"' +
-								' title="' + esc( house
-									? App.t( 'panel.boxOffice.heldFor', { name: seat.held_for } )
-									: seat.label ) + '">' +
-								esc( seat.label ) +
-							'</button>';
-						} ).join( '' ) +
-					'</div>';
-				} ).join( '' ) +
-			'</div>';
-	};
-
-	Counter.areasMarkup = function ( App ) {
-		var areas = ( Counter.hall.areas || [] ).filter( function ( area ) {
-			return area.places > 0;
+		return Object.assign( {}, strings, {
+			selectSeats: App.t( 'panel.boxOffice.pickSection' ),
+			addToCart: App.t( 'panel.boxOffice.sell' ),
+			reserveTickets: App.t( 'panel.boxOffice.sell' ),
+			working: App.t( 'panel.common.working' ),
+			// The one sentence the buyer's picker has no use for: a chair with somebody's name on it.
+			heldFor: App.t( 'panel.boxOffice.heldFor', { name: '%s' } ),
 		} );
-
-		if ( ! areas.length ) {
-			return '';
-		}
-
-		return '<h3 class="subhead">' + esc( App.t( 'panel.boxOffice.standing' ) ) + '</h3>' +
-			areas.map( function ( area ) {
-				var held = Counter.areas[ area.capacity_object_id ] || 0;
-
-				return '<div class="counter__area">' +
-					'<span>' + esc( area.label ) +
-						'<span class="muted on-own-line">' +
-							esc( App.t( 'panel.boxOffice.placesLeft', {
-								count: App.number( area.remaining ),
-							} ) ) + '</span>' +
-					'</span>' +
-					'<span class="row">' +
-						'<button class="btn btn--sm" data-area-minus="' + esc( area.capacity_object_id ) + '"' +
-							( held ? '' : ' disabled' ) + '>−</button>' +
-						'<output class="counter__count tnum">' + esc( App.number( held ) ) + '</output>' +
-						'<button class="btn btn--sm" data-area-plus="' + esc( area.capacity_object_id ) + '"' +
-							( held < area.remaining ? '' : ' disabled' ) + '>+</button>' +
-					'</span>' +
-				'</div>';
-			} ).join( '' );
-	};
-
-	/* --------------------------------------------------------------------------- the basket */
-
-	Counter.basketMarkup = function ( App ) {
-		var hall = Counter.hall;
-		var seatIds = Object.keys( Counter.selected );
-		var lines = [];
-		var total = 0;
-
-		seatIds.forEach( function ( id ) {
-			var seat = Counter.selected[ id ];
-			var amount = Counter.priceOf( seat.amount, Counter.types[ id ] );
-
-			total += amount;
-			lines.push( { key: id, label: seat.label, amount: amount, seat: true } );
-		} );
-
-		( hall.areas || [] ).forEach( function ( area ) {
-			var held = Counter.areas[ area.capacity_object_id ] || 0;
-
-			if ( held ) {
-				total += ( area.amount || 0 ) * held;
-				lines.push( {
-					key: area.capacity_object_id,
-					label: App.number( held ) + ' × ' + area.label,
-					amount: ( area.amount || 0 ) * held,
-				} );
-			}
-		} );
-
-		if ( ! lines.length ) {
-			return '<p class="hint">' + esc( App.t( 'panel.boxOffice.nothingChosen' ) ) + '</p>';
-		}
-
-		var types = hall.ticket_types || [];
-
-		return '<h3 class="subhead">' + esc( App.t( 'panel.boxOffice.basket' ) ) + '</h3>' +
-			'<ul class="counter__lines">' +
-				lines.map( function ( line ) {
-					return '<li><span>' + esc( line.label ) +
-						( line.seat && types.length > 1
-							? '<select class="select select--sm" data-seat-type="' + esc( line.key ) + '">' +
-								types.map( function ( type ) {
-									return '<option value="' + esc( type.id ) + '"' +
-										( type.id === Counter.types[ line.key ] ? ' selected' : '' ) + '>' +
-										esc( type.name ) + '</option>';
-								} ).join( '' ) +
-							'</select>'
-							: '' ) +
-					'</span>' +
-					'<span class="tnum">' + esc( App.money( line.amount, hall.currency ) ) + '</span></li>';
-				} ).join( '' ) +
-			'</ul>' +
-			'<p class="counter__total"><span>' + esc( App.t( 'panel.boxOffice.total' ) ) + '</span>' +
-				'<span class="tnum">' + esc( App.money( total, hall.currency ) ) + '</span></p>' +
-			'<button class="btn btn--primary btn--block" id="counter-sell">' +
-				esc( App.t( 'panel.boxOffice.sell' ) ) + '</button>';
-	};
-
-	/** The same arithmetic as the picker and the server; see App\Models\TicketType::priceFrom. */
-	Counter.priceOf = function ( base, typeId ) {
-		var type = ( Counter.hall.ticket_types || [] ).filter( function ( entry ) {
-			return entry.id === typeId;
-		} )[ 0 ];
-
-		base = base || 0;
-
-		if ( ! type ) {
-			return base;
-		}
-
-		if ( 'fixed' === type.kind ) {
-			return Math.max( 0, type.value || 0 );
-		}
-
-		var amount = base;
-
-		if ( 'percent_off' === type.kind ) {
-			amount = base - Math.floor( ( base * Math.max( 0, Math.min( 100, type.value || 0 ) ) ) / 100 );
-		} else if ( 'amount_off' === type.kind ) {
-			amount = base - Math.max( 0, type.value || 0 );
-		}
-
-		return Math.max( 0, Math.min( base, amount ) );
-	};
-
-	Counter.bindHall = function () {
-		var App = Counter.App;
-
-		each( '[data-section]', function ( button ) {
-			button.addEventListener( 'click', function () {
-				Counter.section = Number( button.dataset.section );
-				Counter.paintHall();
-			} );
-		} );
-
-		bind( 'counter-back', function () {
-			Counter.section = null;
-			Counter.paintHall();
-		} );
-
-		each( '[data-seat]', function ( button ) {
-			button.addEventListener( 'click', function () {
-				var id = button.dataset.seat;
-
-				if ( Counter.selected[ id ] ) {
-					delete Counter.selected[ id ];
-					delete Counter.types[ id ];
-				} else {
-					Counter.selected[ id ] = {
-						label: button.dataset.label,
-						amount: '' === button.dataset.amount ? 0 : Number( button.dataset.amount ),
-					};
-
-					var fallback = ( Counter.hall.ticket_types || [] ).filter( function ( type ) {
-						return type.is_default;
-					} )[ 0 ];
-
-					if ( fallback ) {
-						Counter.types[ id ] = fallback.id;
-					}
-				}
-
-				Counter.paintHall();
-			} );
-		} );
-
-		bind( 'counter-find', function () {
-			var App = Counter.App;
-			var wanted = Number( ( document.getElementById( 'counter-together' ) || {} ).value ) || 1;
-
-			App.request( 'GET', '/events/' + Counter.eventId + '/best-available?quantity=' + wanted )
-				.then( function ( response ) {
-					var seats = response.data || [];
-
-					if ( ! seats.length ) {
-						App.toast( App.t( 'panel.boxOffice.noneTogether' ), true );
-
-						return;
-					}
-
-					// The suggestion replaces whatever was in the basket rather than adding to it:
-					// a clerk who asks twice means "not those, these".
-					Counter.selected = {};
-					Counter.types = {};
-
-					var fallback = ( Counter.hall.ticket_types || [] ).filter( function ( type ) {
-						return type.is_default;
-					} )[ 0 ];
-
-					seats.forEach( function ( seat ) {
-						Counter.selected[ seat.seat_id ] = {
-							label: [ seat.section, seat.row, seat.label ].filter( Boolean ).join( ' · ' ),
-							amount: seat.amount,
-						};
-
-						if ( fallback ) {
-							Counter.types[ seat.seat_id ] = fallback.id;
-						}
-					} );
-
-					Counter.paintHall();
-				} )
-				.catch( function ( error ) { App.toast( error.message, true ); } );
-		} );
-
-		each( '[data-area-plus]', function ( button ) {
-			button.addEventListener( 'click', function () {
-				var id = button.dataset.areaPlus;
-
-				Counter.areas[ id ] = ( Counter.areas[ id ] || 0 ) + 1;
-				Counter.paintHall();
-			} );
-		} );
-
-		each( '[data-area-minus]', function ( button ) {
-			button.addEventListener( 'click', function () {
-				var id = button.dataset.areaMinus;
-
-				Counter.areas[ id ] = Math.max( 0, ( Counter.areas[ id ] || 0 ) - 1 );
-				Counter.paintHall();
-			} );
-		} );
-
-		each( '[data-seat-type]', function ( select ) {
-			select.addEventListener( 'change', function () {
-				Counter.types[ select.dataset.seatType ] = select.value;
-				Counter.paintHall();
-			} );
-		} );
-
-		bind( 'counter-sell', function () { Counter.sell( App ); } );
 	};
 
 	/* ------------------------------------------------------------------------------ the sale */
 
-	Counter.sell = function ( App ) {
+	/**
+	 * Who these are for, how it is being paid for, and done.
+	 *
+	 * `chosen` is what the picker handed over: the seats, the areas, the ticket type against each,
+	 * and the arrival window where the event sells them. Nothing is re-derived from the screen —
+	 * the seats in this sale are the seats that were on the plan when the clerk pressed the button.
+	 */
+	Counter.sell = function ( App, chosen, widget ) {
 		App.modal( {
 			title: App.t( 'panel.boxOffice.sellTitle' ),
 			submitLabel: App.t( 'panel.boxOffice.sell' ),
@@ -507,22 +347,6 @@
 					'<input class="input" id="c-email" type="email" maxlength="190">' +
 					'<span class="field__hint">' + esc( App.t( 'panel.boxOffice.buyerEmailHint' ) ) +
 					'</span></div>' +
-				// Somebody walking up at ten past ten still has to be put in a window, and the
-				// window still has to have room. Absent on every event that sells no windows.
-				( ( Counter.hall.entry_slots || [] ).length
-					? '<div class="field"><label class="field__label" for="c-slot">' +
-						esc( App.t( 'panel.boxOffice.entry' ) ) + '</label>' +
-						'<select class="select" id="c-slot">' +
-							Counter.hall.entry_slots.map( function ( slot ) {
-								return '<option value="' + esc( slot.id ) + '"' +
-									( slot.sold_out ? ' disabled' : '' ) + '>' +
-									esc( slot.label ) +
-									( slot.sold_out
-										? ' — ' + esc( App.t( 'panel.entrySlots.full' ) )
-										: '' ) + '</option>';
-							} ).join( '' ) +
-						'</select></div>'
-					: '' ) +
 				'<div class="field"><label class="field__label" for="c-payment">' +
 					esc( App.t( 'panel.boxOffice.payment' ) ) + '</label>' +
 					'<select class="select" id="c-payment">' +
@@ -591,15 +415,26 @@
 					return true;
 				}
 
+				/*
+				 * What the picker handed over, plus who and how.
+				 *
+				 * The seats are the picker's answer rather than anything read back off the screen:
+				 * the sale is for the chairs that were on the plan when the button was pressed, and
+				 * a second reading a moment later is a second chance to disagree with it.
+				 */
 				var payload = {
-					seat_ids: Object.keys( Counter.selected ),
-					areas: Counter.areas,
-					seat_types: Counter.types,
+					seat_ids: chosen.seat_ids || [],
+					areas: chosen.areas || {},
+					seat_types: chosen.seat_types || {},
+					area_types: chosen.area_types || {},
 					buyer: {
 						name: name,
 						email: document.getElementById( 'c-email' ).value.trim() || null,
 					},
-					entry_slot_id: ( document.getElementById( 'c-slot' ) || {} ).value || null,
+					// Somebody walking up at ten past ten still has to be put in a window. The
+					// picker asks for it on the plan, the way the website does, so it arrives here
+					// already chosen rather than as one more field to tab past.
+					entry_slot_id: chosen.entry_slot_id || null,
 					payment: document.getElementById( 'c-payment' ).value,
 					// A comp is a gift and an invoice is not paid yet: neither has a method, and
 					// sending one would put a number against a drawer nothing went into.
@@ -641,21 +476,37 @@
 							);
 						}
 
+						/*
+						 * The chairs are somebody's now.
+						 *
+						 * The picker lets go of them and asks the hall again rather than being torn
+						 * down and rebuilt: the clerk keeps their zoom, their floor and their place
+						 * in the room, and the next customer is already standing there.
+						 */
+						widget.settled();
+
 						// An agent has just spent some of their credit; the strip must not go on
 						// saying what it was before the sale.
 						if ( Counter.agent ) {
 							App.request( 'GET', '/sales-agents/summary' )
 								.then( function ( mine ) {
 									Counter.agent = mine.agent || null;
-									Counter.paint();
-									Counter.choose( Counter.eventId );
+									Counter.refreshStrip();
 								} )
-								.catch( function () { Counter.choose( Counter.eventId ); } );
-
-							return;
+								.catch( function () {} );
 						}
+					} )
+					.catch( function ( error ) {
+						/*
+						 * Refused: a seat taken while the dialog was open, a credit line reached.
+						 *
+						 * The selection stays exactly as it was — the clerk is mid-conversation and
+						 * clearing their chairs out from under them would make them start it again —
+						 * and the button comes back so they can try the sale a different way.
+						 */
+						widget.stumbled( error.message );
 
-						Counter.choose( Counter.eventId );
+						throw error;
 					} );
 			},
 		} );

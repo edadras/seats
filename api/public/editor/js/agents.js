@@ -466,7 +466,7 @@
 					'<div class="field"><label class="field__label" for="ag-kind">' +
 						esc( App.t( 'panel.agents.movement' ) ) + '</label>' +
 						'<select class="select" id="ag-kind">' +
-							[ 'topup', 'settlement', 'adjustment' ].map( function ( kind ) {
+							[ 'topup', 'settlement', 'deduction', 'adjustment' ].map( function ( kind ) {
 								return '<option value="' + kind + '">' +
 									esc( App.t( 'panel.agents.kinds.' + kind ) ) + '</option>';
 							} ).join( '' ) +

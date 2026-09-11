@@ -15,6 +15,7 @@
  *   node printing_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openHall, chooseSeats, startSale } from './counter-hall.mjs';
 import { seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
@@ -63,16 +64,9 @@ await page.waitForSelector( '.sidebar' );
 
 console.log( 'A sale at the window, with the printer beside it' );
 await page.click( 'nav button[data-view=counter]' );
-await page.waitForSelector( '#counter-event' );
-await page.selectOption( '#counter-event', { label: 'Opening night' } );
-await page.waitForSelector( '.counter__blocks' );
-await page.locator( '.counter__block:not([disabled])' ).first().click();
-await page.waitForSelector( '.counter__seat' );
-await page.locator( '.counter__seat:not([disabled])' ).first().click();
-await page.waitForTimeout( 300 );
-
-await page.click( '#counter-sell' );
-await page.waitForSelector( '.modal' );
+await openHall( page, 'Opening night' );
+await chooseSeats( page, 1 );
+await startSale( page );
 await page.fill( '#c-name', 'Paper buyer' );
 await page.selectOption( '#c-payment', 'comp' );
 

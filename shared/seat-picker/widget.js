@@ -814,9 +814,12 @@
 		this.resize();
 
 		var self = this;
-		window.addEventListener( 'resize', function () {
-			self.resize();
-		} );
+
+		// Named rather than anonymous, so `destroy()` can take it off again: a panel that switches
+		// between three events in an afternoon would otherwise leave three listeners resizing three
+		// canvases that are no longer on the page.
+		this.onResize = function () { self.resize(); };
+		window.addEventListener( 'resize', this.onResize );
 
 		/*
 		 * Full screen gives the plan whatever height the rest of the picker is not using, and that
@@ -1584,7 +1587,7 @@
 			url += ( url.indexOf( '?' ) === -1 ? '?' : '&' ) + 'since=' + encodeURIComponent( this.cursor );
 		}
 
-		fetch( url, { credentials: 'same-origin' } )
+		fetch( url, { credentials: 'same-origin', headers: nonceHeaders( this.config, {} ) } )
 			.then( function ( response ) {
 				return response.json();
 			} )
@@ -1711,6 +1714,16 @@
 			seat.state = self.isSelected( seat ) ? 'selected' : update.state;
 			seat.amount = update.amount;
 			seat.zoneKey = update.zone_key || seat.zoneKey;
+			/*
+			 * Who this chair is being kept for.
+			 *
+			 * Null on every seat the public is ever shown — the buyer's availability does not carry
+			 * it, and cannot. The counter's does: a house seat is blocked to the website and on sale
+			 * at the window, and a clerk who hands out the seat kept for the director's mother
+			 * because it looked like any other free chair has made the mistake holding it back was
+			 * meant to prevent.
+			 */
+			seat.heldFor = update.held_for || null;
 		} );
 
 		this.paint();
@@ -1773,6 +1786,25 @@
 				self.fetchAvailability();
 			}
 		}, POLL_INTERVAL );
+	};
+
+	/**
+	 * Take this picker off the page.
+	 *
+	 * A page that shows one event for its whole life never needs this — a buyer's tab is the
+	 * widget's whole world. A box office is the other case: a clerk changes the night in a select
+	 * and the old hall has to stop polling and let go of the window, or an afternoon of switching
+	 * between three events is three timers asking about three halls.
+	 */
+	SeatmapWidget.prototype.destroy = function () {
+		window.clearInterval( this.pollTimer );
+
+		if ( this.onResize ) {
+			window.removeEventListener( 'resize', this.onResize );
+		}
+
+		this.container.innerHTML = '';
+		this.container.seatmapWidget = null;
 	};
 
 	SeatmapWidget.prototype.canvasSize = function () {
@@ -2404,6 +2436,23 @@
 			ctx.arc( seat.x, seat.y, SEAT_RADIUS, 0, Math.PI * 2 );
 			ctx.fill();
 			ctx.stroke();
+
+			/*
+			 * A ring around a seat somebody's name is on.
+			 *
+			 * Only the counter ever sees one. Drawn outside the chair rather than inside it so the
+			 * zone's own colour is still readable — the clerk needs to know both what it costs and
+			 * that it is spoken for.
+			 */
+			if ( seat.heldFor && 'selected' !== seat.state ) {
+				ctx.beginPath();
+				ctx.strokeStyle = colours.ink;
+				ctx.lineWidth = 1.5 / scale;
+				ctx.setLineDash( [ 2 / scale, 2 / scale ] );
+				ctx.arc( seat.x, seat.y, SEAT_RADIUS + 2, 0, Math.PI * 2 );
+				ctx.stroke();
+				ctx.setLineDash( [] );
+			}
 		} );
 	};
 
@@ -3083,6 +3132,52 @@
 		return this.selected.indexOf( seat ) !== -1;
 	};
 
+	/**
+	 * Choose these exact chairs, by id, in place of whatever was chosen before.
+	 *
+	 * For a host that found the seats somewhere else — the box office asks the same
+	 * "four together" question the website does, but answers it as a *suggestion*: the clerk is
+	 * looking at the person, not at a clock, and a hold taken on their behalf is a hold somebody
+	 * has to remember to release when the conversation goes another way. So the seats land on the
+	 * plan, chosen and visible, and nothing is committed until the sale is.
+	 */
+	SeatmapWidget.prototype.chooseByIds = function ( ids ) {
+		var self = this;
+
+		this.selected.slice().forEach( function ( seat ) {
+			seat.state = 'available';
+		} );
+
+		this.selected = [];
+
+		( ids || [] ).forEach( function ( id ) {
+			var seat = self.seatsById[ id ];
+
+			if ( ! seat || 'available' !== seat.state ) {
+				return;
+			}
+
+			seat.ticketTypeId = self.defaultType ? self.defaultType.id : null;
+			self.selected.push( seat );
+			seat.state = 'selected';
+		} );
+
+		// Move the list to where the chairs are, the way a click on the plan does: an answer the
+		// clerk cannot see on screen is an answer they have to take on trust.
+		if ( this.selected.length ) {
+			this.followSeat( this.selected[ 0 ] );
+		}
+
+		this.busy = false;
+		this.submitEl.textContent = this.seated ? this.i18n.addToCart : this.i18n.reserveTickets;
+		// The host was asked to find these, so "Working…" is still on the screen. The chairs on the
+		// plan are the answer; leaving the word there would say the answer had not arrived.
+		this.announce( '' );
+		this.paint();
+		this.renderSeatList();
+		this.renderSelection();
+	};
+
 	SeatmapWidget.prototype.toggleSeat = function ( seat ) {
 		if ( ! seat.id ) {
 			return; // Not placed in the published version; not orderable.
@@ -3315,11 +3410,19 @@
 		var unavailable = 'available' !== seat.state && 'selected' !== seat.state;
 		var template = unavailable ? this.i18n.seatUnavailable : this.i18n.seatLabel;
 
-		return template
+		var sentence = template
 			.replace( '%1$s', seat.section || '' )
 			.replace( '%2$s', seat.row || '' )
 			.replace( '%3$s', seat.label )
 			.replace( '%4$s', null == seat.amount ? '' : this.formatMoney( seat.amount ) );
+
+		// Appended rather than replacing: the clerk still needs to know where the seat is and what
+		// it costs, and *then* that somebody's name is on it.
+		if ( seat.heldFor && this.i18n.heldFor ) {
+			sentence += ' — ' + this.i18n.heldFor.replace( '%s', seat.heldFor );
+		}
+
+		return sentence;
 	};
 
 	SeatmapWidget.prototype.buildSeatButton = function ( seat ) {
@@ -3338,6 +3441,10 @@
 
 		if ( seat.accessible ) {
 			button.classList.add( 'is-accessible' );
+		}
+
+		if ( seat.heldFor ) {
+			button.classList.add( 'is-house' );
 		}
 
 		button.addEventListener( 'click', function () {
@@ -3569,6 +3676,24 @@
 
 		this.submitEl.disabled = true;
 
+		/*
+		 * A host that finishes the sale itself.
+		 *
+		 * The box office is the one of these: the person at the window is not going to a cart, and
+		 * a hold taken on their behalf would be a seat locked for ten minutes because a conversation
+		 * went another way. So the panel embeds this same picker — the same room the buyer sees,
+		 * which is the whole point — and takes the chosen seats from here into its own sale.
+		 *
+		 * It is the *only* fork in this file between the two sides. Everything above it — the plan,
+		 * the zoom, the room in three dimensions, the seats side by side, the arrival window — is
+		 * one implementation, so the clerk and the buyer cannot be looking at two different halls.
+		 */
+		if ( 'function' === typeof this.config.onReserve ) {
+			this.config.onReserve( body, this );
+
+			return;
+		}
+
 		fetch( this.holdEndpoint(), {
 			method: 'POST',
 			credentials: 'same-origin',
@@ -3613,6 +3738,45 @@
 				self.submitEl.textContent = self.seated ? self.i18n.addToCart : self.i18n.reserveTickets;
 				self.updateSubmitState();
 			} );
+	};
+
+	/**
+	 * The host finished what it took from `onReserve`, and it worked.
+	 *
+	 * The selection goes, because those chairs are somebody's now, and availability is asked for
+	 * again rather than assumed — the hall has changed and the next customer is already waiting.
+	 */
+	SeatmapWidget.prototype.settled = function () {
+		this.selected = [];
+		this.areas.forEach( function ( area ) {
+			area.quantity = 0;
+			area.split = null;
+		} );
+
+		this.busy = false;
+		this.submitEl.textContent = this.seated ? this.i18n.addToCart : this.i18n.reserveTickets;
+		this.cursor = null;
+		this.fetchAvailability();
+		this.paint();
+		this.renderSeatList();
+		this.renderSelection();
+	};
+
+	/**
+	 * The host tried and was refused.
+	 *
+	 * The selection stays exactly as it was: whatever went wrong — a credit line reached, a seat
+	 * taken while the dialog was open — the clerk is mid-conversation, and clearing their chairs
+	 * out from under them would make them start it again.
+	 */
+	SeatmapWidget.prototype.stumbled = function ( message ) {
+		this.busy = false;
+		this.submitEl.textContent = this.seated ? this.i18n.addToCart : this.i18n.reserveTickets;
+		this.updateSubmitState();
+
+		if ( message ) {
+			this.announce( message );
+		}
 	};
 
 	/**
@@ -3725,10 +3889,22 @@
 		}
 	}
 
+	/**
+	 * Whatever this host has to say about who is asking.
+	 *
+	 * Three kinds of host and three answers: WordPress has a nonce, a first-party site has its own
+	 * CSRF header, and the panel has a bearer token — the picker at the box office is the same
+	 * picker, signed in as the clerk. The widget does not know which kind it is in, so every one of
+	 * them arrives the same way and is put on every request it makes rather than only on the last.
+	 */
 	function nonceHeaders( config, headers ) {
 		if ( config.nonce ) {
 			headers[ config.nonceHeader || 'X-WP-Nonce' ] = config.nonce;
 		}
+
+		Object.keys( config.headers || {} ).forEach( function ( name ) {
+			headers[ name ] = config.headers[ name ];
+		} );
 
 		return headers;
 	}

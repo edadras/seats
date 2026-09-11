@@ -165,6 +165,8 @@ class Seatmap_Widget {
 							'selectSeats'    => __( 'Select your seats', 'seatmap-connect' ),
 							'available'      => __( 'Available', 'seatmap-connect' ),
 							'unavailable'    => __( 'Unavailable', 'seatmap-connect' ),
+							/* translators: %s: who the seat is being kept for. The box office runs this picker too. */
+							'heldFor'        => __( 'kept for %s', 'seatmap-connect' ),
 							'selected'       => __( 'Selected', 'seatmap-connect' ),
 							'yourSelection'  => __( 'Your selection', 'seatmap-connect' ),
 							'noneSelected'   => __( 'No seats selected yet.', 'seatmap-connect' ),

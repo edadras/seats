@@ -356,6 +356,53 @@ class SalesAgentTest extends TestCase
     }
 
     #[Test]
+    public function credit_can_be_taken_back_as_well_as_paid_in(): void
+    {
+        $night = $this->makeSellableEvent();
+        $mine = $this->agentFor($night, ['credit_limit' => 0]);
+        $owner = $this->makeUser($night['tenant'], 'owner');
+
+        $this->actingAs($owner)->postJson('/v1/sales-agents/'.$mine['agent']->id.'/credit', [
+            'kind' => 'topup', 'amount' => 10000, 'currency' => 'EUR', 'reference' => 'BANK-1',
+        ])->assertCreated();
+
+        /*
+         * A float going back the other way. Its own movement rather than a settlement, because a
+         * settlement is the agency handing over what it took and this is the organiser taking
+         * credit back — the two land in the same direction and mean different things, and a
+         * statement that called them one thing is a statement nobody can reconcile against a bank.
+         *
+         * The sign is the kind's, not the caller's: a typed minus does not pay an agency.
+         */
+        $this->actingAs($owner)->postJson('/v1/sales-agents/'.$mine['agent']->id.'/credit', [
+            'kind' => 'deduction', 'amount' => 2500, 'currency' => 'EUR', 'note' => 'Float returned',
+        ])->assertCreated();
+
+        $account = $this->actingAs($owner)
+            ->getJson('/v1/sales-agents/'.$mine['agent']->id)
+            ->assertOk()
+            ->json('account');
+
+        $this->assertSame(10000, $account['paid_in']);
+        $this->assertSame(-2500, $account['deducted']);
+        $this->assertSame(0, $account['settled_out']);
+        $this->assertSame(7500, $account['balance']);
+        $this->assertSame(7500, $account['available']);
+
+        // And a minus typed into the box lands the same way round as one that was not.
+        $this->actingAs($owner)->postJson('/v1/sales-agents/'.$mine['agent']->id.'/credit', [
+            'kind' => 'deduction', 'amount' => -1000, 'currency' => 'EUR',
+        ])->assertCreated();
+
+        $this->assertSame(
+            6500,
+            $this->actingAs($owner)
+                ->getJson('/v1/sales-agents/'.$mine['agent']->id)
+                ->json('account.balance'),
+        );
+    }
+
+    #[Test]
     public function an_agency_reads_its_own_statement_and_reaches_no_others(): void
     {
         $night = $this->makeSellableEvent(rows: 3, perRow: 6, amount: 2500);

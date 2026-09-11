@@ -56,16 +56,7 @@ class BoxOfficeController extends Controller
     {
         $this->authorize($request, 'orders.sell');
 
-        // An agent opening a night they were not given is told so here, rather than after they
-        // have chosen four seats and taken somebody's money out of their hand.
-        $agent = $this->agents->forUser($request->user());
-
-        if ($agent && ! $this->agents->maySell($agent, $event)) {
-            throw ApiException::denied(
-                'agent_event_not_allowed',
-                'This agent has not been given this event to sell.',
-            );
-        }
+        $this->assertMaySell($request, $event);
 
         $states = [];
 
@@ -126,6 +117,94 @@ class BoxOfficeController extends Controller
             'ticket_types' => TicketTypes::forEvent($event),
             'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event, openOnly: true),
         ]);
+    }
+
+    /**
+     * The same hall the buyer is looking at, for the person at the window.
+     *
+     * The counter used to draw its own grid of seat buttons — a list of chairs in rows, with no
+     * plan, no zoom and no idea where in the room anything was. A clerk taking a telephone booking
+     * was describing a hall they could not see, from a screen that looked nothing like the one the
+     * caller had open. So the panel runs the buyer's picker instead, and this is what it feeds:
+     * the same event, the same geometry, the same shape of answer.
+     *
+     * Two differences, and both are the counter's whole reason for existing: availability is asked
+     * for as the counter, which can see a house seat the website cannot, and each such seat carries
+     * the name it is being kept under.
+     */
+    public function hall(Request $request, Event $event)
+    {
+        $this->authorize($request, 'orders.sell');
+        $this->assertMaySell($request, $event);
+
+        if (! $event->seat_map_version_id) {
+            throw ApiException::conflict('map_not_published', 'This event has no published seat map.');
+        }
+
+        return response()->json([
+            'event' => app(\App\Domain\Events\PickerEvent::class)->forEvent($event),
+            'seat_map_version_id' => $event->seat_map_version_id,
+            'geometry' => app(\App\Domain\SeatMaps\PublishedGeometry::class)
+                ->forVersion($event->seatMapVersion),
+        ]);
+    }
+
+    /** What is free right now, as the counter sees it. The picker polls this every few seconds. */
+    public function hallAvailability(Request $request, Event $event)
+    {
+        $this->authorize($request, 'orders.sell');
+        $this->assertMaySell($request, $event);
+
+        $since = $request->query('since');
+        $current = (string) $event->availability_version;
+
+        if (null !== $since && $since === $current) {
+            return response()->json(['cursor' => $current, 'full' => false, 'seats' => []]);
+        }
+
+        /*
+         * Who each house seat is being kept for.
+         *
+         * Merged in here rather than added to the availability service, whose answer the public
+         * picker also reads: the label is not the public's. A chair the website is not allowed to
+         * sell and this window is, with somebody's name on it, is the one thing the counter sees
+         * that nobody else does.
+         */
+        $house = EventSeatOverride::where('event_id', $event->id)
+            ->whereNotNull('held_for')
+            ->pluck('held_for', 'seat_id');
+
+        $seats = array_map(
+            fn (array $seat) => $seat + ['held_for' => $house[$seat['seat_id']] ?? null],
+            $this->availability->forEvent($event, counter: true),
+        );
+
+        return response()->json([
+            'cursor' => $current,
+            'full' => true,
+            'seats' => $seats,
+            'areas' => $this->availability->capacityForEvent($event),
+            'entry_slots' => app(\App\Domain\Events\EntrySlots::class)->forEvent($event, openOnly: true),
+            'price_tier' => app(\App\Domain\Pricing\PriceTiers::class)->describe($event),
+        ]);
+    }
+
+    /**
+     * An agent opening a night they were not given.
+     *
+     * Asked before anything is drawn rather than after they have chosen four seats and taken
+     * somebody's money out of their hand.
+     */
+    private function assertMaySell(Request $request, Event $event): void
+    {
+        $agent = $this->agents->forUser($request->user());
+
+        if ($agent && ! $this->agents->maySell($agent, $event)) {
+            throw ApiException::denied(
+                'agent_event_not_allowed',
+                'This agent has not been given this event to sell.',
+            );
+        }
     }
 
     /**

@@ -11,6 +11,7 @@
  *   node plans_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openHall, chooseSeats, startSale } from './counter-hall.mjs';
 import { seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
@@ -56,19 +57,9 @@ const seatsBefore = await free();
 
 console.log( 'A party of four, on a deposit' );
 await page.click( 'nav button[data-view=counter]' );
-await page.waitForSelector( '#counter-event' );
-await page.selectOption( '#counter-event', { label: 'Opening night' } );
-await page.waitForSelector( '.counter__blocks' );
-await page.locator( '.counter__block:not([disabled])' ).first().click();
-await page.waitForSelector( '.counter__seat' );
-
-for ( let seat = 0; seat < 4; seat++ ) {
-	await page.locator( '.counter__seat:not([disabled])' ).nth( seat ).click();
-}
-
-await page.waitForTimeout( 300 );
-await page.click( '#counter-sell' );
-await page.waitForSelector( '.modal' );
+await openHall( page, 'Opening night' );
+await chooseSeats( page, 4 );
+await startSale( page );
 await page.fill( '#c-name', 'Miss Fielding' );
 await page.fill( '#c-email', 'office@stmarys.test' );
 await page.fill( '#c-group', "St Mary's School" );

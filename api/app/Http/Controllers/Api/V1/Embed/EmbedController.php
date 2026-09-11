@@ -45,37 +45,7 @@ class EmbedController extends Controller
          */
         app(\App\Domain\Insights\SalesPace::class)->record($event, 'embed');
 
-        return response()->json([
-            'public_id' => $event->public_id,
-            // A picker pasted onto somebody's own page is read in whatever language that page
-            // asked for, so the event's own words follow the same rule as the site's.
-            'name' => $event->nameFor(),
-            'description' => $event->descriptionFor(),
-            'starts_at' => $event->starts_at?->toIso8601String(),
-            'ends_at' => $event->ends_at?->toIso8601String(),
-            'timezone' => $event->timezone,
-            'currency' => $event->currency,
-            // How many decimal places that currency has. Sent because the picker formats money in
-            // the browser, and a table of currency exponents copied into JavaScript is a table
-            // that goes out of date somewhere nobody is looking.
-            'currency_decimals' => Money::exponent((string) $event->currency),
-            'status' => $event->status,
-            'venue' => [
-                'name' => $event->venue?->name,
-                'city' => $event->venue?->city,
-            ],
-            'seat_map_version_id' => $event->seat_map_version_id,
-            'hold_ttl_seconds' => $event->hold_ttl_seconds,
-            'max_seats_per_order' => $event->max_seats_per_order,
-            'areas' => $this->availability->capacityForEvent($event),
-            'zones' => $event->priceZones->map(fn ($zone) => [
-                'key' => $zone->key,
-                'name' => $zone->name,
-                'amount' => $zone->amount,
-                'color' => $zone->color,
-            ])->values(),
-            'ticket_types' => \App\Domain\Events\TicketTypes::forEvent($event),
-        ]);
+        return response()->json(app(\App\Domain\Events\PickerEvent::class)->forEvent($event));
     }
 
     /**

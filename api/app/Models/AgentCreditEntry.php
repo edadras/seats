@@ -17,8 +17,16 @@ class AgentCreditEntry extends Model
 {
     use BelongsToTenant, HasUuids;
 
-    /** Money in from the agent, money out to them, and anything somebody signed their name to. */
-    public const KINDS = ['topup', 'settlement', 'adjustment'];
+    /*
+     * Four movements, and the difference between the two that go out matters.
+     *
+     * A settlement is the agency handing over what it has taken — money that moved, in the
+     * organiser's direction. A deduction is the organiser taking credit back: a returned float, a
+     * penalty, a correction of somebody's own typo. Both make the balance smaller and they are not
+     * the same event, and a statement that called them one thing would be a statement nobody could
+     * reconcile against a bank.
+     */
+    public const KINDS = ['topup', 'settlement', 'deduction', 'adjustment'];
 
     protected $fillable = [
         'tenant_id', 'sales_agent_id', 'kind', 'amount', 'currency',

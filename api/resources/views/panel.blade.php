@@ -7,12 +7,17 @@
     <meta name="color-scheme" content="light dark">
     <link rel="stylesheet" href="{{ asset('editor/design.css') }}">
     <link rel="stylesheet" href="{{ asset('editor/panel.css') }}">
+    {{-- The buyer's seat picker, which the box office runs too: one hall, both sides of the glass. --}}
+    <link rel="stylesheet" href="{{ asset('site/css/widget.css') }}">
 </head>
 <body>
     <div id="app" data-api="{{ url('/v1') }}"></div>
     <script src="{{ asset('editor/js/i18n.js') }}"></script>
     <script src="{{ asset('editor/js/icons.js') }}"></script>
     <script src="{{ asset('editor/js/hall3d.js') }}"></script>
+    {{-- After the 3D engine, which it asks for as it boots: a hall that arrived a tick late would
+         have had its own button decided against already. --}}
+    <script src="{{ asset('site/js/widget.js') }}"></script>
     <script src="{{ asset('editor/js/chart.js') }}"></script>
     <script src="{{ asset('editor/js/hall.js') }}"></script>
     <script src="{{ asset('editor/js/chart-ops.js') }}"></script>

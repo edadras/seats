@@ -15,6 +15,15 @@ return [
         'selectSeats' => 'Wählen Sie Ihre Plätze',
         'available' => 'Frei',
         'unavailable' => 'Belegt',
+        /*
+         * A chair with somebody's name on it.
+         *
+         * Never shown to a buyer — their availability does not carry the name and cannot.
+         * It is here because the box office runs this same picker, and a clerk who hands out
+         * the seat kept for the director's mother because it looked like any other free chair
+         * has made exactly the mistake holding it back was meant to prevent.
+         */
+        'heldFor' => 'reserviert für %s',
         'selected' => 'Ausgewählt',
         'yourSelection' => 'Ihre Auswahl',
         'noneSelected' => 'Noch keine Plätze ausgewählt.',

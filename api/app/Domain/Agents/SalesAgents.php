@@ -134,6 +134,7 @@ class SalesAgents
 
         $paidIn = (int) $entries->where('kind', 'topup')->sum('amount');
         $settled = (int) $entries->where('kind', 'settlement')->sum('amount');
+        $deducted = (int) $entries->where('kind', 'deduction')->sum('amount');
         $adjustments = (int) $entries->where('kind', 'adjustment')->sum('amount');
 
         $sales = $this->sales($agent);
@@ -145,12 +146,13 @@ class SalesAgents
          * a thousand euros of tickets owes nine hundred, and the ledger should say so rather than
          * making somebody do that subtraction on a Friday.
          */
-        $balance = $paidIn + $settled + $adjustments - $sales['sold'] + $sales['commission'];
+        $balance = $paidIn + $settled + $deducted + $adjustments - $sales['sold'] + $sales['commission'];
 
         return [
             'currency' => $sales['currency'] ?: (string) ($entries->first()->currency ?? config('app.currency', 'EUR')),
             'paid_in' => $paidIn,
             'settled_out' => $settled,
+            'deducted' => $deducted,
             'adjustments' => $adjustments,
             'sold' => $sales['sold'],
             'refunded' => $sales['refunded'],
@@ -281,13 +283,13 @@ class SalesAgents
         /*
          * Direction is decided here rather than left to the caller's sign.
          *
-         * A top-up is money in and a settlement is money out, always; a panel that could send a
-         * negative top-up is a panel where a typo pays an agency instead of charging it. An
-         * adjustment is the one that keeps its sign, because that is what an adjustment is.
+         * A top-up is money in; a settlement and a deduction are both out, always. A panel that
+         * could send a negative top-up is a panel where a typo pays an agency instead of charging
+         * it. An adjustment is the one that keeps its sign, because that is what an adjustment is.
          */
         $signed = match ($kind) {
             'topup' => abs($amount),
-            'settlement' => -abs($amount),
+            'settlement', 'deduction' => -abs($amount),
             default => $amount,
         };
 

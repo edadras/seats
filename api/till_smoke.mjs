@@ -14,6 +14,7 @@
  *   node till_smoke.mjs
  */
 import { chromium } from 'playwright';
+import { openHall, chooseSeats, startSale } from './counter-hall.mjs';
 import { seatedEvent } from './smoke-support.mjs';
 
 const BASE = process.env.SEATMAP_URL || 'http://127.0.0.1:8123';
@@ -81,15 +82,9 @@ const sell = async ( method ) => {
 	await page.click( 'nav button[data-view=counter]' );
 	await page.waitForSelector( '#counter-event', { timeout: 20000 } );
 	await page.selectOption( '#counter-event', night.id );
-	await page.waitForSelector( '.counter__blocks, .counter__seat', { timeout: 20000 } );
-
-	if ( await page.locator( '.counter__block:not([disabled])' ).count() ) {
-		await page.locator( '.counter__block:not([disabled])' ).first().click();
-		await page.waitForSelector( '.counter__seat:not([disabled])' );
-	}
-
-	await page.locator( '.counter__seat:not([disabled])' ).first().click();
-	await page.click( '#counter-sell' );
+	await openHall( page );
+	await chooseSeats( page, 1 );
+	await startSale( page );
 	await page.waitForSelector( '#c-name' );
 	await page.fill( '#c-name', 'At the window' );
 	await page.selectOption( '#c-method', method );

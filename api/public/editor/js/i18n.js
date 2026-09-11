@@ -130,6 +130,41 @@
 	};
 
 	/**
+	 * A whole branch of the catalogue, rather than one string out of it.
+	 *
+	 * For the one reader that is not this panel: the seat picker takes its entire vocabulary as an
+	 * object, because it is a shared implementation that must not learn which host it is inside.
+	 * The panel is now one of its hosts, and hands it the same `site.picker` block the hosted site
+	 * does rather than keeping a second copy of fifty sentences.
+	 */
+	I18n.branch = function ( key ) {
+		var found = key.split( '.' ).reduce( function ( carry, part ) {
+			return carry && typeof carry === 'object' ? carry[ part ] : undefined;
+		}, this.messages );
+
+		return found && 'object' === typeof found ? found : {};
+	};
+
+	/**
+	 * The symbol a currency is written with, from the browser's own ICU data.
+	 *
+	 * Taken apart from a formatted zero rather than from a table: a table of currency symbols
+	 * copied into JavaScript is a table that goes out of date somewhere nobody is looking.
+	 */
+	I18n.currencySymbol = function ( currency ) {
+		try {
+			return new Intl.NumberFormat( this.icu, {
+				style: 'currency',
+				currency: currency,
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 0,
+			} ).format( 0 ).replace( /[\d\s\u00a0\u202f]/g, '' );
+		} catch ( error ) {
+			return ( currency || '' ) + ' ';
+		}
+	};
+
+	/**
 	 * How many decimal places a currency has, from the browser's own ICU data.
 	 *
 	 * Two for a euro, none for a rial, three for a dinar. Asked rather than assumed, because

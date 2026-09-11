@@ -14,6 +14,15 @@ return [
         'selectSeats' => 'صندلی‌هایتان را انتخاب کنید',
         'available' => 'آزاد',
         'unavailable' => 'ناموجود',
+        /*
+         * A chair with somebody's name on it.
+         *
+         * Never shown to a buyer — their availability does not carry the name and cannot.
+         * It is here because the box office runs this same picker, and a clerk who hands out
+         * the seat kept for the director's mother because it looked like any other free chair
+         * has made exactly the mistake holding it back was meant to prevent.
+         */
+        'heldFor' => 'نگه‌داشته برای %s',
         'selected' => 'انتخاب‌شده',
         'yourSelection' => 'انتخاب شما',
         'noneSelected' => 'هنوز صندلی‌ای انتخاب نشده است.',

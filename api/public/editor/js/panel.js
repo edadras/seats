@@ -239,6 +239,25 @@
 		return i18n.date( value, options );
 	};
 
+	/** A whole branch of the catalogue — for the seat picker, which takes its words as an object. */
+	App.catalogue = function ( key ) {
+		return i18n.branch( key );
+	};
+
+	App.currencySymbol = function ( currency ) {
+		return i18n.currencySymbol( currency );
+	};
+
+	/** Which of the two this panel is being read in — light or dark, whoever chose it. */
+	App.theme = function () {
+		return Theme.current();
+	};
+
+	/** The reader's locale, in the form Intl wants — the picker formats its own prices. */
+	App.locale = function () {
+		return i18n.icu;
+	};
+
 	/* ------------------------------------------------------------------------- transport */
 
 	/**
@@ -683,6 +702,12 @@
 
 			if ( self.editor ) {
 				self.editor.draw();
+			}
+
+			// The seat picker at the counter is a canvas too, and it is a guest that has been told
+			// which theme to wear rather than left to ask the operating system.
+			if ( window.SeatmapCounter ) {
+				window.SeatmapCounter.syncTheme();
 			}
 		} );
 
