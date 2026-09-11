@@ -68,6 +68,7 @@ return [
     'refund_exceeds_payment' => 'That is more than this booking was charged.',
     'order_not_refundable' => 'Only a confirmed order can be refunded.',
     'nothing_to_settle' => 'Nothing was taken in that period, so there is nothing to settle.',
+    'payout_already_recorded' => 'That statement has already been taken in. Remove the first one if it was wrong.',
     'payout_already_void' => 'That payout has already been voided.',
     'payout_is_void' => 'A voided payout cannot be paid.',
     'period_already_settled' => 'Some of those days have already been settled.',

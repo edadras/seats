@@ -213,6 +213,18 @@ return [
         'keep_days' => (int) env('SEATMAP_ACCOUNT_KEEP_DAYS', 30),
     ],
 
+    /*
+     * How far back a gateway statement is assumed to reach.
+     *
+     * Used only to decide which of our own payments a statement should have contained: without a
+     * window, every sale ever made would be reported as missing from a transfer that was never
+     * meant to include it. Fourteen days covers the settlement delay of every processor this
+     * platform speaks to, with room for a weekend.
+     */
+    'settlement' => [
+        'payout_window_days' => 14,
+    ],
+
     'checkin' => [
         'pairing_code_ttl_minutes' => 30,
         'max_batch_scans' => 500,

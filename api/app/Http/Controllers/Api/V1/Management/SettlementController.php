@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Management;
 
 use App\Domain\Settlement\Payouts;
+use App\Domain\Settlement\GatewayPayouts;
 use App\Domain\Settlement\Settlement;
 use App\Http\Controllers\Controller;
 use App\Support\Audit\AuditLogger;
@@ -64,6 +65,82 @@ class SettlementController extends Controller
      * is the organiser's money, so nothing about it is hidden from them: the period, the figures as
      * they were frozen, the bank reference, and a voided one with the reason it was voided.
      */
+    /**
+     * The statements a card processor has actually paid, and what they do not explain.
+     *
+     * Behind `reports.orders.view` with the rest of the settlement screen, and for the same reason:
+     * this is the money the venue took, line by line, with buyers' payment references on it.
+     */
+    public function gatewayPayouts(Request $request)
+    {
+        $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
+
+        return response()->json(['data' => app(GatewayPayouts::class)->all()]);
+    }
+
+    public function recordGatewayPayout(Request $request)
+    {
+        $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
+
+        $data = $request->validate([
+            'gateway' => ['required', 'string', 'max:60'],
+            'reference' => ['required', 'string', 'max:160'],
+            'currency' => ['required', 'string', 'size:3'],
+            'paid_on' => ['required', 'date'],
+            // Signed, and allowed to be: a statement that took more back than it paid out is a bad
+            // week, not a bad number, and refusing it would leave nowhere to record the week.
+            'gross' => ['required', 'integer'],
+            'fees' => ['required', 'integer'],
+            'net' => ['required', 'integer'],
+            'note' => ['nullable', 'string', 'max:500'],
+            'lines' => ['sometimes', 'array', 'max:5000'],
+            'lines.*.reference' => ['nullable', 'string', 'max:160'],
+            'lines.*.kind' => ['required', 'string', 'in:payment,refund,fee,adjustment'],
+            'lines.*.amount' => ['required', 'integer'],
+            'lines.*.fee' => ['sometimes', 'integer'],
+            'lines.*.occurred_on' => ['nullable', 'date'],
+            'lines.*.description' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        $payout = app(GatewayPayouts::class)->record(
+            $data,
+            $data['lines'] ?? [],
+            $request->user()?->getAuthIdentifier(),
+        );
+
+        $this->audit->record('gateway_payout.recorded', $payout, [
+            'reference' => $payout->reference,
+            'net' => $payout->net,
+        ]);
+
+        return response()->json(
+            ['data' => app(GatewayPayouts::class)->reconcile($payout)],
+            201,
+        );
+    }
+
+    public function reconcileGatewayPayout(Request $request, \App\Models\GatewayPayout $payout)
+    {
+        $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
+
+        return response()->json(['data' => app(GatewayPayouts::class)->reconcile($payout)]);
+    }
+
+    public function forgetGatewayPayout(Request $request, \App\Models\GatewayPayout $payout)
+    {
+        $this->authorize($request, 'reports.orders.view');
+        app(\App\Domain\Programme\EventManagers::class)->assertNotScoped($request->user());
+
+        $this->audit->record('gateway_payout.removed', $payout, ['reference' => $payout->reference]);
+
+        app(GatewayPayouts::class)->remove($payout);
+
+        return response()->json(['deleted' => true]);
+    }
+
     public function payouts(Request $request)
     {
         $this->authorize($request, 'reports.orders.view');

@@ -2813,3 +2813,27 @@
 }
 
 .view-shot img { width: 100%; height: 100%; object-fit: cover; }
+
+/*
+ * The lines of a bank statement that need explaining.
+ *
+ * A plain list rather than a table: every row is the same three or four facts, they are read one
+ * at a time by somebody searching for a reference, and a table would spend half a dialogue's width
+ * on column headings nobody looks at twice.
+ */
+.statement-lines {
+	margin: var(--s-2) 0 0;
+	padding: 0;
+	list-style: none;
+	max-block-size: 18rem;
+	overflow: auto;
+	font-size: 0.875rem;
+}
+
+.statement-lines li {
+	padding-block: var(--s-2);
+	border-block-end: 1px solid var(--border-subtle);
+	overflow-wrap: anywhere;
+}
+
+.statement-lines li:last-child { border-block-end: 0; }

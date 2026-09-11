@@ -562,6 +562,39 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## The books, against the bank
+
+Every money figure on this platform is worked out from the orders in this database. That is the
+right way round — a booking's arithmetic is frozen the moment it is paid and never recomputed — but
+it has always meant the same thing: **the figures agree with themselves.** A gateway that declines a
+payment we recorded, reverses one, holds a deposit back or charges a fee nobody accounted for leaves
+the ledger saying one number and the bank another, and nothing here could notice.
+
+So a payout is taken in as the card processor states it — its own reference, its own gross, fees and
+net, with the transactions it claims to be made of — and the two halves are put side by side. There
+are only four things that can be said about a line, and the point of the screen is that it says
+which of the four every line is:
+
+| | |
+| --- | --- |
+| **Matched** | We have the order and the amount agrees. Nothing to do. |
+| **Differs** | Matched by reference, different amount — with both figures, because "out by €8.00" is something you can search a statement for and "does not reconcile" is not. Almost always a partial refund nobody wrote down. |
+| **Unknown** | They paid for something this database has never heard of. |
+| **Missing** | We recorded a payment they have not paid for. The case a ledger agreeing with itself can never surface. |
+
+And a fifth that costs nothing and catches the commonest mistake of all: whether the payout's own
+gross, fees and net add up to each other and to the lines inside it. The totals are **typed from the
+statement, not summed from the file** — a payout that fails its own arithmetic is itself a finding,
+and it could not be if we worked the totals out ourselves.
+
+The import is a **column mapper**, not a fixed format. Every processor names its columns differently
+and always will, so the file is read as it comes, the headings are shown, and the mapper guesses —
+`Source`, `Reporting Category`, `Created (UTC)` — and asks. Anything else means a venue editing a CSV
+in a spreadsheet before it can use its own ticketing system.
+
+Nothing is derived and nothing is stored as a verdict: a reconciliation is a view over two sets of
+rows, because a refund processed tomorrow must not silently disagree with an answer frozen today.
+
 ## A door that works when the network does not
 
 A scanner has always kept working with no signal in the sense that it lost nothing: a scan went
@@ -838,7 +871,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-four, in order
+./smoke.sh                    # all sixty-five, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -1076,6 +1109,11 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A scheme people have joined is switched off, never deleted | `MembershipTest` |
 | Nobody who has already renewed is sent a renewal reminder | `MembershipTest` |
 | A photograph hangs off the room, not the drawing: republishing a chart keeps every view | `SeatViewTest` |
+| A payment the gateway did not pay for is named, and so is one it paid that we cannot place | `GatewayReconciliationTest` |
+| A partial refund is compared with what actually went back, not with the order total | `GatewayReconciliationTest` |
+| A statement that fails its own arithmetic says so before anybody looks for the discrepancy | `GatewayReconciliationTest`, `bank_smoke` |
+| The same statement uploaded twice is refused rather than doubling a venue's income | `GatewayReconciliationTest`, `bank_smoke` |
+| A processor's own column names are read and mapped, not required to match ours | `bank_smoke` |
 | A door list carries hashes and never a code, so a lost scanner mints nothing | `DoorListTest`, `scanners_smoke` |
 | With no signal a forged code is refused, and a ticket sold since is a doubt rather than a refusal | the scanner's own tests |
 | The same ticket twice at one door, offline, is admitted once | the scanner's own tests |

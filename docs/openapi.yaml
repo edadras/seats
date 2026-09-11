@@ -8608,6 +8608,121 @@ paths:
                   kind: { type: string, enum: [invoice] }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /settlement/gateway-payouts:
+    get:
+      operationId: listGatewayPayouts
+      tags: [Settlement]
+      summary: The statements a card processor has actually paid
+      description: |
+        Requires `reports.orders.view`. Every other figure on the settlement screen is worked out
+        from the orders in this database; these are the one set of numbers that are not ours.
+
+        Each row carries `unexplained` — how many of its lines this platform cannot account for —
+        because a finance officer scanning a list wants to know which statement to open, not its
+        totals.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/GatewayPayoutSummary" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: recordGatewayPayout
+      tags: [Settlement]
+      summary: Take in a statement, and get the comparison back
+      description: |
+        The totals are what the gateway asserts, not a sum of the lines: a payout whose lines do
+        not add up to its own gross is itself a finding, and could not be if this computed them.
+
+        The same `gateway` and `reference` twice is refused with `payout_already_recorded`. A
+        second upload that quietly doubled a venue's income would not be found until an accountant
+        found it, and by then nobody would remember there had been two.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateway, reference, currency, paid_on, gross, fees, net]
+              properties:
+                gateway: { type: string, maxLength: 60 }
+                reference: { type: string, maxLength: 160 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                paid_on: { type: string, format: date }
+                gross: { type: integer, description: "Minor units, as the gateway states it." }
+                fees: { type: integer }
+                net: { type: integer }
+                note: { type: [string, "null"], maxLength: 500 }
+                lines:
+                  type: array
+                  maxItems: 5000
+                  items:
+                    type: object
+                    required: [kind, amount]
+                    properties:
+                      reference: { type: [string, "null"], maxLength: 160 }
+                      kind: { type: string, enum: [payment, refund, fee, adjustment] }
+                      amount:
+                        type: integer
+                        description: "Signed: a refund is negative, because that is how it arrives."
+                      fee: { type: integer }
+                      occurred_on: { type: [string, "null"], format: date }
+                      description: { type: [string, "null"], maxLength: 300 }
+      responses:
+        "201":
+          description: Taken in, with the reconciliation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/GatewayReconciliation" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /settlement/gateway-payouts/{payout}:
+    parameters:
+      - name: payout
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: reconcileGatewayPayout
+      tags: [Settlement]
+      summary: One statement, line by line, against what this database says
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/GatewayReconciliation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: forgetGatewayPayout
+      tags: [Settlement]
+      summary: Remove a statement that was taken in wrongly
+      description: |
+        Its lines go with it. No order is touched — this is a copy of somebody else's document, and
+        nothing on this platform was derived from it.
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+
   /settlement/payouts:
     get:
       operationId: listMyPayouts
@@ -12162,6 +12277,75 @@ components:
         name: { type: string, description: The section's name as the designer typed it. }
         url: { type: [string, "null"], format: uri }
         caption: { type: string }
+
+    GatewayPayoutSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        gateway: { type: string }
+        reference: { type: string }
+        currency: { type: string }
+        paid_on: { type: string, format: date }
+        gross: { type: integer }
+        fees: { type: integer }
+        net: { type: integer }
+        lines: { type: integer }
+        unexplained:
+          type: integer
+          description: How many of its lines this platform cannot account for.
+
+    GatewayReconciliation:
+      type: object
+      description: |
+        The four sentences there are to say about a statement, and a fifth that costs nothing: a
+        payout whose own gross, fees and net do not agree with each other or with its lines.
+      properties:
+        payout: { $ref: "#/components/schemas/GatewayPayoutSummary" }
+        arithmetic:
+          type: object
+          properties:
+            lines_total: { type: integer }
+            lines_match_gross: { type: boolean }
+            line_fees_total: { type: integer }
+            line_fees_match: { type: boolean }
+            net_expected: { type: integer }
+            net_matches: { type: boolean }
+        matched:
+          type: array
+          description: We have the order and the amount agrees, or it is the gateway's own fee line.
+          items: { $ref: "#/components/schemas/GatewayLine" }
+        differs:
+          type: array
+          description: Matched by reference, different amount. Usually an unrecorded partial refund.
+          items: { $ref: "#/components/schemas/GatewayLine" }
+        unknown:
+          type: array
+          description: They paid for something this database has never heard of.
+          items: { $ref: "#/components/schemas/GatewayLine" }
+        missing:
+          type: array
+          description: Payments this database recorded that are on no statement yet.
+          items:
+            type: object
+            properties:
+              reference: { type: string }
+              order_id: { type: string }
+              amount: { type: integer }
+              confirmed_at: { type: string, format: date-time }
+
+    GatewayLine:
+      type: object
+      properties:
+        reference: { type: string }
+        kind: { type: string, enum: [payment, refund, fee, adjustment] }
+        amount: { type: integer }
+        fee: { type: integer }
+        occurred_on: { type: [string, "null"], format: date }
+        description: { type: [string, "null"] }
+        order_id: { type: [string, "null"] }
+        expected:
+          type: integer
+          description: Present only on a `differs` line — what this database says it should be.
 
     ScannerDoorList:
       type: object

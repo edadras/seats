@@ -614,6 +614,22 @@ Route::prefix('v1')->group(function () {
 
         Route::get('settlement', [SettlementController::class, 'index']);
         Route::get('settlement/payouts', [SettlementController::class, 'payouts']);
+
+        /*
+         * The books, against the bank.
+         *
+         * Every other figure on the settlement screen is worked out from the orders in this
+         * database. These are the one set of numbers that are not ours — what a card processor
+         * says it actually transferred — and the reconciliation is the only place the two are put
+         * side by side.
+         *
+         * Declared before `settlement/export` for no reason other than reading order; the paths do
+         * not overlap.
+         */
+        Route::get('settlement/gateway-payouts', [SettlementController::class, 'gatewayPayouts']);
+        Route::post('settlement/gateway-payouts', [SettlementController::class, 'recordGatewayPayout']);
+        Route::get('settlement/gateway-payouts/{payout}', [SettlementController::class, 'reconcileGatewayPayout']);
+        Route::delete('settlement/gateway-payouts/{payout}', [SettlementController::class, 'forgetGatewayPayout']);
         Route::get('settlement/export', [SettlementController::class, 'export']);
         Route::get('settlement/statement', [SettlementController::class, 'statement']);
 

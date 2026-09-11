@@ -30,6 +30,7 @@
 				Settle.events = response.data || [];
 				Settle.paint();
 				Settle.load();
+				Settle.loadBank();
 			} )
 			.catch( function ( error ) { App.error( error ); } );
 	};
@@ -72,7 +73,9 @@
 				'<div id="settle-totals" class="spaced"></div>' +
 				'<div id="settle-rows"></div>' +
 				'<p class="hint spaced">' + esc( App.t( 'panel.settlement.note' ) ) + '</p>' +
-				'<div id="settle-payouts"></div>',
+				'<div id="settle-payouts"></div>' +
+				// The one section on this screen whose numbers did not come from this database.
+				'<div id="settle-bank"></div>',
 		} );
 
 		[ 'settle-from', 'settle-to', 'settle-event', 'settle-basis' ].forEach( function ( id ) {
@@ -158,6 +161,26 @@
 			// Quiet on purpose: the settlement above it is the screen, and a toast about a second
 			// request failing would land on top of figures that are perfectly fine.
 			.catch( function () { host.innerHTML = ''; } );
+	};
+
+	/**
+	 * The statements the gateway actually paid.
+	 *
+	 * Its own request and its own failure: an organiser who may read a settlement but whose
+	 * gateway has never been reconciled should still get the screen above it.
+	 */
+	Settle.loadBank = function () {
+		var App = Settle.App;
+		var host = document.getElementById( 'settle-bank' );
+
+		if ( ! host || ! global.SeatmapBank ) {
+			return;
+		}
+
+		global.SeatmapBank.load( App ).then( function () {
+			host.innerHTML = global.SeatmapBank.markup( App );
+			global.SeatmapBank.bind( App, Settle.loadBank );
+		} );
 	};
 
 	Settle.payoutsMarkup = function ( App, response ) {

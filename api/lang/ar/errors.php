@@ -68,6 +68,7 @@ return [
     'refund_exceeds_payment' => 'هذا المبلغ أكبر من المبلغ المحصَّل لهذا الطلب.',
     'order_not_refundable' => 'لا يمكن ردّ المبلغ إلا لطلب مؤكَّد.',
     'nothing_to_settle' => 'لم يُحصَّل شيء في تلك الفترة، فلا شيء لتسويته.',
+    'payout_already_recorded' => 'أُدخل هذا الكشف من قبل. احذف الأول إن كان خطأً.',
     'payout_already_void' => 'هذه الدفعة أُلغيت من قبل.',
     'payout_is_void' => 'لا يمكن دفع دفعة ملغاة.',
     'period_already_settled' => 'بعض تلك الأيام جرت تسويتها بالفعل.',

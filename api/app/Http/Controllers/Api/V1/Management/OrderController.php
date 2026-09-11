@@ -95,6 +95,16 @@ class OrderController extends Controller
                 'phone' => $order->buyer['phone'] ?? null,
             ],
             'channel' => $order->apiClient?->name,
+            /*
+             * The handle the card processor knows this payment by.
+             *
+             * On the one order somebody has open, never on a list of forty: this is what a person
+             * reconciling a bank statement by hand searches for at the other end, and they are
+             * looking at one booking when they need it. It identifies a payment and not a card —
+             * there is nothing here that could be used to take money.
+             */
+            'payment_reference' => $order->metadata['payment_reference'] ?? null,
+            'gateway' => $order->metadata['gateway'] ?? null,
             // What is still owed and when, on a booking being paid in instalments. Worked out on
             // every read, so a plan cannot be late in the database and current on the screen.
             'plan' => app(\App\Domain\Payments\PaymentPlans::class)->state($order),

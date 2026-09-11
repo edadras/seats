@@ -24,6 +24,15 @@ class ExternalOrderResource extends JsonResource
             'hold_token' => $this->hold?->token,
             'currency' => $this->currency,
             'total_amount' => $this->total_amount,
+            /*
+             * The handle the card processor knows this payment by.
+             *
+             * Read straight off the order rather than derived, and present because a person
+             * reconciling a bank statement by hand needs exactly this to find the payment at the
+             * other end. It identifies a payment, not a card: there is nothing here that could be
+             * used to take money.
+             */
+            'payment_reference' => $this->metadata['payment_reference'] ?? null,
             'confirmed_at' => $this->confirmed_at?->toIso8601String(),
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
             'refunded_at' => $this->refunded_at?->toIso8601String(),

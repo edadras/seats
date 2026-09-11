@@ -68,6 +68,7 @@ return [
     'refund_exceeds_payment' => 'Das ist mehr, als für diese Bestellung berechnet wurde.',
     'order_not_refundable' => 'Nur eine bestätigte Bestellung kann erstattet werden.',
     'nothing_to_settle' => 'In diesem Zeitraum wurde nichts eingenommen, es gibt also nichts abzurechnen.',
+    'payout_already_recorded' => 'Diese Abrechnung wurde bereits eingelesen. Entfernen Sie die erste, falls sie falsch war.',
     'payout_already_void' => 'Diese Auszahlung wurde bereits storniert.',
     'payout_is_void' => 'Eine stornierte Auszahlung kann nicht ausgezahlt werden.',
     'period_already_settled' => 'Einige dieser Tage sind bereits abgerechnet.',

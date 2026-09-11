@@ -68,6 +68,7 @@ return [
     'refund_exceeds_payment' => "C'est plus que ce qui a été facturé pour cette commande.",
     'order_not_refundable' => 'Seule une commande confirmée peut être remboursée.',
     'nothing_to_settle' => 'Rien n’a été encaissé sur cette période, il n’y a donc rien à régler.',
+    'payout_already_recorded' => 'Ce relevé a déjà été importé. Retirez le premier s’il était erroné.',
     'payout_already_void' => 'Ce versement a déjà été annulé.',
     'payout_is_void' => 'Un versement annulé ne peut pas être payé.',
     'period_already_settled' => 'Certains de ces jours ont déjà été réglés.',

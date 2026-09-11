@@ -1615,6 +1615,71 @@ return [
         'domainHint' => 'Point it at us with a CNAME or an A record first, then add the TXT record we show you.',
     ],
 
+    /*
+     * The books, against the bank.
+     *
+     * Every other figure on the settlement screen is worked out from the orders in this database.
+     * These words are for the one section whose numbers did not come from here — what a card
+     * processor says it actually transferred — and the four sentences there are to say about it.
+     */
+    'bank' => [
+        'title' => 'What the gateway actually paid',
+        'description' => 'Everything else on this screen is worked out from your own orders. This is the one place they meet the money that reached the bank.',
+        'import' => 'Take in a statement',
+        'importHint' => 'The totals below are what your gateway says it transferred — copy them from the statement, not from a spreadsheet. A payout whose lines do not add up to them is itself worth knowing about, and it cannot be if we add them up ourselves.',
+        'gateway' => 'Gateway',
+        'statement' => 'Statement reference',
+        'currency' => 'Currency',
+        'paidOn' => 'Paid on',
+        'gross' => 'Gross',
+        'fees' => 'Fees',
+        'net' => 'Net',
+        'lines' => 'Lines',
+        'file' => 'The transactions (CSV)',
+        'fileHint' => 'Export it from your gateway however it comes. You will say which column is which on the next step. Optional — the totals alone answer "did this month’s money arrive".',
+        'next' => 'Next',
+        'noRows' => 'That file has no rows in it.',
+        'columns' => 'Which column is which',
+        'columnsHint' => ':count rows. Every processor names its columns differently, so this asks rather than guesses — though it has had a guess.',
+        'ignore' => 'Not in this file',
+        'record' => 'Take it in',
+        'recorded' => 'Statement taken in.',
+        'field' => [
+            'reference' => 'The payment’s reference',
+            'kind' => 'What kind of line it is',
+            'amount' => 'Amount',
+            'fee' => 'Fee',
+            'occurred_on' => 'Date',
+            'description' => 'Description',
+        ],
+        'unexplained' => ':count unexplained',
+        'allExplained' => 'All accounted for',
+        'open' => 'Compare',
+        'reconciliation' => 'The books, against the bank',
+        'of' => 'Statement :reference · :net paid on :when.',
+        'linesOff' => 'The lines add up to :lines; the statement says its gross is :gross.',
+        'feesOff' => 'The line fees add up to :lines; the statement says its fees are :fees.',
+        'netOff' => 'Gross less fees comes to :expected; the statement says it paid :net.',
+        'weSaid' => 'we recorded :amount',
+        'bucket' => [
+            'differs' => ':count paid for a different amount',
+            'unknown' => ':count we cannot place',
+            'missing' => ':count we recorded and they did not pay',
+            'matched' => ':count accounted for',
+        ],
+        'bucketHint' => [
+            'differs' => 'Usually a partial refund nobody wrote down, or a currency conversion.',
+            'unknown' => 'They paid for something this system has never heard of.',
+            'missing' => 'Payments this system recorded that are on no statement yet.',
+            'matched' => 'Nothing to do about these.',
+        ],
+        'forget' => 'Remove this statement?',
+        'forgetBody' => 'It goes with its lines. Your orders are untouched — this is a copy of somebody else’s document.',
+        'forgotten' => 'Statement removed.',
+        'emptyTitle' => 'No statements yet',
+        'emptyBody' => 'Take in the payout file from your gateway and every line of it is compared with what this system recorded.',
+    ],
+
     'settlement' => [
         'title' => 'Settlement',
         'description' => 'What came in, what went back out, what we kept, and what is owed — per event and per period.',

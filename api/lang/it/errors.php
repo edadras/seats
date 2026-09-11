@@ -68,6 +68,7 @@ return [
     'refund_exceeds_payment' => 'È più di quanto è stato addebitato per questo ordine.',
     'order_not_refundable' => 'Solo un ordine confermato può essere rimborsato.',
     'nothing_to_settle' => 'In quel periodo non è stato incassato nulla, quindi non c’è nulla da liquidare.',
+    'payout_already_recorded' => 'Questo estratto è già stato importato. Rimuovi il primo se era sbagliato.',
     'payout_already_void' => 'Questo pagamento è già stato annullato.',
     'payout_is_void' => 'Un pagamento annullato non può essere pagato.',
     'period_already_settled' => 'Alcuni di quei giorni sono già stati liquidati.',
