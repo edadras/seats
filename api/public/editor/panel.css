@@ -67,6 +67,41 @@
 	overflow-y: auto;
 }
 
+/*
+ * A way to get to a screen by naming it.
+ *
+ * Thirty-five screens is more than anybody holds in their head, and the sidebar answers "what is
+ * there" rather than "where is the thing I already know I want". This is the second question, and
+ * it is a filter over the list that is already there rather than a palette over the top of it — the
+ * reader stays where they were reading.
+ */
+.nav-find { padding: 0 var(--s-3) var(--s-3); }
+
+.nav-find__input {
+	inline-size: 100%;
+	min-block-size: 2rem;
+	padding-inline: var(--s-3);
+	border: 1px solid var(--border);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--text-sm);
+}
+
+.nav-find__input:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+	border-color: var(--accent);
+}
+
+.nav-find__none {
+	margin: 0;
+	padding-inline: var(--s-3);
+	font-size: var(--text-sm);
+	color: var(--text-muted);
+}
+
 .nav-group { display: flex; flex-direction: column; gap: 1px; }
 
 /*

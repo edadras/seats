@@ -24,6 +24,8 @@
 		this.editor = editor;
 		this.options = options || {};
 		this.onManageCategories = this.options.onManageCategories || function () {};
+		this.seatViews = this.options.seatViews || function () { return {}; };
+		this.onSeatViewChange = this.options.onSeatViewChange || function () {};
 	}
 
 	Inspector.prototype.render = function () {
@@ -370,6 +372,33 @@
 		this.number( body, t( 'panel.inspector.fontSize' ), section.labeling.fontSize, 6, 120, 1, function ( value ) {
 			self.change( function () { section.labeling.fontSize = value; } );
 		}, 'pt' );
+
+		/*
+		 * What a buyer would see from here.
+		 *
+		 * Here, and not only on the seat-map list, because this is where somebody is standing when
+		 * they think of it: they have just drawn the balcony and know exactly what it looks like
+		 * from up there. Going back to a list of charts to say so is a trip nobody makes.
+		 *
+		 * It is not part of the chart. It hangs off the map, keyed by this section's own key, and
+		 * saves on its own the moment it is typed — so it survives publishing, and publishing is
+		 * not required to change it.
+		 */
+		var views = this.seatViews();
+		var held = views[ section.key ] || ( views[ section.key ] = { url: '', caption: '' } );
+		var view = this.section( t( 'panel.inspector.viewTitle' ) );
+
+		view.appendChild( el( 'p', 'hint', t( 'panel.inspector.viewHint' ) ) );
+
+		this.text( view, t( 'panel.inspector.viewUrl' ), held.url, function ( value ) {
+			held.url = value;
+			self.onSeatViewChange();
+		} );
+
+		this.text( view, t( 'panel.inspector.viewCaption' ), held.caption, function ( value ) {
+			held.caption = value;
+			self.onSeatViewChange();
+		} );
 
 		var contents = this.section( t( 'panel.inspector.contents' ) );
 		var counts = {};

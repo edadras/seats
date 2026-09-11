@@ -35,40 +35,59 @@
 	 * else's to grant — and a list of them is any-of, for the screens that answer a narrow question
 	 * to one caller and a wide one to another.
 	 */
+	/*
+	 * The sidebar.
+	 *
+	 * Grouped by the question somebody arrived with, not by the table the screen reads. That is a
+	 * correction rather than a first draft: "Programme" had grown to twenty-one items, six of which
+	 * — discounts, access codes, seasons, vouchers, points, memberships — all answer one question,
+	 * "who gets in cheaper or earlier", and a person who wanted one of them had no way to know
+	 * which. A group of twenty-one is a list; a list of six groups is a menu.
+	 */
 	var NAV = [
 		{ group: null, items: [ { key: 'overview', icon: 'grid', needs: 'reports.attendance.view', notFor: 'manager' } ] },
 		{ group: 'programme', items: [
 			{ key: 'events', icon: 'calendar', needs: 'events.view' },
 			{ key: 'productions', icon: 'map', needs: 'events.view', notFor: 'manager' },
-			// A dress rehearsal for the buyer's path. Beside the counter because it is the same
-			// act — selling a seat — with nobody's money in it.
+			{ key: 'entryslots', icon: 'clock', needs: 'events.view' },
+			{ key: 'questions', icon: 'file', needs: 'events.view' },
+			// A dress rehearsal for the buyer's path. Here rather than beside the counter: it is
+			// about a night rather than about a sale, and it is the last thing done to one before
+			// it goes on sale.
 			{ key: 'rehearsal', icon: 'eye', needs: 'events.manage' },
+		] },
+		{ group: 'selling', items: [
 			{ key: 'counter', icon: 'ticket', needs: 'orders.sell' },
 			{ key: 'tills', icon: 'wallet', needs: 'orders.sell' },
+			{ key: 'orders', icon: 'file', needs: [ 'orders.view', 'orders.view.own' ] },
+			{ key: 'plans', icon: 'clock', needs: 'orders.view' },
+			{ key: 'baskets', icon: 'list', needs: 'orders.view' },
 			{ key: 'agents', icon: 'users', needs: 'agents.manage' },
 			// An agency's own account, offered to the agency. `when` rather than `needs` because
 			// selling for somebody is not a permission — an owner holds every permission there is
 			// and is nobody's agency.
 			{ key: 'myagency', icon: 'wallet', when: 'agent' },
-			{ key: 'orders', icon: 'file', needs: [ 'orders.view', 'orders.view.own' ] },
-			{ key: 'plans', icon: 'clock', needs: 'orders.view' },
+		] },
+		/*
+		 * Every way a person pays less than the wall price, or gets in before everybody else.
+		 *
+		 * These six were scattered through a group of twenty-one, each behind a name that only
+		 * makes sense once you already know what it does. Together they are one question with six
+		 * answers, which is a thing somebody can choose between.
+		 */
+		{ group: 'offers', items: [
+			{ key: 'discounts', icon: 'tag', needs: 'discounts.manage' },
+			{ key: 'access', icon: 'lock', needs: 'discounts.manage' },
+			{ key: 'seasons', icon: 'calendar', needs: 'discounts.manage' },
+			{ key: 'vouchers', icon: 'wallet', needs: 'vouchers.manage' },
+			{ key: 'loyalty', icon: 'target', needs: 'vouchers.manage' },
+			{ key: 'memberships', icon: 'users', needs: 'vouchers.manage' },
+		] },
+		// What the door works on, what it works from, and what it works with.
+		{ group: 'door', items: [
 			{ key: 'tickets', icon: 'ticket', needs: 'tickets.view' },
 			{ key: 'doorlist', icon: 'check', needs: 'checkins.view' },
-			// The phones at the doors. Beside the door list because they are the same job seen
-			// from two sides: what the door works from, and what it works on.
-			{ key: 'scanners', icon: 'ticket', needs: 'devices.manage' },
-			{ key: 'questions', icon: 'file', needs: 'events.view' },
-			{ key: 'entryslots', icon: 'clock', needs: 'events.view' },
-			{ key: 'discounts', icon: 'tag', needs: 'discounts.manage' },
-			{ key: 'seasons', icon: 'calendar', needs: 'discounts.manage' },
-			{ key: 'access', icon: 'lock', needs: 'discounts.manage' },
-			{ key: 'vouchers', icon: 'wallet', needs: 'vouchers.manage' },
-			// Points and tiers. Beside the vouchers because that is what a point turns into, and
-			// behind the same permission for the same reason.
-			{ key: 'loyalty', icon: 'target', needs: 'vouchers.manage' },
-			// The Friends scheme. Beside the points and the credit because it is the third thing
-			// a venue gives its regulars, and the same desk hands out all three.
-			{ key: 'memberships', icon: 'users', needs: 'vouchers.manage' },
+			{ key: 'scanners', icon: 'seat', needs: 'devices.manage' },
 		] },
 		{ group: 'venue', items: [
 			{ key: 'maps', icon: 'map', needs: 'maps.view' },
@@ -77,15 +96,14 @@
 		{ group: 'audience', items: [
 			{ key: 'customers', icon: 'users', needs: 'orders.view', notFor: 'manager' },
 			{ key: 'waitlist', icon: 'clock', needs: 'orders.view' },
+			{ key: 'messaging', icon: 'mail', needs: 'messages.send' },
 			{ key: 'sites', icon: 'globe', needs: 'sites.view' },
 			{ key: 'themes', icon: 'palette', needs: 'sites.view' },
-			{ key: 'messaging', icon: 'mail', needs: 'messages.send' },
 		] },
 		{ group: 'insight', items: [
-			{ key: 'promoters', icon: 'users', needs: 'reports.orders.view', notFor: 'manager' },
-			{ key: 'baskets', icon: 'list', needs: 'orders.view' },
 			{ key: 'reports', icon: 'chart', needs: 'reports.attendance.view', notFor: 'manager' },
 			{ key: 'settlement', icon: 'wallet', needs: 'reports.orders.view', notFor: 'manager' },
+			{ key: 'promoters', icon: 'users', needs: 'reports.orders.view', notFor: 'manager' },
 		] },
 		{ group: 'account', items: [
 			{ key: 'connections', icon: 'plug', needs: 'connections.manage' },
@@ -93,12 +111,12 @@
 			{ key: 'team', icon: 'users', needs: 'team.view' },
 			{ key: 'managers', icon: 'users', needs: 'team.view' },
 			{ key: 'billing', icon: 'wallet', needs: 'account.manage' },
-			// Taking this account's data, and closing it. Last but one in the account group,
-			// because it is the last thing anybody does here.
-			{ key: 'leaving', icon: 'download', needs: 'account.manage' },
-			{ key: 'security', icon: 'lock' },
 			{ key: 'wallet', icon: 'ticket', needs: 'account.manage' },
+			{ key: 'security', icon: 'lock' },
 			{ key: 'audit', icon: 'history', needs: 'audit.view' },
+			// Taking this account's data, and closing it. Last, because it is the last thing
+			// anybody does here.
+			{ key: 'leaving', icon: 'download', needs: 'account.manage' },
 		] },
 	];
 
@@ -981,12 +999,77 @@
 		host.innerHTML = '';
 
 		/*
+		 * A way to get to a screen by naming it.
+		 *
+		 * Thirty-five screens is more than anybody holds in their head, and the sidebar answers
+		 * "what is there" rather than "where is the thing I already know I want". Typing is the
+		 * shortest path for the second question, and slash is where every application this
+		 * audience uses has put it.
+		 *
+		 * A filter over the list that is already there, not a separate palette: the reader stays in
+		 * the sidebar they were reading, and pressing Escape gives it back whole.
+		 */
+		var finder = node( 'div', 'nav-find' );
+		var box = node( 'input', 'nav-find__input' );
+
+		box.type = 'search';
+		box.id = 'nav-find';
+		box.value = self.navFilter || '';
+		box.setAttribute( 'placeholder', self.t( 'panel.shell.findScreen' ) );
+		box.setAttribute( 'aria-label', self.t( 'panel.shell.findScreen' ) );
+
+		box.addEventListener( 'input', function () {
+			self.navFilter = box.value;
+			self.renderNav();
+			// Focus is lost with the element it was on: the list was rebuilt under the typing.
+			var again = document.getElementById( 'nav-find' );
+
+			if ( again ) {
+				again.focus();
+				again.setSelectionRange( again.value.length, again.value.length );
+			}
+		} );
+
+		box.addEventListener( 'keydown', function ( event ) {
+			if ( 'Escape' === event.key ) {
+				self.navFilter = '';
+				self.renderNav();
+			}
+
+			// Enter opens the only thing left, which is what typing three letters is usually for.
+			if ( 'Enter' === event.key ) {
+				var only = document.querySelectorAll( '#nav .nav-item' );
+
+				if ( 1 === only.length ) {
+					only[ 0 ].click();
+				}
+			}
+		} );
+
+		finder.appendChild( box );
+		host.appendChild( finder );
+
+		var wanted = ( self.navFilter || '' ).trim().toLowerCase();
+		var found = 0;
+
+		/*
 		 * Grouped, because twelve unlabelled rows is a list somebody reads every time rather than
 		 * learns once. The headings name the job, not the table: "Venue" is where the room lives,
 		 * whether that is a chart or the building it is in.
 		 */
 		NAV.forEach( function ( section ) {
-			var items = section.items.filter( function ( entry ) { return self.offers( entry ); } );
+			var items = section.items.filter( function ( entry ) {
+				if ( ! self.offers( entry ) ) {
+					return false;
+				}
+
+				// Matched against the name in the reader's own language, which is the only name
+				// they know the screen by.
+				return '' === wanted
+					|| self.t( 'panel.nav.' + entry.key ).toLowerCase().indexOf( wanted ) > -1;
+			} );
+
+			found += items.length;
 
 			// A heading over nothing is worse than no heading: an external agency's nav is four rows
 			// and a group label with an empty space under it would read as a screen that failed.
@@ -1031,6 +1114,13 @@
 
 			host.appendChild( group );
 		} );
+
+		if ( wanted && ! found ) {
+			var nothing = node( 'p', 'nav-find__none' );
+
+			nothing.textContent = self.t( 'panel.shell.findNothing' );
+			host.appendChild( nothing );
+		}
 	};
 
 	App.route = function ( view ) {
@@ -3166,6 +3256,23 @@
 	App.openDesigner = function ( mapId ) {
 		var self = this;
 
+		/*
+		 * The photographs alongside the chart itself.
+		 *
+		 * Fetched with the map rather than on demand, so the inspector can show the one belonging
+		 * to a section the moment somebody selects it. Failure is silent and leaves an empty set:
+		 * a designer whose photographs could not be listed should still be able to draw.
+		 */
+		this.seatViews = {};
+
+		this.request( 'GET', '/seat-maps/' + mapId + '/views' )
+			.then( function ( answer ) {
+				( answer.data || [] ).forEach( function ( row ) {
+					self.seatViews[ row.section_key ] = { url: row.url || '', caption: row.caption || '' };
+				} );
+			} )
+			.catch( function () {} );
+
 		this.request( 'GET', '/seat-maps/' + mapId ).then( function ( map ) {
 			self.map = map;
 
@@ -3181,6 +3288,27 @@
 			// The designer takes the whole window: a sidebar beside a canvas is a sidebar in the way.
 			self.root.innerHTML = self.designerMarkup( map );
 			self.mountDesigner( chart );
+		} ).catch( function ( error ) { self.toast( error.message, true ); } );
+	};
+
+	/**
+	 * Write the whole set of section photographs back.
+	 *
+	 * Whole, because the endpoint replaces the set: a row whose address has just been cleared is a
+	 * photograph being taken away, and sending only the filled ones would mean "no change".
+	 */
+	App.saveSeatViews = function () {
+		var self = this;
+		var views = this.seatViews || {};
+
+		return this.request( 'PUT', '/seat-maps/' + this.map.id + '/views', {
+			views: Object.keys( views ).map( function ( key ) {
+				return {
+					section_key: key,
+					url: views[ key ].url || null,
+					caption: views[ key ].caption || '',
+				};
+			} ),
 		} ).catch( function ( error ) { self.toast( error.message, true ); } );
 	};
 
@@ -3317,7 +3445,13 @@
 		this.inspector = new window.SeatmapInspector(
 			document.getElementById( 'dz-inspector' ),
 			editor,
-			{ onManageCategories: function () { self.manageCategories(); } }
+			{
+				onManageCategories: function () { self.manageCategories(); },
+				// The photographs a buyer sees from each section. Handed in rather than fetched by
+				// the inspector: they belong to the map, and the map is this screen's business.
+				seatViews: function () { return self.seatViews || {}; },
+				onSeatViewChange: function () { self.saveSeatViews(); },
+			}
 		);
 
 		// Exposed for the browser smoke test, and genuinely useful in the console when diagnosing
@@ -4232,6 +4366,33 @@
 	}
 
 	App.escape = esc;
+
+	/*
+	 * Slash puts the cursor in the screen finder.
+	 *
+	 * Only when nothing is being typed into already: a venue called "Slash" would otherwise be
+	 * unnameable, and a seat number with a slash in it would jump the reader out of the field.
+	 */
+	document.addEventListener( 'keydown', function ( event ) {
+		if ( '/' !== event.key || event.metaKey || event.ctrlKey ) {
+			return;
+		}
+
+		var on = document.activeElement;
+		var typing = on && ( /^(INPUT|TEXTAREA|SELECT)$/.test( on.tagName ) || on.isContentEditable );
+
+		if ( typing ) {
+			return;
+		}
+
+		var box = document.getElementById( 'nav-find' );
+
+		if ( box ) {
+			event.preventDefault();
+			box.focus();
+			box.select();
+		}
+	} );
 
 	document.addEventListener( 'DOMContentLoaded', function () { App.init(); } );
 } )();

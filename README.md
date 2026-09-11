@@ -562,6 +562,28 @@ Configure `SEATMAP_PANEL_HOSTS` in production. It is the allow-list for the cont
 other `Host` is looked up as a site. With it unset, one host serves both — which is what you want
 in development and never in production.
 
+## Finding your way around thirty-five screens
+
+Two corrections to the panel, both of which were the same mistake: a menu grouped by the table a
+screen reads rather than by the question somebody arrived with.
+
+**The sidebar.** "Programme" had grown to twenty-one items, six of which — discounts, presale codes,
+season tickets, vouchers, points and memberships — all answer one question: *who gets in cheaper or
+earlier?* A person who wanted one of them had no way of knowing which. They are now **Offers**, and
+the rest is split the same way: Programme (what is on), Selling (the box office), The door, Venue,
+Audience, Insight, Account. A group of twenty-one is a list; a list of eight groups is a menu.
+
+**A way to name the screen you want.** Slash puts the cursor in a box at the top of the sidebar and
+typing filters it, matched against the screen's name *in the reader's own language*, which is the
+only name they know it by. Enter opens the one that is left. It is a filter over the list already
+there rather than a palette on top of it — the reader stays where they were reading.
+
+**And the photograph goes where the section is.** "The view from here" was only reachable from a
+button on the seat-map list. Somebody who has just drawn the balcony and knows exactly what it looks
+like from up there was never going to go back to a list of charts to say so, so it is in the
+designer's own section panel now, saving on its own — it survives publishing, and publishing is not
+needed to change it.
+
 ## The books, against the bank
 
 Every money figure on this platform is worked out from the orders in this database. That is the
