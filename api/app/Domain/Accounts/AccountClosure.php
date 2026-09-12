@@ -17,6 +17,7 @@ use App\Support\Audit\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Closing an account, and eventually erasing it.
@@ -208,6 +209,32 @@ class AccountClosure
 
         if (is_dir($directory)) {
             File::deleteDirectory($directory);
+        }
+
+        $this->forgetPictures($id);
+    }
+
+    /**
+     * The posters, the photographs of the view, the trailer.
+     *
+     * The rows go with the account — they carry its id and cascade — but the bytes are on a disk
+     * and would stay there for ever. An account that left should not leave its artwork on somebody
+     * else's server, and this is the reason every uploaded file's path starts with the account's
+     * own id: one prefix, removable without reading a database.
+     *
+     * Outside the transaction and last, deliberately. A file that cannot be deleted is a tidiness
+     * problem; a transaction rolled back because of one would leave the account half-erased, which
+     * is not.
+     */
+    private function forgetPictures(string $id): void
+    {
+        try {
+            Storage::disk(config('media.disk'))->deleteDirectory($id);
+        } catch (\Throwable $e) {
+            logger()->warning('An erased account left its pictures behind.', [
+                'tenant_id' => $id,
+                'reason' => $e->getMessage(),
+            ]);
         }
     }
 

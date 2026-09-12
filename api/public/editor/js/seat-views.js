@@ -12,7 +12,6 @@
 ( function ( global ) {
 	'use strict';
 
-	var icon = global.SeatmapIcon;
 
 	var Views = {
 		App: null,
@@ -42,7 +41,7 @@
 			: '<div class="empty"><p>' + esc( App.t( 'panel.seatViews.noSections' ) ) + '</p>' +
 				'<p class="hint">' + esc( App.t( 'panel.seatViews.noSectionsHint' ) ) + '</p></div>';
 
-		var host = App.modal( {
+		App.modal( {
 			title: App.t( 'panel.seatViews.title' ),
 			submitLabel: App.t( 'panel.seatViews.save' ),
 			body: body,
@@ -53,13 +52,6 @@
 					App.toast( App.t( 'panel.seatViews.saved' ) );
 				} );
 			} : null,
-		} );
-
-		// A picture of the address as it is typed, so somebody who pasted the wrong link finds out
-		// here rather than from a buyer.
-		host.querySelectorAll( '[data-view-url]' ).forEach( function ( input ) {
-			input.addEventListener( 'input', function () { preview( host, input ); } );
-			preview( host, input );
 		} );
 	};
 
@@ -73,7 +65,8 @@
 		var out = [];
 
 		panel.querySelectorAll( '[data-view-row]' ).forEach( function ( element ) {
-			var url = element.querySelector( '[data-view-url]' ).value.trim();
+			var field = element.querySelector( '[data-media-field]' );
+			var url = ( field ? field.dataset.value : '' ).trim();
 			var caption = element.querySelector( '[data-view-caption]' ).value.trim();
 
 			out.push( {
@@ -86,23 +79,6 @@
 		return out;
 	};
 
-	function preview( host, input ) {
-		var frame = host.querySelector( '[data-view-shot="' + cssEscape( input.dataset.viewUrl ) + '"]' );
-		var url = input.value.trim();
-
-		if ( ! frame ) {
-			return;
-		}
-
-		// Only an address this platform would actually serve. The server refuses anything else,
-		// and showing a javascript: link a frame here would be showing it working.
-		if ( /^https?:\/\//i.test( url ) ) {
-			frame.innerHTML = '<img src="' + esc( url ) + '" alt="">';
-		} else {
-			frame.innerHTML = icon( 'image', { size: 18 } );
-		}
-	}
-
 	function row( one ) {
 		var App = Views.App;
 		var key = one.section_key;
@@ -110,12 +86,20 @@
 		return '<div class="card card--pad stack" data-view-row="' + esc( key ) + '">' +
 			'<div class="row--between"><strong>' + esc( one.name ) + '</strong>' +
 			'<span class="muted tnum">' + esc( key ) + '</span></div>' +
-			'<div class="view-shot" data-view-shot="' + esc( key ) + '"></div>' +
 			'<div class="field"><label class="field__label" for="view-url-' + esc( key ) + '">' +
 			esc( App.t( 'panel.seatViews.url' ) ) + '</label>' +
-			'<input class="input" id="view-url-' + esc( key ) + '" type="url" maxlength="500" ' +
-			'data-view-url="' + esc( key ) + '" value="' + esc( one.url || '' ) + '" ' +
-			'placeholder="https://">' +
+			/*
+			 * The field is its own preview, which is what the frame above this row used to be.
+			 *
+			 * One picture of the photograph rather than two — and now the photograph can be dragged
+			 * straight onto it, which is how somebody who has just walked a hall with a camera
+			 * actually works through twelve sections.
+			 */
+			global.SeatmapMedia.field( {
+				id: 'view-url-' + key,
+				kind: 'image',
+				value: one.url || '',
+			} ) +
 			'<span class="field__hint">' + esc( App.t( 'panel.seatViews.urlHint' ) ) + '</span></div>' +
 			'<div class="field"><label class="field__label" for="view-cap-' + esc( key ) + '">' +
 			esc( App.t( 'panel.seatViews.caption' ) ) + '</label>' +
@@ -124,11 +108,6 @@
 			'placeholder="' + esc( App.t( 'panel.seatViews.captionPlaceholder' ) ) + '">' +
 			'<span class="field__hint">' + esc( App.t( 'panel.seatViews.captionHint' ) ) + '</span></div>' +
 			'</div>';
-	}
-
-	/** Section keys are the designer's own words, so they are quoted before going into a selector. */
-	function cssEscape( value ) {
-		return String( value ).replace( /["\\]/g, '\\$&' );
 	}
 
 	function esc( value ) {

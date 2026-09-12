@@ -255,9 +255,21 @@ await desk.waitForTimeout( 1200 );
 check( 'a fourth can be added',
 	4 === await desk.locator( '#blocks .block' ).first().locator( '.faq-edit' ).count() );
 
-await desk.locator( '#blocks .block' ).first()
-	.locator( '.faq-edit' ).last().locator( 'input' ).first()
-	.fill( 'https://pictures.test/foyer.svg' );
+/*
+ * The picture is set by pasting an address, which is now one of four ways to set one.
+ *
+ * The box is behind its own button rather than always on the screen: most people drag a file onto
+ * the field or choose one already uploaded, and a permanent URL box beside those reads as the
+ * required way rather than the exception. A venue whose poster is already on their own server is
+ * the exception it is there for — which is this check.
+ */
+const slide = desk.locator( '#blocks .block' ).first().locator( '.faq-edit' ).last();
+
+await slide.locator( '[data-role=address]' ).click();
+await slide.locator( '[data-role=url]' ).fill( 'https://pictures.test/foyer.svg' );
+// Blurred rather than Entered: the field commits on `change`, and Enter inside the seat-view
+// dialog would submit the dialog instead.
+await slide.locator( '[data-role=url]' ).blur();
 await desk.waitForTimeout( 1500 );
 
 const reread = ( await api( 'GET', `/v1/sites/${ site.id }` ) ).body.pages

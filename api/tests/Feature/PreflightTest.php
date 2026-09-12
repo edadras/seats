@@ -107,6 +107,24 @@ class PreflightTest extends TestCase
     }
 
     /**
+     * The upload limits, checked against PHP's rather than against nothing.
+     *
+     * This is the one media failure an operator cannot diagnose from inside the application: PHP
+     * refuses an oversized request in the web server, before any of this runs, so an organiser
+     * watches a film upload for two minutes and then gets a blank page with no sentence on it.
+     */
+    #[Test]
+    public function it_says_when_php_will_refuse_an_upload_the_platform_allows(): void
+    {
+        $this->healthy();
+        config(['media.max_video_megabytes' => 100000]);
+
+        $this->artisan('seatmap:preflight')
+            ->assertExitCode(0)
+            ->expectsOutputToContain('below the 100000 MB media limit');
+    }
+
+    /**
      * Everything the command needs to be happy about, so each test above changes exactly one thing
      * and the exit status can only be about that one thing.
      */

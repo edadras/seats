@@ -184,6 +184,15 @@ return [
      * and a name that the organiser had neither chosen nor ever seen.
      */
 
+    'media' => [
+        'drop' => 'Drag a file here, or choose one',
+        'choose' => 'Choose a file',
+        'library' => 'From your files',
+        'libraryEmpty' => 'Nothing has been uploaded yet. Drag a file onto any picture field and it will appear here.',
+        'address' => 'Paste an address',
+        'remove' => 'Remove',
+        'sending' => 'Sending…',
+    ],
     'ticketDesign' => [
         'back' => 'All events',
         'title' => 'The ticket',
@@ -353,8 +362,8 @@ return [
         'action' => 'Views',
         'title' => 'The view from each section',
         'hint' => 'One photograph per section, shown to a buyer beside the seats they are choosing. Leave a section empty and nothing is shown for it.',
-        'url' => 'Address of the photograph',
-        'urlHint' => 'A web address ending in .jpg, .png or .webp. Landscape, and wide enough to be worth opening.',
+        'url' => 'The photograph',
+        'urlHint' => 'Drag the photograph here, or paste a web address. Landscape, and wide enough to be worth opening.',
         'caption' => 'Caption',
         'captionPlaceholder' => 'Row F, centre',
         'captionHint' => 'Optional. Without one, a buyer is told which section it is of.',
@@ -471,7 +480,7 @@ return [
         'timezone' => 'Timezone',
         'timezoneHint' => 'The clock at the venue. A start time you type is read here, not on our server.',
         'artwork' => 'Poster',
-        'artworkHint' => 'A link to the artwork. Left empty, your website draws a cover from the event’s name.',
+        'artworkHint' => 'Drag the poster here, or paste a link to one. Left empty, your website draws a cover from the event’s name.',
         'about' => 'About this event',
         'aboutHint' => 'Shown on your website above the seat picker.',
     ],
@@ -1645,7 +1654,7 @@ return [
         'alignLeft' => 'Left',
         'alignCentre' => 'Centre',
         'richTextPlaceholder' => 'Write here. A blank line starts a new paragraph.',
-        'imageUrl' => 'Image URL',
+        'imageUrl' => 'Picture',
         'imageAlt' => 'Description',
         'imageAltPlaceholder' => 'What is in the picture, for someone who cannot see it',
         'caption' => 'Caption',
@@ -1694,7 +1703,7 @@ return [
         'slideHref' => 'Where it leads (optional)',
         'addSlide' => 'Add a picture',
         'removeSlide' => 'Remove this picture',
-        'videoUrl' => 'Video address',
+        'videoUrl' => 'Film',
         'videoPoster' => 'Still image (optional)',
         'videoHint' => 'YouTube, Vimeo, or a link to an .mp4, .webm or .ogg file. The player itself loads only once a visitor presses play.',
         'specLabel' => 'Label',
@@ -1728,7 +1737,7 @@ return [
         'headingFont' => 'Headings',
         'bodyFont' => 'Body text',
         'corners' => 'Corners',
-        'logoUrl' => 'Logo URL',
+        'logoUrl' => 'Logo',
         'tagline' => 'Tagline',
         // The typeface and corner names are the theme editor's; there is one set of them, under
         // `themes.options`, and a second set here would be a second translation of the same word.

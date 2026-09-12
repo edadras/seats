@@ -33,8 +33,35 @@ php artisan seatmap:preflight
 ```
 
 **There is no asset build and no `storage:link`.** The panel, the designer and the hosted sites are
-plain files under `public/`, and nothing is written to a public disk. An operator who assumes a
-JavaScript toolchain is involved will spend an afternoon on a step that does not exist.
+plain files under `public/`, and an uploaded picture is handed over by a route rather than from a
+linked directory. An operator who assumes a JavaScript toolchain is involved will spend an afternoon
+on a step that does not exist.
+
+### Where uploaded pictures go
+
+Organisers upload posters, photographs of the view from a section and the occasional trailer. By
+default those land on a local disk under `storage/app/media`, which is right for one server and
+wrong for two: two web servers with two local disks is a site whose hero image appears on every
+other page load. Behind a load balancer, set `SEATMAP_MEDIA_DISK=s3` and fill in the `AWS_*` block.
+Nothing else changes — a file is addressed by its row, not by its path, and on a bucket the visitor
+is redirected to a short-lived signed URL rather than the bucket being made public.
+
+Two limits are worth setting deliberately, and one of them has a trap in it:
+
+```
+SEATMAP_MEDIA_MAX_IMAGE_MB=12
+SEATMAP_MEDIA_MAX_VIDEO_MB=64
+```
+
+**Both have to be under PHP's own `upload_max_filesize` and `post_max_size`.** PHP refuses an
+oversized request in the web server, before this application runs, so a limit set above PHP's is an
+organiser watching a film upload for two minutes and then getting a blank page with no sentence on
+it. `seatmap:preflight` compares the two and says so. The same applies to the web server's own cap —
+`client_max_body_size` in nginx, which defaults to 1 MB and will refuse almost every poster.
+
+Backing up the database is not backing up the pictures. They are files on a disk or in a bucket, and
+a restore that has the rows but not the bytes is a programme of events with a broken image on every
+card.
 
 ### The question at the end
 

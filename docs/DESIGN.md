@@ -122,7 +122,7 @@ eye passes is a room nobody can read.
 | | |
 | --- | --- |
 | Contrast, focus order, keyboard reach | `api/a11y_check.mjs`, both themes, every run |
-| That a page still renders and sells | `api/site_smoke.mjs` and the other 66 browser checks |
+| That a page still renders and sells | `api/site_smoke.mjs` and the other 67 browser checks |
 | That the six languages still fit | `tools/i18n-check.mjs`, and the RTL pass in `languages_smoke` |
 | Everything above that a machine cannot judge | Look at the rendered page. Screenshot it at 1440 and at 390. Measure the gaps before claiming they are right. |
 

@@ -523,6 +523,23 @@
 			field( label, input, options.wide || options.multiline );
 		}
 
+		/**
+		 * A picture or a film, dragged on rather than hosted somewhere first.
+		 *
+		 * The same control as everywhere else in the panel, and it still takes a pasted address —
+		 * which is what a venue moving in from another platform has a hundred of.
+		 */
+		function media( label, key, kind ) {
+			field( label, global.SeatmapMedia.attach(
+				App,
+				{ kind: kind || 'image', value: block[ key ] || '' },
+				function ( url ) {
+					block[ key ] = url;
+					Sites.savePage( App );
+				}
+			), true );
+		}
+
 		function select( label, key, options ) {
 			var input = document.createElement( 'select' );
 			input.className = 'select';
@@ -582,7 +599,7 @@
 			case 'hero':
 				text( label( 'blockTitle' ), 'title', { wide: true } );
 				text( label( 'heroSubtitle' ), 'subtitle', { wide: true } );
-				text( label( 'imageUrl' ), 'url', { wide: true, placeholder: 'https://…' } );
+				media( label( 'imageUrl' ), 'url' );
 				select( label( 'align' ), 'align', [
 					[ 'start', label( 'alignLeft' ) ], [ 'center', label( 'alignCentre' ) ],
 				] );
@@ -610,7 +627,7 @@
 				break;
 
 			case 'image':
-				text( label( 'imageUrl' ), 'url', { wide: true, placeholder: 'https://…' } );
+				media( label( 'imageUrl' ), 'url' );
 				text( label( 'imageAlt' ), 'alt', {
 					wide: true, placeholder: label( 'imageAltPlaceholder' ),
 				} );
@@ -634,10 +651,17 @@
 				break;
 
 			case 'video':
-				text( label( 'videoUrl' ), 'url', { wide: true, placeholder: 'https://…' } );
+				/*
+				 * A film uploaded here, or the address of one on YouTube or Vimeo.
+				 *
+				 * Both, because they are different things a venue has: a thirty-second trailer they
+				 * were sent as a file, and a channel they already put everything on. The renderer
+				 * has understood all three since it was written.
+				 */
+				media( label( 'videoUrl' ), 'url', 'video' );
 				text( label( 'blockTitle' ), 'title', { wide: true } );
 				text( label( 'caption' ), 'caption', { wide: true } );
-				text( label( 'videoPoster' ), 'poster', { wide: true, placeholder: 'https://…' } );
+				media( label( 'videoPoster' ), 'poster' );
 				host.appendChild( node( 'p', 'hint', label( 'videoHint' ) ) );
 				break;
 
@@ -772,8 +796,18 @@
 			head.appendChild( tools );
 			wrap.appendChild( head );
 
+			// The picture itself gets the whole control — dropped on, chosen, or pasted — and the
+			// three words about it stay plain boxes.
+			wrap.appendChild( global.SeatmapMedia.attach(
+				App,
+				{ kind: 'image', value: item.url || '' },
+				function ( url ) {
+					item.url = url;
+					Sites.savePage( App );
+				}
+			) );
+
 			[
-				[ 'url', 'imageUrl' ],
 				[ 'alt', 'imageAlt' ],
 				[ 'caption', 'caption' ],
 				[ 'href', 'slideHref' ],
@@ -1417,12 +1451,11 @@
 		radius.addEventListener( 'change', function () { Sites.saveBrand( App, { radius: radius.value } ); } );
 		field( App.t( 'panel.sites.corners' ), radius );
 
-		var logo = document.createElement( 'input' );
-		logo.className = 'input';
-		logo.placeholder = 'https://…';
-		logo.value = brand.logo_url || '';
-		logo.addEventListener( 'change', function () { Sites.saveBrand( App, { logo_url: logo.value } ); } );
-		field( App.t( 'panel.sites.logoUrl' ), logo, true );
+		field( App.t( 'panel.sites.logoUrl' ), global.SeatmapMedia.attach(
+			App,
+			{ kind: 'image', value: brand.logo_url || '' },
+			function ( url ) { Sites.saveBrand( App, { logo_url: url } ); }
+		), true );
 
 		var tagline = document.createElement( 'input' );
 		tagline.className = 'input';

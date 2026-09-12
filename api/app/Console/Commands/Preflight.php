@@ -71,6 +71,9 @@ class Preflight extends Command
         $this->section('What has to be on disk');
         $this->disk();
 
+        $this->section('Where the pictures go');
+        $this->media();
+
         return $this->verdict();
     }
 
@@ -399,9 +402,85 @@ class Preflight extends Command
         // operator who assumes otherwise spends an afternoon on a step that does not exist.
         $this->note(
             'Neither `npm run build` nor `php artisan storage:link` is part of deploying this: the '
-            .'panel and the sites are served as plain files from public/, and nothing is uploaded to '
-            .'a public disk.',
+            .'panel and the sites are served as plain files from public/, and an uploaded picture is '
+            .'handed over by a route rather than from a linked directory.',
         );
+    }
+
+    /**
+     * Where the pictures go, and whether one can get there.
+     *
+     * The limits are the part worth checking rather than assuming. PHP refuses an oversized upload
+     * in the web server, before any of this application runs — so a media limit above
+     * `upload_max_filesize` is an organiser watching a film upload for two minutes and then getting
+     * a blank page with no sentence on it, which is the worst failure this feature has.
+     */
+    private function media(): void
+    {
+        $disk = (string) config('media.disk');
+        $driver = (string) config('filesystems.disks.'.$disk.'.driver');
+
+        if ('local' === $driver) {
+            $root = (string) config('filesystems.disks.'.$disk.'.root');
+
+            if (! is_dir($root)) {
+                @mkdir($root, 0775, true);
+            }
+
+            $this->check(
+                is_dir($root) && is_writable($root),
+                'The media disk is writable — '.$root,
+                $root.' cannot be written to by the web server user, so every upload fails. It is '
+                .'also a local directory: behind more than one web server, set SEATMAP_MEDIA_DISK to '
+                .'a bucket, or a poster will appear on every other page load.',
+            );
+        } else {
+            $this->pass('The media disk is '.$disk.' ('.$driver.')');
+        }
+
+        $this->check(
+            function_exists('imagewebp') && function_exists('imagejpeg') && function_exists('imagepng'),
+            'GD can write JPEG, PNG and WebP',
+            'This build of GD is missing one of imagejpeg, imagepng or imagewebp. Uploaded pictures '
+            .'are re-encoded on the way in — metadata dropped, size capped — and without these the '
+            .'upload fails rather than storing the original.',
+        );
+
+        $video = (int) config('media.max_video_megabytes');
+
+        foreach (['upload_max_filesize', 'post_max_size'] as $setting) {
+            $allowed = $this->megabytes((string) ini_get($setting));
+
+            $this->warnUnless(
+                $allowed >= $video,
+                $allowed >= $video
+                    ? 'PHP '.$setting.' is '.ini_get($setting).', which covers the '.$video.' MB media limit'
+                    : 'PHP '.$setting.' is '.ini_get($setting).', below the '.$video.' MB media limit',
+                'PHP '.$setting.' is '.ini_get($setting).' but SEATMAP_MEDIA_MAX_VIDEO_MB is '.$video
+                .'. PHP refuses the request before this application sees it, so the organiser waits '
+                .'for the upload and then gets a blank page rather than a sentence. Raise the PHP '
+                .'setting, or lower the media limit to match.',
+            );
+        }
+    }
+
+    /** A php.ini size — "12M", "1G", "8388608" — as whole megabytes. */
+    private function megabytes(string $value): float
+    {
+        $value = trim($value);
+
+        if ('' === $value) {
+            return 0;
+        }
+
+        $number = (float) $value;
+
+        return match (strtolower(substr($value, -1))) {
+            'g' => $number * 1024,
+            'm' => $number,
+            'k' => $number / 1024,
+            default => $number / 1048576,
+        };
     }
 
     /* --------------------------------------------------------------------------- reporting */

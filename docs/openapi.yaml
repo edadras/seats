@@ -9794,6 +9794,120 @@ paths:
                     items: { $ref: "#/components/schemas/EmbedOrigin" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /media:
+    get:
+      operationId: listMedia
+      tags: [Connections]
+      summary: The pictures and films this account has uploaded
+      description: |
+        Requires any of `events.manage`, `sites.manage`, `maps.manage`, `venues.manage` or
+        `account.manage` — the permissions that come with a field a picture goes in. There is no
+        `media.manage`, deliberately: putting a file on a server is not an authority anybody wants,
+        using one is.
+
+        `kind` narrows it to `image` or `video`, which is what a field that wants a poster asks for
+        so it does not offer somebody's trailer.
+      parameters:
+        - name: kind
+          in: query
+          schema: { type: string, enum: [image, video] }
+      responses:
+        "200":
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MediaFile" }
+                  limits:
+                    type: object
+                    properties:
+                      image_megabytes: { type: integer }
+                      video_megabytes: { type: integer }
+                      accepts:
+                        type: array
+                        items: { type: string }
+                        description: "The media types that may be uploaded, for a file dialog to offer."
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: uploadMedia
+      tags: [Connections]
+      summary: Keep a picture or a film
+      description: |
+        Multipart, one part named `file`. The permissions are the ones on `GET`.
+
+        **The type is decided from the bytes, not from the request.** A browser's `Content-Type` is
+        whatever the browser said and an extension is whatever the file was called; neither is
+        evidence, and what is at stake is a file served back from the venue's own domain. SVG is
+        refused specifically — it is a document that can carry script.
+
+        **A picture is re-encoded on the way in**: metadata dropped, the longest side capped. A
+        photograph straight off a phone is otherwise a hero image that takes nine seconds on a
+        3G connection. An animated GIF is kept as it came, because re-encoding one leaves a frame.
+
+        **The same file twice is the same file.** Keyed on the SHA-256 of the stored bytes, per
+        account, so a poster dragged onto four events is stored once and a retried upload does not
+        leave two of everything. The response is `201` either way, with the row that already stood
+        for it.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Kept
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  media: { $ref: "#/components/schemas/MediaFile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: >-
+            `media_type_refused` — not a picture or a film this platform will serve.
+            `media_too_large` — over the limit for its kind.
+            `media_upload_failed` — the bytes could not be read.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /media/{media}:
+    parameters:
+      - name: media
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: forgetMedia
+      tags: [Connections]
+      summary: Remove a file, and the bytes with it
+      description: |
+        The permissions are the ones on `GET`. Nothing checks whether the file is still in use: a
+        picture can be referred to from an event, a page, a theme and a ticket at once, and a check
+        that misses one of those would report "still in use" for something nobody can find — while a
+        library that cannot be pruned fills up with fifty attempts at one poster. A page whose
+        picture has gone renders without it, which is what every one of those surfaces already does.
+      responses:
+        "200":
+          description: Gone
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api-clients:
     get:
       operationId: listApiClients
@@ -13581,6 +13695,24 @@ components:
             properties:
               size: { type: integer }
               url: { type: [string, "null"], format: uri }
+
+    MediaFile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url:
+          type: string
+          description: >-
+            Where it is served, absolute and on the host that asked. This is what goes into an
+            event's artwork, a page block or a ticket's background — a file kept here looks exactly
+            like a file kept anywhere else, which is why nothing else had to change to accept one.
+        kind: { type: string, enum: [image, video] }
+        mime: { type: string }
+        bytes: { type: integer, description: "The size as stored, after re-encoding." }
+        width: { type: [integer, "null"], description: "Null for a film: reading one means decoding it." }
+        height: { type: [integer, "null"] }
+        name: { type: string, description: "What it was called on the uploader's own machine." }
+        created_at: { type: [string, "null"], format: date-time }
 
     EmbedOrigin:
       type: object

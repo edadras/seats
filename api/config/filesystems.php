@@ -47,6 +47,21 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Pictures and films an organiser uploaded.
+         *
+         * Private on the disk and served by the application, not through `public/storage`. Three
+         * reasons: the same code path works when this is a bucket, there is no `storage:link` step
+         * to forget on a new server, and what is served is decided by a route rather than by
+         * whatever happens to be in a directory.
+         */
+        'media' => [
+            'driver' => 'local',
+            'root' => env('SEATMAP_MEDIA_ROOT', storage_path('app/media')),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

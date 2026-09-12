@@ -59,6 +59,7 @@ use App\Http\Controllers\Api\V1\Management\SeatPriceController;
 use App\Http\Controllers\Api\V1\Management\BillingController;
 use App\Http\Controllers\Api\V1\Management\ReportScheduleController;
 use App\Http\Controllers\Api\V1\Management\SettlementController;
+use App\Http\Controllers\Api\V1\Management\MediaController;
 use App\Http\Controllers\Api\V1\Management\MembershipController;
 use App\Http\Controllers\Api\V1\Management\SiteController;
 use App\Http\Controllers\Api\V1\Management\WebhookController;
@@ -762,6 +763,18 @@ Route::prefix('v1')->group(function () {
         Route::post('sites/{site}/domains/{domain}/verify', [SiteController::class, 'verifyDomain']);
         Route::post('sites/{site}/domains/{domain}/primary', [SiteController::class, 'makeDomainPrimary']);
         Route::delete('sites/{site}/domains/{domain}', [SiteController::class, 'destroyDomain']);
+
+        /*
+         * The account's pictures and films.
+         *
+         * Not behind `connections.manage` like the block below, and not behind a permission of its
+         * own: uploading a file is not an authority, *using* one is, so these ask for any of the
+         * permissions that own a field a picture goes in. See MediaController for why inventing
+         * `media.manage` would have quietly taken artwork away from every existing custom role.
+         */
+        Route::get('media', [MediaController::class, 'index']);
+        Route::post('media', [MediaController::class, 'store']);
+        Route::delete('media/{media}', [MediaController::class, 'destroy']);
 
         Route::get('api-clients', [ApiClientController::class, 'index']);
         Route::delete('api-clients/{client}/keys/{keyId}', [ApiClientController::class, 'revoke']);

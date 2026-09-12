@@ -879,6 +879,54 @@ endpoints is a programme and a chart the venue already shows the world. What it 
 venue's brand on a page they did not choose, and their inventory's rate limits. `THREAT_MODEL.md`
 T9 says so in those words.
 
+## Pictures, put there by dragging them
+
+Every image and every film on this platform used to be a URL somebody else was hosting: an event's
+artwork, a site's hero, a slideshow, the logo in the masthead, the view from a seat, the background
+of a ticket. That is a fine thing to allow and a poor thing to require — it asks a theatre with a
+poster on their desktop to go and find a web host first.
+
+So there is one field, used in all of those places, and it does four things: drag a file onto the
+preview, choose one from a dialog, pick one already uploaded, or paste an address. The last is kept
+deliberately — a venue whose poster is already on their own server should not have to upload it
+again, and an organiser moving in from another platform has a hundred of them. What the field hands
+back is always a URL, which is why nothing that already held a picture had to change to accept one.
+
+Three rules decide what may be kept, and all three are about a file being served back from the
+venue's own domain:
+
+**The type comes from the bytes.** A browser's `Content-Type` is whatever the browser said and an
+extension is whatever the file was called. Neither is evidence. SVG is refused specifically, and it
+is the one people ask about: an SVG is a document that can carry script, served same-origin from the
+site the venue's staff sign in to. There is no way to allow it that is worth what it costs.
+
+**A picture is re-encoded, not stored as it arrived.** A photograph off a phone is 48 megapixels and
+carries the coordinates of the house it was taken in. Re-encoding drops the metadata and caps the
+longest side at 2560, which is a hero image on a large screen at twice the pixel density. An
+animated GIF is the exception — re-encoding one through GD leaves a single frame — so it is kept as
+it came and bounded by size instead.
+
+**The same file twice is the same file.** Keyed on the SHA-256 of the stored bytes, per account: one
+poster dragged onto four events is stored once, and an upload retried because a phone lost signal
+does not leave two of everything.
+
+Files are served by the application at `/media/{id}/{name}`, not from `public/`. That costs a PHP
+process per picture and buys three things: the same code path whether the disk is a volume or a
+bucket, no `storage:link` step to forget when a server is built, and a cache header set here — a
+year, immutable, because the path names the file and its bytes never change. On a bucket the visitor
+is redirected to a short-lived signed URL instead, so making a bucket public is not part of
+installing this.
+
+There is no `media.manage` permission, deliberately. Uploading a file is not an authority anybody
+wants — *using* one is — so the endpoint asks for any of the permissions that own a field a picture
+goes in. Inventing one would also have been a quiet regression: every existing custom role with
+`events.manage` would have lost the ability to set an event's artwork on the day it shipped.
+
+The limit worth setting before an installation goes up is the film one. PHP refuses an oversized
+upload in the web server, before any of this runs, so a media limit above `upload_max_filesize` is
+an organiser watching an upload for two minutes and then getting a blank page with no sentence on
+it. `seatmap:preflight` checks exactly that.
+
 ## The ticket the venue designed
 
 Every ticket this platform printed used to look the same: a bordered box, the event, the seat, a QR.
@@ -1027,7 +1075,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-seven, in order
+./smoke.sh                    # all sixty-eight, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -1364,6 +1412,17 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Designing a ticket is not a door volunteer's job | `TicketDesignTest` |
 | A field lands where it was dropped, and the board is the shape of the paper | `ticket_design_smoke` |
 | The night can go back to the standard ticket | `TicketDesignTest`, `ticket_design_smoke` |
+| A picture is kept and served from an address anybody can open | `MediaLibraryTest`, `media_smoke` |
+| A drawing that can carry script is refused however it is named | `MediaLibraryTest` |
+| A file that is not a picture or a film is refused, in words | `MediaLibraryTest`, `media_smoke` |
+| The same poster dragged on twice is one file | `MediaLibraryTest` |
+| A photograph is brought down to a size a page can use | `MediaLibraryTest` |
+| A file over the limit is refused with the limit in the sentence | `MediaLibraryTest` |
+| One account's library is not another's | `MediaLibraryTest` |
+| Somebody with no field to put a picture in may not upload one | `MediaLibraryTest` |
+| Removing a file takes the bytes with it | `MediaLibraryTest` |
+| A poster dropped on a night is saved, and offered again for a ticket | `media_smoke` |
+| PHP will not refuse an upload the platform allows | `PreflightTest` |
 
 ## Installing the plugin
 

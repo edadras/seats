@@ -87,7 +87,20 @@ const first = sections[ 0 ].section_key;
 check( 'the chart’s own sections are listed to attach to',
 	( await desk.locator( '[data-view-row]' ).count() ) === sections.length );
 
-await desk.fill( `[data-view-url="${ first }"]`, `https://cdn.example/${ first }.png` );
+/*
+ * Pasted rather than dragged, which is one of the four ways the picture field takes a file.
+ *
+ * The drag-and-drop path is `media_smoke`'s job; what this check is about is the section list and
+ * what reaches a buyer, so it uses the shortest route to a picture — and it is the route a venue
+ * whose photographs are already on their own server takes anyway.
+ */
+const shot = desk.locator( `[data-view-row="${ first }"] [data-media-field]` );
+
+await shot.locator( '[data-role=address]' ).click();
+await shot.locator( '[data-role=url]' ).fill( `https://cdn.example/${ first }.png` );
+// Blurred rather than Entered: the field commits on `change`, and Enter inside the seat-view
+// dialog would submit the dialog instead.
+await shot.locator( '[data-role=url]' ).blur();
 await desk.fill( `[data-view-caption="${ first }"]`, 'Row F, centre' );
 await settle( 300 );
 await desk.screenshot( { path: `${ SHOTS }/01-attaching.png`, fullPage: true } );

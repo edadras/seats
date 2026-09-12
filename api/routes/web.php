@@ -13,6 +13,7 @@ use App\Http\Controllers\Site\PreferencesController;
 use App\Http\Controllers\Site\RenewalController;
 use App\Http\Controllers\Site\QueueController;
 use App\Http\Controllers\Site\SeasonController;
+use App\Http\Controllers\Site\MediaFileController;
 use App\Http\Controllers\Site\SiteFilesController;
 use App\Http\Controllers\Site\SitePageController;
 use App\Http\Controllers\Site\StoreController;
@@ -243,6 +244,18 @@ Route::get('auth/google/callback', GoogleSignInController::class)->middleware('t
  */
 Route::get('robots.txt', [SiteFilesController::class, 'robots']);
 Route::get('sitemap.xml', [SiteFilesController::class, 'sitemap']);
+
+/*
+ * The pictures and films an organiser uploaded.
+ *
+ * On every host, and ahead of the site group, for the same reason as the two files above: a poster
+ * appears on the venue's website, inside the panel that is editing it, on a ticket the renderer is
+ * fetching, and in an email. One address that answers everywhere is the only shape that serves all
+ * four. The name on the end is decoration for humans and caches and is ignored.
+ */
+Route::get('media/{id}/{name?}', [MediaFileController::class, 'show'])
+    ->where('id', '[0-9a-fA-F-]{36}')
+    ->name('media.show');
 
 /*
  * A venue's site, installable.

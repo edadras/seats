@@ -104,10 +104,15 @@
 
 	Design.settings = function ( App, state ) {
 		return '<div class="field-duo">' +
+			// A `label for` on a button: the drop target is one, and buttons are labelable, so the
+			// field is announced as "Background" rather than as its own instructions.
 			'<div class="field"><label class="field__label" for="td-bg">' +
 				esc( App.t( 'panel.ticketDesign.background' ) ) + '</label>' +
-				'<input class="input" id="td-bg" type="url" value="' + esc( state.background_url || '' ) +
-					'" placeholder="https://…">' +
+				global.SeatmapMedia.field( {
+					id: 'td-bg',
+					kind: 'image',
+					value: state.background_url || '',
+				} ) +
 				'<span class="field__hint">' + esc( App.t( 'panel.ticketDesign.backgroundHint' ) ) + '</span>' +
 			'</div>' +
 			'<div class="field"><label class="field__label" for="td-page">' +
@@ -256,7 +261,21 @@
 		on( '#td-preview', Design.preview );
 		on( '#td-clear', Design.clear );
 
-		change( '#td-bg', function ( value ) { Design.state.background_url = value.trim(); Design.paint(); } );
+		/*
+		 * The picture field says when it changed, rather than being read.
+		 *
+		 * It is four controls in one — a drop target, a file dialog, the account's library and a
+		 * pasted address — and every one of them ends in the same event. Listening for that is what
+		 * keeps this screen from having to know which of the four somebody used.
+		 */
+		var background = document.querySelector( '[data-media-field][data-id="td-bg"]' );
+
+		if ( background ) {
+			background.addEventListener( 'media:change', function ( event ) {
+				Design.state.background_url = event.detail.url;
+				Design.paint();
+			} );
+		}
 		change( '#td-page', function ( value ) { Design.state.page_size = value; Design.paint(); } );
 		change( '#td-orient', function ( value ) { Design.state.orientation = value; Design.paint(); } );
 

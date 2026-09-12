@@ -189,6 +189,27 @@ the name, which cannot be done without giving up TLS verification of the name. T
 rules are where that is closed properly, and `SEATMAP_WEBHOOK_VERIFY_DESTINATION` must be on in
 production — off, the whole check is relaxed to suit a development machine.
 
+### T14 — A file served from the venue's own domain (Elevation, Information disclosure)
+
+An organiser uploads a poster, and this platform serves it back from the same origin the venue's
+staff sign in to and buyers pay on. That makes an upload field the one place somebody outside this
+codebase hands the server a file and the server hands it to everybody else — and a file that is
+*not* a picture, served there, is script on the venue's own domain.
+
+*Mitigations.* `App\Domain\Media\MediaLibrary` decides the type from the bytes, never from the
+request's `Content-Type` or the file's extension, and checks it against a closed list by exact
+match — a "starts with `image/`" test is precisely how an SVG gets in. SVG is refused outright: it
+is a document that can carry script, and there is no version of allowing it that is worth what it
+costs. Pictures that can be re-encoded are, which destroys anything hidden in the container as a
+side effect of dropping metadata and capping the size. What is served carries
+`X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; sandbox`, so a
+mistake in any of the above is a broken image rather than a script.
+
+What this does not pretend to do is keep one account's files secret from another's. An identifier
+is not a credential here, and the route serves any file to anybody who has its address: these are
+the pictures on a public ticket shop's front page. What keeps a library private is that nothing
+lists it — the endpoint that does is scoped to the account and behind a permission.
+
 ## Assumptions
 
 - TLS is terminated in front of the API and enforced (HSTS); plaintext HTTP is not supported.

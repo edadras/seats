@@ -341,7 +341,16 @@
 			headers[ 'X-Seatmap-Locale' ] = i18n.locale;
 		}
 
-		if ( body ) {
+		/*
+		 * A file is not JSON, and the boundary is not ours to invent.
+		 *
+		 * `FormData` goes through untouched and without a `Content-Type`: the browser writes one
+		 * with the multipart boundary it chose, and a header set here would replace it with one
+		 * that has no boundary in it — which the server reads as an empty request.
+		 */
+		var isForm = 'undefined' !== typeof FormData && body instanceof FormData;
+
+		if ( body && ! isForm ) {
 			headers[ 'Content-Type' ] = 'application/json';
 		}
 
@@ -352,7 +361,7 @@
 		return fetch( this.api + path, {
 			method: method,
 			headers: headers,
-			body: body ? JSON.stringify( body ) : undefined,
+			body: body ? ( isForm ? body : JSON.stringify( body ) ) : undefined,
 		} ).then( function ( response ) {
 			if ( raw && response.ok ) {
 				return response.blob();
@@ -1211,7 +1220,23 @@
 				'<div class="page-head__actions">' + ( options.actions || '' ) + '</div>' +
 			'</div>' +
 			'<div class="page-body">' + ( options.body || '' ) + '</div>';
+
+		/*
+		 * Picture fields come to life here rather than at every call site.
+		 *
+		 * A media field is markup plus behaviour, and a screen that renders the markup and forgets
+		 * the wiring shows an organiser a dead grey rectangle. Doing it once, where every screen
+		 * already passes through, means a field added tomorrow works without anybody remembering.
+		 */
+		mediaFields();
 	};
+
+	/** Wake up any picture field the screen just drew. Harmless when there are none. */
+	function mediaFields() {
+		if ( window.SeatmapMedia ) {
+			window.SeatmapMedia.wire( App );
+		}
+	}
 
 	// Shared with the website and ticket screens, which build the same furniture.
 	App.table = function ( headings, rows, emptyMarkup ) {
@@ -1396,6 +1421,9 @@
 
 		document.body.appendChild( host );
 		document.addEventListener( 'keydown', onKey );
+
+		// A dialog is a screen too: the events form asks for a poster inside one.
+		mediaFields();
 
 		host.addEventListener( 'mousedown', function ( event ) {
 			if ( event.target === host ) {
@@ -2259,8 +2287,12 @@
 
 			'<div class="field"><label class="field__label" for="e-image">' +
 			esc( App.t( 'panel.events.artwork' ) ) + '</label>' +
-			'<input class="input" id="e-image" name="image_url" type="url" maxlength="500" ' +
-			'placeholder="https://" value="' + esc( ( event && event.image_url ) || '' ) + '">' +
+			window.SeatmapMedia.field( {
+				id: 'e-image',
+				name: 'image_url',
+				kind: 'image',
+				value: ( event && event.image_url ) || '',
+			} ) +
 			'<span class="field__hint">' + esc( App.t( 'panel.events.artworkHint' ) ) + '</span></div>' +
 
 			/*

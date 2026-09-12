@@ -2828,28 +2828,6 @@
 .is-live > td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
 /*
- * The view from a section, while it is being attached.
- *
- * A frame that is always there rather than one that appears when an address is typed: the row does
- * not jump as somebody pastes a link, and an address that fetches nothing shows an empty frame,
- * which is the answer. The picture is shown at the size a buyer sees it, not larger.
- */
-.view-shot {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	aspect-ratio: 16 / 9;
-	max-width: 16rem;
-	overflow: hidden;
-	border: 1px solid var(--border);
-	border-radius: var(--r-md);
-	background: var(--surface-sunken);
-	color: var(--text-muted);
-}
-
-.view-shot img { width: 100%; height: 100%; object-fit: cover; }
-
-/*
  * The lines of a bank statement that need explaining.
  *
  * A plain list rather than a table: every row is the same three or four facts, they are read one
@@ -3057,3 +3035,121 @@
 .ticket-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .ticket-field:active { cursor: grabbing; }
+
+/*
+ * A picture, put there by dragging it.
+ *
+ * The preview is the drop target rather than a separate strip below it: the thing somebody is
+ * aiming at is the thing they are looking at, and a drop zone that is not where the picture goes is
+ * a second place to learn.
+ *
+ * It keeps its height whether it holds a picture or not. A field that grows when a poster lands in
+ * it moves every control under it — which, on the events form, is the button they were about to
+ * press.
+ */
+.media-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-2);
+}
+
+.media-drop {
+	display: grid;
+	place-items: center;
+	inline-size: 100%;
+	block-size: 9.5rem;
+	padding: var(--s-2);
+	border: 1px dashed var(--border);
+	border-radius: var(--r-sm);
+	background: var(--surface-sunken);
+	color: var(--text-secondary);
+	font: inherit;
+	font-size: var(--text-xs);
+	cursor: pointer;
+	overflow: hidden;
+	transition: border-color 120ms ease, background 120ms ease;
+}
+
+.media-drop:hover,
+.media-drop:focus-visible { border-color: var(--accent-border); }
+
+/* Under the pointer with a file in hand. The one moment this control has to say "yes, here". */
+.media-drop.is-over {
+	border-color: var(--accent);
+	border-style: solid;
+	background: var(--accent-soft);
+}
+
+.media-drop__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--s-1);
+	text-align: center;
+}
+
+.media-drop__art,
+.media-drop__art img,
+.media-drop__art video {
+	display: block;
+	inline-size: 100%;
+	block-size: 100%;
+	/* `contain`, not `cover`: this is a proof of what was uploaded, and a cover crop hides the
+	   half of a poster that is about to be cut off on the page. */
+	object-fit: contain;
+}
+
+.media-field.is-working .media-drop { opacity: 0.55; }
+
+.media-field__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--s-2);
+}
+
+.media-field__about { margin: 0; }
+
+/* The account's files, to pick one out of rather than upload it again. */
+.media-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+	gap: var(--s-3);
+}
+
+.media-tile {
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-1);
+	padding: var(--s-2);
+	border: 1px solid var(--border);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	font: inherit;
+	font-size: var(--text-xs);
+	color: var(--text-secondary);
+	cursor: pointer;
+	text-align: start;
+}
+
+.media-tile:hover { border-color: var(--accent-border); }
+
+.media-tile img,
+.media-tile__film {
+	display: grid;
+	place-items: center;
+	inline-size: 100%;
+	block-size: 5rem;
+	object-fit: contain;
+	background: var(--surface-sunken);
+	border-radius: 2px;
+}
+
+.media-tile__name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.media-drop { transition: none; }
+}
