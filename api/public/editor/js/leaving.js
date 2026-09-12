@@ -66,7 +66,8 @@
 	Leaving.exportsMarkup = function ( App ) {
 		if ( ! Leaving.exports.length ) {
 			return App.emptyState( 'file', App.t( 'panel.leaving.emptyTitle' ),
-				esc( App.t( 'panel.leaving.emptyBody' ) ) );
+				esc( App.t( 'panel.leaving.emptyBody' ) ),
+				{ does: 'leave-export', label: App.t( 'panel.leaving.take' ) } );
 		}
 
 		return App.table(

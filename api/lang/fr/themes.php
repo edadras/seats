@@ -34,6 +34,8 @@ return [
     'save' => 'Enregistrer le thème',
     'saved' => 'Thème enregistré.',
     'discard' => 'Quitter sans enregistrer vos modifications ?',
+    'discardTitle' => 'Quitter sans enregistrer ?',
+    'discardLeave' => 'Quitter sans enregistrer',
     'preview' => 'Aperçu',
     'stylesheet' => 'Feuille de style',
     'stylesheetHint' => 'Pour ce que les réglages ne savent pas dire. Du CSS simple — pas de scripts, pas d’@import, et des images depuis votre site ou une adresse https seulement.',

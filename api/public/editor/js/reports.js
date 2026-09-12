@@ -293,7 +293,8 @@
 								'</td></tr>';
 						} ).join( '' )
 					)
-					: App.emptyState( 'chart', App.t( 'reports.noReports' ), App.t( 'reports.noReportsHint' ) ) ) +
+					: App.emptyState( 'chart', App.t( 'reports.noReports' ), App.t( 'reports.noReportsHint' ),
+						{ does: 'report-new', label: App.t( 'reports.newReport' ) } ) ) +
 
 				Reports.schedulesMarkup( App ) +
 
@@ -308,7 +309,8 @@
 								} ) ) + '</span>' +
 						'</button>';
 					} ).join( '' ) + '</div>'
-					: App.emptyState( 'chart', App.t( 'reports.noPages' ), App.t( 'reports.noPagesHint' ) ) ),
+					: App.emptyState( 'chart', App.t( 'reports.noPages' ), App.t( 'reports.noPagesHint' ),
+						{ does: 'report-new-page', label: App.t( 'reports.newPage' ) } ) ),
 		} );
 
 		each( '[data-open]', function ( button ) {

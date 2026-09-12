@@ -189,8 +189,9 @@
 	Loyal.membersMarkup = function ( App ) {
 		if ( ! Loyal.members.length ) {
 			return '<h3 class="subhead">' + esc( App.t( 'panel.loyalty.members' ) ) + '</h3>' +
+				// Points arrive with the next booking; nobody is added to this list by hand.
 				App.emptyState( 'users', App.t( 'panel.loyalty.nobodyTitle' ),
-					esc( App.t( 'panel.loyalty.nobodyBody' ) ) );
+					esc( App.t( 'panel.loyalty.nobodyBody' ) ), { waiting: true } );
 		}
 
 		return '<h3 class="subhead">' + esc( App.t( 'panel.loyalty.members' ) ) + '</h3>' +

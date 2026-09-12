@@ -59,10 +59,12 @@
 		App.page( {
 			title: App.t( 'panel.webapp.title' ),
 			description: esc( App.t( 'panel.webapp.subtitle' ) ),
+			// The home-screen app is what a website becomes, so there has to be a website first.
 			body: App.emptyState(
 				'globe',
 				App.t( 'panel.webapp.none' ),
-				esc( App.t( 'panel.webapp.noneHint' ) )
+				esc( App.t( 'panel.webapp.noneHint' ) ),
+				App.goesTo( 'sites' )
 			),
 		} );
 	};

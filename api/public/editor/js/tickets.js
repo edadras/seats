@@ -23,7 +23,7 @@
 					App.page( {
 						title: App.t( 'panel.tickets.title' ),
 						body: App.emptyState( 'ticket', App.t( 'panel.tickets.noEventsTitle' ),
-							esc( App.t( 'panel.tickets.noEventsBody' ) ) ),
+							esc( App.t( 'panel.tickets.noEventsBody' ) ), App.goesTo( 'events' ) ),
 					} );
 
 					return;
@@ -141,10 +141,12 @@
 						'',
 					],
 					rows,
+					// Tickets appear as they are sold; the counter is where one is made by hand.
 					App.emptyState( 'search', App.t( 'panel.tickets.nothingFound' ),
 						esc( App.t( Tickets.query
 							? 'panel.tickets.noMatch'
-							: 'panel.tickets.nothingSold' ) ) )
+							: 'panel.tickets.nothingSold' ) ),
+						Tickets.query ? { waiting: true } : App.goesTo( 'counter' ) )
 				) + ( response.meta && response.meta.total
 					? '<p class="hint spaced">' + esc( App.t( 'panel.tickets.shown', {
 						count: App.number( response.data.length ),

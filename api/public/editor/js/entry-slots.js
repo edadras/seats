@@ -64,7 +64,7 @@
 						'</select>' +
 					'</div>'
 					: App.emptyState( 'calendar', App.t( 'panel.entrySlots.noEventsTitle' ),
-						esc( App.t( 'panel.entrySlots.noEventsBody' ) ) ) ) +
+						esc( App.t( 'panel.entrySlots.noEventsBody' ) ), App.goesTo( 'events' ) ) ) +
 				'<div id="es-rows" class="spaced"></div>',
 		} );
 
@@ -102,7 +102,8 @@
 	Slots.rowsMarkup = function ( App ) {
 		if ( ! Slots.list.length ) {
 			return App.emptyState( 'clock', App.t( 'panel.entrySlots.emptyTitle' ),
-				esc( App.t( 'panel.entrySlots.emptyBody' ) ) );
+				esc( App.t( 'panel.entrySlots.emptyBody' ) ),
+				{ does: 'es-add', label: App.t( 'panel.entrySlots.add' ) } );
 		}
 
 		return App.table(

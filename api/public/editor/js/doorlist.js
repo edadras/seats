@@ -89,7 +89,7 @@
 							: '' ) +
 					'</div>'
 					: App.emptyState( 'calendar', App.t( 'panel.doorList.noEventsTitle' ),
-						esc( App.t( 'panel.doorList.noEventsBody' ) ) ) ) +
+						esc( App.t( 'panel.doorList.noEventsBody' ) ), App.goesTo( 'events' ) ) ) +
 				'<div id="door-tally" class="spaced"></div>' +
 				'<div id="door-rows"></div>',
 		} );
@@ -205,10 +205,12 @@
 
 	Door.rowsMarkup = function ( App, response ) {
 		if ( ! response.data.length ) {
+			// Who is coming is decided by who buys; this list fills itself.
 			return App.emptyState(
 				Door.filters.q ? 'search' : 'ticket',
 				App.t( Door.filters.q ? 'panel.doorList.noMatchTitle' : 'panel.doorList.emptyTitle' ),
-				esc( App.t( Door.filters.q ? 'panel.doorList.noMatchBody' : 'panel.doorList.emptyBody' ) )
+				esc( App.t( Door.filters.q ? 'panel.doorList.noMatchBody' : 'panel.doorList.emptyBody' ) ),
+				{ waiting: true }
 			);
 		}
 

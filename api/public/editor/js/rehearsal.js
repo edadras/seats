@@ -62,7 +62,7 @@
 						'</select>' +
 					'</div>'
 					: App.emptyState( 'calendar', App.t( 'panel.rehearsal.noEventsTitle' ),
-						esc( App.t( 'panel.rehearsal.noEventsBody' ) ) ) ) +
+						esc( App.t( 'panel.rehearsal.noEventsBody' ) ), App.goesTo( 'events' ) ) ) +
 				'<div id="reh-body" class="spaced"></div>',
 		} );
 

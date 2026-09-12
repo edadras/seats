@@ -226,8 +226,9 @@
 		if ( ! agent ) {
 			App.page( {
 				title: App.t( 'panel.nav.myagency' ),
+				// A statement about who is signed in, not a job somebody can do from here.
 				body: App.emptyState( 'users', App.t( 'panel.agents.notAnAgent' ),
-					esc( App.t( 'panel.agents.notAnAgentBody' ) ) ),
+					esc( App.t( 'panel.agents.notAnAgentBody' ) ), { waiting: true } ),
 			} );
 
 			return;

@@ -621,6 +621,10 @@ return [
         'focalPoint' => 'Punto focale — clicca il punto verso cui guarda la sala, di solito il centro del palco',
     ],
 
+    'empty' => [
+        'goTo' => 'Vai a :screen',
+    ],
+
     'prompt' => [
         'sectionName' => 'Nome del settore',
         'sectionDefault' => 'Settore :number',

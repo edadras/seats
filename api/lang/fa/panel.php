@@ -621,6 +621,10 @@ return [
         'focalPoint' => 'نقطهٔ کانونی — روی جایی که سالن رو به آن است کلیک کنید، معمولاً وسط صحنه',
     ],
 
+    'empty' => [
+        'goTo' => 'رفتن به :screen',
+    ],
+
     'prompt' => [
         'sectionName' => 'نام سکشن',
         'sectionDefault' => 'سکشن :number',

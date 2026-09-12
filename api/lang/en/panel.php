@@ -652,6 +652,10 @@ return [
         'focalPoint' => 'Focal point — click the spot the venue faces, usually the middle of the stage',
     ],
 
+    'empty' => [
+        'goTo' => 'Go to :screen',
+    ],
+
     'prompt' => [
         'sectionName' => 'Section name',
         'sectionDefault' => 'Section :number',

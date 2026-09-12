@@ -34,6 +34,8 @@ return [
     'save' => 'Salva il tema',
     'saved' => 'Tema salvato.',
     'discard' => 'Esci senza salvare le modifiche?',
+    'discardTitle' => 'Uscire senza salvare?',
+    'discardLeave' => 'Esci senza salvare',
     'preview' => 'Anteprima',
     'stylesheet' => 'Foglio di stile',
     'stylesheetHint' => 'Per ciò che i comandi non sanno dire. CSS semplice — niente script, niente @import, e immagini solo dal tuo sito o da un indirizzo https.',

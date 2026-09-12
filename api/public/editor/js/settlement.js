@@ -263,8 +263,9 @@
 
 	Settle.rowsMarkup = function ( App, response ) {
 		if ( ! response.rows.length ) {
+			// The takings appear as nights are sold; there is nothing to create here.
 			return App.emptyState( 'chart', App.t( 'panel.settlement.emptyTitle' ),
-				esc( App.t( 'panel.settlement.emptyBody' ) ) );
+				esc( App.t( 'panel.settlement.emptyBody' ) ), { waiting: true } );
 		}
 
 		return App.table(

@@ -80,6 +80,8 @@ return [
         'needSelection' => 'Wählen Sie zuerst Plätze aus.',
         'needAmount' => 'Geben Sie zuerst einen Preis ein.',
         'discard' => 'Ohne Speichern der geänderten Plätze verlassen?',
+        'discardTitle' => 'Ohne Speichern verlassen?',
+        'discardLeave' => 'Ohne Speichern verlassen',
         'soldWarning' => ':count dieser Plätze sind bereits verkauft. Diese Tickets behalten ihren Verkaufspreis; das hier zahlt die nächste Käuferin.',
         'legendOwn' => 'Eigener Preis',
         'legendBlocked' => 'Gesperrt',

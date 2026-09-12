@@ -61,7 +61,7 @@
 						'</select>' +
 					'</div>'
 					: App.emptyState( 'calendar', App.t( 'panel.questions.noEventsTitle' ),
-						esc( App.t( 'panel.questions.noEventsBody' ) ) ) ) +
+						esc( App.t( 'panel.questions.noEventsBody' ) ), App.goesTo( 'events' ) ) ) +
 				'<div id="q-rows" class="spaced"></div>',
 		} );
 
@@ -97,7 +97,8 @@
 	Questions.rowsMarkup = function ( App ) {
 		if ( ! Questions.list.length ) {
 			return App.emptyState( 'file', App.t( 'panel.questions.emptyTitle' ),
-				esc( App.t( 'panel.questions.emptyBody' ) ) );
+				esc( App.t( 'panel.questions.emptyBody' ) ),
+				{ does: 'q-add', label: App.t( 'panel.questions.add' ) } );
 		}
 
 		return App.table(

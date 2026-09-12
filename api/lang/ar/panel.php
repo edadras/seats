@@ -621,6 +621,10 @@ return [
         'focalPoint' => 'نقطة التركيز — انقر الموضع الذي تتّجه إليه القاعة، وهو غالباً وسط الخشبة',
     ],
 
+    'empty' => [
+        'goTo' => 'الذهاب إلى :screen',
+    ],
+
     'prompt' => [
         'sectionName' => 'اسم القسم',
         'sectionDefault' => 'القسم :number',

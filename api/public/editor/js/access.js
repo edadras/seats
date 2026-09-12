@@ -124,7 +124,11 @@
 			return App.emptyState(
 				Access.filters.q ? 'search' : 'lock',
 				App.t( Access.filters.q ? 'panel.access.noMatchTitle' : 'panel.access.noneTitle' ),
-				esc( App.t( Access.filters.q ? 'panel.access.noMatchBody' : 'panel.access.noneBody' ) )
+				esc( App.t( Access.filters.q ? 'panel.access.noMatchBody' : 'panel.access.noneBody' ) ),
+				// A search that found nothing is answered by searching differently, not by a button.
+				Access.filters.q
+					? { waiting: true }
+					: { does: 'access-new', label: App.t( 'panel.access.create' ) }
 			);
 		}
 

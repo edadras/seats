@@ -119,7 +119,10 @@
 			return App.emptyState(
 				Vouchers.filters.q ? 'search' : 'wallet',
 				App.t( Vouchers.filters.q ? 'panel.vouchers.noMatchTitle' : 'panel.vouchers.noneTitle' ),
-				esc( App.t( Vouchers.filters.q ? 'panel.vouchers.noMatchBody' : 'panel.vouchers.noneBody' ) )
+				esc( App.t( Vouchers.filters.q ? 'panel.vouchers.noMatchBody' : 'panel.vouchers.noneBody' ) ),
+				Vouchers.filters.q
+					? { waiting: true }
+					: { does: 'v-new', label: App.t( 'panel.vouchers.create' ) }
 			);
 		}
 

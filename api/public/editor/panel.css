@@ -421,6 +421,15 @@
 .empty__title { font-weight: 600; }
 .empty__body { color: var(--text-muted); max-inline-size: 26rem; }
 
+/* The way out of an empty screen, under the sentence that explains it. */
+.empty__action { margin-block-start: var(--s-1); }
+
+/*
+ * The screens where an empty list is the right answer — nobody has abandoned a basket, nobody is
+ * waiting for a returned seat. Nothing to press, and the icon says so by staying quiet.
+ */
+.empty--waiting .empty__icon { opacity: 0.7; }
+
 /* ========================================================================= auth */
 
 .auth {

@@ -232,10 +232,12 @@
 		var App = Orders.App;
 
 		if ( ! response.data.length ) {
+			// An order arrives by somebody buying; the counter is where one is made by hand.
 			return App.emptyState(
 				Orders.filters.q ? 'search' : 'ticket',
 				App.t( Orders.filters.q ? 'panel.orders.noMatchTitle' : 'panel.orders.noneTitle' ),
-				esc( App.t( Orders.filters.q ? 'panel.orders.noMatchBody' : 'panel.orders.noneBody' ) )
+				esc( App.t( Orders.filters.q ? 'panel.orders.noMatchBody' : 'panel.orders.noneBody' ) ),
+				Orders.filters.q ? { waiting: true } : App.goesTo( 'counter' )
 			);
 		}
 

@@ -68,10 +68,11 @@
 					'<th>' + esc( App.t( 'panel.common.status' ) ) + '</th>' +
 					'<th>' + esc( App.t( 'panel.webhooks.lastDelivery' ) ) + '</th>' +
 					'<th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
-				: '<div class="empty spaced"><span class="empty__icon">' +
-					icon( 'plug', { size: 22 } ) + '</span>' +
-					'<p class="empty__title">' + esc( App.t( 'panel.webhooks.emptyTitle' ) ) + '</p>' +
-					'<p class="empty__body">' + esc( App.t( 'panel.webhooks.emptyBody' ) ) + '</p></div>' ) +
+				// The panel's own empty state rather than a hand-built one, so this carries the way
+				// out of itself like every other — see App.emptyState.
+				: App.emptyState( 'plug', App.t( 'panel.webhooks.emptyTitle' ),
+					esc( App.t( 'panel.webhooks.emptyBody' ) ),
+					{ does: 'hook-add', label: App.t( 'panel.webhooks.add' ) } ) ) +
 			'</div>';
 	};
 

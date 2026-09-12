@@ -315,6 +315,162 @@ check( 'a module that is off asks for nothing',
 	modules.filter( ( module ) => ! module.on && module.asking ).map( ( module ) => module.key ).join( ', ' ) || 'none asking' );
 
 /*
+ * An empty screen that says how to fill it.
+ *
+ * An empty list is the first thing most people see on most screens, and each of these used to be a
+ * sentence and a full stop — *No discount codes yet. Make one and it works on your own site
+ * straight away.* Made where? Worse, several pointed at another screen in words and offered no way
+ * of getting there. So every empty state now carries the way out of itself: the screen's own action,
+ * pressed from here, or the screen where the thing is actually made — or, where an empty list is
+ * simply the right answer, it says so in the markup rather than by leaving a gap.
+ */
+console.log( '\nEvery empty screen says how to fill it' );
+
+const deadEnds = [];
+const brokenWays = [];
+let emptySeen = 0;
+let leadless = [];
+
+for ( const view of views ) {
+	await page.click( `nav button[data-view=${ view }]` );
+
+	try {
+		await page.waitForFunction( () => {
+			const heading = document.querySelector( '.page-head h1' );
+
+			return heading && heading.textContent.trim().length > 0;
+		}, null, { timeout: 8000 } );
+	} catch ( error ) {
+		continue;
+	}
+
+	await page.waitForTimeout( 300 );
+
+	const screen = await page.evaluate( () => {
+		const text = ( node ) => ( node ? node.textContent.trim().replace( /\s+/g, ' ' ) : '' );
+
+		return {
+			lead: text( document.querySelector( '.page-head__desc' ) ),
+			empties: [ ...document.querySelectorAll( '.page-body .empty' ) ].map( ( empty ) => ( {
+				title: text( empty.querySelector( '.empty__title' ) ),
+				waiting: empty.hasAttribute( 'data-waiting' ),
+				does: ( empty.querySelector( '[data-does]' ) || {} ).dataset?.does || '',
+				goes: ( empty.querySelector( '[data-goes]' ) || {} ).dataset?.goes || '',
+				// A button pointing at an id that is not on the screen would press nothing at all.
+				reaches: ( () => {
+					const press = empty.querySelector( '[data-does]' );
+
+					return ! press || !! document.getElementById( press.dataset.does );
+				} )(),
+				label: text( empty.querySelector( '.empty__action' ) ),
+			} ) ),
+		};
+	} );
+
+	if ( ! screen.lead ) {
+		leadless.push( view );
+	}
+
+	screen.empties.forEach( function ( empty ) {
+		emptySeen++;
+
+		if ( ! empty.waiting && ! empty.does && ! empty.goes ) {
+			deadEnds.push( `${ view }: “${ empty.title }”` );
+		}
+
+		if ( ! empty.reaches ) {
+			brokenWays.push( `${ view }: “${ empty.title }” presses ${ empty.does }, which is not on the screen` );
+		}
+
+		if ( ( empty.does || empty.goes ) && ! empty.label ) {
+			deadEnds.push( `${ view }: “${ empty.title }” offers an unnamed button` );
+		}
+	} );
+}
+
+check( 'empty screens were found and read', emptySeen >= 10, `${ emptySeen } of them` );
+check( 'none of them is a dead end', 0 === deadEnds.length, deadEnds.join( ' | ' ) );
+check( 'and every way out reaches something', 0 === brokenWays.length, brokenWays.join( ' | ' ) );
+check( 'every screen says what it is', 0 === leadless.length, leadless.join( ', ' ) );
+
+/* And the way out works — pressed, on a screen that really is empty. */
+await page.click( 'nav button[data-view=discounts]' );
+await page.waitForSelector( '.page-body .empty [data-does]', { timeout: 8000 } );
+await page.click( '.page-body .empty [data-does]' );
+await page.waitForTimeout( 700 );
+
+check( 'pressing the way out of an empty screen opens the thing it names',
+	1 === await page.locator( '.modal' ).count(),
+	await page.locator( '.modal h2' ).innerText().catch( () => 'nothing opened' ) );
+
+await page.keyboard.press( 'Escape' );
+await page.waitForTimeout( 300 );
+
+/*
+ * And a screen that sends you elsewhere actually takes you there. Season tickets is the specimen:
+ * a season needs a run of at least two nights, a run is made on an event, and this screen used to
+ * say so in a sentence and leave you to find the way.
+ */
+await page.click( 'nav button[data-view=seasons]' );
+await page.waitForSelector( '.page-body .empty [data-goes]', { timeout: 8000 } );
+await page.click( '.page-body .empty [data-goes]' );
+await page.waitForTimeout( 900 );
+
+check( 'and one that points at another screen opens it',
+	'Events' === await page.locator( '.page-head h1' ).innerText(),
+	await page.locator( '.page-head h1' ).innerText() );
+
+/*
+ * Leaving a half-finished job is the panel's own question.
+ *
+ * Two screens guarded unsaved work with `window.confirm` — the browser's grey box, whose buttons
+ * are in the browser's language and which a browser may suppress outright, guarding nothing.
+ */
+console.log( '\nLeaving without saving is asked, not assumed' );
+
+const putToTheBrowser = prompts.length;
+
+await page.click( 'nav button[data-view=themes]' );
+await page.waitForTimeout( 900 );
+
+/* Made from the empty state's own way out, which checks both things at once. */
+if ( await page.locator( '.page-body .empty [data-does]' ).count() ) {
+	await page.click( '.page-body .empty [data-does]' );
+	await page.waitForSelector( '.modal', { timeout: 8000 } );
+	await page.fill( '.modal input[name=name]', 'A theme to leave' );
+	await page.click( '.modal button[type=submit]' );
+	await page.waitForTimeout( 1500 );
+}
+
+// Making one opens its editor; an account that already had themes is opened from the gallery.
+if ( ! ( await page.locator( '#theme-back' ).count() ) ) {
+	await page.waitForSelector( '[data-edit]', { timeout: 10000 } );
+	await page.locator( '[data-edit]' ).first().click();
+}
+
+await page.waitForSelector( '#theme-back', { timeout: 10000 } );
+await page.waitForTimeout( 500 );
+
+const token = page.locator( '[data-token]' ).first();
+
+check( 'the theme editor offers something to change', ( await token.count() ) > 0 );
+
+await token.fill( '#123456' );
+await page.waitForTimeout( 300 );
+await page.click( '#theme-back' );
+await page.waitForTimeout( 700 );
+
+check( 'leaving unsaved work asks first', 1 === await page.locator( '.modal' ).count(),
+	await page.locator( '.modal h2' ).innerText().catch( () => 'nothing was asked' ) );
+check( 'and the browser is never asked to put the question',
+	putToTheBrowser === prompts.length );
+
+await page.keyboard.press( 'Escape' );
+await page.waitForTimeout( 400 );
+
+check( 'saying nothing keeps the work on screen', 1 === await page.locator( '#theme-back' ).count() );
+
+/*
  * One night, seven screens.
  *
  * The door list, the tickets, the questions a checkout asks, the entry windows, the waiting list,

@@ -70,7 +70,7 @@
 						'</select>' +
 					'</div>'
 					: App.emptyState( 'calendar', App.t( 'panel.waitlist.noEventsTitle' ),
-						esc( App.t( 'panel.waitlist.noEventsBody' ) ) ) ) +
+						esc( App.t( 'panel.waitlist.noEventsBody' ) ), App.goesTo( 'events' ) ) ) +
 				'<div id="wait-summary" class="spaced"></div>' +
 				'<div id="wait-rows"></div>',
 		} );
@@ -132,8 +132,9 @@
 
 	Wait.rowsMarkup = function ( App, response ) {
 		if ( ! response.data.length ) {
+			// Somebody joins from the event's own page once it sells out; nothing to press here.
 			return App.emptyState( 'users', App.t( 'panel.waitlist.emptyTitle' ),
-				esc( App.t( 'panel.waitlist.emptyBody' ) ) );
+				esc( App.t( 'panel.waitlist.emptyBody' ) ), { waiting: true } );
 		}
 
 		return App.table(

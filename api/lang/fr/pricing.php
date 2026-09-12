@@ -80,6 +80,8 @@ return [
         'needSelection' => 'Choisissez d’abord des places.',
         'needAmount' => 'Saisissez d’abord un tarif.',
         'discard' => 'Quitter sans enregistrer les places modifiées ?',
+        'discardTitle' => 'Quitter sans enregistrer ?',
+        'discardLeave' => 'Quitter sans enregistrer',
         'soldWarning' => ':count de ces places sont déjà vendues. Ces billets gardent leur tarif de vente ; celui-ci vaut pour le prochain acheteur.',
         'legendOwn' => 'Tarif propre',
         'legendBlocked' => 'Bloquée',

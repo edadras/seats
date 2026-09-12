@@ -56,7 +56,8 @@
 						'</td></tr>';
 				} ).join( '' ),
 				App.emptyState( 'users', App.t( 'panel.managers.emptyTitle' ),
-					esc( App.t( 'panel.managers.emptyBody' ) ) )
+					esc( App.t( 'panel.managers.emptyBody' ) ),
+					{ does: 'mgr-add', label: App.t( 'panel.managers.add' ) } )
 			),
 		} );
 

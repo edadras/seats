@@ -79,8 +79,9 @@
 							} ).join( '' ) +
 						'</select>' +
 					'</div>'
+					// Nothing to sell until there is a night to sell it for.
 					: App.emptyState( 'calendar', App.t( 'panel.boxOffice.noEventsTitle' ),
-						esc( App.t( 'panel.boxOffice.noEventsBody' ) ) ) ) +
+						esc( App.t( 'panel.boxOffice.noEventsBody' ) ), App.goesTo( 'events' ) ) ) +
 				'<div id="counter-hall" class="spaced"></div>',
 		} );
 

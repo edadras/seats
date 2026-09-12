@@ -34,6 +34,8 @@ return [
     'save' => 'Theme speichern',
     'saved' => 'Theme gespeichert.',
     'discard' => 'Ohne Speichern verlassen?',
+    'discardTitle' => 'Ohne Speichern verlassen?',
+    'discardLeave' => 'Ohne Speichern verlassen',
     'preview' => 'Vorschau',
     'stylesheet' => 'Stylesheet',
     'stylesheetHint' => 'Für das, was die Regler nicht sagen können. Reines CSS — keine Skripte, kein @import, Bilder nur von Ihrer Website oder einer https-Adresse.',

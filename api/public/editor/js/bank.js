@@ -83,7 +83,8 @@
 				],
 				rows,
 				App.emptyState( 'wallet', App.t( 'panel.bank.emptyTitle' ),
-					esc( App.t( 'panel.bank.emptyBody' ) ) )
+					esc( App.t( 'panel.bank.emptyBody' ) ),
+					{ does: 'bank-import', label: App.t( 'panel.bank.import' ) } )
 			) +
 			'</section>';
 	};

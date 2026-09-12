@@ -59,7 +59,8 @@
 
 		if ( ! Members.schemes.length ) {
 			return App.emptyState( 'users', App.t( 'panel.memberships.noneTitle' ),
-				esc( App.t( 'panel.memberships.noneBody' ) ) );
+				esc( App.t( 'panel.memberships.noneBody' ) ),
+				{ does: 'mem-add', label: App.t( 'panel.memberships.addScheme' ) } );
 		}
 
 		return App.table(
@@ -162,8 +163,9 @@
 			'</div>';
 
 		if ( ! Members.members.length ) {
+			// Members arrive by joining on the website; nobody adds one here.
 			return head + App.emptyState( 'users', App.t( 'panel.memberships.nobodyTitle' ),
-				esc( App.t( 'panel.memberships.nobodyBody' ) ) );
+				esc( App.t( 'panel.memberships.nobodyBody' ) ), { waiting: true } );
 		}
 
 		return head + App.table(

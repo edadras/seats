@@ -295,7 +295,9 @@
 						  App.t( 'team.whoColumn' ), App.t( 'team.changedColumn' ) ],
 						page.data.map( function ( entry ) { return Audit.row( App, entry ); } ).join( '' )
 					)
-					: App.emptyState( 'info', App.t( 'team.auditTitle' ), App.t( 'team.noActivity' ) ) ),
+					// The log writes itself as people work.
+					: App.emptyState( 'info', App.t( 'team.auditTitle' ), App.t( 'team.noActivity' ),
+						{ waiting: true } ) ),
 		} );
 
 		[ [ 'audit-action', 'action' ], [ 'audit-actor', 'actor_id' ] ].forEach( function ( pair ) {

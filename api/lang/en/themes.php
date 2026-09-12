@@ -34,6 +34,8 @@ return [
     'save' => 'Save the theme',
     'saved' => 'Theme saved.',
     'discard' => 'Leave without saving your changes?',
+    'discardTitle' => 'Leave without saving?',
+    'discardLeave' => 'Leave without saving',
     'preview' => 'Preview',
     'stylesheet' => 'Stylesheet',
     'stylesheetHint' => 'For what the controls cannot say. Plain CSS — no scripts, no @import, and pictures only from your own site or an https address.',

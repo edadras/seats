@@ -80,6 +80,8 @@ return [
         'needSelection' => 'Choose some seats first.',
         'needAmount' => 'Type a price first.',
         'discard' => 'Leave without saving the seats you changed?',
+        'discardTitle' => 'Leave without saving?',
+        'discardLeave' => 'Leave without saving',
         'soldWarning' => ':count of those seats are already sold. Those tickets keep the price they were sold at; this is what the next buyer pays.',
         'legendOwn' => 'Its own price',
         'legendBlocked' => 'Blocked',

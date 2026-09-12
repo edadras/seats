@@ -171,10 +171,12 @@
 		var meta = response.meta;
 
 		if ( ! response.data.length ) {
+			// A customer arrives by buying a ticket; this list is filled from outside.
 			return App.emptyState(
 				Customers.filters.q ? 'search' : 'users',
 				App.t( Customers.filters.q ? 'panel.customers.noMatchTitle' : 'panel.customers.noneTitle' ),
-				esc( App.t( Customers.filters.q ? 'panel.customers.noMatchBody' : 'panel.customers.noneBody' ) )
+				esc( App.t( Customers.filters.q ? 'panel.customers.noMatchBody' : 'panel.customers.noneBody' ) ),
+				{ waiting: true }
 			);
 		}
 

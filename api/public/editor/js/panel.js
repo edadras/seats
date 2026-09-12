@@ -1052,8 +1052,9 @@
 						'<p>' + esc( notice.body ) + '</p>' +
 					'</li>';
 				} ).join( '' ) + '</ul>'
+				// An empty bell is the good outcome, not a job — see emptyState.
 				: this.emptyState( 'info', this.t( 'panel.notices.none' ),
-					esc( this.t( 'panel.notices.noneHint' ) ) ),
+					esc( this.t( 'panel.notices.noneHint' ) ), { waiting: true } ),
 			onSubmit: function () {
 				return self.request( 'POST', '/notifications/read', {} ).then( function () {
 					return self.loadNotices();
@@ -1506,8 +1507,37 @@
 		return table( headings, rows, emptyMarkup );
 	};
 
-	App.emptyState = function ( iconName, title, body ) {
-		return emptyState( iconName, title, body );
+	/**
+	 * A question with two answers, asked the way the rest of the panel asks everything else.
+	 *
+	 * `window.confirm` is the browser's own grey box: its buttons are in the browser's language
+	 * rather than the reader's, it cannot say in more than a line what is about to be lost, and a
+	 * browser is free to suppress it — which turns a guard against losing an afternoon's work into
+	 * no guard at all. `done` is called only if the answer is yes.
+	 */
+	App.confirm = function ( options, done ) {
+		this.modal( {
+			title: options.title,
+			submitLabel: options.confirmLabel,
+			danger: !! options.danger,
+			body: '<p>' + esc( options.body ) + '</p>',
+			onSubmit: function () { done(); },
+		} );
+	};
+
+	App.emptyState = function ( iconName, title, body, action ) {
+		return emptyState( iconName, title, body, action );
+	};
+
+	/**
+	 * The way to the screen where a thing is actually made.
+	 *
+	 * The label is built from the name that screen carries in the sidebar, so the button says where
+	 * it goes in the words the reader already knows it by — and a screen renamed in the catalogue
+	 * renames itself here too.
+	 */
+	App.goesTo = function ( view ) {
+		return { goes: view, label: this.t( 'panel.empty.goTo', { screen: this.t( 'panel.nav.' + view ) } ) };
 	};
 
 	App.timezone = function () {
@@ -1545,11 +1575,73 @@
 		return held ? markup : '';
 	}
 
-	function emptyState( iconName, title, body ) {
-		return '<div class="empty"><span class="empty__icon">' + icon( iconName, { size: 22 } ) + '</span>' +
+	/**
+	 * Nothing here yet — and what to do about it.
+	 *
+	 * An empty screen is the first thing most people see on most screens, and every one of these
+	 * used to be a sentence and a full stop: *No discount codes yet. Make one and it works on your
+	 * own site straight away.* Made where? The button was in the corner of the page, or, worse, on
+	 * another screen entirely — the season tickets screen said to go and put dates in a series, and
+	 * offered no way of getting there. Reading is not doing.
+	 *
+	 * So an empty state carries the way out of itself, and there are exactly two of those:
+	 *
+	 *   `{ does: 'add-event', label: … }`  presses the screen's own action, whatever it does. Not a
+	 *   copy of it — the same button, pressed from here — so the two cannot come apart.
+	 *
+	 *   `{ goes: 'events', label: … }`  opens the screen where the thing is actually made.
+	 *
+	 * And a third possibility that is not an action at all: `{ waiting: true }`, for the screens
+	 * where an empty list is the right answer and nobody should do anything about it — nobody has
+	 * left a basket, nobody is waiting for a returned seat. That one is *declared* rather than
+	 * omitted, so the decision is in the markup where it can be read, and a screen cannot be given
+	 * a dead end by accident. `forms_smoke` holds both halves of that up.
+	 */
+	function emptyState( iconName, title, body, action ) {
+		var settings = action || {};
+		var way = '';
+
+		if ( settings.does ) {
+			way = '<button class="btn btn--primary empty__action" type="button" data-does="' +
+				esc( settings.does ) + '">' + esc( settings.label ) + '</button>';
+		} else if ( settings.goes ) {
+			way = '<button class="btn empty__action" type="button" data-goes="' +
+				esc( settings.goes ) + '">' + esc( settings.label ) + '</button>';
+		}
+
+		return '<div class="empty' + ( settings.waiting ? ' empty--waiting' : '' ) + '"' +
+			( settings.waiting ? ' data-waiting' : '' ) + '>' +
+			'<span class="empty__icon">' + icon( iconName, { size: 22 } ) + '</span>' +
 			'<p class="empty__title">' + esc( title ) + '</p>' +
-			'<p class="empty__body">' + body + '</p></div>';
+			'<p class="empty__body">' + body + '</p>' + way + '</div>';
 	}
+
+	/**
+	 * The two ways out of an empty screen, wired once for the whole panel.
+	 *
+	 * One listener on the document rather than one per screen: an empty state is markup a screen
+	 * returns as a string, and a screen that returned the markup and forgot the wiring would offer
+	 * a button that does nothing — which is worse than the sentence it replaced.
+	 */
+	document.addEventListener( 'click', function ( event ) {
+		var press = event.target.closest && event.target.closest( '[data-does]' );
+
+		if ( press ) {
+			var action = document.getElementById( press.dataset.does );
+
+			if ( action ) {
+				action.click();
+			}
+
+			return;
+		}
+
+		var go = event.target.closest && event.target.closest( '[data-goes]' );
+
+		if ( go ) {
+			App.route( go.dataset.goes );
+		}
+	} );
 
 	function table( headings, rows, emptyMarkup ) {
 		if ( ! rows ) {
@@ -1780,7 +1872,8 @@
 						],
 						rows,
 						emptyState( 'building', self.t( 'panel.venues.emptyTitle' ),
-							esc( self.t( 'panel.venues.emptyBody' ) ) )
+							esc( self.t( 'panel.venues.emptyBody' ) ),
+							{ does: 'add-venue', label: self.t( 'panel.venues.new' ) } )
 					),
 				} );
 
@@ -1887,9 +1980,12 @@
 						rows,
 						results[ 1 ].data.length
 							? emptyState( 'map', self.t( 'panel.maps.emptyTitle' ),
-								esc( self.t( 'panel.maps.emptyBody' ) ) )
+								esc( self.t( 'panel.maps.emptyBody' ) ),
+								{ does: 'add-map', label: self.t( 'panel.maps.new' ) } )
+							// A chart belongs to a building, so the way out of this one is the
+							// screen where buildings are made.
 							: emptyState( 'building', self.t( 'panel.maps.needVenueTitle' ),
-								esc( self.t( 'panel.maps.needVenueBody' ) ) )
+								esc( self.t( 'panel.maps.needVenueBody' ) ), self.goesTo( 'venues' ) )
 					),
 				} );
 
@@ -2142,8 +2238,9 @@
 
 	function overviewNights( app, nights ) {
 		if ( ! nights.length ) {
+			// Nothing on means nothing sold, and the way out of that is a night to sell.
 			return emptyState( 'calendar', app.t( 'panel.overview.nothingOn' ),
-				esc( app.t( 'panel.overview.nothingOnBody' ) ) );
+				esc( app.t( 'panel.overview.nothingOnBody' ) ), app.goesTo( 'events' ) );
 		}
 
 		return '<ul class="nights">' + nights.map( function ( night ) {
@@ -2306,9 +2403,11 @@
 						rows,
 						sellable.length
 							? emptyState( 'calendar', self.t( 'panel.events.emptyTitle' ),
-								esc( self.t( 'panel.events.emptyBody' ) ) )
+								esc( self.t( 'panel.events.emptyBody' ) ),
+								{ does: 'add-event', label: self.t( 'panel.events.new' ) } )
+							// An event sells against a published chart, so that is where to start.
 							: emptyState( 'map', self.t( 'panel.events.needChartTitle' ),
-								esc( self.t( 'panel.events.needChartBody' ) ) )
+								esc( self.t( 'panel.events.needChartBody' ) ), self.goesTo( 'maps' ) )
 					),
 				} );
 
@@ -3535,7 +3634,8 @@
 						],
 						rows,
 						emptyState( 'plug', self.t( 'panel.connections.emptyTitle' ),
-							esc( self.t( 'panel.connections.emptyBody' ) ) )
+							esc( self.t( 'panel.connections.emptyBody' ) ),
+							{ does: 'add-client', label: self.t( 'panel.connections.connect' ) } )
 					) + window.SeatmapWebhooks.markup( self, hooks ) +
 						self.embedMarkup( events ) + self.originsMarkup( origins ),
 				} );

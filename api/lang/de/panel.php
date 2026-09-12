@@ -622,6 +622,10 @@ return [
         'focalPoint' => 'Blickpunkt — klicken Sie auf die Stelle, der sich der Saal zuwendet, meist die Bühnenmitte',
     ],
 
+    'empty' => [
+        'goTo' => 'Zu :screen',
+    ],
+
     'prompt' => [
         'sectionName' => 'Name des Blocks',
         'sectionDefault' => 'Block :number',

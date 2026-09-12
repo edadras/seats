@@ -1137,6 +1137,28 @@ somebody starts typing.
 because the shape of a form is a fact about the rendered page and not about the source that printed
 it. It found six unlabelled controls the day it was written.
 
+**An empty screen says how to fill it.** An empty list is the first thing most people meet on most
+screens, and every one of these was a sentence and a full stop: *No discount codes yet. Make one and
+it works on your own site straight away.* Made where? Several pointed at another screen in words and
+offered no way of getting there — season tickets said to go and put dates in a series, and left you
+to find it. So an empty state now carries the way out of itself, and there are exactly two of those:
+`{ does: 'add-event' }` presses the screen's own action — the same button, not a copy of it — and
+`{ goes: 'events' }` opens the screen where the thing is actually made, labelled from the name that
+screen carries in the sidebar. Both are wired by one listener for the whole panel, because a screen
+that returned the markup and forgot the wiring would offer a button that does nothing, which is
+worse than the sentence it replaced.
+
+The third possibility is not an action: `{ waiting: true }`, for the screens where an empty list is
+the right answer and nobody should do anything about it — nobody has abandoned a basket, nobody is
+waiting for a returned seat, the activity log writes itself. That one is *declared* rather than
+omitted, so a dead end cannot be added by accident and the decision is in the markup where it can be
+read. Twenty-four empty states, and `forms_smoke` holds up both halves.
+
+**The panel asks its own questions.** Two screens guarded unsaved work with `window.confirm` — the
+browser's grey box, whose buttons are in the browser's language rather than the reader's, and which a
+browser is free to suppress, turning a guard against losing an afternoon's work into no guard at all.
+`App.confirm()` is the panel's own dialog, and nothing in the panel now reaches for the browser's.
+
 **One night, however many screens.** Seven screens ask which night you are working on — the counter,
 the door list, the tickets, the questions a checkout asks, the entry windows, the waiting list, the
 rehearsal — and each used to keep its own answer. A clerk who chose Saturday on one was shown Friday
@@ -1638,6 +1660,9 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Nothing that has to be answered is hidden, and everything that has to be is marked | `forms_smoke` |
 | A module that is switched off asks for nothing | `forms_smoke` |
 | Every screen that asks which night is on the same one, and stays there | `forms_smoke` |
+| No empty screen is a dead end: it presses the screen's own action, or opens the one that makes the thing | `forms_smoke` |
+| A screen where an empty list is the right answer says so, rather than leaving a gap | `forms_smoke` |
+| Leaving unsaved work is the panel's own question, never the browser's | `forms_smoke` |
 
 ## Installing the plugin
 

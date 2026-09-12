@@ -63,7 +63,8 @@
 						} ).join( '' )
 					)
 					: App.emptyState( 'users', App.t( 'panel.promoters.emptyTitle' ),
-						App.t( 'panel.promoters.emptyHint' ) ) ) +
+						App.t( 'panel.promoters.emptyHint' ),
+						{ does: 'promoter-add', label: App.t( 'panel.promoters.add' ) } ) ) +
 
 				'<h3 class="subhead">' + esc( App.t( 'panel.promoters.campaigns' ) ) + '</h3>' +
 				'<p class="hint">' + esc( App.t( 'panel.promoters.campaignsHint' ) ) + '</p>' +
@@ -77,8 +78,9 @@
 								esc( row.orders ) + '</td></tr>';
 						} ).join( '' )
 					)
+					// A campaign appears because somebody used a tagged link, not because of a button.
 					: App.emptyState( 'chart', App.t( 'panel.promoters.noCampaigns' ),
-						App.t( 'panel.promoters.noCampaignsHint' ) ) ),
+						App.t( 'panel.promoters.noCampaignsHint' ), { waiting: true } ) ),
 		} );
 
 		Promoters.wire( App );

@@ -622,6 +622,10 @@ return [
         'focalPoint' => 'Point focal — cliquez l’endroit vers lequel la salle est tournée, en général le milieu de la scène',
     ],
 
+    'empty' => [
+        'goTo' => 'Aller à :screen',
+    ],
+
     'prompt' => [
         'sectionName' => 'Nom du bloc',
         'sectionDefault' => 'Bloc :number',

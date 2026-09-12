@@ -57,7 +57,8 @@
 						],
 						rows,
 						App.emptyState( 'globe', App.t( 'panel.sites.emptyTitle' ),
-							esc( App.t( 'panel.sites.emptyBody' ) ) )
+							esc( App.t( 'panel.sites.emptyBody' ) ),
+							{ does: 'add-site', label: App.t( 'panel.sites.new' ) } )
 					),
 				} );
 

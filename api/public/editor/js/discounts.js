@@ -123,7 +123,10 @@
 			return App.emptyState(
 				Discounts.filters.q ? 'search' : 'tag',
 				App.t( Discounts.filters.q ? 'panel.discounts.noMatchTitle' : 'panel.discounts.noneTitle' ),
-				esc( App.t( Discounts.filters.q ? 'panel.discounts.noMatchBody' : 'panel.discounts.noneBody' ) )
+				esc( App.t( Discounts.filters.q ? 'panel.discounts.noMatchBody' : 'panel.discounts.noneBody' ) ),
+				Discounts.filters.q
+					? { waiting: true }
+					: { does: 'discount-new', label: App.t( 'panel.discounts.create' ) }
 			);
 		}
 

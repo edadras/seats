@@ -69,7 +69,8 @@
 				App.emptyState(
 					'check',
 					App.t( 'panel.scanners.emptyTitle' ),
-					esc( App.t( 'panel.scanners.emptyBody' ) )
+					esc( App.t( 'panel.scanners.emptyBody' ) ),
+					{ does: 'scanner-add', label: App.t( 'panel.scanners.add' ) }
 				)
 			),
 		} );

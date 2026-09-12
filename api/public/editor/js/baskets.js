@@ -128,10 +128,12 @@
 		var App = Baskets.App;
 
 		if ( ! response.data.length ) {
+			// Nobody abandoned a basket is the good outcome; there is nothing here to press.
 			return App.emptyState(
 				Baskets.filters.q ? 'search' : 'check',
 				App.t( Baskets.filters.q ? 'panel.baskets.noMatchTitle' : 'panel.baskets.noneTitle' ),
-				esc( App.t( Baskets.filters.q ? 'panel.baskets.noMatchBody' : 'panel.baskets.noneBody' ) )
+				esc( App.t( Baskets.filters.q ? 'panel.baskets.noMatchBody' : 'panel.baskets.noneBody' ) ),
+				{ waiting: true }
 			);
 		}
 

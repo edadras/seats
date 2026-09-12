@@ -151,7 +151,9 @@
 							return Pricing.row( App, zone, index, currency );
 						} ).join( '' )
 					)
-					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ) ) ) +
+					// Zones come from the categories drawn on the chart, not from this screen.
+					: App.emptyState( 'tag', App.t( 'pricing.noZones' ), App.t( 'pricing.noZonesHint' ),
+						App.goesTo( 'maps' ) ) ) +
 
 				Pricing.tiersSection( App, currency ) +
 				Pricing.demandSection( App, currency ) +
@@ -889,7 +891,8 @@
 						return Pricing.tierRow( App, tier, index, currency );
 					} ).join( '' )
 				)
-				: App.emptyState( 'clock', App.t( 'pricing.tiers.none' ), App.t( 'pricing.tiers.noneHint' ) ) ) +
+				: App.emptyState( 'clock', App.t( 'pricing.tiers.none' ), App.t( 'pricing.tiers.noneHint' ),
+					{ does: 'tier-add', label: App.t( 'pricing.tiers.add' ) } ) ) +
 			'<button class="btn" id="tier-add">' + esc( App.t( 'pricing.tiers.add' ) ) + '</button>';
 	};
 
@@ -979,7 +982,8 @@
 					} ).join( '' )
 				)
 				: App.emptyState( 'chart', App.t( 'pricing.demand.none' ),
-					App.t( 'pricing.demand.noneHint' ) ) ) +
+					App.t( 'pricing.demand.noneHint' ),
+					{ does: 'demand-add', label: App.t( 'pricing.demand.add' ) } ) ) +
 			'<button class="btn" id="demand-add">' + esc( App.t( 'pricing.demand.add' ) ) + '</button>';
 	};
 

@@ -35,7 +35,9 @@
 				? '<div class="modules">' + modules.map( function ( module ) {
 					return Modules.card( App, module );
 				} ).join( '' ) + '</div>'
-				: App.emptyState( 'plug', App.t( 'modules.installed' ), App.t( 'modules.noFailures' ) ),
+				// What runs on a server is deployed, not installed from a screen — see the note above.
+				: App.emptyState( 'plug', App.t( 'modules.installed' ), App.t( 'modules.noFailures' ),
+					{ waiting: true } ),
 		} );
 
 		Modules.bind( App, modules );

@@ -371,7 +371,8 @@
 					} ).join( '' )
 				)
 				: App.emptyState( 'mail', App.t( 'messaging.announceNone' ),
-					esc( App.t( 'messaging.announceNoneHint' ) ) ) );
+					esc( App.t( 'messaging.announceNoneHint' ) ),
+					{ does: 'announce-new', label: App.t( 'messaging.announceNew' ) } ) );
 	};
 
 	/**
@@ -430,7 +431,8 @@
 					} ).join( '' )
 				)
 				: App.emptyState( 'users', App.t( 'messaging.segmentsNone' ),
-					esc( App.t( 'messaging.segmentsNoneHint' ) ) ) );
+					esc( App.t( 'messaging.segmentsNoneHint' ) ),
+					{ does: 'segment-new', label: App.t( 'messaging.segmentNew' ) } ) );
 	};
 
 	/**
@@ -918,7 +920,9 @@
 		var App = Messaging.App;
 
 		if ( ! Messaging.log.length ) {
-			return App.emptyState( 'mail', App.t( 'messaging.noLog' ), App.t( 'messaging.noLogHint' ) );
+			// The log fills itself as messages go out.
+			return App.emptyState( 'mail', App.t( 'messaging.noLog' ), App.t( 'messaging.noLogHint' ),
+				{ waiting: true } );
 		}
 
 		return '<div class="filters">' +

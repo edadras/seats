@@ -71,7 +71,8 @@
 							return Themes.card( theme, true );
 						} ).join( '' ) +
 					'</div>'
-					: App.emptyState( 'palette', App.t( 'themes.noneYet' ), App.t( 'themes.noneYetHint' ) ) ),
+					: App.emptyState( 'palette', App.t( 'themes.noneYet' ), App.t( 'themes.noneYetHint' ),
+						{ does: 'theme-new', label: App.t( 'themes.new' ) } ) ),
 		} );
 
 		Themes.bindGallery();
@@ -505,11 +506,20 @@
 		} );
 
 		document.getElementById( 'theme-back' ).addEventListener( 'click', function () {
-			if ( Themes.dirty && ! global.confirm( App.t( 'themes.discard' ) ) ) {
+			var leave = function () { Themes.render( App ); };
+
+			if ( ! Themes.dirty ) {
+				leave();
+
 				return;
 			}
 
-			Themes.render( App );
+			App.confirm( {
+				title: App.t( 'themes.discardTitle' ),
+				body: App.t( 'themes.discard' ),
+				confirmLabel: App.t( 'themes.discardLeave' ),
+				danger: true,
+			}, leave );
 		} );
 
 		document.getElementById( 'theme-save' ).addEventListener( 'click', function () { Themes.save(); } );

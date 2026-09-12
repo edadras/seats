@@ -324,7 +324,18 @@
 					: ( Seasons.series.length ? 'panel.seasons.noneTitle' : 'panel.seasons.noRunsTitle' ) ),
 				esc( App.t( Seasons.filters.q
 					? 'panel.seasons.noMatchBody'
-					: ( Seasons.series.length ? 'panel.seasons.noneBody' : 'panel.seasons.noRunsBody' ) ) )
+					: ( Seasons.series.length ? 'panel.seasons.noneBody' : 'panel.seasons.noRunsBody' ) ) ),
+				/*
+				 * Three situations and three answers: a search found nothing, there are runs to
+				 * sell a season against, or there are none — and the last one is the reason this
+				 * screen used to be a dead end, since a run is made on an event and this said so
+				 * in a sentence without offering the way there.
+				 */
+				Seasons.filters.q
+					? { waiting: true }
+					: ( Seasons.series.length
+						? { does: 's-new', label: App.t( 'panel.seasons.create' ) }
+						: App.goesTo( 'events' ) )
 			);
 		}
 

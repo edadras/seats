@@ -80,6 +80,8 @@ return [
         'needSelection' => 'Scegli prima dei posti.',
         'needAmount' => 'Scrivi prima un prezzo.',
         'discard' => 'Esci senza salvare i posti modificati?',
+        'discardTitle' => 'Uscire senza salvare?',
+        'discardLeave' => 'Esci senza salvare',
         'soldWarning' => ':count di questi posti sono già venduti. Quei biglietti mantengono il prezzo di vendita; questo vale per il prossimo acquirente.',
         'legendOwn' => 'Prezzo proprio',
         'legendBlocked' => 'Bloccato',

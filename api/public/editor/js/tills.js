@@ -58,7 +58,8 @@
 
 		if ( ! till ) {
 			return App.emptyState( 'wallet', App.t( 'panel.tills.noneOpen' ),
-				esc( App.t( 'panel.tills.noneOpenHint' ) ) );
+				esc( App.t( 'panel.tills.noneOpenHint' ) ),
+				{ does: 'till-open', label: App.t( 'panel.tills.open' ) } );
 		}
 
 		var money = function ( amount ) { return App.money( amount, till.currency ); };

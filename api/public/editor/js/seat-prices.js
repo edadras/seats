@@ -130,8 +130,9 @@
 		var App = Seats.App;
 
 		if ( ! Seats.sections.length ) {
+			// A section is drawn on the chart, which is where this one has to be answered.
 			return App.emptyState( 'map', App.t( 'pricing.seats.noSections' ),
-				App.t( 'pricing.seats.noSectionsHint' ) );
+				App.t( 'pricing.seats.noSectionsHint' ), App.goesTo( 'maps' ) );
 		}
 
 		return '<div class="blocks-grid">' + Seats.sections.map( function ( section ) {
@@ -292,11 +293,22 @@
 		var App = Seats.App;
 
 		document.getElementById( 'seats-back' ).addEventListener( 'click', function () {
-			if ( Object.keys( Seats.staged ).length && ! global.confirm( App.t( 'pricing.seats.discard' ) ) ) {
+			var leave = function () { global.SeatmapPricing.open( App, Seats.eventId ); };
+
+			// Prices typed and not yet saved are worth one question — asked in the panel's own
+			// dialog, since the browser's grey box may be suppressed and then guards nothing.
+			if ( ! Object.keys( Seats.staged ).length ) {
+				leave();
+
 				return;
 			}
 
-			global.SeatmapPricing.open( App, Seats.eventId );
+			App.confirm( {
+				title: App.t( 'pricing.seats.discardTitle' ),
+				body: App.t( 'pricing.seats.discard' ),
+				confirmLabel: App.t( 'pricing.seats.discardLeave' ),
+				danger: true,
+			}, leave );
 		} );
 
 		document.getElementById( 'seats-save' ).addEventListener( 'click', function () { Seats.save(); } );
