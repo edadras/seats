@@ -264,6 +264,13 @@ return [
         'findNothing' => 'صفحه‌ای با این نام نیست.',
         'switchToLight' => 'رفتن به پوستهٔ روشن',
         'switchToDark' => 'رفتن به پوستهٔ تیره',
+        'calendar' => 'تقویم',
+        'calendar_auto' => 'بر اساس زبان',
+        'calendar_persian' => 'شمسی',
+        'calendar_gregory' => 'میلادی',
+        'calendarOpen' => 'انتخاب تاریخ',
+        'calendarBack' => 'ماه پیش',
+        'calendarNext' => 'ماه بعد',
     ],
 
     'common' => [
@@ -1699,6 +1706,11 @@ return [
         'domain' => 'دامنه',
         'domainPlaceholder' => 'tickets.example.com',
         'domainHint' => 'اول با یک CNAME یا رکورد A آن را به ما اشاره دهید، بعد رکورد TXT‌ای را که نشان می‌دهیم بیفزایید.',
+        'calendar' => 'تقویم',
+        'calendarHint' => 'این سایت تاریخ‌ها را برای بازدیدکننده چطور بنویسد. جدا از زبان است: سالنی که فصلش را شمسی می‌بندد، روی صفحهٔ انگلیسی هم شمسی چاپ می‌کند.',
+        'calendar_auto' => 'بر اساس زبان بازدیدکننده',
+        'calendar_persian' => 'شمسی',
+        'calendar_gregory' => 'میلادی',
     ],
 
     'bank' => [

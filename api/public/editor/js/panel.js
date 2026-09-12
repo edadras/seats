@@ -265,6 +265,10 @@
 					 */
 					if ( self.token && self.profile ) {
 						self.permissions = self.profile.permissions || null;
+						// Including the calendar, which `remember` would have applied had the call
+						// got through: a bad moment on the network should not quietly move a
+						// venue's dates back to the reader's own calendar.
+						i18n.useCalendar( self.profile.calendar );
 						self.showWorkspace();
 					}
 				} );
@@ -697,9 +701,21 @@
 			permissions: this.permissions,
 			agent: response.agent || null,
 			programme_manager: !! response.programme_manager,
+			// Which calendar this account writes its dates in. Remembered with the rest of the
+			// sign-in so a reopened tab reads the same way before `/auth/me` has answered.
+			calendar: ( response.tenant && response.tenant.calendar ) || 'auto',
 		};
 
 		window.sessionStorage.setItem( STORE.profile, JSON.stringify( this.profile ) );
+
+		/*
+		 * And applied, here, at the one moment both halves are in hand.
+		 *
+		 * The catalogue carries the calendar the *language* implies — it is cached publicly and must
+		 * say nothing about an account — and this is the account's. Everything that formats a date
+		 * reads the result, so this line is the whole of it.
+		 */
+		i18n.useCalendar( this.profile.calendar );
 	};
 
 	/**
@@ -853,7 +869,8 @@
 					'<nav class="sidebar__nav" id="nav" aria-label="' +
 						esc( this.t( 'panel.nav.sections' ) ) + '"></nav>' +
 					'<div class="sidebar__footer">' +
-						'<div class="sidebar__language">' + this.languageField( 'locale' ) + '</div>' +
+						'<div class="sidebar__language">' + this.languageField( 'locale' ) +
+							this.calendarField() + '</div>' +
 						'<div class="account">' +
 						'<span class="account__avatar" aria-hidden="true">' + esc( initials( name ) ) + '</span>' +
 						'<div class="account__body">' +
@@ -899,6 +916,26 @@
 		var language = document.getElementById( 'locale' );
 
 		language.addEventListener( 'change', function () { i18n.choose( language.value ); } );
+
+		var calendar = document.getElementById( 'calendar' );
+
+		if ( calendar ) {
+			calendar.addEventListener( 'change', function () {
+				self.request( 'PATCH', '/account/calendar', { calendar: calendar.value } )
+					.then( function () {
+						/*
+						 * Reloaded rather than repainted, exactly as a language change is.
+						 *
+						 * The calendar is inside the locale string every date on every screen is
+						 * formatted with, and half of them were drawn before this moment. A reload
+						 * is one line and is right; repainting "the screens that show dates" is a
+						 * list somebody has to keep.
+						 */
+						window.location.reload();
+					} )
+					.catch( function ( error ) { self.toast( error.message, true ); } );
+			} );
+		}
 
 		// An account that has not verified its address gets a bar it can act on, not a nag: the
 		// code box is in it, and everything else on the panel still works.
@@ -982,6 +1019,34 @@
 				return '<option value="' + esc( entry.code ) + '"' +
 					( entry.code === i18n.locale ? ' selected' : '' ) + '>' +
 					esc( entry.native ) + '</option>';
+			} ).join( '' ) +
+			'</select>';
+	};
+
+	/**
+	 * Which calendar this account writes its dates in.
+	 *
+	 * Beside the language rather than on a settings screen, because it is the same kind of thing —
+	 * how the panel reads — and because there is no account settings screen for it to be the only
+	 * inhabitant of. Offered only to somebody who may change the account: it is the venue's
+	 * decision, not the reader's, and a clerk moving the whole organisation's dates is not a
+	 * setting anybody wanted.
+	 *
+	 * Nothing at all for everybody else, rather than a disabled control. A dead select is a
+	 * question about who they are; its absence is not.
+	 */
+	App.calendarField = function () {
+		if ( ! this.may( 'account.manage' ) ) {
+			return '';
+		}
+
+		var current = ( this.profile || {} ).calendar || 'auto';
+
+		return '<select class="select select--sm" id="calendar" aria-label="' +
+			esc( this.t( 'panel.shell.calendar' ) ) + '">' +
+			[ 'auto', 'persian', 'gregory' ].map( function ( key ) {
+				return '<option value="' + key + '"' + ( key === current ? ' selected' : '' ) + '>' +
+					esc( App.t( 'panel.shell.calendar_' + key ) ) + '</option>';
 			} ).join( '' ) +
 			'</select>';
 	};
@@ -1228,13 +1293,23 @@
 		 * the wiring shows an organiser a dead grey rectangle. Doing it once, where every screen
 		 * already passes through, means a field added tomorrow works without anybody remembering.
 		 */
-		mediaFields();
+		richFields();
 	};
 
-	/** Wake up any picture field the screen just drew. Harmless when there are none. */
-	function mediaFields() {
+	/**
+	 * Wake up the fields that are more than markup. Harmless when the screen has none.
+	 *
+	 * Both are done here, where every screen already passes, rather than at each call site: a
+	 * picture field that was drawn and not wired is a dead grey rectangle, and a date field is a
+	 * box an Iranian organiser has to convert in their head.
+	 */
+	function richFields() {
 		if ( window.SeatmapMedia ) {
 			window.SeatmapMedia.wire( App );
+		}
+
+		if ( window.SeatmapCalendar ) {
+			window.SeatmapCalendar.wire( App );
 		}
 	}
 
@@ -1422,8 +1497,8 @@
 		document.body.appendChild( host );
 		document.addEventListener( 'keydown', onKey );
 
-		// A dialog is a screen too: the events form asks for a poster inside one.
-		mediaFields();
+		// A dialog is a screen too: the events form asks for a poster and a date inside one.
+		richFields();
 
 		host.addEventListener( 'mousedown', function ( event ) {
 			if ( event.target === host ) {

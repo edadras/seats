@@ -288,6 +288,13 @@ return [
         'findNothing' => 'No screen by that name.',
         'switchToLight' => 'Switch to the light theme',
         'switchToDark' => 'Switch to the dark theme',
+        'calendar' => 'Calendar',
+        'calendar_auto' => 'Follow the language',
+        'calendar_persian' => 'Jalali',
+        'calendar_gregory' => 'Gregorian',
+        'calendarOpen' => 'Choose a date',
+        'calendarBack' => 'Previous month',
+        'calendarNext' => 'Next month',
     ],
 
     'common' => [
@@ -1775,6 +1782,11 @@ return [
         'domain' => 'Domain',
         'domainPlaceholder' => 'tickets.example.com',
         'domainHint' => 'Point it at us with a CNAME or an A record first, then add the TXT record we show you.',
+        'calendar' => 'Calendar',
+        'calendarHint' => 'How this site writes its dates for a visitor. Separate from the language: a venue that programmes its season in Jalali prints Jalali on an English page too.',
+        'calendar_auto' => 'Follow the visitor’s language',
+        'calendar_persian' => 'Jalali',
+        'calendar_gregory' => 'Gregorian',
     ],
 
     /*

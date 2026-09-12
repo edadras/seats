@@ -264,6 +264,13 @@ return [
         'findNothing' => 'Nessuna schermata con quel nome.',
         'switchToLight' => 'Passa al tema chiaro',
         'switchToDark' => 'Passa al tema scuro',
+        'calendar' => 'Calendario',
+        'calendar_auto' => 'Segui la lingua',
+        'calendar_persian' => 'Jalali',
+        'calendar_gregory' => 'Gregoriano',
+        'calendarOpen' => 'Scegli una data',
+        'calendarBack' => 'Mese precedente',
+        'calendarNext' => 'Mese successivo',
     ],
 
     'common' => [
@@ -1699,6 +1706,11 @@ return [
         'domain' => 'Dominio',
         'domainPlaceholder' => 'biglietti.esempio.com',
         'domainHint' => 'Prima fallo puntare a noi con un CNAME o un record A, poi aggiungi il record TXT che ti mostriamo.',
+        'calendar' => 'Calendario',
+        'calendarHint' => 'Come questo sito scrive le date per chi lo visita. Separato dalla lingua: una sala che programma la stagione in jalali lo stampa in jalali anche su una pagina inglese.',
+        'calendar_auto' => 'Segui la lingua di chi visita',
+        'calendar_persian' => 'Jalali',
+        'calendar_gregory' => 'Gregoriano',
     ],
 
     'bank' => [

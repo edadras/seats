@@ -313,6 +313,22 @@
 							'</span></label>';
 					} ).join( '' ) +
 				'</div>' +
+				/*
+				 * The calendar, on the same screen as the languages and not the same setting.
+				 *
+				 * Here because it is the same kind of decision — how this site writes itself down
+				 * for a visitor — and separate from the language because it answers a different
+				 * question. A Persian page is read by somebody who reads Persian; a Jalali date is
+				 * printed by a venue that programmes its season in Jalali, and an Iranian theatre
+				 * with an English page still does.
+				 */
+				'<div class="field on-own-line"><label class="field__label" for="site-calendar">' +
+					esc( App.t( 'panel.sites.calendar' ) ) + '</label>' +
+					'<select class="select" id="site-calendar">' +
+						Sites.calendarOptions( App, site.calendar ) +
+					'</select>' +
+					'<span class="field__hint">' + esc( App.t( 'panel.sites.calendarHint' ) ) + '</span>' +
+				'</div>' +
 				'<div class="row"><button class="btn btn--primary" id="locales-save">' +
 					esc( App.t( 'panel.common.save' ) ) + '</button></div>' +
 			'</div>';
@@ -326,14 +342,27 @@
 				}
 			} );
 
-			App.request( 'PATCH', '/sites/' + site.id, { locales: wanted } )
+			App.request( 'PATCH', '/sites/' + site.id, {
+				locales: wanted,
+				calendar: document.getElementById( 'site-calendar' ).value,
+			} )
 				.then( function ( saved ) {
 					Sites.state.site.locales = saved.locales;
+					Sites.state.site.calendar = saved.calendar;
 					App.toast( App.t( 'panel.sites.languagesSaved' ) );
 					Sites.paintLanguages( App );
 				} )
 				.catch( function ( error ) { App.toast( error.message, true ); } );
 		} );
+	};
+
+	/** The three calendars a venue may keep, named for a reader rather than for ICU. */
+	Sites.calendarOptions = function ( App, current ) {
+		return [ 'auto', 'persian', 'gregory' ].map( function ( key ) {
+			return '<option value="' + key + '"' +
+				( ( current || 'auto' ) === key ? ' selected' : '' ) + '>' +
+				esc( App.t( 'panel.sites.calendar_' + key ) ) + '</option>';
+		} ).join( '' );
 	};
 
 	/* --------------------------------------------------------------------------- the page */

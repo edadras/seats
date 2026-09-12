@@ -64,6 +64,16 @@ class ResolveTenantFromUser
         // about something inside it. The context has it; a controller should not have to ask twice.
         $request->attributes->set('tenant', $tenant);
 
+        /*
+         * The calendar this account's staff work in.
+         *
+         * A different question from the one the site answers, and deliberately a different setting:
+         * a venue selling to visitors from abroad may publish Gregorian dates and still run its box
+         * office in Jalali. Every panel response carries the locale string this produces, so the
+         * panel's own JavaScript writes dates the same way without being told separately.
+         */
+        \App\Support\Locale\Calendars::use($tenant->calendar);
+
         return $next($request);
     }
 }

@@ -2097,6 +2097,50 @@ paths:
               schema: { $ref: "#/components/schemas/SingleSignOn" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /account/calendar:
+    patch:
+      operationId: setAccountCalendar
+      tags: [Account]
+      summary: Which calendar this account's staff read and type dates in
+      description: |
+        Requires `account.manage` — it is the venue's decision rather than the reader's, and a clerk
+        moving the whole organisation's dates is not a setting anybody wanted. A colleague who
+        prefers another language already has their own setting for that: the language is a fact
+        about the reader, the calendar is a decision by the organisation.
+
+        Three values. `auto` follows the reader's language, which is the old behaviour and the
+        default: Persian sees Jalali and everyone else Gregorian. `persian` is Jalali for every
+        reader in every language — an Iranian theatre with an English page still programmes its
+        season in Jalali. `gregory` is Gregorian for every reader, Persian included. `jalali`,
+        `shamsi` and `gregorian` are accepted as the names people actually use; anything else
+        becomes `auto` rather than a refusal, because the worst outcome of a typo here is dates in
+        the reader's own calendar, which is where they started.
+
+        The site a buyer visits has its own setting — see `PATCH /sites/{site}` — because what a
+        visitor reads and what the box office types are two different decisions. Nothing stored
+        moves either way: everything is UTC in the database and a wall clock in the venue's own
+        zone on the way out, and a calendar is a way of writing a moment down.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [calendar]
+              properties:
+                calendar: { type: string, enum: [auto, persian, gregory] }
+      responses:
+        "200":
+          description: As stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  calendar: { type: string, enum: [auto, persian, gregory] }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /account/exports:
     get:
       operationId: listAccountExports
@@ -10640,6 +10684,15 @@ paths:
                 name: { type: string, maxLength: 120 }
                 theme_key: { type: string, maxLength: 40 }
                 locale: { type: string, maxLength: 12 }
+                calendar:
+                  type: string
+                  enum: [auto, persian, gregory]
+                  description: >-
+                    How this site writes its dates for a visitor. Separate from the language, which
+                    is a fact about the reader: a venue that programmes its season in Jalali prints
+                    Jalali on an English page too. `auto` follows the visitor's own language.
+                    `jalali`, `shamsi` and `gregorian` are accepted as the names people use, and
+                    anything unrecognised becomes `auto` rather than being refused.
                 timezone: { type: string }
                 currency: { type: string, minLength: 3, maxLength: 3 }
                 status: { type: string, enum: [draft, live] }
@@ -14967,6 +15020,13 @@ components:
             with English furniture. A language the platform does not speak is dropped rather than
             stored — the page would have translated words and untranslated buttons.
           items: { type: string }
+        calendar:
+          type: string
+          enum: [auto, persian, gregory]
+          description: >-
+            How this site writes its dates for a visitor — Jalali, Gregorian, or whichever the
+            visitor's own language implies. A separate decision from the language and from the
+            account's own setting, which is what its staff read and type.
         timezone: { type: string }
         currency: { type: string }
         brand: { $ref: "#/components/schemas/SiteBrand" }

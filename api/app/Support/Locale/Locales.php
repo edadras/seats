@@ -79,14 +79,19 @@ final class Locales
      * The ICU locale to format numbers, dates and money with.
      *
      * The numbering system and the calendar are pinned here rather than left to ICU's default for
-     * the region, so a Persian reader gets Persian digits and a Persian calendar whatever server
-     * they land on. The browser is handed this same string and honours both.
+     * the region, so a Persian reader gets Persian digits whatever server they land on. The browser
+     * is handed this same string and honours both — which is how the panel's own JavaScript writes
+     * dates in the venue's calendar without knowing anything about the setting.
+     *
+     * The calendar comes from {@see Calendars} rather than from the table below, because it is the
+     * one of the two that is not a fact about the language: a venue chooses it, and an Iranian
+     * theatre with an English page still prints ۱۴۰۵ on the ticket.
      */
     public static function icu(string $locale): string
     {
         $entry = self::ALL[$locale] ?? self::ALL[self::FALLBACK];
 
-        return $locale.'-'.$entry['region'].'-u-nu-'.$entry['digits'].'-ca-'.$entry['calendar'];
+        return $locale.'-'.$entry['region'].'-u-nu-'.$entry['digits'].'-ca-'.Calendars::current($locale);
     }
 
     /** @return array{name: string, native: string, dir: string, digits: string, region: string, calendar: string} */

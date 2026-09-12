@@ -86,6 +86,9 @@ class SiteController extends Controller
             // arrives — it is what every untranslated word on the site is written in.
             'locales' => ['sometimes', 'array', 'max:12'],
             'locales.*' => ['string', 'max:12'],
+            // How this site writes a date down. Not the same question as which language it is
+            // written in — see App\Support\Locale\Calendars.
+            'calendar' => ['sometimes', 'string', 'max:16'],
             'timezone' => ['sometimes', 'string', 'timezone'],
             'currency' => ['sometimes', 'string', 'size:3'],
             'status' => ['sometimes', 'in:draft,live'],
@@ -172,6 +175,12 @@ class SiteController extends Controller
                 fn ($code) => \App\Support\Locale\Locales::normalise($code),
                 $data['locales'],
             )))));
+        }
+
+        if (array_key_exists('calendar', $data)) {
+            // Anything unrecognised becomes `auto` rather than a refusal: the worst outcome of a
+            // typo here is dates in the reader's own calendar, which is where they started.
+            $data['calendar'] = \App\Support\Locale\Calendars::clean($data['calendar']) ?? 'auto';
         }
 
         $site->fill($data);
@@ -719,6 +728,8 @@ class SiteController extends Controller
             // The languages this site is published in, its own always among them. Only these are
             // offered in the switcher: a menu of six that means one is a menu that misleads.
             'locales' => $site->publishedLocales(),
+            // Jalali, Gregorian, or the reader's own — how this site writes its dates down.
+            'calendar' => $site->calendar ?: 'auto',
             'timezone' => $site->timezone,
             'currency' => $site->currency,
             'invoices_enabled' => (bool) $site->invoices_enabled,

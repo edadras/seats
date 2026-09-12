@@ -264,6 +264,13 @@ return [
         'findNothing' => 'لا شاشة بهذا الاسم.',
         'switchToLight' => 'التحويل إلى المظهر الفاتح',
         'switchToDark' => 'التحويل إلى المظهر الداكن',
+        'calendar' => 'التقويم',
+        'calendar_auto' => 'حسب اللغة',
+        'calendar_persian' => 'الشمسي (جلالي)',
+        'calendar_gregory' => 'الميلادي',
+        'calendarOpen' => 'اختيار تاريخ',
+        'calendarBack' => 'الشهر السابق',
+        'calendarNext' => 'الشهر التالي',
     ],
 
     'common' => [
@@ -1699,6 +1706,11 @@ return [
         'domain' => 'النطاق',
         'domainPlaceholder' => 'tickets.example.com',
         'domainHint' => 'وجّهه إلينا أولاً بسجل CNAME أو A، ثم أضِف سجل TXT الذي نعرضه لك.',
+        'calendar' => 'التقويم',
+        'calendarHint' => 'كيف يكتب هذا الموقع تواريخه للزائر. منفصل عن اللغة: قاعة تبرمج موسمها بالتقويم الشمسي تطبعه شمسيًا حتى على صفحة إنجليزية.',
+        'calendar_auto' => 'حسب لغة الزائر',
+        'calendar_persian' => 'الشمسي (جلالي)',
+        'calendar_gregory' => 'الميلادي',
     ],
 
     'bank' => [

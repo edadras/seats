@@ -28,6 +28,37 @@ class AccountController extends Controller
         private readonly AccountClosure $closure,
     ) {}
 
+    /**
+     * Which calendar this account's staff read and type dates in.
+     *
+     * Its own endpoint rather than part of a settings screen, because there is no account settings
+     * screen and this does not want one: the control sits beside the language picker in the panel's
+     * own footer, which is where somebody already goes to change how the panel reads to them.
+     *
+     * `account.manage`, because it is the venue's decision rather than the reader's. A box-office
+     * clerk should not be able to move the whole organisation's dates, and a colleague who prefers
+     * another language already has their own setting for that.
+     */
+    public function calendar(Request $request)
+    {
+        $this->authorize($request, 'account.manage');
+
+        $data = $request->validate(['calendar' => ['required', 'string', 'max:16']]);
+
+        $tenant = app(\App\Support\Tenancy\TenantContext::class)->get();
+
+        // Anything unrecognised becomes `auto` rather than a refusal: the worst outcome is dates in
+        // the reader's own calendar, which is where they started.
+        $tenant->calendar = \App\Support\Locale\Calendars::clean($data['calendar']) ?? 'auto';
+
+        app(\App\Support\Audit\AuditLogger::class)
+            ->record('account.calendar_set', $tenant, ['calendar' => $tenant->calendar]);
+
+        $tenant->save();
+
+        return response()->json(['calendar' => $tenant->calendar]);
+    }
+
     public function exports(Request $request)
     {
         $this->authorize($request, 'account.manage');

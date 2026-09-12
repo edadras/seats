@@ -87,6 +87,22 @@
 		document.documentElement.setAttribute( 'dir', this.dir );
 	};
 
+	/**
+	 * The venue's own calendar, applied on top of the language's.
+	 *
+	 * The catalogue is cached for a day and served to everybody, so it carries the calendar the
+	 * *language* implies and nothing about an account. The account's own arrives with the sign-in,
+	 * and this is where the two meet: one substitution in the ICU locale string, after which every
+	 * date and every month name on every screen follows — `Intl` does the rest.
+	 */
+	I18n.useCalendar = function ( calendar ) {
+		if ( ! calendar || 'auto' === calendar ) {
+			return;
+		}
+
+		this.icu = this.icu.replace( /-ca-[a-z]+/, '' ) + '-ca-' + calendar;
+	};
+
 	I18n.choose = function ( locale ) {
 		this.remember( locale );
 		window.location.reload();

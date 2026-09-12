@@ -58,7 +58,14 @@ class LocaleController extends Controller
             ->json([
                 'locale' => $locale,
                 'dir' => Locales::direction($locale),
-                'icu' => Locales::icu($locale),
+                /*
+                 * The language's own default calendar, never the reader's account's.
+                 *
+                 * This response is cached for a day and marked `public`, so anything account-shaped
+                 * in it would reach the next account through a shared cache. The venue's own
+                 * calendar arrives separately, on `/auth/me`, and the panel composes the two.
+                 */
+                'icu' => \App\Support\Locale\Calendars::runAs('auto', fn () => Locales::icu($locale)),
                 'messages' => $messages,
             ])
             // A day, and revalidated: catalogues change on deploy, and a stale one shows a person

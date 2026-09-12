@@ -31,7 +31,6 @@ final class Dates
         }
 
         $locale = self::locale($locale);
-        $info = Locales::info($locale);
 
         // The formatter is built by hand rather than through IntlDateFormatter::formatObject().
         // That shortcut ignores the calendar: it applies the pattern with a Gregorian calendar
@@ -42,7 +41,11 @@ final class Dates
             IntlDateFormatter::FULL,
             IntlDateFormatter::SHORT,
             $when->getTimezone(),
-            'gregory' === $info['calendar'] ? IntlDateFormatter::GREGORIAN : IntlDateFormatter::TRADITIONAL,
+            // TRADITIONAL means "whatever calendar the locale string asks for", which is where the
+            // venue's own choice arrives — see Calendars.
+            'gregory' === Calendars::current($locale)
+                ? IntlDateFormatter::GREGORIAN
+                : IntlDateFormatter::TRADITIONAL,
         );
 
         $formatter->setPattern($pattern);

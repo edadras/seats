@@ -265,6 +265,13 @@ return [
         'findNothing' => 'Kein Bildschirm dieses Namens.',
         'switchToLight' => 'Zum hellen Design wechseln',
         'switchToDark' => 'Zum dunklen Design wechseln',
+        'calendar' => 'Kalender',
+        'calendar_auto' => 'Der Sprache folgen',
+        'calendar_persian' => 'Jalali',
+        'calendar_gregory' => 'Gregorianisch',
+        'calendarOpen' => 'Datum wählen',
+        'calendarBack' => 'Vorheriger Monat',
+        'calendarNext' => 'Nächster Monat',
     ],
 
     'common' => [
@@ -1700,6 +1707,11 @@ return [
         'domain' => 'Domain',
         'domainPlaceholder' => 'tickets.example.com',
         'domainHint' => 'Zeigen Sie sie zuerst per CNAME oder A-Record auf uns und legen Sie dann den TXT-Eintrag an, den wir Ihnen zeigen.',
+        'calendar' => 'Kalender',
+        'calendarHint' => 'Wie diese Website ihre Daten für Besucher schreibt. Unabhängig von der Sprache: ein Haus, das seine Spielzeit in Jalali plant, druckt Jalali auch auf einer englischen Seite.',
+        'calendar_auto' => 'Der Sprache des Besuchers folgen',
+        'calendar_persian' => 'Jalali',
+        'calendar_gregory' => 'Gregorianisch',
     ],
 
     'bank' => [

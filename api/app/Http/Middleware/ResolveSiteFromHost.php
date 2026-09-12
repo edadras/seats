@@ -42,6 +42,15 @@ class ResolveSiteFromHost
         $request->attributes->set('site', $site);
 
         /*
+         * The calendar this site writes its dates in.
+         *
+         * Bound here rather than where a date is printed, because every page of a hosted site goes
+         * through this and none of them should have to know: a programme, a basket, a confirmation
+         * and the ticket that comes out of it are one venue's dates and are written one way.
+         */
+        \App\Support\Locale\Calendars::use($site->calendar);
+
+        /*
          * Which link they arrived on, remembered here rather than at the checkout.
          *
          * Here because it is the only place every page of a hosted site goes through, and a

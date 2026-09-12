@@ -350,6 +350,9 @@ Route::prefix('v1')->group(function () {
         Route::put('sso', [SsoController::class, 'save'])->middleware('throttle:20,60,sso-save');
         Route::delete('sso', [SsoController::class, 'destroy']);
 
+        // Which calendar this account's staff read and type dates in. The site's own is set on the
+        // site, because what a buyer reads and what the box office types are two decisions.
+        Route::patch('account/calendar', [AccountController::class, 'calendar']);
         Route::get('account/exports', [AccountController::class, 'exports']);
         Route::post('account/exports', [AccountController::class, 'export'])
             ->middleware('throttle:3,60,account-export');

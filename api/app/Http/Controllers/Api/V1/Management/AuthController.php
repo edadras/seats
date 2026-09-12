@@ -135,6 +135,10 @@ class AuthController extends Controller
                 'status' => $tenant->status,
                 'timezone' => $tenant->timezone,
                 'locale' => $tenant->locale,
+                // Which calendar this account's staff read and type dates in. Here rather
+                // than in the language catalogue, which is cached publicly and must carry
+                // nothing about an account — see LocaleController.
+                'calendar' => $tenant->calendar ?: 'auto',
             ],
             'role' => $membership->role,
             'permissions' => $this->permissionsFor($membership, $tenant),
@@ -202,6 +206,10 @@ class AuthController extends Controller
                 'status' => $tenant?->status,
                 'timezone' => $tenant?->timezone,
                 'locale' => $tenant?->locale,
+                // Which calendar this account's staff read and type dates in. Here rather
+                // than in the language catalogue, which is cached publicly and must carry
+                // nothing about an account — see LocaleController.
+                'calendar' => $tenant?->calendar ?: 'auto',
             ],
             'role' => $membership?->role,
             'permissions' => $membership ? $this->permissionsFor($membership, $tenant) : [],
@@ -278,6 +286,10 @@ class AuthController extends Controller
                 'status' => $tenant->status,
                 'timezone' => $tenant->timezone,
                 'locale' => $tenant->locale,
+                // Which calendar this account's staff read and type dates in. Here rather
+                // than in the language catalogue, which is cached publicly and must carry
+                // nothing about an account — see LocaleController.
+                'calendar' => $tenant->calendar ?: 'auto',
             ],
             'role' => $membership->role,
             'permissions' => $this->permissionsFor($membership, $tenant),
@@ -316,6 +328,10 @@ class AuthController extends Controller
                 'status' => $tenant?->status,
                 'timezone' => $tenant?->timezone,
                 'locale' => $tenant?->locale,
+                // Which calendar this account's staff read and type dates in. Here rather
+                // than in the language catalogue, which is cached publicly and must carry
+                // nothing about an account — see LocaleController.
+                'calendar' => $tenant?->calendar ?: 'auto',
             ],
             'role' => $membership?->role,
             'permissions' => $this->gate->permissions($request),

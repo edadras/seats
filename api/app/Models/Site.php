@@ -20,6 +20,7 @@ class Site extends Model
 
     protected $fillable = [
         'tenant_id', 'api_client_id', 'name', 'theme_key', 'site_theme_id', 'locale', 'locales', 'timezone',
+        'calendar',
         'currency', 'brand', 'status', 'google_signin', 'published_at',
         'invoices_enabled', 'legal_name', 'tax_number', 'billing_address',
         'invoice_footer', 'invoice_prefix', 'measurement',

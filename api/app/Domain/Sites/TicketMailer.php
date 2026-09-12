@@ -85,7 +85,18 @@ class TicketMailer
         }
 
         try {
-            Mail::to($email)->send(new TicketsIssued($site, $order, $tickets));
+            /*
+             * Sent in the site's own calendar, whoever happens to be sending it.
+             *
+             * Mail leaves from a queue worker, and the worker's process has no request in it — so
+             * nothing has bound a calendar and the last booking's would otherwise still be in
+             * force. `runAs` puts it back afterwards, which is what makes a run of a hundred
+             * confirmations for four venues come out right.
+             */
+            \App\Support\Locale\Calendars::runAs(
+                $site->calendar,
+                fn () => Mail::to($email)->send(new TicketsIssued($site, $order, $tickets)),
+            );
         } catch (\Throwable $e) {
             Log::warning('Could not email tickets.', [
                 'order' => $order->external_order_id,
