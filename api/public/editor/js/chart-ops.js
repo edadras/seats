@@ -190,6 +190,71 @@
 	};
 
 	/**
+	 * Does a polygon touch an object at all?
+	 *
+	 * What a selection box takes. It used to take whatever had its *centre* inside, which is a rule
+	 * nobody has ever been taught: a box dragged across half a section, or along most of a row,
+	 * came back with nothing selected and no way to tell why. Touching is the rule every drawing
+	 * program uses and the one people try first.
+	 *
+	 * Three ways to touch, and all three are needed: the box may be inside the object (a small box
+	 * within a large section), the object may be inside the box (the ordinary case), or their edges
+	 * may simply cross (a lasso drawn through a row).
+	 */
+	Ops.touches = function ( polygon, object ) {
+		var box = Ops.bounds( object );
+		var corners = [
+			[ box.x, box.y ],
+			[ box.x + box.width, box.y ],
+			[ box.x + box.width, box.y + box.height ],
+			[ box.x, box.y + box.height ],
+		];
+
+		var inside = polygon.some( function ( point ) {
+			return point[ 0 ] >= box.x && point[ 0 ] <= box.x + box.width &&
+				point[ 1 ] >= box.y && point[ 1 ] <= box.y + box.height;
+		} );
+
+		if ( inside ) {
+			return true;
+		}
+
+		var covered = corners.some( function ( corner ) {
+			return Ops.pointInPolygon( { x: corner[ 0 ], y: corner[ 1 ] }, polygon );
+		} );
+
+		if ( covered ) {
+			return true;
+		}
+
+		for ( var i = 0, j = polygon.length - 1; i < polygon.length; j = i++ ) {
+			for ( var k = 0, l = corners.length - 1; k < corners.length; l = k++ ) {
+				if ( segmentsCross( polygon[ j ], polygon[ i ], corners[ l ], corners[ k ] ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	};
+
+	/** Do two line segments cross? Orientation signs, which need no division and so cannot divide by zero. */
+	function segmentsCross( a, b, c, d ) {
+		var side = function ( p, q, r ) {
+			var value = ( q[ 1 ] - p[ 1 ] ) * ( r[ 0 ] - q[ 0 ] ) - ( q[ 0 ] - p[ 0 ] ) * ( r[ 1 ] - q[ 1 ] );
+
+			return 0 === value ? 0 : ( value > 0 ? 1 : 2 );
+		};
+
+		var one = side( a, b, c );
+		var two = side( a, b, d );
+		var three = side( c, d, a );
+		var four = side( c, d, b );
+
+		return one !== two && three !== four;
+	}
+
+	/**
 	 * The row whose *label* is under the pointer.
 	 *
 	 * Selecting a row by its name is how anybody would try to do it — it is the only part of a row

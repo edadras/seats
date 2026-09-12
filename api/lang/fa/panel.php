@@ -614,6 +614,10 @@ return [
     'prompt' => [
         'sectionName' => 'نام سکشن',
         'sectionDefault' => 'سکشن :number',
+        'text' => 'متن',
+        'textDefault' => 'برچسب',
+        'picture' => 'تصویر',
+        'pictureAddress' => 'نشانی تصویر',
     ],
 
     'floors' => [
@@ -717,6 +721,7 @@ return [
         'text' => 'متن',
         'shape' => 'شکل',
         'image' => 'تصویر',
+        'picture' => 'تصویر',
         'icon' => 'نماد',
         'objects' => ':count شیء',
         'categories' => 'دسته‌ها',

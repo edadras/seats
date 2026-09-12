@@ -965,6 +965,24 @@
 .issue .icon { flex: none; margin-block-start: 1px; }
 
 /* A read-only line: a fact about the selection rather than something to change. */
+/*
+ * The line at the top of a frozen panel. Every control below it is disabled; this says why, once,
+ * rather than leaving somebody to work it out from a field that will not take a number.
+ */
+.insp-locked {
+	display: flex;
+	align-items: center;
+	gap: var(--s-2);
+	margin-block-end: var(--s-3);
+	padding: var(--s-2) var(--s-3);
+	border-radius: var(--r-sm);
+	background: var(--surface-sunken);
+	color: var(--text-secondary);
+}
+
+/* A picture field in the inspector is as wide as the panel: it is a preview, not a text box. */
+.insp-field .media-field { grid-column: 1 / -1; }
+
 .insp-static {
 	padding-block: 0.15rem;
 	font-size: var(--text-sm);

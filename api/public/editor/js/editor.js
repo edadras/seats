@@ -102,6 +102,25 @@
 		this.onSelectionChange = options.onSelectionChange || function () {};
 		this.onContextChange = options.onContextChange || function () {};
 		this.onStatus = options.onStatus || function () {};
+
+		/*
+		 * Asking somebody a question, and asking them for a picture.
+		 *
+		 * Both are hooks rather than calls to `window.prompt`, because a prompt is a grey box in
+		 * the browser's own language with no place for a preview, and because a picture should be
+		 * dragged in or chosen from the library the platform already has — typing an address is
+		 * the fallback, not the way. The panel supplies its own modal; the defaults here keep the
+		 * editor usable on its own, which is how it is driven in a unit test.
+		 *
+		 * Both are asynchronous, so nothing may assume the answer is back when they return.
+		 */
+		this.ask = options.ask || function ( question, value, done ) {
+			done( window.prompt( question, value ) );
+		};
+
+		this.pickPicture = options.pickPicture || function ( done ) {
+			done( window.prompt( t( 'panel.prompt.pictureAddress' ) ) );
+		};
 	}
 
 	Editor.prototype.init = function () {
@@ -110,6 +129,31 @@
 		this.resize();
 
 		return this;
+	};
+
+	/**
+	 * Let go of the window.
+	 *
+	 * The keyboard is bound to the window rather than to the canvas — Delete and Ctrl+Z have to
+	 * work wherever the pointer happens to be — and a listener on the window outlives the screen
+	 * that added it. A designer closed and opened again left the first editor listening: it went
+	 * on taking every keystroke, editing a chart nobody could see, and writing its answers into
+	 * the status line of the designer that had replaced it. "This chart is locked" under a chart
+	 * that is not locked is where that was finally noticed.
+	 *
+	 * The callbacks are dropped as well as the listeners: whatever still holds this editor can no
+	 * longer reach the screen through it.
+	 */
+	Editor.prototype.destroy = function () {
+		window.removeEventListener( 'keydown', this.keyDown );
+		window.removeEventListener( 'keyup', this.keyUp );
+
+		var nothing = function () {};
+
+		this.onChange = nothing;
+		this.onSelectionChange = nothing;
+		this.onContextChange = nothing;
+		this.onStatus = nothing;
 	};
 
 	/* ------------------------------------------------------------------------- context */
@@ -206,7 +250,19 @@
 		this.onChange( this.chart );
 	};
 
+	/**
+	 * Undo and redo are edits too.
+	 *
+	 * They looked like navigation and were not guarded, so Ctrl+Z on a locked chart put the whole
+	 * thing back a step — the one way left to change a chart that says it cannot be changed.
+	 */
 	Editor.prototype.undo = function () {
+		if ( this.locked ) {
+			this.onStatus( t( 'panel.hints.readOnly' ) );
+
+			return;
+		}
+
 		var previous = this.history.undo( this.chart );
 
 		if ( previous ) {
@@ -215,6 +271,12 @@
 	};
 
 	Editor.prototype.redo = function () {
+		if ( this.locked ) {
+			this.onStatus( t( 'panel.hints.readOnly' ) );
+
+			return;
+		}
+
 		var next = this.history.redo( this.chart );
 
 		if ( next ) {
@@ -906,32 +968,75 @@
 		ctx.restore();
 	};
 
+	/**
+	 * A picture on the plan — usually a floor plan being traced over.
+	 *
+	 * Three things this has to survive, and it survived none of them:
+	 *
+	 * **The address changing.** The cache was keyed by the object alone, so a picture swapped in
+	 * the panel went on drawing the one it replaced until the page was reloaded. It is keyed by
+	 * the address now, which is the thing that decides what is drawn.
+	 *
+	 * **The picture not being there.** A file that 404s, a host that is down, an address with a
+	 * typo in it: the browser reports such an image as `complete` with no width, and `drawImage`
+	 * on it *throws*. That threw inside the repaint, which abandoned the rest of the frame and
+	 * every step that was waiting behind it — the plan stopped drawing and the tool in hand stopped
+	 * answering, with one line in the console to explain it.
+	 *
+	 * **Not being there yet.** A frame while it loads, so the object can be seen and moved rather
+	 * than being an invisible rectangle somebody has to remember the position of.
+	 */
 	Editor.prototype.drawImage = function ( ctx, object ) {
-		var cached = this.imageCache && this.imageCache[ object.key ];
+		this.imageCache = this.imageCache || {};
 
-		if ( ! cached ) {
-			this.imageCache = this.imageCache || {};
+		var cached = this.imageCache[ object.key ];
+		var self = this;
+
+		if ( ! cached || cached.href !== object.href ) {
 			var image = new window.Image();
-			var self = this;
 
-			image.onload = function () {
+			cached = this.imageCache[ object.key ] = { href: object.href, node: image, failed: false };
+
+			image.onload = function () { self.draw(); };
+			image.onerror = function () {
+				cached.failed = true;
 				self.draw();
 			};
 
 			image.src = object.href;
-			this.imageCache[ object.key ] = image;
-
-			return;
 		}
 
-		if ( ! cached.complete ) {
-			return;
-		}
+		var ready = ! cached.failed && cached.node.complete && cached.node.naturalWidth > 0;
 
 		ctx.save();
 		ctx.globalAlpha *= object.opacity == null ? 1 : object.opacity;
-		ctx.drawImage( cached, object.x, object.y, object.width, object.height );
+
+		if ( ready ) {
+			ctx.drawImage( cached.node, object.x, object.y, object.width, object.height );
+		} else {
+			this.drawMissingPicture( ctx, object );
+		}
+
 		ctx.restore();
+	};
+
+	/** Where a picture would be: a dashed frame with a cross through it, and no words to translate. */
+	Editor.prototype.drawMissingPicture = function ( ctx, object ) {
+		var colors = this.colors();
+
+		ctx.strokeStyle = colors.bounds;
+		ctx.lineWidth = 1 / this.view.scale;
+		ctx.setLineDash( [ 6 / this.view.scale, 4 / this.view.scale ] );
+		ctx.strokeRect( object.x, object.y, object.width, object.height );
+
+		ctx.setLineDash( [] );
+		ctx.strokeStyle = colors.dimmed;
+		ctx.beginPath();
+		ctx.moveTo( object.x, object.y );
+		ctx.lineTo( object.x + object.width, object.y + object.height );
+		ctx.moveTo( object.x + object.width, object.y );
+		ctx.lineTo( object.x, object.y + object.height );
+		ctx.stroke();
 	};
 
 	/** The focal point: a crosshair, drawn last so it is never hidden behind seating. */
@@ -1149,6 +1254,20 @@
 			return;
 		}
 
+		/*
+		 * A locked chart may be looked at, moved around and selected — and not drawn on.
+		 *
+		 * Said here rather than at the commit, which is where it used to be said: a row drawn on a
+		 * locked chart was rubber-banded across the plan, refused when the pointer came up, and the
+		 * one line explaining why was immediately overwritten by the select tool's own hint. What
+		 * was left was a tool that drew nothing and said nothing.
+		 */
+		if ( this.locked && ( DRAW_TOOLS.indexOf( this.tool ) !== -1 || 'focalPoint' === this.tool ) ) {
+			this.onStatus( t( 'panel.hints.readOnly' ) );
+
+			return;
+		}
+
 		if ( 'focalPoint' === this.tool ) {
 			var self = this;
 			this.mutate( function ( chart ) {
@@ -1209,7 +1328,7 @@
 				this.seatSelection = [];
 			}
 
-			this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
+			this.startMove( point );
 			this.onSelectionChange();
 			this.draw();
 
@@ -1228,7 +1347,7 @@
 				this.selection = [];
 			}
 
-			this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
+			this.startMove( point );
 			this.onSelectionChange();
 			this.draw();
 
@@ -1243,7 +1362,7 @@
 				this.seatSelection = [];
 			}
 
-			this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
+			this.startMove( point );
 			this.onSelectionChange();
 			this.draw();
 
@@ -1258,6 +1377,26 @@
 
 		this.marquee = { x1: point.x, y1: point.y, x2: point.x, y2: point.y };
 		this.draw();
+	};
+
+	/**
+	 * Begin dragging what was just selected — unless the chart is locked.
+	 *
+	 * A drag is the one edit that never went through `mutate`: it writes straight into the objects
+	 * on every pointermove, for the good reason that a hundred history entries per drag would make
+	 * undo useless. That is also how a locked chart — including a published one, opened read-only —
+	 * could be rearranged with the pointer and saved, with the padlock lit the whole time.
+	 *
+	 * Selecting is still allowed while locked: looking at what a row is set to is not an edit.
+	 */
+	Editor.prototype.startMove = function ( point ) {
+		if ( this.locked ) {
+			this.onStatus( t( 'panel.hints.readOnly' ) );
+
+			return;
+		}
+
+		this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
 	};
 
 	Editor.prototype.onPointerMove = function ( event, point ) {
@@ -1395,12 +1534,19 @@
 
 	/** Select every object of one kind — the "select same type" tool. */
 	Editor.prototype.selectSameType = function ( type, additive ) {
+		var self = this;
 		var container = this.container();
 		var keys = ( container.objects || [] )
 			.filter( function ( object ) { return object.type === type; } )
 			.map( function ( object ) { return object.key; } );
 
-		this.selection = additive ? this.selection.concat( keys ) : keys;
+		// Concatenating would list a key twice when the type is added to a selection that already
+		// has some of it, and a key listed twice takes two clicks to remove.
+		this.selection = additive
+			? this.selection.concat( keys.filter( function ( key ) {
+				return self.selection.indexOf( key ) === -1;
+			} ) )
+			: keys;
 		this.seatSelection = [];
 		this.onSelectionChange();
 		this.draw();
@@ -1439,14 +1585,13 @@
 			return;
 		}
 
+		// Whatever the box or the lasso touched — see Ops.touches for why that is the rule.
 		( container.objects || [] ).forEach( function ( object ) {
 			if ( 'all' !== self.layer && ( object.layer || 'interactive' ) !== self.layer ) {
 				return;
 			}
 
-			var center = Ops.center( object );
-
-			if ( Ops.pointInPolygon( center, polygon ) && self.selection.indexOf( object.key ) === -1 ) {
+			if ( Ops.touches( polygon, object ) && self.selection.indexOf( object.key ) === -1 ) {
 				self.selection.push( object.key );
 			}
 		} );
@@ -1504,28 +1649,54 @@
 		var self = this;
 		var container = this.container();
 
-		this.mutate( function ( chart ) {
-			var object;
-
-			if ( 'table' === self.tool ) {
-				object = Chart.newTable( chart, 'T' + ( countOfType( container, 'table' ) + 1 ), {
-					x: Chart.snap( point.x, self.grid ),
-					y: Chart.snap( point.y, self.grid ),
-				} );
-			} else if ( 'text' === self.tool ) {
-				var text = window.prompt( 'Text', 'Label' );
-
+		// The words on a label are asked for before anything is added, and the answer may take a
+		// dialog and a moment — so the rest of the placement waits inside the callback.
+		if ( 'text' === this.tool ) {
+			this.ask( t( 'panel.prompt.text' ), t( 'panel.prompt.textDefault' ), function ( text ) {
 				if ( ! text ) {
+					self.setTool( 'select' );
+
 					return;
 				}
 
-				object = Chart.newText( chart, text, { x: point.x, y: point.y } );
-			} else {
-				object = Chart.newIcon( chart, self.iconName || 'wheelchair', { x: point.x, y: point.y } );
+				self.place( container, function ( chart ) {
+					return Chart.newText( chart, text, { x: point.x, y: point.y } );
+				} );
+			} );
+
+			return;
+		}
+
+		this.place( container, function ( chart ) {
+			return 'table' === self.tool
+				? Chart.newTable( chart, 'T' + ( countOfType( container, 'table' ) + 1 ), {
+					x: Chart.snap( point.x, self.grid ),
+					y: Chart.snap( point.y, self.grid ),
+				} )
+				: Chart.newIcon( chart, self.iconName || 'wheelchair', { x: point.x, y: point.y } );
+		} );
+	};
+
+	/**
+	 * Put a newly made object on the plan, select it, and go back to the select tool.
+	 *
+	 * The tail of every drawing tool, and the same tail whether the tool finished on the pointer
+	 * coming up or several seconds later when somebody chose a picture — which is why it is a
+	 * function rather than three copies that have to be kept in step.
+	 */
+	Editor.prototype.place = function ( container, build ) {
+		var self = this;
+
+		this.mutate( function ( chart ) {
+			var object = build( chart );
+
+			if ( ! object ) {
+				return;
 			}
 
 			container.objects.push( object );
 			self.selection = [ object.key ];
+			self.seatSelection = [];
 		} );
 
 		this.setTool( 'select' );
@@ -1545,35 +1716,39 @@
 		var points = this.draft.points;
 		var container = this.container();
 
-		this.mutate( function ( chart ) {
-			var object;
-
-			if ( 'section' === self.tool ) {
-				if ( points.length < 3 ) {
-					return;
-				}
-
-				var label = window.prompt(
-					t( 'panel.prompt.sectionName' ),
-					t( 'panel.prompt.sectionDefault', { number: countOfType( container, 'section' ) + 1 } )
-				);
-
-				if ( ! label ) {
-					return;
-				}
-
-				object = Chart.newSection( chart, label, points );
-			} else {
-				object = Chart.newShape( chart, 'line', { points: points, layer: 'background' } );
-			}
-
-			container.objects.push( object );
-			self.selection = [ object.key ];
-		} );
-
 		this.draft = null;
-		this.setTool( 'select' );
-		this.onSelectionChange();
+
+		if ( 'section' !== this.tool ) {
+			this.place( container, function ( chart ) {
+				return Chart.newShape( chart, 'line', { points: points, layer: 'background' } );
+			} );
+
+			return;
+		}
+
+		if ( points.length < 3 ) {
+			this.setTool( 'select' );
+			this.draw();
+
+			return;
+		}
+
+		this.ask(
+			t( 'panel.prompt.sectionName' ),
+			t( 'panel.prompt.sectionDefault', { number: countOfType( container, 'section' ) + 1 } ),
+			function ( label ) {
+				if ( ! label ) {
+					self.setTool( 'select' );
+					self.draw();
+
+					return;
+				}
+
+				self.place( container, function ( chart ) {
+					return Chart.newSection( chart, label, points );
+				} );
+			}
+		);
 	};
 
 	Editor.prototype.commitDraft = function () {
@@ -1590,6 +1765,33 @@
 			this.draw();
 
 			return; // A stray click, not a drawn object.
+		}
+
+		/*
+		 * A picture is chosen, not typed.
+		 *
+		 * This used to be `window.prompt( 'Image URL' )` — an untranslated grey box asking a theatre
+		 * to go and find a web host before they could trace over their own floor plan. The platform
+		 * has had a media library since; the panel hands one in, so the frame that was just dragged
+		 * out waits while somebody drops a file onto it.
+		 */
+		if ( 'image' === this.tool ) {
+			this.pickPicture( function ( href ) {
+				if ( ! href ) {
+					self.setTool( 'select' );
+					self.draw();
+
+					return;
+				}
+
+				self.place( container, function ( chart ) {
+					return Chart.newImage( chart, href, {
+						x: box.x, y: box.y, width: box.width, height: box.height,
+					} );
+				} );
+			} );
+
+			return;
 		}
 
 		this.mutate( function ( chart ) {
@@ -1610,18 +1812,6 @@
 
 				case 'booth':
 					object = Chart.newBooth( chart, 'Booth ' + ( countOfType( container, 'booth' ) + 1 ), {
-						x: box.x, y: box.y, width: box.width, height: box.height,
-					} );
-					break;
-
-				case 'image':
-					var href = window.prompt( 'Image URL' );
-
-					if ( ! href ) {
-						return;
-					}
-
-					object = Chart.newImage( chart, href, {
 						x: box.x, y: box.y, width: box.width, height: box.height,
 					} );
 					break;
@@ -1679,7 +1869,8 @@
 	Editor.prototype.bindKeyboard = function () {
 		var self = this;
 
-		window.addEventListener( 'keydown', function ( event ) {
+		// Kept on the instance so `destroy` can take them off the window again.
+		this.keyDown = function ( event ) {
 			// Never hijack typing in the property panel.
 			if ( /^(INPUT|TEXTAREA|SELECT)$/.test( event.target.tagName ) ) {
 				return;
@@ -1776,14 +1967,17 @@
 					self.moveSelection( nudges[ event.key ][ 0 ] * step, nudges[ event.key ][ 1 ] * step );
 				} );
 			}
-		} );
+		};
 
-		window.addEventListener( 'keyup', function ( event ) {
+		this.keyUp = function ( event ) {
 			if ( ' ' === event.key ) {
 				self.spaceHeld = false;
 				self.canvas.style.cursor = 'select' === self.tool ? 'default' : 'crosshair';
 			}
-		} );
+		};
+
+		window.addEventListener( 'keydown', this.keyDown );
+		window.addEventListener( 'keyup', this.keyUp );
 	};
 
 	Editor.prototype.copy = function () {

@@ -614,6 +614,10 @@ return [
     'prompt' => [
         'sectionName' => 'Nome del settore',
         'sectionDefault' => 'Settore :number',
+        'text' => 'Testo',
+        'textDefault' => 'Etichetta',
+        'picture' => 'Immagine',
+        'pictureAddress' => 'Indirizzo dell’immagine',
     ],
 
     'floors' => [
@@ -717,6 +721,7 @@ return [
         'text' => 'Testo',
         'shape' => 'Forma',
         'image' => 'Immagine',
+        'picture' => 'Immagine',
         'icon' => 'Icona',
         'objects' => ':count oggetti',
         'categories' => 'Categorie',

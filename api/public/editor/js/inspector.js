@@ -26,6 +26,16 @@
 		this.onManageCategories = this.options.onManageCategories || function () {};
 		this.seatViews = this.options.seatViews || function () { return {}; };
 		this.onSeatViewChange = this.options.onSeatViewChange || function () {};
+
+		/*
+		 * A picture field, handed in by whoever mounted this.
+		 *
+		 * The inspector does not know the panel — it is given an editor and a place to draw — so
+		 * the media library reaches it as a function that builds one field. Without it the two
+		 * picture fields fall back to a plain address box, which is what they were, and the editor
+		 * still runs on its own.
+		 */
+		this.media = this.options.media || null;
 	}
 
 	Inspector.prototype.render = function () {
@@ -34,6 +44,11 @@
 
 		this.root.innerHTML = '';
 
+		this.paint( objects, seats );
+		this.follow();
+	};
+
+	Inspector.prototype.paint = function ( objects, seats ) {
 		if ( seats.length && ! objects.length ) {
 			this.renderSeats( seats );
 
@@ -66,6 +81,38 @@
 			case 'icon': this.renderIcon( object ); break;
 			default: this.renderChart();
 		}
+	};
+
+	/**
+	 * The panel follows the padlock.
+	 *
+	 * Every field here writes through `editor.mutate`, which refuses while the chart is locked —
+	 * quietly, with one line in the status bar. So a locked chart used to show twenty-five live
+	 * controls that took a number, kept showing it, and changed nothing: the panel said one thing
+	 * and the plan another, and the first anybody knew of it was the value coming back on reload.
+	 *
+	 * Done in one sweep at the end rather than by passing a flag through forty field calls, so a
+	 * field written next year is covered without anybody remembering to. The one exception is the
+	 * photograph a buyer sees from a section: it is not part of the chart, it saves on its own, and
+	 * it is editable whether or not the geometry is frozen.
+	 */
+	Inspector.prototype.follow = function () {
+		if ( ! this.editor.locked ) {
+			return;
+		}
+
+		this.root.querySelectorAll( 'input, select, textarea, button' ).forEach( function ( control ) {
+			if ( control.closest( '[data-unlocked]' ) ) {
+				return;
+			}
+
+			control.disabled = true;
+		} );
+
+		var note = el( 'p', 'insp-locked hint' );
+		note.innerHTML = icon( 'lock', { size: 13 } );
+		note.appendChild( document.createTextNode( t( 'panel.hints.readOnly' ) ) );
+		this.root.insertBefore( note, this.root.firstChild );
 	};
 
 	/* --------------------------------------------------------------------- chart level */
@@ -402,7 +449,14 @@
 
 		view.appendChild( el( 'p', 'hint', t( 'panel.inspector.viewHint' ) ) );
 
-		this.text( view, t( 'panel.inspector.viewUrl' ), held.url, function ( value ) {
+		/*
+		 * Not part of the chart, and so not frozen with it: `data-unlocked` keeps this field alive
+		 * when the padlock disables everything else here. It saves the moment it changes, which is
+		 * the whole reason it can be edited on a published chart at all.
+		 */
+		view.setAttribute( 'data-unlocked', '' );
+
+		this.picture( view, t( 'panel.inspector.viewUrl' ), held.url, function ( value ) {
 			held.url = value;
 			self.onSeatViewChange();
 		} );
@@ -680,6 +734,13 @@
 
 		var body = this.section( t( 'panel.inspector.image' ) );
 
+		// The picture itself, which had no field at all: a floor plan dropped in the wrong one had
+		// to be deleted and drawn again, because the only place its address was ever asked for was
+		// the moment it was created.
+		this.picture( body, t( 'panel.inspector.picture' ), image.href, function ( value ) {
+			self.change( function () { image.href = value; } );
+		} );
+
 		this.number( body, t( 'panel.inspector.width' ), image.width, 10, 20000, 1, function ( value ) {
 			self.change( function () { image.width = value; } );
 		}, 'pt' );
@@ -939,6 +1000,26 @@
 
 		input.addEventListener( 'input', function () { onChange( input.value ); } );
 		field.appendChild( input );
+		body.appendChild( field );
+	};
+
+	/**
+	 * A picture: dragged onto the panel, chosen from the library, or typed in as an address.
+	 *
+	 * Falls back to a plain text box when no media field was handed in, so the inspector keeps
+	 * working in a page that has not loaded the library.
+	 */
+	Inspector.prototype.picture = function ( body, label, value, onChange ) {
+		if ( ! this.media ) {
+			this.text( body, label, value, onChange );
+
+			return;
+		}
+
+		var field = el( 'div', 'insp-field insp-field--wide' );
+
+		field.appendChild( el( 'label', '', label ) );
+		field.appendChild( this.media( { kind: 'image', value: value || '' }, onChange ) );
 		body.appendChild( field );
 	};
 

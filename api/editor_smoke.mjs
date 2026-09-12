@@ -28,7 +28,21 @@ const browser = await chromium.launch( {
 const page = await browser.newPage( { viewport: { width: 1600, height: 950 } } );
 const errors = [];
 page.on( 'pageerror', ( e ) => errors.push( e.message ) );
-page.on( 'console', ( m ) => { if ( m.type() === 'error' ) errors.push( m.text() ); } );
+page.on( 'console', ( m ) => {
+	// One address in this run is deliberately unreachable — the check that a missing picture draws
+	// a frame instead of throwing needs a picture that cannot be fetched. The browser logs that it
+	// could not be loaded, which is the truth and not a fault in the panel.
+	const from = ( m.location() || {} ).url || '';
+
+	if ( 'error' === m.type() && ! /example\.invalid/.test( m.text() + ' ' + from ) ) {
+		errors.push( m.text() );
+	}
+} );
+
+// The designer used to ask for a picture and for a label through `window.prompt`. Nothing on this
+// screen may open one now, so every dialog the browser raises is recorded and counted.
+const prompts = [];
+page.on( 'dialog', async ( d ) => { prompts.push( d.type() + ': ' + d.message() ); await d.dismiss(); } );
 
 console.log( 'Panel: sign in' );
 await page.goto( BASE, { waitUntil: 'networkidle' } );
@@ -345,6 +359,213 @@ await page.waitForTimeout( 300 );
 
 check( 'and it comes back', ( await palette() ) === openHeight );
 
+/*
+ * The padlock, and everything it is supposed to hold.
+ *
+ * The lock was only ever checked in `mutate`, and a drag does not go through `mutate` — it writes
+ * into the objects on every pointermove, so that one drag is one undo. A locked chart, a published
+ * one included, could therefore be rearranged with the pointer and saved with the padlock lit. Undo
+ * was the same kind of hole: it looks like navigation and rewrites the whole chart.
+ */
+console.log( 'Designer: a locked chart is locked' );
+await page.click( '#dz-lock' );
+await page.waitForTimeout( 400 );
+
+const anyRow = () => page.evaluate( () => {
+	const editor = window.__editor;
+	const row = editor.floor().objects
+		.filter( ( o ) => o.type === 'section' )[ 0 ].objects.find( ( o ) => o.type === 'row' );
+
+	return { key: row.key, x: row.x, y: row.y };
+} );
+
+const rowBefore = await anyRow();
+const rowSpot = await page.evaluate( ( key ) => {
+	const editor = window.__editor;
+	const row = editor.floor().objects
+		.filter( ( o ) => o.type === 'section' )[ 0 ].objects.find( ( o ) => o.key === key );
+	const rect = editor.canvas.getBoundingClientRect();
+
+	editor.enterSection( editor.floor().objects.filter( ( o ) => o.type === 'section' )[ 0 ].key );
+	editor.selection = [ key ];
+	editor.onSelectionChange();
+	editor.draw();
+
+	return {
+		x: rect.left + editor.view.x + row.x * editor.view.scale,
+		y: rect.top + editor.view.y + row.y * editor.view.scale,
+	};
+}, rowBefore.key );
+
+await page.mouse.move( rowSpot.x, rowSpot.y );
+await page.mouse.down();
+await page.mouse.move( rowSpot.x + 70, rowSpot.y + 50, { steps: 8 } );
+await page.mouse.up();
+await page.waitForTimeout( 300 );
+
+const rowAfter = await anyRow();
+check( 'a locked row cannot be dragged anywhere',
+	rowBefore.x === rowAfter.x && rowBefore.y === rowAfter.y,
+	`${ rowBefore.x },${ rowBefore.y } → ${ rowAfter.x },${ rowAfter.y }` );
+check( 'and the status line says why',
+	/locked/i.test( await page.locator( '#dz-status' ).innerText() ),
+	await page.locator( '#dz-status' ).innerText() );
+
+const historyBefore = await page.evaluate( () => window.__editor.history.past.length );
+await page.keyboard.press( 'Control+z' );
+await page.waitForTimeout( 300 );
+check( 'undo is an edit too, and refuses',
+	historyBefore === await page.evaluate( () => window.__editor.history.past.length ) );
+
+const toolPalette = await page.evaluate( () => {
+	const tools = [ ...document.querySelectorAll( '.tools [data-tool]' ) ];
+
+	return {
+		off: tools.filter( ( t ) => t.disabled ).map( ( t ) => t.dataset.tool ),
+		on: tools.filter( ( t ) => ! t.disabled ).map( ( t ) => t.dataset.tool ),
+	};
+} );
+
+check( 'the tools that draw are put away',
+	toolPalette.off.includes( 'row' ) && toolPalette.off.includes( 'image' ),
+	toolPalette.off.join( ', ' ) );
+check( 'and the ones that only look are not', [ 'select', 'lasso', 'sameType', 'pan' ]
+	.every( ( tool ) => toolPalette.on.includes( tool ) ), toolPalette.on.join( ', ' ) );
+check( 'so is undo, and delete', await page.locator( '#dz-undo' ).isDisabled() &&
+	await page.locator( '#dz-delete' ).isDisabled() );
+
+const frozen = await page.evaluate( () => {
+	const controls = [ ...document.querySelectorAll( '#dz-inspector input, #dz-inspector select, #dz-inspector button' ) ];
+
+	return { total: controls.length, live: controls.filter( ( c ) => ! c.disabled ).length };
+} );
+
+check( 'every field in the panel is disabled rather than silently refusing',
+	frozen.total > 0 && 0 === frozen.live, `${ frozen.live } of ${ frozen.total } still live` );
+check( 'and one line at the top says why',
+	1 === await page.locator( '#dz-inspector .insp-locked' ).count() );
+
+await page.click( '#dz-lock' );
+await page.waitForTimeout( 400 );
+check( 'unlocking gives them all back',
+	! ( await page.locator( '#dz-undo' ).isDisabled() ) &&
+	! ( await page.locator( '.tools [data-tool=row]' ).isDisabled() ) &&
+	0 === await page.locator( '#dz-inspector .insp-locked' ).count() );
+
+await page.click( '#dz-exit' );
+await page.waitForTimeout( 400 );
+
+/*
+ * A picture is chosen, not typed.
+ *
+ * The image tool used to call `window.prompt( 'Image URL' )` — untranslated, unstyled, and asking a
+ * theatre to find a web host before they could trace their own floor plan. The plan's pictures now
+ * use the field the rest of the platform uses.
+ */
+console.log( 'Designer: a picture is dragged in, not typed into a grey box' );
+const promptsBefore = prompts.length;
+
+await page.click( '.tools [data-tool=image]' );
+await page.mouse.move( box.x + 200, box.y + box.height - 180 );
+await page.mouse.down();
+await page.mouse.move( box.x + 360, box.y + box.height - 80, { steps: 8 } );
+await page.mouse.up();
+await page.waitForSelector( '.modal', { timeout: 8000 } );
+
+check( 'the browser is never asked to prompt', promptsBefore === prompts.length );
+check( 'a picture field is offered instead',
+	1 === await page.locator( '.modal [data-media-field]' ).count() );
+check( 'with all four ways to give one',
+	4 === await page.locator( '.modal .media-field__actions button' ).count(),
+	( await page.locator( '.modal .media-field__actions button' ).allInnerTexts() ).join( ' / ' ) );
+
+// An address is one of the four, and the one a test can drive without a file dialog.
+await page.click( '.modal [data-role=address]' );
+await page.fill( '.modal .media-field__url', 'https://example.invalid/plan.png' );
+await page.locator( '.modal .media-field__url' ).press( 'Enter' );
+await page.waitForTimeout( 800 );
+
+const placed = await page.evaluate( () =>
+	window.__editor.floor().objects.filter( ( o ) => o.type === 'image' ).map( ( o ) => o.href ) );
+
+check( 'and the picture lands on the plan', placed.includes( 'https://example.invalid/plan.png' ), placed.join( ', ' ) );
+check( 'the picture can be changed afterwards, which it never could before',
+	1 === await page.locator( '#dz-inspector [data-media-field]' ).count() );
+
+/*
+ * A picture that is not there must not take the plan down with it. The browser calls a 404'd image
+ * `complete` with no width, and `drawImage` on one throws — inside the repaint, which abandoned the
+ * rest of the frame and whatever was waiting behind it.
+ */
+await page.evaluate( () => window.__editor.draw() );
+await page.waitForTimeout( 600 );
+check( 'a picture that cannot be loaded draws a frame rather than throwing',
+	! errors.some( ( e ) => /drawImage|CanvasRenderingContext/.test( e ) ),
+	errors.filter( ( e ) => /drawImage/.test( e ) ).join( ' | ' ) || 'nothing thrown' );
+
+await page.evaluate( () => {
+	const editor = window.__editor;
+
+	editor.floor().objects = editor.floor().objects.filter( ( o ) => o.type !== 'image' );
+	editor.clearSelection();
+} );
+
+console.log( 'Designer: words are asked for in the reader’s language' );
+await page.click( '.tools [data-tool=text]' );
+await page.mouse.click( box.x + 420, box.y + box.height - 120 );
+await page.waitForSelector( '.modal', { timeout: 8000 } );
+
+check( 'the panel asks, not the browser', promptsBefore === prompts.length );
+check( 'in a dialog of its own', 'Text' === await page.locator( '.modal h2' ).innerText() );
+
+await page.fill( '.modal input[name=answer]', 'Sound desk' );
+await page.click( '.modal button[type=submit]' );
+await page.waitForTimeout( 600 );
+
+check( 'and the words land on the plan',
+	( await page.evaluate( () => window.__editor.floor().objects
+		.filter( ( o ) => o.type === 'text' ).map( ( o ) => o.text ) ) ).includes( 'Sound desk' ) );
+
+/*
+ * What a selection box takes. It used to take whatever had its centre inside it, which is a rule
+ * nobody has been taught: a box dragged across half a section came back with nothing selected.
+ */
+console.log( 'Designer: a box selects what it touches' );
+const stageBox = await page.evaluate( () => {
+	const editor = window.__editor;
+	const rect = editor.canvas.getBoundingClientRect();
+	const stage = editor.floor().objects.find( ( o ) => o.key === 'stage' );
+	const to = ( x, y ) => ( {
+		x: rect.left + editor.view.x + x * editor.view.scale,
+		y: rect.top + editor.view.y + y * editor.view.scale,
+	} );
+
+	editor.clearSelection();
+
+	return {
+		from: to( stage.x - 40, stage.y - 30 ),
+		to: to( stage.x + stage.width * 0.4, stage.y + stage.height / 2 ),
+	};
+} );
+
+await page.mouse.move( stageBox.from.x, stageBox.from.y );
+await page.mouse.down();
+await page.mouse.move( stageBox.to.x, stageBox.to.y, { steps: 12 } );
+await page.mouse.up();
+await page.waitForTimeout( 400 );
+
+check( 'a box over part of the stage takes the stage',
+	( await page.evaluate( () => window.__editor.selection ) ).includes( 'stage' ),
+	( await page.evaluate( () => window.__editor.selection ) ).join( ', ' ) );
+
+await page.evaluate( () => {
+	const editor = window.__editor;
+
+	editor.floor().objects = editor.floor().objects.filter( ( o ) => o.text !== 'Sound desk' );
+	editor.clearSelection();
+	editor.draw();
+} );
+
 console.log( 'Designer: categories' );
 await page.locator( '.link-btn', { hasText: 'Manage' } ).first().click();
 await page.waitForSelector( '.modal' );
@@ -426,6 +647,41 @@ await page.waitForTimeout( 400 );
 check( 'dark theme applied', 'dark' === await page.evaluate( () =>
 	document.documentElement.getAttribute( 'data-theme' ) ) );
 await page.screenshot( { path: '/tmp/designer-dark.png' } );
+
+/*
+ * A closed designer lets go of the keyboard.
+ *
+ * The editor binds Delete and Ctrl+Z to the window, because they have to work wherever the pointer
+ * is, and a listener on the window outlives the screen that added it. Closing and reopening left
+ * the first editor listening: it went on taking every keystroke, editing a chart nobody could see,
+ * and writing its answers into the status line of the designer that had replaced it. A locked
+ * editor left behind is what makes that visible — "This chart is locked" under a chart that is not.
+ */
+console.log( 'Designer: a closed designer lets go of the keyboard' );
+await page.evaluate( () => {
+	const editor = window.__editor;
+
+	editor.selection = [ editor.floor().objects[ 0 ].key ];
+	editor.locked = true;
+	editor.onSelectionChange();
+} );
+
+await page.click( '#dz-close' );
+await page.waitForTimeout( 600 );
+await page.click( 'button[data-map]' );
+await page.waitForSelector( '#dz-canvas' );
+await page.waitForTimeout( 800 );
+
+await page.evaluate( () => {
+	document.getElementById( 'dz-status' ).textContent = 'SENTINEL';
+	window.__editor.clearSelection();
+} );
+await page.keyboard.press( 'Delete' );
+await page.waitForTimeout( 400 );
+
+check( 'the designer that was closed answers nothing',
+	'SENTINEL' === await page.locator( '#dz-status' ).innerText(),
+	await page.locator( '#dz-status' ).innerText() );
 
 await browser.close();
 

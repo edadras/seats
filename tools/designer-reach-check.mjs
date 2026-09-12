@@ -151,6 +151,47 @@ check( 'its label follows the rotation',
 check( 'and is still what a click there finds',
 	tilted === Ops.rowLabelAt( { objects: [ tilted ] }, tiltedLabels[ 1 ] ) );
 
+/*
+ * What a selection box takes.
+ *
+ * It took whatever had its *centre* inside, which is a rule nobody has been taught and which makes
+ * a large object all but unselectable by box: a stage 360 units wide needs the box to reach past
+ * its middle before it counts, and a box drawn across most of it comes back empty with no way to
+ * tell why. Touching is the rule every drawing program uses, and it has three cases that all have
+ * to hold — the object inside the box, the box inside the object, and the two merely crossing.
+ */
+console.log( 'A box takes what it touches' );
+
+const stage = {
+	key: 'stage',
+	type: 'shape',
+	kind: 'rect',
+	x: 400,
+	y: 100,
+	width: 360,
+	height: 70,
+	points: null,
+	rotation: 0,
+};
+
+const boxAround = ( x1, y1, x2, y2 ) => [ [ x1, y1 ], [ x2, y1 ], [ x2, y2 ], [ x1, y2 ] ];
+
+check( 'a box over the left corner takes it, though the centre is far outside',
+	true === Ops.touches( boxAround( 360, 60, 500, 140 ), stage ) );
+
+check( 'a box entirely inside it takes it too',
+	true === Ops.touches( boxAround( 500, 120, 560, 150 ), stage ) );
+
+check( 'a box drawn across it, over the top and out the bottom, takes it',
+	true === Ops.touches( boxAround( 500, 60, 520, 260 ), stage ) );
+
+check( 'and a box nowhere near it takes nothing',
+	false === Ops.touches( boxAround( 60, 400, 200, 500 ), stage ) );
+
+check( 'a lasso through a row takes the row',
+	true === Ops.touches( [ [ 90, 60 ], [ 120, 140 ], [ 160, 60 ] ], row ) );
+
+
 console.log( '\n' + '-'.repeat( 68 ) );
 console.log( failures ? `${ failures } FAILED` : 'EVERYTHING ON THE PLAN CAN BE REACHED' );
 process.exit( failures ? 1 : 0 );

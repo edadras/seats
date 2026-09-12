@@ -614,6 +614,10 @@ return [
     'prompt' => [
         'sectionName' => 'اسم القسم',
         'sectionDefault' => 'القسم :number',
+        'text' => 'نص',
+        'textDefault' => 'تسمية',
+        'picture' => 'صورة',
+        'pictureAddress' => 'عنوان الصورة',
     ],
 
     'floors' => [
@@ -717,6 +721,7 @@ return [
         'text' => 'نص',
         'shape' => 'شكل',
         'image' => 'صورة',
+        'picture' => 'الصورة',
         'icon' => 'رمز',
         'objects' => ':count عنصر',
         'categories' => 'الفئات',

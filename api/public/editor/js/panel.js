@@ -3749,12 +3749,22 @@
 	App.mountDesigner = function ( chart ) {
 		var self = this;
 
+		// A designer opened twice must not leave the first one listening to the window — see
+		// Editor.prototype.destroy for what that looked like.
+		if ( this.editor ) {
+			this.editor.destroy();
+		}
+
 		var editor = new window.SeatmapEditor( document.getElementById( 'dz-canvas' ), {
 			chart: chart,
 			onChange: function () { self.refreshDesigner(); },
 			onSelectionChange: function () { self.refreshInspector(); self.refreshStatus(); },
 			onContextChange: function () { self.refreshDesigner(); },
 			onStatus: function ( message ) { document.getElementById( 'dz-status' ).textContent = message; },
+			// A question gets the panel's own dialog rather than the browser's grey box, and a
+			// picture gets the media library. Both are asynchronous; see the editor's own note.
+			ask: function ( question, value, done ) { self.askInDesigner( question, value, done ); },
+			pickPicture: function ( done ) { self.pickPicture( done ); },
 		} ).init();
 
 		this.editor = editor;
@@ -3778,6 +3788,12 @@
 				// the inspector: they belong to the map, and the map is this screen's business.
 				seatViews: function () { return self.seatViews || {}; },
 				onSeatViewChange: function () { self.saveSeatViews(); },
+				// One picture field, the same one the rest of the panel uses.
+				media: window.SeatmapMedia
+					? function ( options, onChange ) {
+						return window.SeatmapMedia.attach( self, options, onChange );
+					}
+					: null,
 			}
 		);
 
@@ -3797,11 +3813,17 @@
 		window.addEventListener( 'resize', this.onResize );
 	};
 
+	/** The tools that put something on the plan — the ones a locked chart has no use for. */
+	var DRAWING_TOOLS = [
+		'row', 'curvedRow', 'section', 'area', 'table', 'booth', 'shape', 'line', 'text', 'image', 'icon',
+	];
+
 	App.renderTools = function () {
 		var self = this;
 		var host = document.getElementById( 'dz-tools' );
 
 		host.innerHTML = '';
+		this.toolsLocked = this.chartLocked();
 
 		this.TOOLS.forEach( function ( tool ) {
 			if ( tool.separator ) {
@@ -3812,10 +3834,19 @@
 
 			var button = node( 'button', 'icon-btn' );
 			var label = self.t( 'panel.tools.' + tool.key );
+			/*
+			 * A locked chart cannot be drawn on, so the tools that draw are off.
+			 *
+			 * Looking is still allowed: select, same-type, lasso and pan stay, because reading what
+			 * a row is set to is not an edit. A tool that can be picked up and then refuses is the
+			 * thing this replaces.
+			 */
+			var forbidden = self.chartLocked() && DRAWING_TOOLS.indexOf( tool.key ) !== -1;
 
 			button.innerHTML = icon( tool.icon );
 			button.dataset.tool = tool.key;
-			button.setAttribute( 'data-tip', label );
+			button.disabled = forbidden;
+			button.setAttribute( 'data-tip', forbidden ? self.t( 'panel.hints.readOnly' ) : label );
 			button.setAttribute( 'data-tip-side', 'right' );
 			button.setAttribute( 'aria-label', label );
 			button.setAttribute( 'aria-pressed', self.editor.tool === tool.key ? 'true' : 'false' );
@@ -3847,6 +3878,7 @@
 
 		on( 'dz-close', function () {
 			window.removeEventListener( 'resize', self.onResize );
+			editor.destroy();
 			self.editor = null;
 			self.inspector = null;
 			self.showWorkspace();
@@ -4137,6 +4169,18 @@
 	};
 
 	App.refreshDesigner = function () {
+		/*
+		 * The palette is redrawn when the padlock moves and at no other time.
+		 *
+		 * Which tools are available is a fact about the lock, and the lock changes from three
+		 * places: the padlock itself, saving a draft — which forks one from the published version
+		 * and so unlocks the chart — and opening a map that has no draft. Redrawing it on every
+		 * change instead would rebuild fifteen buttons after each nudge of a row.
+		 */
+		if ( this.toolsLocked !== this.chartLocked() ) {
+			this.renderTools();
+		}
+
 		this.refreshInspector();
 		this.refreshStatus();
 		this.refreshLayers();
@@ -4154,6 +4198,25 @@
 		if ( badgeNode ) {
 			badgeNode.hidden = ! this.editor.locked;
 		}
+
+		/*
+		 * The buttons in the top bar that change the chart go off with the padlock.
+		 *
+		 * Undo among them: it looks like navigation and is an edit, and it was the one way left to
+		 * change a chart that says it cannot be changed. Copy is not here — taking a copy of what
+		 * is selected changes nothing — and neither are save and publish, which are what somebody
+		 * does with a chart they have finished and locked.
+		 */
+		var frozen = this.chartLocked();
+
+		[ 'dz-undo', 'dz-redo', 'dz-duplicate', 'dz-delete', 'dz-mirror-h', 'dz-mirror-v',
+			'dz-focal', 'dz-add-floor' ].forEach( function ( id ) {
+			var button = document.getElementById( id );
+
+			if ( button ) {
+				button.disabled = frozen;
+			}
+		} );
 
 		var lock = document.getElementById( 'dz-lock' );
 
@@ -4385,8 +4448,86 @@
 		} );
 	};
 
+	/**
+	 * A question the designer needs answered — the name of a section, the words on a label.
+	 *
+	 * The panel's own dialog, in the reader's language and in the panel's own type. `window.prompt`
+	 * was what this replaced: an untranslated grey box, unstyled, ignored outright by some browsers
+	 * when it is not a direct answer to a click, and impossible to put a preview in.
+	 *
+	 * `done` is called with the answer, or with nothing when the dialog is dismissed.
+	 */
+	App.askInDesigner = function ( question, value, done ) {
+		var answered = false;
+
+		this.modal( {
+			title: question,
+			submitLabel: this.t( 'panel.common.save' ),
+			body: '<div class="field"><label class="field__label" for="dz-ask">' +
+				esc( question ) + '</label>' +
+				'<input class="input" id="dz-ask" name="answer" required maxlength="120" value="' +
+				esc( value == null ? '' : value ) + '"></div>',
+			onSubmit: function ( data ) {
+				answered = true;
+				done( String( data.get( 'answer' ) || '' ).trim() );
+			},
+			onClose: function () {
+				if ( ! answered ) {
+					done( null );
+				}
+			},
+		} );
+	};
+
+	/**
+	 * A picture for the plan: dragged on, chosen from the library, or given as an address.
+	 *
+	 * The same field as everywhere else on the platform, in a dialog — so the frame somebody has
+	 * just dragged out on the canvas waits while they find the floor plan on their desktop.
+	 */
+	App.pickPicture = function ( done ) {
+		var answered = false;
+
+		var host = this.modal( {
+			title: this.t( 'panel.prompt.picture' ),
+			submitLabel: this.t( 'panel.common.save' ),
+			body: '<div class="field"><span class="field__label">' +
+				esc( this.t( 'panel.prompt.picture' ) ) + '</span>' +
+				( window.SeatmapMedia
+					? window.SeatmapMedia.field( { kind: 'image', name: 'href' } )
+					: '<input class="input" type="url" name="href" placeholder="https://…">' ) +
+				'</div>',
+			onSubmit: function ( data, form ) {
+				var field = form.querySelector( '[data-media-field]' );
+				var href = field
+					? window.SeatmapMedia.valueOf( field )
+					: String( data.get( 'href' ) || '' ).trim();
+
+				if ( ! href ) {
+					return true; // Nothing chosen yet: leave the dialog up rather than losing the frame.
+				}
+
+				answered = true;
+				done( href );
+			},
+			onClose: function () {
+				if ( ! answered ) {
+					done( null );
+				}
+			},
+		} );
+
+		return host;
+	};
+
 	App.addFloor = function () {
 		var self = this;
+
+		if ( this.chartLocked() ) {
+			this.toast( this.t( 'panel.hints.readOnly' ), true );
+
+			return;
+		}
 
 		this.modal( {
 			title: this.t( 'panel.floors.addTitle' ),
@@ -4422,6 +4563,13 @@
 
 	App.editFloor = function () {
 		var self = this;
+
+		if ( this.chartLocked() ) {
+			this.toast( this.t( 'panel.hints.readOnly' ), true );
+
+			return;
+		}
+
 		var floor = this.editor.floor();
 		var removable = this.editor.chart.floors.length > 1;
 

@@ -645,6 +645,10 @@ return [
     'prompt' => [
         'sectionName' => 'Section name',
         'sectionDefault' => 'Section :number',
+        'text' => 'Text',
+        'textDefault' => 'Label',
+        'picture' => 'Picture',
+        'pictureAddress' => 'Address of the picture',
     ],
 
     'floors' => [
@@ -749,6 +753,7 @@ return [
         'text' => 'Text',
         'shape' => 'Shape',
         'image' => 'Image',
+        'picture' => 'Picture',
         'icon' => 'Icon',
         'objects' => ':count objects',
         'categories' => 'Categories',

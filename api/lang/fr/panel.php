@@ -615,6 +615,10 @@ return [
     'prompt' => [
         'sectionName' => 'Nom du bloc',
         'sectionDefault' => 'Bloc :number',
+        'text' => 'Texte',
+        'textDefault' => 'Étiquette',
+        'picture' => 'Image',
+        'pictureAddress' => 'Adresse de l’image',
     ],
 
     'floors' => [
@@ -718,6 +722,7 @@ return [
         'text' => 'Texte',
         'shape' => 'Forme',
         'image' => 'Image',
+        'picture' => 'Image',
         'icon' => 'Icône',
         'objects' => ':count objets',
         'categories' => 'Catégories',

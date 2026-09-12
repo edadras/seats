@@ -1010,7 +1010,7 @@ are untouched by either.
 ## A plan that answers the pointer
 
 A seating plan is a drawing that has to be operated, and the distance between those two is where its
-faults live. Four were found in it by driving a real browser and measuring, not by reading the code,
+faults live. Ten were found in it by driving a real browser and measuring, not by reading the code,
 and none of them looked like anything on a screenshot: the plan was drawn correctly and simply did
 not answer.
 
@@ -1041,6 +1041,57 @@ statement about the seat in front of you; it now says *Same as row — Stalls*, 
 inherited and from what, and falls back to *No category* only when nothing is.
 
 The layer palette also floated over the plan with no way to put it away; it folds now, and remembers.
+
+### The padlock now holds what it says it holds
+
+`editor.mutate` refuses while a chart is locked, and every field in the panel goes through it — so
+the lock looked complete and was not. **A drag never goes through `mutate`**: it writes into the
+objects on each pointermove, deliberately, because one drag has to be one undo rather than a hundred.
+A locked chart could therefore be rearranged with the pointer and saved, padlock lit, and a published
+chart opens locked. **Undo was the same hole** from the other side: it looks like navigation and it
+rewrites the whole chart.
+
+Both refuse now, and the rest follows from one principle — *a control that cannot work is not
+offered*. The tools that draw are disabled and say why; undo, delete, duplicate, mirror, the focal
+point and the floor buttons go with them; every field in the property panel is disabled in one sweep
+at the end of the render, with a line at the top saying the chart is locked. Selecting is still
+allowed, because reading what a row is set to is not an edit — and so is the photograph a buyer sees
+from a section, which is not part of the chart and saves on its own.
+
+Twenty-five live controls that took a number and changed nothing is what that replaces.
+
+### A picture is chosen, not typed
+
+The image tool called `window.prompt( 'Image URL' )`: an untranslated grey box asking a theatre to
+find a web host before they could trace their own floor plan — and once given, the address could
+never be changed, because the only field that asked for it was the moment of creation. The platform
+has had a media library since. Both places use it now: a picture is dragged onto the dialog, chosen
+from what is already uploaded, or given as an address, and the same field sits in the panel
+afterwards. The photograph a buyer sees from a section is the same field again, where it used to be a
+bare text box. The words on a label and the name of a section are asked for in the panel's own
+dialog, in the reader's language.
+
+A picture that will not load no longer takes the plan with it, either. The browser calls a 404'd
+image `complete` with no width and `drawImage` on one *throws* — inside the repaint, which abandoned
+the rest of the frame and whatever was waiting behind it, leaving a half-drawn plan and a tool that
+had stopped answering. A missing picture draws a dashed frame with a cross through it, and the cache
+is keyed by the address rather than by the object, so swapping a picture actually swaps it.
+
+### A box takes what it touches
+
+Marquee selection took whatever had its *centre* inside the box, which is a rule nobody has been
+taught: a box dragged across most of a section came back with nothing selected and no way to tell
+why. `Ops.touches` is the rule every drawing program uses, with the three cases that all have to
+hold — the object inside the box, the box inside the object, and the two merely crossing.
+
+### A closed designer lets go of the keyboard
+
+Delete and Ctrl+Z are bound to the window, because they have to work wherever the pointer is, and a
+listener on the window outlives the screen that added it. Closing the designer and opening it again
+left the first editor listening: it went on taking every keystroke, editing a chart nobody could see,
+and writing its answers into the status line of the designer that had replaced it. *This chart is
+locked*, under a chart that is not, is how it was finally noticed. `Editor.destroy()` takes the
+listeners off and drops the callbacks, and both closing and mounting call it.
 
 ## The door
 
@@ -1520,6 +1571,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | The room's fields follow the padlock, not the map's history | `editor_smoke` |
 | The 3D switch and the stage height reach the chart | `editor_smoke` |
 | The layer palette folds away from the plan it covers | `editor_smoke` |
+| A locked chart cannot be dragged, nudged or undone into a new shape | `editor_smoke` |
+| Nothing that cannot work is offered: the tools, the toolbar and every field go with the padlock | `editor_smoke` |
+| A picture is dragged in or chosen, never typed into the browser's own box | `editor_smoke` |
+| And can be changed afterwards, which it never could | `editor_smoke` |
+| A picture that will not load draws a frame instead of throwing inside the repaint | `editor_smoke` |
+| A selection box takes what it touches, not what it has surrounded the middle of | `tools/designer-reach-check.mjs`, `editor_smoke` |
+| A designer that has been closed answers no more keystrokes | `editor_smoke` |
 
 ## Installing the plugin
 
