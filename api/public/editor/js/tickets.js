@@ -29,9 +29,7 @@
 					return;
 				}
 
-				if ( ! Tickets.eventId || ! events.some( function ( e ) { return e.id === Tickets.eventId; } ) ) {
-					Tickets.eventId = events[ 0 ].id;
-				}
+				Tickets.eventId = App.pickNight( events, Tickets.eventId );
 
 				App.page( {
 					title: App.t( 'panel.tickets.title' ),
@@ -65,7 +63,7 @@
 				} );
 
 				document.getElementById( 'ticket-event' ).addEventListener( 'change', function ( event ) {
-					Tickets.eventId = event.target.value;
+					Tickets.eventId = App.night( event.target.value );
 					Tickets.load( App );
 				} );
 

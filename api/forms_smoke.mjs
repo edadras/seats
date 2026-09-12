@@ -314,6 +314,66 @@ check( 'a module that is off asks for nothing',
 	modules.filter( ( module ) => ! module.on ).every( ( module ) => ! module.asking ),
 	modules.filter( ( module ) => ! module.on && module.asking ).map( ( module ) => module.key ).join( ', ' ) || 'none asking' );
 
+/*
+ * One night, seven screens.
+ *
+ * The door list, the tickets, the questions a checkout asks, the entry windows, the waiting list,
+ * the rehearsal and the counter all ask which night somebody is working on, and every one of them
+ * used to keep its own answer — so a clerk who chose Saturday on one screen was shown Friday on the
+ * next, from the same picker in the same place, with nothing to say the question had been asked
+ * again.
+ */
+console.log( '\nOne night, however many screens' );
+
+const PICKERS = {
+	doorlist: '#door-event',
+	questions: '#q-event',
+	entryslots: '#es-event',
+	waitlist: '#wait-event',
+	tickets: '#ticket-event',
+	rehearsal: '#reh-event',
+	counter: '#counter-event',
+};
+
+await page.click( 'nav button[data-view=doorlist]' );
+await page.waitForTimeout( 900 );
+
+const nights = await page.locator( '#door-event option' ).evaluateAll( ( options ) =>
+	options.map( ( option ) => option.value ) );
+
+check( 'there is more than one night to be on', nights.length > 1, `${ nights.length } nights` );
+
+const chosen = nights[ 1 ] || nights[ 0 ];
+
+await page.selectOption( '#door-event', chosen );
+await page.waitForTimeout( 900 );
+
+const following = [];
+const wandering = [];
+
+for ( const [ view, selector ] of Object.entries( PICKERS ) ) {
+	await page.click( `nav button[data-view=${ view }]` );
+	await page.waitForTimeout( 900 );
+
+	if ( ! ( await page.locator( selector ).count() ) ) {
+		continue;
+	}
+
+	( ( await page.locator( selector ).inputValue() ) === chosen ? following : wandering ).push( view );
+}
+
+check( 'every screen that asks which night is on the same one',
+	0 === wandering.length && following.length >= 5,
+	wandering.length ? `still on another night: ${ wandering.join( ', ' ) }` : following.join( ', ' ) );
+
+await page.reload( { waitUntil: 'networkidle' } );
+await page.waitForTimeout( 1200 );
+await page.click( 'nav button[data-view=questions]' );
+await page.waitForTimeout( 1200 );
+
+check( 'and it is still the same one tomorrow',
+	chosen === await page.locator( '#q-event' ).inputValue() );
+
 console.log( '\nConsole errors: ' + ( errors.length ? errors.join( ' | ' ) : 'none' ) );
 if ( errors.length ) failures++;
 

@@ -1137,6 +1137,14 @@ somebody starts typing.
 because the shape of a form is a fact about the rendered page and not about the source that printed
 it. It found six unlabelled controls the day it was written.
 
+**One night, however many screens.** Seven screens ask which night you are working on — the counter,
+the door list, the tickets, the questions a checkout asks, the entry windows, the waiting list, the
+rehearsal — and each used to keep its own answer. A clerk who chose Saturday on one was shown Friday
+on the next, from the same picker in the same place, with nothing to say the question had been asked
+again. It is one fact about what somebody is doing, so `App.night()` holds it once and remembers it
+for tomorrow; a screen's own memory is the fallback for when the shared night is not one it lists,
+since the counter offers published nights only.
+
 ## The door
 
 `checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and
@@ -1629,6 +1637,7 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A rule that hides a field names a control that exists | `forms_smoke` |
 | Nothing that has to be answered is hidden, and everything that has to be is marked | `forms_smoke` |
 | A module that is switched off asks for nothing | `forms_smoke` |
+| Every screen that asks which night is on the same one, and stays there | `forms_smoke` |
 
 ## Installing the plugin
 

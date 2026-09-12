@@ -29,7 +29,7 @@
 		App.request( 'GET', '/events?per_page=100' )
 			.then( function ( response ) {
 				Slots.events = response.data || [];
-				Slots.eventId = Slots.eventId || ( Slots.events[ 0 ] || {} ).id || '';
+				Slots.eventId = App.pickNight( Slots.events, Slots.eventId );
 				Slots.paint();
 
 				if ( Slots.eventId ) {
@@ -72,7 +72,7 @@
 
 		if ( picker ) {
 			picker.addEventListener( 'change', function () {
-				Slots.eventId = picker.value;
+				Slots.eventId = App.night( picker.value );
 				Slots.load();
 			} );
 		}

@@ -30,7 +30,7 @@
 		App.request( 'GET', '/events?per_page=100' )
 			.then( function ( response ) {
 				Door.events = response.data || [];
-				Door.eventId = Door.eventId || ( Door.events[ 0 ] || {} ).id || '';
+				Door.eventId = App.pickNight( Door.events, Door.eventId );
 				Door.paint();
 
 				if ( Door.eventId ) {
@@ -120,7 +120,7 @@
 
 			field.addEventListener( 'change', function () {
 				if ( 'eventId' === pair[ 1 ] ) {
-					Door.eventId = field.value;
+					Door.eventId = App.night( field.value );
 					// A window belongs to one event; carrying it to the next would filter the new
 					// night by a time it has never heard of and show nobody.
 					Door.filters.entry_slot_id = '';

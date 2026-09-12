@@ -29,7 +29,7 @@
 		App.request( 'GET', '/events?per_page=100' )
 			.then( function ( response ) {
 				Rehearsal.events = response.data || [];
-				Rehearsal.eventId = Rehearsal.eventId || ( Rehearsal.events[ 0 ] || {} ).id || '';
+				Rehearsal.eventId = App.pickNight( Rehearsal.events, Rehearsal.eventId );
 				Rehearsal.paint();
 
 				if ( Rehearsal.eventId ) {
@@ -70,7 +70,7 @@
 
 		if ( picker ) {
 			picker.addEventListener( 'change', function () {
-				Rehearsal.eventId = picker.value;
+				Rehearsal.eventId = App.night( picker.value );
 				Rehearsal.load();
 			} );
 		}

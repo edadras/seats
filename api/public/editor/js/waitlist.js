@@ -28,7 +28,7 @@
 		App.request( 'GET', '/events?per_page=100' )
 			.then( function ( response ) {
 				Wait.events = response.data || [];
-				Wait.eventId = Wait.eventId || ( Wait.events[ 0 ] || {} ).id || '';
+				Wait.eventId = App.pickNight( Wait.events, Wait.eventId );
 				Wait.paint();
 
 				if ( Wait.eventId ) {
@@ -83,7 +83,9 @@
 			}
 
 			field.addEventListener( 'change', function () {
-				Wait[ pair[ 1 ] ] = field.value;
+				Wait[ pair[ 1 ] ] = 'eventId' === pair[ 1 ]
+					? App.night( field.value )
+					: field.value;
 				Wait.load();
 			} );
 		} );

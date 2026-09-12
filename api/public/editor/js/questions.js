@@ -28,7 +28,7 @@
 		App.request( 'GET', '/events?per_page=100' )
 			.then( function ( response ) {
 				Questions.events = response.data || [];
-				Questions.eventId = Questions.eventId || ( Questions.events[ 0 ] || {} ).id || '';
+				Questions.eventId = App.pickNight( Questions.events, Questions.eventId );
 				Questions.paint();
 
 				if ( Questions.eventId ) {
@@ -69,7 +69,7 @@
 
 		if ( picker ) {
 			picker.addEventListener( 'change', function () {
-				Questions.eventId = picker.value;
+				Questions.eventId = App.night( picker.value );
 				Questions.load();
 			} );
 		}

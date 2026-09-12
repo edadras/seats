@@ -48,10 +48,13 @@
 					return 'published' === event.status;
 				} );
 
+				// Settled before the screen is drawn, or the picker is painted with the night this
+				// screen was last on rather than the one the panel is working on.
+				Counter.eventId = App.pickNight( Counter.events, Counter.eventId );
 				Counter.paint();
 
-				if ( Counter.events.length ) {
-					Counter.choose( Counter.events[ 0 ].id );
+				if ( Counter.eventId ) {
+					Counter.choose( Counter.eventId );
 				}
 			} )
 			.catch( function ( error ) { App.error( error ); } );
@@ -127,7 +130,8 @@
 	Counter.choose = function ( eventId ) {
 		var App = Counter.App;
 
-		Counter.eventId = eventId;
+		// The night this screen is on is the night the whole panel is on — see App.night.
+		Counter.eventId = App.night( eventId );
 
 		// The hall on screen belongs to the night that was on screen. Taken down before the next
 		// one is asked for, so an afternoon of switching between three events is not three pickers

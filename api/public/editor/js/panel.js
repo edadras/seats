@@ -296,6 +296,62 @@
 		return i18n.date( value, options );
 	};
 
+	/* ------------------------------------------------------------------ the night in hand */
+
+	/**
+	 * Which night the panel is working on.
+	 *
+	 * Seven screens ask this — the counter, the door list, the tickets, the questions a checkout
+	 * asks, the entry windows, the waiting list, the rehearsal — and each used to keep its own
+	 * answer. So a clerk who chose Saturday on one screen was shown Friday on the next, from the
+	 * same picker in the same place, with nothing to say the question had been asked again. It is
+	 * one fact about what somebody is doing, so it is held once, and remembered for tomorrow.
+	 *
+	 * Per browser rather than on the account: two people at one box office are working on two
+	 * different nights, and neither should move the other's screen.
+	 */
+	App.night = function ( id ) {
+		if ( undefined === id ) {
+			try {
+				return window.localStorage.getItem( 'seatmap.night' ) || '';
+			} catch ( error ) {
+				return '';
+			}
+		}
+
+		try {
+			window.localStorage.setItem( 'seatmap.night', id || '' );
+		} catch ( error ) {
+			// A browser with storage off still works; the choice just lasts one screen.
+		}
+
+		return id;
+	};
+
+	/**
+	 * The night a screen should open on.
+	 *
+	 * The one the panel is working on wins, and that is the point: a screen that remembered its own
+	 * last answer would go on disagreeing with the one next to it, which is the thing being fixed.
+	 * What a screen remembers is the fallback for when the shared night is not one it lists — the
+	 * counter offers published nights only, so a draft chosen elsewhere cannot be its answer.
+	 */
+	App.pickNight = function ( events, current ) {
+		var listed = function ( id ) {
+			return !! id && ( events || [] ).some( function ( event ) { return event.id === id; } );
+		};
+
+		if ( listed( App.night() ) ) {
+			return App.night();
+		}
+
+		if ( listed( current ) ) {
+			return current;
+		}
+
+		return ( events || [] ).length ? events[ 0 ].id : '';
+	};
+
 	/** A whole branch of the catalogue — for the seat picker, which takes its words as an object. */
 	App.catalogue = function ( key ) {
 		return i18n.branch( key );
