@@ -221,213 +221,222 @@ msgstr "آزاد"
 msgid "Unavailable"
 msgstr "ناموجود"
 
-#: includes/class-seatmap-widget.php:168
+#. translators: %s: who the seat is being kept for. The box office runs this picker too.
+#: includes/class-seatmap-widget.php:169
+msgid "kept for %s"
+msgstr "نگه‌داشته برای %s"
+
+#: includes/class-seatmap-widget.php:170
 msgid "Selected"
 msgstr "انتخاب‌شده"
 
-#: includes/class-seatmap-widget.php:169
+#: includes/class-seatmap-widget.php:171
 msgid "Your selection"
 msgstr "انتخاب شما"
 
-#: includes/class-seatmap-widget.php:170
+#: includes/class-seatmap-widget.php:172
 msgid "No seats selected yet."
 msgstr "هنوز صندلی‌ای انتخاب نشده است."
 
-#: includes/class-seatmap-widget.php:171
+#: includes/class-seatmap-widget.php:173
 msgid "Total"
 msgstr "مجموع"
 
-#: includes/class-seatmap-widget.php:172 includes/class-seatmap-widget.php:216
+#: includes/class-seatmap-widget.php:174 includes/class-seatmap-widget.php:219
 msgid "Reserve and add to cart"
 msgstr "رزرو و افزودن به سبد خرید"
 
-#: includes/class-seatmap-widget.php:173
+#: includes/class-seatmap-widget.php:175
 msgid "Reserving…"
 msgstr "در حال رزرو…"
 
-#: includes/class-seatmap-widget.php:174
+#: includes/class-seatmap-widget.php:176
 msgid "Sorry, one of those seats was just taken. It has been removed from your selection."
 msgstr "متأسفیم، یکی از آن صندلی‌ها همین حالا گرفته شد و از انتخاب شما برداشته شد."
 
-#: includes/class-seatmap-widget.php:175
+#: includes/class-seatmap-widget.php:177
 msgid "Something went wrong. Please try again."
 msgstr "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
 
-#: includes/class-seatmap-widget.php:176
+#: includes/class-seatmap-widget.php:178
 msgid "You can select up to %d seats."
 msgstr "حداکثر %d صندلی می‌توانید انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:177
+#: includes/class-seatmap-widget.php:179
 msgid "%1$s, row %2$s, seat %3$s — %4$s"
 msgstr "%1$s، ردیف %2$s، صندلی %3$s — %4$s"
 
-#: includes/class-seatmap-widget.php:178
+#: includes/class-seatmap-widget.php:180
 msgid "%1$s, row %2$s, seat %3$s — unavailable"
 msgstr "%1$s، ردیف %2$s، صندلی %3$s — ناموجود"
 
-#: includes/class-seatmap-widget.php:179
+#: includes/class-seatmap-widget.php:181
 msgid "Zoom in"
 msgstr "بزرگ‌نمایی"
 
-#: includes/class-seatmap-widget.php:180
+#: includes/class-seatmap-widget.php:182
 msgid "Zoom out"
 msgstr "کوچک‌نمایی"
 
-#: includes/class-seatmap-widget.php:181
+#: includes/class-seatmap-widget.php:183
 msgid "Reset view"
 msgstr "بازگرداندن نما"
 
-#: includes/class-seatmap-widget.php:182
+#: includes/class-seatmap-widget.php:184
 msgid "Full screen"
 msgstr "تمام‌صفحه"
 
-#: includes/class-seatmap-widget.php:183
+#: includes/class-seatmap-widget.php:185
 msgid "Leave full screen"
 msgstr "خروج از تمام‌صفحه"
 
-#: includes/class-seatmap-widget.php:184
+#: includes/class-seatmap-widget.php:186
 msgid "See the hall in 3D"
 msgstr "دیدن سالن به‌صورت سه‌بعدی"
 
-#: includes/class-seatmap-widget.php:185
+#: includes/class-seatmap-widget.php:187
 msgid "Back to the plan"
 msgstr "بازگشت به نقشه"
 
-#: includes/class-seatmap-widget.php:186
+#: includes/class-seatmap-widget.php:188
 msgid "Seats held until %s"
 msgstr "صندلی‌ها تا %s نگه داشته می‌شوند"
 
-#: includes/class-seatmap-widget.php:187
+#: includes/class-seatmap-widget.php:189
 msgid "Your reservation expired. Please choose your seats again."
 msgstr "مهلت رزرو شما تمام شد. لطفاً دوباره صندلی‌ها را انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:188
+#: includes/class-seatmap-widget.php:190
 msgid "Stage"
 msgstr "صحنه"
 
-#: includes/class-seatmap-widget.php:189
+#: includes/class-seatmap-widget.php:191
 msgid "Floor"
 msgstr "طبقه"
 
-#: includes/class-seatmap-widget.php:190
+#: includes/class-seatmap-widget.php:192
 msgid "Standing and tables"
 msgstr "ایستاده و میزها"
 
 #. translators: %d: number of places still available.
-#: includes/class-seatmap-widget.php:192
+#: includes/class-seatmap-widget.php:194
 msgid "%d left"
 msgstr "%d جای باقی‌مانده"
 
-#: includes/class-seatmap-widget.php:193 includes/class-seatmap-widget.php:206
+#: includes/class-seatmap-widget.php:195 includes/class-seatmap-widget.php:208
 msgid "Sold out"
 msgstr "تمام شد"
 
 #. translators: %s: name of the standing area.
-#: includes/class-seatmap-widget.php:195
+#: includes/class-seatmap-widget.php:197
 msgid "Add one place in %s"
 msgstr "یک جا در %s اضافه کن"
 
 #. translators: %s: name of the standing area.
-#: includes/class-seatmap-widget.php:197
+#: includes/class-seatmap-widget.php:199
 msgid "Remove one place in %s"
 msgstr "یک جا از %s کم کن"
 
-#: includes/class-seatmap-widget.php:198
+#: includes/class-seatmap-widget.php:200
 msgid "That area filled up while you were choosing. Please pick a different number of places."
 msgstr "این محدوده هنگام انتخاب شما پُر شد. لطفاً تعداد دیگری را انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:200
+#: includes/class-seatmap-widget.php:202
 msgid "Choose an area"
 msgstr "یک بخش را انتخاب کنید"
 
-#: includes/class-seatmap-widget.php:201
+#: includes/class-seatmap-widget.php:203
 msgid "Back to the whole venue"
 msgstr "بازگشت به نمای کل سالن"
 
 #. translators: %s: the price of the cheapest seat in the area.
-#: includes/class-seatmap-widget.php:203
+#: includes/class-seatmap-widget.php:205
 msgid "From %s"
 msgstr "از %s"
 
 #. translators: %d: number of seats still available in the area.
-#: includes/class-seatmap-widget.php:205
+#: includes/class-seatmap-widget.php:207
 msgid "%d seats left"
 msgstr "%d صندلی باقی‌مانده"
 
 #. translators: %s: name of the area.
-#: includes/class-seatmap-widget.php:208
+#: includes/class-seatmap-widget.php:210
 msgid "Show seats in %s"
 msgstr "نمایش صندلی‌های %s"
 
 #. translators: %s: name of the area.
-#: includes/class-seatmap-widget.php:210
+#: includes/class-seatmap-widget.php:212
 msgid "In %s"
 msgstr "در %s"
 
-#: includes/class-seatmap-widget.php:212
+#: includes/class-seatmap-widget.php:213
+msgid "The view from %s"
+msgstr "نمای سالن از %s"
+
+#: includes/class-seatmap-widget.php:215
 msgid "Choose your tickets"
 msgstr "بلیت‌هایتان را انتخاب کنید"
 
-#: includes/class-seatmap-widget.php:213
+#: includes/class-seatmap-widget.php:216
 msgid "Tickets"
 msgstr "بلیت‌ها"
 
-#: includes/class-seatmap-widget.php:214
+#: includes/class-seatmap-widget.php:217
 msgid "Who is this ticket for?"
 msgstr "این بلیت برای چه کسی است؟"
 
-#: includes/class-seatmap-widget.php:215
+#: includes/class-seatmap-widget.php:218
 msgid "Nothing chosen yet."
 msgstr "هنوز چیزی انتخاب نشده است."
 
 #. translators: %d: the largest number of tickets one order may hold.
-#: includes/class-seatmap-widget.php:218
+#: includes/class-seatmap-widget.php:221
 msgid "You can take up to %d tickets."
 msgstr "تا %d بلیت می‌توانید بردارید."
 
 #. translators: %s: the seat or area being taken off the order.
-#: includes/class-seatmap-widget.php:220
+#: includes/class-seatmap-widget.php:223
 msgid "Remove %s"
 msgstr "حذف %s"
 
-#: includes/class-seatmap-widget.php:222
+#: includes/class-seatmap-widget.php:225
 msgid "Seat list"
 msgstr "فهرست صندلی‌ها"
 
-#: includes/class-seatmap-widget.php:224
+#: includes/class-seatmap-widget.php:227
 msgid "Seats together"
 msgstr "صندلی‌های کنار هم"
 
-#: includes/class-seatmap-widget.php:225
+#: includes/class-seatmap-widget.php:228
 msgid "Find seats"
 msgstr "پیدا کن"
 
 #. translators: %d: the largest number of adjacent seats left.
-#: includes/class-seatmap-widget.php:227
+#: includes/class-seatmap-widget.php:230
 msgid "The most seats side by side is %d. Try that many, or pick from the plan."
 msgstr "بیشترین تعداد صندلی کنار هم %d است. همین تعداد را امتحان کنید یا از روی نقشه انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:228
+#: includes/class-seatmap-widget.php:231
 msgid "There are no seats left."
 msgstr "صندلی خالی نمانده است."
 
-#: includes/class-seatmap-widget.php:231
+#: includes/class-seatmap-widget.php:234
 msgid "Arrival time"
 msgstr "زمان ورود"
 
-#: includes/class-seatmap-widget.php:232
+#: includes/class-seatmap-widget.php:235
 msgid "Choose when you will arrive"
 msgstr "زمان ورودتان را انتخاب کنید"
 
-#: includes/class-seatmap-widget.php:233
+#: includes/class-seatmap-widget.php:236
 msgid "That arrival time filled up while you were choosing. Please pick another."
 msgstr "ظرفیت این زمان ورود در همین فاصله پر شد. لطفاً زمان دیگری انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:234
+#: includes/class-seatmap-widget.php:237
 msgid "Choose an arrival time before reserving."
 msgstr "پیش از رزرو، زمان ورود را انتخاب کنید."
 
-#: includes/class-seatmap-widget.php:245
+#: includes/class-seatmap-widget.php:248
 msgid "Choosing seats needs JavaScript. Please enable it, or contact the box office."
 msgstr "انتخاب صندلی به جاوااسکریپت نیاز دارد. لطفاً فعالش کنید، یا با گیشه تماس بگیرید."
 
