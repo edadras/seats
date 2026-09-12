@@ -287,6 +287,14 @@ jobs:
       - name: The hall's arithmetic is the arithmetic that was written down
         run: node tools/hall3d-check.mjs
 
+      - name: Everything drawn on a plan can be reached by a pointer
+        run: |
+          # A seat's catchment that reaches further than half the distance to the next chair
+          # swallows the gaps a row is selected through, and a label drawn somewhere other than
+          # where it is hit-tested cannot be clicked at all. Neither is visible in a screenshot:
+          # the plan looks right and simply does not answer.
+          node tools/designer-reach-check.mjs
+
       - name: Every string the picker asks for is provided by every host
         run: node tools/picker-strings-check.mjs
 

@@ -490,7 +490,25 @@
 	padding: var(--s-2);
 }
 
-.layers__title { padding: var(--s-1) var(--s-2) var(--s-2); }
+.layers__title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-2);
+	inline-size: 100%;
+	padding: var(--s-1) var(--s-2) var(--s-2);
+	border: none;
+	background: none;
+	color: inherit;
+	/* The family only: `font` shorthand or a size here would beat `.overline`, and the palette's
+	   title would stop looking like every other overline in the panel. */
+	font-family: inherit;
+	cursor: pointer;
+}
+
+/* Folded, it is a title bar and nothing else — the plan underneath is reachable again. */
+.layers.is-folded { padding-block-end: var(--s-1); }
+.layers.is-folded .layers__title { padding-block-end: var(--s-1); }
 
 .layer {
 	display: flex;

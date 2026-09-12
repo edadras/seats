@@ -306,10 +306,22 @@
 			: t( 'panel.inspector.seats', { count: seats.length } ) );
 
 		var first = seats[ 0 ].seat;
+		var owner = seats[ 0 ].owner;
+
+		/*
+		 * What these chairs are priced as when they say nothing themselves.
+		 *
+		 * Only offered when every chair in the selection has the same owner: "same as the row" is a
+		 * sentence about one row, and eight seats from four rows have four answers to it.
+		 */
+		var shared = seats.every( function ( entry ) { return entry.owner === owner; } );
+		var inherited = shared && owner && owner.categoryKey
+			? { of: owner.type, label: this.categoryLabel( owner.categoryKey ) }
+			: null;
 
 		this.categoryField( first, function ( key ) {
 			seats.forEach( function ( entry ) { entry.seat.categoryKey = key; } );
-		} );
+		}, inherited );
 
 		var body = this.section( t( 'panel.inspector.seat' ) );
 
@@ -760,12 +772,30 @@
 
 	/* --------------------------------------------------------------------- shared fields */
 
-	Inspector.prototype.categoryField = function ( object, apply ) {
+	/**
+	 * Which category this thing is priced under.
+	 *
+	 * `inherited` is the one that makes this honest. A seat usually has no category of its own and
+	 * takes the row's — that is how a whole block is priced in one move — and this control used to
+	 * show "no category assigned" for such a seat while the buyer saw it as Premium. It was worse
+	 * than a cosmetic lie: the same dropdown, touched, wrote a category onto the seat and quietly
+	 * detached it from its row for ever.
+	 *
+	 * So the empty option says what empty *means* here: same as the row, and which one that is.
+	 *
+	 * @param {?{label: string, of: string}} inherited what this falls back to, when it falls back
+	 */
+	Inspector.prototype.categoryField = function ( object, apply, inherited ) {
 		var self = this;
 		var body = this.section( t( 'panel.inspector.category' ), t( 'panel.inspector.manage' ),
 			function () { self.onManageCategories(); } );
 
-		var options = [ { value: '', label: t( 'panel.inspector.noCategory' ) } ].concat(
+		var nothing = inherited
+			? t( 'row' === inherited.of ? 'panel.inspector.sameAsRow' : 'panel.inspector.sameAsTable',
+				{ name: inherited.label } )
+			: t( 'panel.inspector.noCategory' );
+
+		var options = [ { value: '', label: nothing } ].concat(
 			( this.editor.chart.categories || [] ).map( function ( category ) {
 				return { value: category.key, label: category.label, color: category.color };
 			} )
@@ -780,6 +810,15 @@
 				}
 			} );
 		} );
+	};
+
+	/** A category's own name, for a sentence about it. Falls back to its key, which is never empty. */
+	Inspector.prototype.categoryLabel = function ( key ) {
+		var found = ( this.editor.chart.categories || [] ).filter( function ( category ) {
+			return category.key === key;
+		} )[ 0 ];
+
+		return found ? found.label : key;
 	};
 
 	Inspector.prototype.layerField = function ( object ) {

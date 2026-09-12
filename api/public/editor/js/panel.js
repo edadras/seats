@@ -3958,8 +3958,24 @@
 		document.querySelector( '.designer' ).classList.add( 'is-room' );
 		document.getElementById( 'dz-inspector' ).innerHTML = '';
 		this.roomFloorKey = null;
+		this.roomLocked = null;
 		this.hall.draw();
 		this.refreshInspector();
+	};
+
+	/**
+	 * Whether the chart may be edited at this moment.
+	 *
+	 * Two things used to answer this and they disagreed. `readOnly` is a fact about the *map* —
+	 * published, with no draft forked from it yet — and is decided once, when the designer opens.
+	 * `editor.locked` is what the padlock in the toolbar actually toggles, and it is the live
+	 * answer. Reading the first where the second was meant is how the room's fields stayed greyed
+	 * out for ever: the toast said "chart unlocked" and every number beside it still refused.
+	 *
+	 * One accessor, and the padlock is the only thing that moves it.
+	 */
+	App.chartLocked = function () {
+		return !! ( this.editor && this.editor.locked );
 	};
 
 	/**
@@ -3983,9 +3999,10 @@
 			}
 		} );
 
-		// A published chart with no draft is read-only, and so are its numbers: a field that looks
-		// editable and silently refuses is worse than one that says it is not.
-		var locked = this.readOnly ? ' disabled' : '';
+		// A locked chart's numbers are locked too: a field that looks editable and silently refuses
+		// is worse than one that says it is not. The padlock is what decides, not how the map
+		// happened to arrive — see App.chartLocked.
+		var locked = this.chartLocked() ? ' disabled' : '';
 
 		var field = function ( id, label, value, hint, step ) {
 			return '<label class="field"><span class="field__label">' + esc( label ) + '</span>' +
@@ -4013,7 +4030,7 @@
 		return '<div class="inspector__panel">' +
 			'<h3 class="inspector__title">' + esc( t( 'panel.hall3d.title' ) ) + '</h3>' +
 			'<p class="inspector__hint">' + esc( t( 'panel.hall3d.lead' ) ) + '</p>' +
-			( this.readOnly
+			( this.chartLocked()
 				? '<p class="inspector__hint">' + esc( t( 'panel.hints.readOnly' ) ) + '</p>'
 				: '' ) +
 			'<label class="perms__row"><input type="checkbox" class="checkbox" id="room-enabled"' +
@@ -4169,10 +4186,18 @@
 		 */
 		if ( this.hall ) {
 			var host = document.getElementById( 'dz-inspector' );
-			var stale = this.roomFloorKey !== this.editor.floorKey;
+			/*
+			 * Rebuilt when the floor changes — different blocks — and when the padlock moves,
+			 * because every field in the panel is enabled or disabled by it. Not on every keystroke:
+			 * a rake field redraws the room as it is typed, and a panel rebuilt on each of those
+			 * would take the cursor out of the box somebody is still in.
+			 */
+			var stale = this.roomFloorKey !== this.editor.floorKey ||
+				this.roomLocked !== this.chartLocked();
 
 			if ( host && ( stale || ! host.querySelector( '.inspector__panel' ) ) ) {
 				this.roomFloorKey = this.editor.floorKey;
+				this.roomLocked = this.chartLocked();
 				host.innerHTML = this.roomInspector();
 				this.bindRoomInspector();
 			}
@@ -4235,7 +4260,35 @@
 		}
 
 		host.innerHTML = '';
-		host.appendChild( node( 'h4', 'layers__title overline', this.t( 'panel.designer.selectionLayer' ) ) );
+
+		/*
+		 * The palette folds away.
+		 *
+		 * It floats over the top-left of the plan, two hundred pixels by a hundred and seventy-seven,
+		 * and whatever is drawn under it cannot be clicked at all — a chart whose stage sits near the
+		 * origin has a stage nobody can select. Folded it is a title bar; the choice is remembered
+		 * per browser, because somebody who put it away meant it for more than one chart.
+		 */
+		var folded = this.layersFolded();
+		var title = node( 'button', 'layers__title overline' );
+
+		title.appendChild( node( 'span', null, this.t( 'panel.designer.selectionLayer' ) ) );
+		title.innerHTML += icon( folded ? 'plus' : 'minus', { size: 13 } );
+		title.setAttribute( 'data-tip', this.t( folded
+			? 'panel.designer.showLayers'
+			: 'panel.designer.hideLayers' ) );
+		title.setAttribute( 'aria-expanded', folded ? 'false' : 'true' );
+		title.addEventListener( 'click', function () {
+			self.layersFolded( ! folded );
+			self.refreshLayers();
+		} );
+
+		host.classList.toggle( 'is-folded', folded );
+		host.appendChild( title );
+
+		if ( folded ) {
+			return;
+		}
 
 		var floor = this.editor.floor();
 		var counts = { all: 0 };
@@ -4271,6 +4324,31 @@
 
 			host.appendChild( button );
 		} );
+	};
+
+	/**
+	 * Whether the layer palette is folded, remembered per browser.
+	 *
+	 * Read with no argument, written with one. `localStorage` because it is a preference about this
+	 * person's screen rather than anything about the chart — a colleague opening the same map should
+	 * get their own answer, and the chart should not carry it.
+	 */
+	App.layersFolded = function ( value ) {
+		if ( undefined === value ) {
+			try {
+				return '1' === window.localStorage.getItem( 'seatmap.layersFolded' );
+			} catch ( error ) {
+				return false;
+			}
+		}
+
+		try {
+			window.localStorage.setItem( 'seatmap.layersFolded', value ? '1' : '0' );
+		} catch ( error ) {
+			// A browser with storage off still folds it; the choice just lasts one visit.
+		}
+
+		return value;
 	};
 
 	App.refreshFloors = function () {
@@ -4499,6 +4577,9 @@
 			[ [ 'Space', this.t( 'panel.shortcuts.drag' ) ], 'pan' ],
 			[ [ 'Enter' ], 'closeShape' ],
 			[ [ this.t( 'panel.shortcuts.doubleClick' ) ], 'enterSection' ],
+			// The row gesture is the one nobody would guess: inside a section every point on a row
+			// belongs to a chair, so the row itself is reached by its name or by holding Alt.
+			[ [ 'Alt', this.t( 'panel.shortcuts.click' ) ], 'selectRow' ],
 			[ [ 'Delete' ], 'removeSelection' ],
 		];
 

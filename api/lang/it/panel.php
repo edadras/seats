@@ -558,6 +558,8 @@ return [
         'fit' => 'Adatta alla vista',
         'floorSettings' => 'Rinomina o rimuovi questo livello',
         'selectionLayer' => 'Livello di selezione',
+        'hideLayers' => 'Richiudi',
+        'showLayers' => 'Mostra i livelli',
         'copied' => 'Copiato.',
         'locked' => 'Piantina bloccata.',
         'unlocked' => 'Piantina sbloccata.',
@@ -591,7 +593,7 @@ return [
 
     'hints' => [
         'readOnly' => 'Questa piantina è bloccata. Sbloccala per modificarla.',
-        'select' => 'Seleziona — Shift + clic aggiunge oggetti alla selezione o li toglie. Ctrl+D deseleziona',
+        'select' => 'Seleziona — Maiusc + clic per aggiungere o togliere. Ctrl+D per deselezionare. Alt + clic su un posto, o clic sulla lettera della fila, prende tutta la fila',
         'sameType' => 'Seleziona lo stesso tipo — un clic seleziona tutto ciò che è dello stesso tipo. Shift + clic aggiunge o toglie un tipo. Ctrl+D deseleziona',
         'lasso' => 'Lazo — traccia attorno ai posti che vuoi',
         'pan' => 'Spostamento — trascina per muovere la vista',
@@ -653,6 +655,7 @@ return [
         'closeShape' => 'Chiudi il settore o la linea che stai disegnando',
         'enterSection' => 'Entra in un settore, o esci',
         'removeSelection' => 'Rimuovi la selezione',
+        'selectRow' => 'Seleziona l’intera fila a cui appartiene un posto',
     ],
 
     'chart' => [
@@ -806,6 +809,8 @@ return [
         'distributeDown' => 'Distribuisci in verticale',
         'category' => 'Categoria',
         'noCategory' => 'Nessuna categoria assegnata',
+        'sameAsRow' => 'Come la fila — :name',
+        'sameAsTable' => 'Come il tavolo — :name',
         'layer' => 'Livello',
         'decrease' => 'Diminuisci :label',
         'increase' => 'Aumenta :label',

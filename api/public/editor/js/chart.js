@@ -469,6 +469,48 @@
 			: labeling.label;
 	};
 
+	/**
+	 * Where a row's label is written, at one or both ends.
+	 *
+	 * Here rather than in the drawing code because two things need it and they must not drift: the
+	 * designer draws the label, and it also has to be *clickable* — it is how a row is selected,
+	 * since every point along the seats themselves belongs to a chair. A label drawn in one place
+	 * and hit-tested in another is a control that works everywhere except where somebody aims.
+	 *
+	 * @return {Array<{x: number, y: number}>} empty when the row shows no label at all
+	 */
+	Chart.rowLabelPositions = function ( row, positions ) {
+		var labeling = row.labeling || {};
+		var where = labeling.position || 'both';
+
+		if ( false === labeling.enabled || 'none' === where || ! Chart.displayedRowLabel( row ) ) {
+			return [];
+		}
+
+		positions = positions || Chart.rowSeatPositions( row );
+
+		if ( ! positions.length ) {
+			return [];
+		}
+
+		// One seat's pitch beyond the end chair, which is where the eye expects the row's name.
+		var pitch = Chart.SEAT_SIZE + ( Number( row.seatSpacing ) || 0 );
+		var theta = ( ( Number( row.rotation ) || 0 ) * Math.PI ) / 180;
+		var first = positions[ 0 ];
+		var last = positions[ positions.length - 1 ];
+		var out = [];
+
+		if ( 'both' === where || 'start' === where ) {
+			out.push( { x: first.x - Math.cos( theta ) * pitch, y: first.y - Math.sin( theta ) * pitch } );
+		}
+
+		if ( 'both' === where || 'end' === where ) {
+			out.push( { x: last.x + Math.cos( theta ) * pitch, y: last.y + Math.sin( theta ) * pitch } );
+		}
+
+		return out;
+	};
+
 	/* --------------------------------------------------------------------------- sections */
 
 	/**

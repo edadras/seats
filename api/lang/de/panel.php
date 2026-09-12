@@ -559,6 +559,8 @@ return [
         'fit' => 'Ins Bild einpassen',
         'floorSettings' => 'Diese Ebene umbenennen oder entfernen',
         'selectionLayer' => 'Auswahlebene',
+        'hideLayers' => 'Einklappen',
+        'showLayers' => 'Ebenen zeigen',
         'copied' => 'Kopiert.',
         'locked' => 'Plan gesperrt.',
         'unlocked' => 'Plan entsperrt.',
@@ -592,7 +594,7 @@ return [
 
     'hints' => [
         'readOnly' => 'Dieser Plan ist gesperrt. Entsperren Sie ihn, um etwas zu ändern.',
-        'select' => 'Auswählen — Shift + Klick fügt Objekte zur Auswahl hinzu oder nimmt sie heraus. Ctrl+D hebt die Auswahl auf',
+        'select' => 'Auswählen — Umschalt + Klick fügt hinzu oder entfernt. Strg+D hebt die Auswahl auf. Alt + Klick auf einen Platz, oder ein Klick auf den Buchstaben der Reihe, nimmt die ganze Reihe',
         'sameType' => 'Gleiche Art auswählen — Ein Klick wählt alles derselben Art. Shift + Klick nimmt eine Art dazu oder heraus. Ctrl+D hebt die Auswahl auf',
         'lasso' => 'Lasso — ziehen Sie um die gewünschten Plätze',
         'pan' => 'Verschieben — ziehen, um den Ausschnitt zu bewegen',
@@ -654,6 +656,7 @@ return [
         'closeShape' => 'Den Block oder die Linie schließen, die gezeichnet wird',
         'enterSection' => 'In einen Block hinein oder wieder heraus',
         'removeSelection' => 'Auswahl entfernen',
+        'selectRow' => 'Die ganze Reihe wählen, zu der ein Platz gehört',
     ],
 
     'chart' => [
@@ -807,6 +810,8 @@ return [
         'distributeDown' => 'Senkrecht verteilen',
         'category' => 'Kategorie',
         'noCategory' => 'Keine Kategorie zugewiesen',
+        'sameAsRow' => 'Wie die Reihe — :name',
+        'sameAsTable' => 'Wie der Tisch — :name',
         'layer' => 'Ebene',
         'decrease' => ':label verringern',
         'increase' => ':label erhöhen',

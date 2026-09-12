@@ -151,9 +151,18 @@
 		return inside;
 	};
 
-	/** The seat nearest a point, within a tolerance — how clicking a seat actually resolves. */
+	/**
+	 * The chair under the pointer — the one you can see, not one within reaching distance.
+	 *
+	 * The tolerance used to be 0.8 of a seat's *width*, which is nearly its whole diameter beyond
+	 * its edge. Seats in a row sit about 24 units apart and a seat is 18 across, so those catchment
+	 * circles overlapped: there was no point anywhere along a row that did not belong to a chair,
+	 * and the row itself — a strip exactly one seat tall — could never be clicked at all. Half the
+	 * seat is the circle that is drawn, which is what somebody is aiming at, and it leaves the gaps
+	 * between chairs to the row that owns them.
+	 */
 	Ops.seatAt = function ( container, point, tolerance ) {
-		tolerance = tolerance || Chart.SEAT_SIZE * 0.8;
+		tolerance = tolerance || Chart.SEAT_SIZE / 2;
 
 		var best = null;
 		var bestDistance = tolerance;
@@ -173,6 +182,37 @@
 				if ( distance < bestDistance ) {
 					bestDistance = distance;
 					best = { object: object, seat: object.seats[ index ], index: index, position: position };
+				}
+			} );
+		} );
+
+		return best;
+	};
+
+	/**
+	 * The row whose *label* is under the pointer.
+	 *
+	 * Selecting a row by its name is how anybody would try to do it — it is the only part of a row
+	 * that is not a chair — so the letter at either end is a control rather than decoration. The
+	 * box is generous because the text is ten pixels tall and nobody aims at a letter precisely.
+	 */
+	Ops.rowLabelAt = function ( container, point, tolerance ) {
+		tolerance = tolerance || Chart.SEAT_SIZE * 0.7;
+
+		var best = null;
+		var bestDistance = tolerance;
+
+		( container.objects || [] ).forEach( function ( object ) {
+			if ( 'row' !== object.type ) {
+				return;
+			}
+
+			Chart.rowLabelPositions( object ).forEach( function ( spot ) {
+				var distance = Math.hypot( spot.x - point.x, spot.y - point.y );
+
+				if ( distance < bestDistance ) {
+					bestDistance = distance;
+					best = object;
 				}
 			} );
 		} );

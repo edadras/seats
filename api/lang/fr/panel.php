@@ -559,6 +559,8 @@ return [
         'fit' => 'Ajuster à la vue',
         'floorSettings' => 'Renommer ou supprimer ce niveau',
         'selectionLayer' => 'Calque de sélection',
+        'hideLayers' => 'Replier',
+        'showLayers' => 'Afficher les calques',
         'copied' => 'Copié.',
         'locked' => 'Plan verrouillé.',
         'unlocked' => 'Plan déverrouillé.',
@@ -592,7 +594,7 @@ return [
 
     'hints' => [
         'readOnly' => 'Ce plan est verrouillé. Déverrouillez-le pour le modifier.',
-        'select' => 'Sélectionner — Shift + clic ajoute un objet à la sélection ou l’en retire. Ctrl+D désélectionne',
+        'select' => 'Sélection — Maj + clic pour ajouter ou retirer. Ctrl+D pour désélectionner. Alt + clic sur un siège, ou clic sur la lettre d’une rangée, prend la rangée entière',
         'sameType' => 'Sélectionner le même type — un clic sélectionne tout ce qui est du même type. Shift + clic ajoute ou retire un type. Ctrl+D désélectionne',
         'lasso' => 'Lasso — dessinez autour des places voulues',
         'pan' => 'Déplacement — faites glisser pour bouger la vue',
@@ -654,6 +656,7 @@ return [
         'closeShape' => 'Fermer le bloc ou la ligne en cours de tracé',
         'enterSection' => 'Entrer dans un bloc, ou en ressortir',
         'removeSelection' => 'Supprimer la sélection',
+        'selectRow' => 'Sélectionner toute la rangée d’un siège',
     ],
 
     'chart' => [
@@ -807,6 +810,8 @@ return [
         'distributeDown' => 'Répartir verticalement',
         'category' => 'Catégorie',
         'noCategory' => 'Aucune catégorie attribuée',
+        'sameAsRow' => 'Comme la rangée — :name',
+        'sameAsTable' => 'Comme la table — :name',
         'layer' => 'Calque',
         'decrease' => 'Diminuer :label',
         'increase' => 'Augmenter :label',

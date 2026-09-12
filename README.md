@@ -1007,6 +1007,41 @@ A night with no design prints the platform's ticket, which is a state rather tha
 and **Back to the standard ticket** returns to it. Tickets already sent are files a buyer holds and
 are untouched by either.
 
+## A plan that answers the pointer
+
+A seating plan is a drawing that has to be operated, and the distance between those two is where its
+faults live. Four were found in it by driving a real browser and measuring, not by reading the code,
+and none of them looked like anything on a screenshot: the plan was drawn correctly and simply did
+not answer.
+
+**A chair's catchment was wider than the gap between chairs.** `Ops.seatAt` accepted a click within
+`SEAT_SIZE * 0.8` — 14.4 units — of a seat's centre, while seats in a row sit 24 apart, so the two
+catchments met in the middle and there was no gap left anywhere along a row. Since a click is tested
+for a seat before it is tested for a row, a row could not be picked up by clicking between its
+chairs, which is how anybody tries. The tolerance is now half a seat, and
+`tools/designer-reach-check.mjs` measures the reach by probing outward from a centre rather than
+restating the constant — a check that asserts `SEAT_SIZE / 2 === SEAT_SIZE / 2` cannot fail.
+
+**A row's letter was drawn in one place and hit-tested in none.** The label was positioned by the
+drawing code alone, so it was visible and inert. `Chart.rowLabelPositions` now returns the spots, the
+canvas draws at them and `Ops.rowLabelAt` hits at them, and the two cannot drift apart because there
+is only one of them. Clicking a row's letter takes the whole row; so does Alt and any of its chairs,
+which is in the shortcuts dialog and in the hint under the select tool.
+
+**Two variables answered one question about the lock.** `App.readOnly` is a fact settled when the
+designer opens — this map has no draft — while `editor.locked` is what the padlock toggles while
+somebody works. The room inspector read the first where it meant the second, so on a published chart
+the 3D switch and the stage height stayed greyed out under a toast saying the chart was unlocked, and
+that is the "the 3D checkbox does nothing" that was reported. `App.chartLocked()` is now the single
+answer, and the inspector rebuilds when it changes rather than when the floor does.
+
+**An inherited category was displayed as none.** A seat usually carries no category of its own and
+wears its row's. The inspector's empty option said *No category*, which is a different and wrong
+statement about the seat in front of you; it now says *Same as row — Stalls*, naming what is
+inherited and from what, and falls back to *No category* only when nothing is.
+
+The layer palette also floated over the plan with no way to put it away; it folds now, and remembers.
+
 ## The door
 
 `checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and
@@ -1107,6 +1142,7 @@ node tools/panel-strings-check.mjs          # the panel and its catalogue agree,
 node tools/picker-strings-check.mjs         # every host provides what the picker asks for
 php tools/error-strings-check.php           # every refusal has a sentence, and vice versa
 node tools/route-contract-check.mjs         # every /v1 route is in the contract, and vice versa
+node tools/designer-reach-check.mjs        # everything drawn on a plan can be clicked
 ```
 
 The PHP suite runs against PostgreSQL by design — see `phpunit.xml`. The concurrency tests spawn
@@ -1477,6 +1513,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | Work for one venue does not leave its calendar on the next | `CalendarTest` |
 | Seventy years of dates convert exactly, both ways, against ICU | `calendar_smoke` |
 | A Jalali date typed into the panel becomes the right instant | `calendar_smoke` |
+| A chair's catchment stops short of the gap the row is selected through | `tools/designer-reach-check.mjs` |
+| A row's letter is drawn where it is clicked, at any rotation | `tools/designer-reach-check.mjs`, `editor_smoke` |
+| A whole row is taken by its letter, or by Alt and a chair | `editor_smoke` |
+| A seat with no category of its own says whose it wears | `editor_smoke` |
+| The room's fields follow the padlock, not the map's history | `editor_smoke` |
+| The 3D switch and the stage height reach the chart | `editor_smoke` |
+| The layer palette folds away from the plan it covers | `editor_smoke` |
 
 ## Installing the plugin
 

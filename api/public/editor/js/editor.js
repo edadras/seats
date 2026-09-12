@@ -624,16 +624,13 @@
 			return;
 		}
 
-		var position = labeling.position || 'both';
+		// The same arithmetic the hit test uses, so the label a person aims at is the one that
+		// answers. See Chart.rowLabelPositions.
+		var spots = Chart.rowLabelPositions( row, positions );
 
-		if ( 'none' === position ) {
+		if ( ! spots.length ) {
 			return;
 		}
-
-		var pitch = Chart.SEAT_SIZE + ( Number( row.seatSpacing ) || 0 );
-		var first = positions[ 0 ];
-		var last = positions[ positions.length - 1 ];
-		var theta = ( ( Number( row.rotation ) || 0 ) * Math.PI ) / 180;
 
 		ctx.save();
 		ctx.fillStyle = this.colors().rowLabel;
@@ -641,13 +638,9 @@
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 
-		if ( 'both' === position || 'start' === position ) {
-			ctx.fillText( text, first.x - Math.cos( theta ) * pitch, first.y - Math.sin( theta ) * pitch );
-		}
-
-		if ( 'both' === position || 'end' === position ) {
-			ctx.fillText( text, last.x + Math.cos( theta ) * pitch, last.y + Math.sin( theta ) * pitch );
-		}
+		spots.forEach( function ( spot ) {
+			ctx.fillText( text, spot.x, spot.y );
+		} );
 
 		ctx.restore();
 	};
@@ -1045,6 +1038,11 @@
 		return Ops.seatAt( this.container(), point );
 	};
 
+	/** The row whose label is under the pointer — see Ops.rowLabelAt for why this is a control. */
+	Editor.prototype.rowLabelAt = function ( point ) {
+		return Ops.rowLabelAt( this.container(), point );
+	};
+
 	/* ------------------------------------------------------------------------ interaction */
 
 	Editor.prototype.setTool = function ( tool ) {
@@ -1184,6 +1182,36 @@
 
 		if ( 'sameType' === this.tool && objectHit ) {
 			this.selectSameType( objectHit.type, event.shiftKey );
+
+			return;
+		}
+
+		/*
+		 * Selecting the row rather than a chair in it.
+		 *
+		 * Two ways, because a row is the one object on a plan that is almost entirely covered by its
+		 * own children: click its label — the letter at either end, which is the only part of a row
+		 * that is not a seat — or hold Alt and click any chair in it, which is the "select what owns
+		 * this" gesture every drawing program has.
+		 *
+		 * Before the seat test, deliberately: the label sits a seat's width beyond the last chair,
+		 * so without this the nearest chair would answer for it.
+		 */
+		var rowHit = ( event.altKey && seatHit && 'row' === seatHit.object.type )
+			? seatHit.object
+			: this.rowLabelAt( point );
+
+		if ( rowHit && this.sectionKey ) {
+			if ( event.shiftKey ) {
+				this.toggleObject( rowHit.key );
+			} else {
+				this.selection = [ rowHit.key ];
+				this.seatSelection = [];
+			}
+
+			this.drag = { mode: 'move', lastX: point.x, lastY: point.y, moved: false };
+			this.onSelectionChange();
+			this.draw();
 
 			return;
 		}

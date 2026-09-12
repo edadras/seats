@@ -132,6 +132,96 @@ check( 'exit-section control appears', await page.locator( '#dz-exit' ).isVisibl
 const sectionTitle = await page.locator( '.inspector__head' ).innerText();
 check( 'panel narrows to the section', /section/i.test( sectionTitle ), sectionTitle );
 
+/*
+ * Reaching a row, which for a long time was impossible.
+ *
+ * Every point along a row belongs to one of its chairs, so a row could only ever be selected by the
+ * gaps — and the catchment around each seat was wide enough to swallow those too. Driven with a
+ * real pointer here rather than by setting `editor.selection`, because setting it is exactly what
+ * hid the bug: the row *could* be selected, just not by anybody using a mouse.
+ */
+console.log( 'Designer: a row can actually be clicked' );
+
+const where = async ( what ) => page.evaluate( ( which ) => {
+	const editor = window.__editor;
+	const row = editor.container().objects.find( ( o ) => o.type === 'row' );
+	const seats = window.SeatmapChart.rowSeatPositions( row );
+	const labels = window.SeatmapChart.rowLabelPositions( row, seats );
+	const rect = editor.canvas.getBoundingClientRect();
+	const to = ( p ) => ( {
+		x: rect.left + editor.view.x + p.x * editor.view.scale,
+		y: rect.top + editor.view.y + p.y * editor.view.scale,
+	} );
+
+	if ( 'label' === which ) {
+		return to( labels[ 0 ] );
+	}
+
+	if ( 'between' === which ) {
+		return to( { x: ( seats[ 0 ].x + seats[ 1 ].x ) / 2, y: ( seats[ 0 ].y + seats[ 1 ].y ) / 2 } );
+	}
+
+	return to( seats[ Math.floor( seats.length / 2 ) ] );
+}, what );
+
+const selected = () => page.evaluate( () => ( {
+	objects: window.__editor.selection.length,
+	seats: window.__editor.seatSelection.length,
+} ) );
+
+let spot = await where( 'seat' );
+await page.mouse.click( spot.x, spot.y );
+await page.waitForTimeout( 250 );
+let picked = await selected();
+
+check( 'clicking a chair still takes the chair', 1 === picked.seats && 0 === picked.objects,
+	JSON.stringify( picked ) );
+
+/*
+ * And the chair says what it is actually priced as.
+ *
+ * A seat with no category of its own takes the row's, which is how a whole block is priced in one
+ * move — and the panel used to answer "no category assigned" for such a seat while the buyer saw it
+ * as Premium. Worse than cosmetic: touching that dropdown wrote a category onto the seat and quietly
+ * detached it from its row.
+ */
+const inherited = await page.evaluate( () => {
+	const row = window.__editor.container().objects.find( ( o ) => o.type === 'row' );
+	const select = document.querySelector( '#dz-inspector select' );
+
+	return { row: row.categoryKey, shown: select ? select.selectedOptions[ 0 ].textContent : '' };
+} );
+
+check( 'and a chair that takes the row’s category says so',
+	!! inherited.row && new RegExp( inherited.row, 'i' ).test( inherited.shown ),
+	`the row is "${ inherited.row }", the panel says "${ inherited.shown }"` );
+
+spot = await where( 'label' );
+await page.mouse.click( spot.x, spot.y );
+await page.waitForTimeout( 250 );
+picked = await selected();
+
+check( 'clicking the row’s letter takes the row', 1 === picked.objects && 0 === picked.seats,
+	JSON.stringify( picked ) );
+
+spot = await where( 'seat' );
+await page.keyboard.down( 'Alt' );
+await page.mouse.click( spot.x, spot.y );
+await page.keyboard.up( 'Alt' );
+await page.waitForTimeout( 250 );
+picked = await selected();
+
+check( 'and so does Alt and a chair in it', 1 === picked.objects && 0 === picked.seats,
+	JSON.stringify( picked ) );
+
+spot = await where( 'between' );
+await page.mouse.click( spot.x, spot.y );
+await page.waitForTimeout( 250 );
+picked = await selected();
+
+check( 'and the gap between two chairs belongs to the row', 1 === picked.objects && 0 === picked.seats,
+	JSON.stringify( picked ) );
+
 console.log( 'Designer: inspect and edit a row' );
 await page.evaluate( () => {
 	const editor = window.__editor;
@@ -189,6 +279,71 @@ console.log( 'Designer: leave the section' );
 await page.click( '#dz-exit' );
 await page.waitForTimeout( 500 );
 check( 'back at chart level', ! ( await page.locator( '#dz-exit' ).isVisible() ) );
+
+/*
+ * The room, and the padlock that governs it.
+ *
+ * Two things answered "may this be edited" and they disagreed: a fact about the map, decided when
+ * the designer opened, and the padlock in the toolbar that people actually press. The room's panel
+ * read the first, so on a published chart every field in it — including the switch that offers the
+ * 3D view to buyers — stayed greyed out for ever, under a toast saying the chart was unlocked.
+ */
+console.log( 'Designer: the room follows the padlock' );
+await page.click( '#dz-3d' );
+await page.waitForSelector( '#room-enabled', { timeout: 10000 } );
+
+check( 'an unlocked chart offers the room’s numbers',
+	! ( await page.locator( '#room-enabled' ).isDisabled() ) );
+
+await page.locator( '#room-enabled' ).click();
+await page.waitForTimeout( 300 );
+
+check( 'and the switch actually writes to the chart',
+	true === await page.evaluate( () => !! ( window.__editor.chart.view3d || {} ).enabled ) );
+
+await page.fill( '#room-stage-height', '40' );
+await page.waitForTimeout( 300 );
+
+check( 'so does a number beside it',
+	40 === await page.evaluate( () => window.__editor.chart.view3d.stage.height ) );
+
+await page.click( '#dz-lock' );
+await page.waitForTimeout( 500 );
+
+check( 'and locking the chart takes them away again',
+	await page.locator( '#room-enabled' ).isDisabled() );
+
+await page.click( '#dz-lock' );
+await page.waitForTimeout( 500 );
+await page.click( '#dz-3d' );
+await page.waitForTimeout( 600 );
+
+check( 'back to the plan', 0 === await page.locator( '#room-enabled' ).count() );
+
+/*
+ * The layer palette folds away.
+ *
+ * It floats over the top-left of the plan and whatever is drawn under it cannot be clicked at all,
+ * which on a chart whose stage sits near the origin is a stage nobody can select.
+ */
+console.log( 'Designer: the layer palette folds away' );
+const palette = () => page.evaluate( () =>
+	Math.round( document.getElementById( 'dz-layers' ).getBoundingClientRect().height ) );
+
+const openHeight = await palette();
+
+await page.click( '.layers__title' );
+await page.waitForTimeout( 300 );
+
+const foldedHeight = await palette();
+
+check( 'folded, it is a title bar', foldedHeight < openHeight / 2,
+	`${ openHeight }px → ${ foldedHeight }px` );
+
+await page.click( '.layers__title' );
+await page.waitForTimeout( 300 );
+
+check( 'and it comes back', ( await palette() ) === openHeight );
 
 console.log( 'Designer: categories' );
 await page.locator( '.link-btn', { hasText: 'Manage' } ).first().click();

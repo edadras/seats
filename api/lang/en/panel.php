@@ -588,6 +588,8 @@ return [
         'fit' => 'Fit to view',
         'floorSettings' => 'Rename or remove this floor',
         'selectionLayer' => 'Selection layer',
+        'hideLayers' => 'Fold this away',
+        'showLayers' => 'Show the layers',
         'copied' => 'Copied.',
         'locked' => 'Chart locked.',
         'unlocked' => 'Chart unlocked.',
@@ -622,7 +624,7 @@ return [
     /* The status line under the canvas: what the tool in hand does, in one sentence. */
     'hints' => [
         'readOnly' => 'This chart is locked. Unlock it to make changes.',
-        'select' => 'Select — Shift + Click to add or remove objects from selection. Ctrl+D to deselect',
+        'select' => 'Select — Shift + Click to add or remove. Ctrl+D to deselect. Alt + Click a seat, or click a row’s letter, to take the whole row',
         'sameType' => 'Select same type — Click select of the same type. Shift + Click to add or remove types from selection. Ctrl+D to deselect',
         'lasso' => 'Lasso — drag around the seats you want',
         'pan' => 'Pan — drag to move the view',
@@ -684,6 +686,7 @@ return [
         'closeShape' => 'Close the section or line being drawn',
         'enterSection' => 'Go into a section, or back out of it',
         'removeSelection' => 'Remove the selection',
+        'selectRow' => 'Select the whole row a seat belongs to',
     ],
 
     /* Words the chart model itself produces: layer names, its checklist, and what it refuses. */
@@ -838,6 +841,8 @@ return [
         'distributeDown' => 'Distribute down',
         'category' => 'Category',
         'noCategory' => 'No category assigned',
+        'sameAsRow' => 'Same as the row — :name',
+        'sameAsTable' => 'Same as the table — :name',
         'layer' => 'Layer',
         'decrease' => 'Decrease :label',
         'increase' => 'Increase :label',
