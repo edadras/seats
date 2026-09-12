@@ -318,6 +318,9 @@ return [
         'previous' => 'Previous',
         'next' => 'Next',
         'never' => 'Never',
+        'notSet' => 'Not set',
+        'on' => 'On',
+        'off' => 'Off',
         'failed' => 'Request failed',
     ],
 
@@ -382,6 +385,13 @@ return [
     'events' => [
         'description' => 'Paste an event’s public ID into WordPress as <code>[seatmap_event id="evt_…"]</code>, or into the Seat map block.',
         'new' => 'New event',
+        'groups' => [
+            'night' => 'The night itself',
+            'sale' => 'When it goes on sale',
+            'limits' => 'Limits at the checkout',
+            'changes' => 'If a buyer cannot come',
+            'access' => 'Getting in',
+        ],
         'create' => 'Create event',
         'starts' => 'Starts',
         'publicId' => 'Public ID',

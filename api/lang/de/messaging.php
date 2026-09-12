@@ -104,6 +104,7 @@ return [
     'subject' => 'Betreff',
     'body' => 'Nachricht',
     'locale' => 'Sprache',
+    'channel' => 'Kanal',
     'usingDefault' => 'Es gilt unser Wortlaut. Schreiben Sie Ihren, um ihn zu ersetzen.',
     'placeholders' => 'Verfügbar: :list',
     'save' => 'Wortlaut speichern',

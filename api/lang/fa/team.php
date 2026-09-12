@@ -41,6 +41,7 @@ return [
     'noActivity' => 'هنوز چیزی رخ نداده است.',
     'anyAction' => 'هر کاری',
     'anyone' => 'هر کسی',
+    'roleOf' => 'اختیارات :name',
     'changedFrom' => 'بود :from',
     'changedTo' => 'اکنون :to',
     'system' => 'سامانه',

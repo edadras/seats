@@ -341,9 +341,9 @@
 			submitLabel: App.t( 'panel.common.save' ),
 			body:
 				'<div class="stack">' +
-					field( 'ag-name', App.t( 'panel.agents.name' ), agent ? agent.name : '', 160 ) +
+					field( 'ag-name', App.t( 'panel.agents.name' ), agent ? agent.name : '', 160, null, true ) +
 					field( 'ag-code', App.t( 'panel.agents.code' ), agent ? agent.code : '', 40,
-						App.t( 'panel.agents.codeHint' ) ) +
+						App.t( 'panel.agents.codeHint' ), true ) +
 					field( 'ag-contact', App.t( 'panel.agents.contact' ), agent ? agent.contact_name : '', 120 ) +
 					field( 'ag-email', App.t( 'panel.agents.email' ), agent ? agent.contact_email : '', 190 ) +
 					field( 'ag-phone', App.t( 'panel.agents.phone' ), agent ? agent.contact_phone : '', 40 ) +
@@ -557,9 +557,11 @@
 
 	/* ---------------------------------------------------------------------------- helpers */
 
-	function field( id, label, current, max, hint ) {
+	/** `must` marks the two the server will not do without, so the form says so before it is sent. */
+	function field( id, label, current, max, hint, must ) {
 		return '<div class="field"><label class="field__label" for="' + id + '">' + esc( label ) +
-			'</label><input class="input" id="' + id + '" maxlength="' + max + '" value="' +
+			'</label><input class="input" id="' + id + '" maxlength="' + max + '"' +
+			( must ? ' required' : '' ) + ' value="' +
 			esc( current || '' ) + '">' +
 			( hint ? '<span class="field__hint">' + esc( hint ) + '</span>' : '' ) + '</div>';
 	}

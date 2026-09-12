@@ -71,7 +71,9 @@
 								: App.t( 'team.neverSeen' ) ) ) +
 					'</td>' +
 					'<td class="table__actions">' +
-						'<select class="select select--sm" data-member-role="' + esc( member.id ) + '">' +
+						// One row per person, so the name of the control is the person it is about.
+						'<select class="select select--sm" data-member-role="' + esc( member.id ) + '"' +
+							' aria-label="' + esc( App.t( 'team.roleOf', { name: member.name } ) ) + '">' +
 						Team.roles.map( function ( role ) {
 							return '<option value="' + esc( role.key ) + '"' +
 								( role.key === member.role ? ' selected' : '' ) + '>' +
@@ -350,8 +352,15 @@
 		return String( value ).slice( 0, 80 );
 	}
 
+	/*
+	 * A filter is a control like any other and needs a name.
+	 *
+	 * These sit in a row above a table with nothing beside them, so the name is carried on the
+	 * control rather than printed twice: the blank option — "Any action", "Anyone" — is what the
+	 * filter is *for*, and is already translated.
+	 */
 	function select( id, blank, options, current ) {
-		return '<select class="select" id="' + id + '">' +
+		return '<select class="select" id="' + id + '" aria-label="' + esc( blank ) + '">' +
 			'<option value="">' + esc( blank ) + '</option>' +
 			options.map( function ( option ) {
 				return '<option value="' + esc( option[ 0 ] ) + '"' +

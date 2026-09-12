@@ -104,6 +104,7 @@ return [
     'subject' => 'Oggetto',
     'body' => 'Messaggio',
     'locale' => 'Lingua',
+    'channel' => 'Canale',
     'usingDefault' => 'Vale il nostro testo. Scrivi il tuo per sostituirlo.',
     'placeholders' => 'Disponibili: :list',
     'save' => 'Salva il testo',

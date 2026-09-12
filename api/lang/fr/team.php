@@ -41,6 +41,7 @@ return [
     'noActivity' => 'Rien ne s’est encore passé.',
     'anyAction' => 'Toute action',
     'anyone' => 'Tout le monde',
+    'roleOf' => 'Ce que :name peut faire',
     'changedFrom' => 'était :from',
     'changedTo' => 'maintenant :to',
     'system' => 'Système',

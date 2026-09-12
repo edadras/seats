@@ -42,6 +42,7 @@ return [
     'noActivity' => 'Nothing has happened yet.',
     'anyAction' => 'Any action',
     'anyone' => 'Anyone',
+    'roleOf' => 'What :name may do',
     'changedFrom' => 'was :from',
     'changedTo' => 'now :to',
     'system' => 'System',

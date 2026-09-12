@@ -262,14 +262,18 @@
 
 		return '<section class="theme-group">' +
 			'<div class="filters">' +
-				'<select class="select" id="msg-channel">' +
+				// Three filters over a table, each carrying its own name: there is nothing beside
+				// them to read, and a select whose name is only its current value is a riddle.
+				'<select class="select" id="msg-channel" aria-label="' +
+					esc( App.t( 'messaging.channel' ) ) + '">' +
 					Messaging.channels.map( function ( channel ) {
 						return '<option value="' + esc( channel.key ) + '"' +
 							( channel.key === Messaging.channel ? ' selected' : '' ) + '>' +
 							esc( channel.name ) + '</option>';
 					} ).join( '' ) +
 				'</select>' +
-				'<select class="select" id="msg-locale">' +
+				'<select class="select" id="msg-locale" aria-label="' +
+					esc( App.t( 'messaging.locale' ) ) + '">' +
 					Messaging.locales.map( function ( entry ) {
 						return '<option value="' + esc( entry.code ) + '"' +
 							( entry.code === Messaging.locale ? ' selected' : '' ) + '>' +
@@ -918,7 +922,8 @@
 		}
 
 		return '<div class="filters">' +
-				'<select class="select" id="msg-filter">' +
+				'<select class="select" id="msg-filter" aria-label="' +
+					esc( App.t( 'messaging.filterAll' ) ) + '">' +
 					'<option value="">' + esc( App.t( 'messaging.filterAll' ) ) + '</option>' +
 					[ 'sent', 'refused', 'unavailable', 'queued' ].map( function ( status ) {
 						return '<option value="' + status + '"' +

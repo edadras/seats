@@ -1093,6 +1093,50 @@ and writing its answers into the status line of the designer that had replaced i
 locked*, under a chart that is not, is how it was finally noticed. `Editor.destroy()` takes the
 listeners off and drops the callbacks, and both closing and mounting call it.
 
+## A form that says what it wants
+
+Several parts of this panel worked correctly and could not be worked out, and the reason was
+structural rather than verbal. The event form is the specimen: **twenty-eight questions in one
+column**, in no order anybody could see, five of them needed to put a night on sale and nothing
+marking which five — with *Hours before* sitting in plain view under a refund policy of never, and
+*People choosing at once* under a sale with no queue. Every field did what it said. Nobody could
+tell what to do with it.
+
+Help text does not fix that: the shape of the form is what is being read. So two things, both of
+them mechanisms rather than paragraphs:
+
+**A form is a few named parts.** `App.group()` renders one — a `<details>` with a name, and a line
+saying what it currently holds. The part that must be answered now is open; the parts that are
+policies rather than facts are closed, each stating its own answer: *Refunds: Not offered ·
+Exchanges: Not offered*. The event form asks eight questions when it opens instead of twenty-eight,
+and the other four decisions are named rather than buried. `<details>` and not a scripted accordion:
+it opens with a keyboard, the browser's own page search finds what is inside it, and a closed part
+containing an unanswered required field opens itself when the form is submitted.
+
+**A field appears when it applies.** Mark anything — a field, a pair, a whole part — with
+`data-when`:
+
+```html
+data-when="waiting_room"             <!-- while that switch is on -->
+data-when="refunds=until"            <!-- while that control holds that value -->
+data-when="exchanges=until|always"   <!-- … or any of these -->
+```
+
+One rule, wired once for every screen and every dialog, replacing three hand-rolled versions of it
+that each covered one form. The settings of a module that is switched off are gone with it: ten
+payment gateways asking for an API key and a merchant id, for things that are not running, read as a
+job somebody has to do.
+
+Two smaller rules follow the same principle — say it in the structure, once, rather than in forty
+places by hand. A field the server will not do without carries `required`, and the star beside its
+label is put there by reading that attribute, so what is marked and what is enforced cannot drift.
+And every control has a name: a placeholder is not a label, because it disappears exactly when
+somebody starts typing.
+
+`api/forms_smoke.mjs` holds all of it up, in a browser, across all forty-six forms the panel opens —
+because the shape of a form is a fact about the rendered page and not about the source that printed
+it. It found six unlabelled controls the day it was written.
+
 ## The door
 
 `checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and
@@ -1208,7 +1252,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-nine, in order
+./smoke.sh                    # all seventy, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -1578,6 +1622,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A picture that will not load draws a frame instead of throwing inside the repaint | `editor_smoke` |
 | A selection box takes what it touches, not what it has surrounded the middle of | `tools/designer-reach-check.mjs`, `editor_smoke` |
 | A designer that has been closed answers no more keystrokes | `editor_smoke` |
+| Every control in the panel has a name of its own | `forms_smoke` |
+| No form is a wall of questions: past a dozen, it is named parts | `forms_smoke` |
+| A closed part of a form says what it is holding | `forms_smoke` |
+| A field that cannot matter yet is not on screen | `forms_smoke` |
+| A rule that hides a field names a control that exists | `forms_smoke` |
+| Nothing that has to be answered is hidden, and everything that has to be is marked | `forms_smoke` |
+| A module that is switched off asks for nothing | `forms_smoke` |
 
 ## Installing the plugin
 

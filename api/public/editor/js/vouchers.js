@@ -302,7 +302,9 @@
 					'<span class="field__hint" id="v-kind-hint"></span>' +
 				'</div>' +
 
-				'<div class="field" id="v-code-field">' +
+				// A code is what a gift voucher *is*; credit is attached to somebody's address
+				// instead. Each field waits for the kind that uses it — see App.applyWhen.
+				'<div class="field" id="v-code-field" data-when="v-form-kind=gift">' +
 					'<label class="field__label" for="v-code">' +
 						esc( App.t( 'panel.vouchers.code' ) ) + '</label>' +
 					'<div class="filters">' +
@@ -314,7 +316,7 @@
 					'<span class="field__hint">' + esc( App.t( 'panel.vouchers.codeHint' ) ) + '</span>' +
 				'</div>' +
 
-				'<div class="field" id="v-email-field" hidden>' +
+				'<div class="field" id="v-email-field" data-when="v-form-kind=credit">' +
 					'<label class="field__label" for="v-email">' +
 						esc( App.t( 'panel.vouchers.email' ) ) + '</label>' +
 					'<input class="input" id="v-email" type="email" maxlength="190" ' +
@@ -326,7 +328,7 @@
 					'<div class="field">' +
 						'<label class="field__label" for="v-amount">' +
 							esc( App.t( 'panel.vouchers.amount' ) ) + '</label>' +
-						'<input class="input" id="v-amount" type="number" min="0" step="0.01" ' +
+						'<input class="input" id="v-amount" type="number" min="0" step="0.01" required ' +
 							'inputmode="decimal">' +
 					'</div>' +
 					'<div class="field">' +
@@ -339,7 +341,9 @@
 					'</div>' +
 				'</div>' +
 
-				'<div class="field">' +
+				// A name on a gift card is decoration; a name on somebody's credit is the wrong
+				// field entirely, since the address is who it belongs to.
+				'<div class="field" data-when="v-form-kind=gift">' +
 					'<label class="field__label" for="v-recipient">' +
 						esc( App.t( 'panel.vouchers.recipient' ) ) + '</label>' +
 					'<input class="input" id="v-recipient" maxlength="160">' +
@@ -387,15 +391,8 @@
 		var currency = document.getElementById( 'v-currency' );
 
 		function explain() {
-			var gift = 'gift' === kind.value;
-
 			document.getElementById( 'v-kind-hint' ).textContent =
 				App.t( 'panel.vouchers.kindHints.' + kind.value );
-			document.getElementById( 'v-code-field' ).hidden = ! gift;
-			document.getElementById( 'v-email-field' ).hidden = gift;
-			// A name on a gift card is decoration; a name on somebody's credit is the wrong field
-			// entirely, since the address is who it belongs to.
-			document.getElementById( 'v-recipient' ).closest( '.field' ).hidden = ! gift;
 		}
 
 		function restep() {

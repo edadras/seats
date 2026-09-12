@@ -193,7 +193,8 @@
 							} ).join( '' ) +
 						'</select></div>' +
 				'</div>' +
-				'<div class="field" id="q-options-field">' +
+				// Choices belong to a choice question and nowhere else — see App.applyWhen.
+				'<div class="field" id="q-options-field" data-when="q-kind=choice">' +
 					'<label class="field__label" for="q-options">' +
 						esc( App.t( 'panel.questions.options' ) ) + '</label>' +
 					'<textarea class="input" id="q-options" rows="4">' +
@@ -240,16 +241,6 @@
 				return Questions.save();
 			},
 		} );
-
-		var kind = document.getElementById( 'q-kind' );
-
-		function shape() {
-			// Choices belong to a choice question and nowhere else.
-			document.getElementById( 'q-options-field' ).hidden = 'choice' !== kind.value;
-		}
-
-		kind.addEventListener( 'change', shape );
-		shape();
 	};
 
 	/** The whole list, every time: what a checkout asks is one decision about the event. */

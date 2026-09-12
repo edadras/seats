@@ -94,7 +94,13 @@ const eventId = tinker( `
 ` );
 
 await page.locator( `[data-event-edit="${ eventId }"]` ).click();
-await page.waitForSelector( '#e-resale' );
+// Attached rather than visible: the part it lives in is closed until somebody opens it.
+await page.waitForSelector( '#e-resale', { state: 'attached' } );
+
+// Both belong to the part of the form about a buyer who cannot come, which opens by its name.
+await page.locator( '.modal .form-group', { has: page.locator( '#e-resale' ) } )
+	.locator( 'summary' ).click();
+await page.waitForTimeout( 200 );
 
 // Both off until somebody says otherwise: a venue that has never thought about either should not
 // discover it has been offering them.
@@ -116,6 +122,8 @@ check( 'the switch answers to the control a person can see',
 	await page.locator( '#e-resale' ).isChecked() );
 
 await page.selectOption( '#e-exchanges', 'always' );
+// The fee is a term of an exchange and appears with them.
+await page.waitForTimeout( 200 );
 await page.fill( '#e-exchange-fee', '300' );
 await page.screenshot( { path: `${ SHOTS }/01-terms.png` } );
 await page.locator( '.modal button[type=submit]' ).click();

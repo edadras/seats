@@ -104,6 +104,7 @@ return [
     'subject' => 'Subject',
     'body' => 'Message',
     'locale' => 'Language',
+    'channel' => 'Channel',
     'usingDefault' => 'Using our wording. Type your own to replace it.',
     'placeholders' => 'Available: :list',
     'save' => 'Save the wording',

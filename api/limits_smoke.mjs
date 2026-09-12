@@ -59,7 +59,13 @@ await page.waitForSelector( '.sidebar' );
 await page.click( 'nav button[data-view=events]' );
 await page.waitForSelector( `[data-event-edit="${ night.id }"]` );
 await page.locator( `[data-event-edit="${ night.id }"]` ).click();
-await page.waitForSelector( '#e-per-buyer' );
+// Attached rather than visible: the part it lives in is closed until somebody opens it.
+await page.waitForSelector( '#e-per-buyer', { state: 'attached' } );
+
+// Both live in the part of the form about limits at the checkout.
+await page.locator( '.modal .form-group', { has: page.locator( '#e-per-buyer' ) } )
+	.locator( 'summary' ).click();
+await page.waitForTimeout( 200 );
 
 check( 'the event form asks how many one person may buy',
 	await page.locator( '#e-per-buyer' ).isVisible() );

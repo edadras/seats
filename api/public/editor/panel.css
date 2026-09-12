@@ -250,6 +250,69 @@
 /* Separates a block from the field group above it without a bespoke rule each time. */
 .spaced { margin-block-start: var(--s-4); }
 
+/*
+ * A named part of a form.
+ *
+ * The structure is the explanation: a form is parts, each with a name somebody can decide about,
+ * and each saying on its own line what it currently holds. Closed, a part is one line — so a long
+ * form reads as five decisions rather than thirty boxes.
+ */
+.form-group {
+	border: 1px solid var(--border);
+	border-radius: var(--r-md);
+	background: var(--surface);
+}
+
+.form-group + .form-group { margin-block-start: calc( var(--s-3) * -1 + var(--s-4) ); }
+
+.form-group__head {
+	display: flex;
+	align-items: center;
+	gap: var(--s-3);
+	padding: var(--s-3) var(--s-4);
+	cursor: pointer;
+	list-style: none;
+	border-radius: var(--r-md);
+}
+
+/* Safari draws its own triangle unless told twice. */
+.form-group__head::-webkit-details-marker { display: none; }
+.form-group__head:hover { background: var(--surface-sunken); }
+
+.form-group__head:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+.form-group__title { font-weight: 600; }
+
+/* What this part holds at the moment, so a closed part is still an answer and not a mystery. */
+.form-group__state {
+	flex: 1;
+	min-inline-size: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+}
+
+.form-group__mark {
+	flex: none;
+	margin-inline-start: auto;
+	color: var(--text-secondary);
+	transition: transform var(--speed) var(--ease);
+}
+
+.form-group__state + .form-group__mark { margin-inline-start: 0; }
+.form-group[open] .form-group__mark { transform: rotate(180deg); }
+
+.form-group__body {
+	padding: 0 var(--s-4) var(--s-4);
+	border-block-start: 1px solid var(--border);
+	padding-block-start: var(--s-4);
+}
+
 /* ==================================================================== data tables */
 
 .table-wrap {

@@ -369,7 +369,8 @@
 							esc( code ? code.value : 10 ) + '">' +
 						'<span class="field__hint" id="d-value-hint"></span>' +
 					'</div>' +
-					'<div class="field" id="d-currency-field">' +
+					// A percentage has no currency; a fixed amount has nothing else it could mean.
+					'<div class="field" id="d-currency-field" data-when="d-kind=fixed">' +
 						'<label class="field__label" for="d-currency">' + esc( App.t( 'panel.discounts.currency' ) ) + '</label>' +
 						'<input class="input" id="d-currency" maxlength="3" value="' +
 							esc( ( code && code.currency ) || '' ) + '">' +
@@ -446,10 +447,9 @@
 
 		var kind = document.getElementById( 'd-kind' );
 
-		// A percentage has no currency and a fixed amount has nothing else it could mean, so the
-		// field that does not apply is hidden rather than shown and quietly ignored.
+		// The number means two different things, so it says which as the kind is changed. Which
+		// fields apply at all is declared in the markup — see App.applyWhen.
 		function shape() {
-			document.getElementById( 'd-currency-field' ).hidden = 'fixed' !== kind.value;
 			document.getElementById( 'd-value-hint' ).textContent = App.t( 'fixed' === kind.value
 				? 'panel.discounts.amountMinor'
 				: 'panel.discounts.amountPercent' );

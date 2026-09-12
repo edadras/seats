@@ -295,6 +295,9 @@ return [
         'previous' => 'Précédent',
         'next' => 'Suivant',
         'never' => 'Jamais',
+        'notSet' => 'Non défini',
+        'on' => 'Activé',
+        'off' => 'Désactivé',
         'failed' => 'Échec de la requête',
     ],
 
@@ -353,6 +356,13 @@ return [
     'events' => [
         'description' => 'Collez l’identifiant public d’un événement dans WordPress sous la forme <code>[seatmap_event id="evt_…"]</code>, ou dans le bloc « Plan de salle ».',
         'new' => 'Nouvel événement',
+        'groups' => [
+            'night' => 'La soirée elle-même',
+            'sale' => 'Quand la vente ouvre',
+            'limits' => 'Limites au paiement',
+            'changes' => 'Si un acheteur ne peut pas venir',
+            'access' => 'Entrer dans la salle',
+        ],
         'create' => 'Créer l’événement',
         'starts' => 'Début',
         'publicId' => 'Identifiant public',

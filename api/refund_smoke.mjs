@@ -56,7 +56,17 @@ await page.click( 'nav button[data-view=events]' );
 await page.waitForSelector( '[data-event-edit]' );
 
 await page.locator( '[data-event-edit]' ).first().click();
-await page.waitForSelector( '#e-refunds' );
+// Attached rather than visible: the part it lives in is closed until somebody opens it.
+await page.waitForSelector( '#e-refunds', { state: 'attached' } );
+
+/*
+ * The event form is five named parts, and the terms of a refund live in the one about a buyer who
+ * cannot come. Opened by pressing its name, which is what a person does — the part is closed until
+ * then so that the form asks about the night before it asks about policy.
+ */
+await page.locator( '.modal .form-group', { has: page.locator( '#e-refunds' ) } )
+	.locator( 'summary' ).click();
+await page.waitForTimeout( 200 );
 
 check( 'the terms belong to the night, not to the account',
 	await page.locator( '#e-refunds' ).isVisible() );

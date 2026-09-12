@@ -121,9 +121,14 @@
 				'<button type="button" class="btn btn--sm btn--danger" data-role="clear" hidden>' +
 					esc( App.t( 'panel.media.remove' ) ) + '</button>' +
 			'</div>' +
+			// Both are named: the address box appears on request and the file box is reached
+			// through the drop target, and a control nobody can see is still a control somebody's
+			// screen reader will land on.
 			'<input class="input media-field__url" type="url" maxlength="1024" hidden' +
+				' aria-label="' + esc( App.t( 'panel.media.address' ) ) + '"' +
 				' placeholder="https://…" data-role="url">' +
 			'<input type="file" hidden data-role="file"' +
+				' aria-label="' + esc( App.t( 'panel.media.choose' ) ) + '"' +
 				' accept="' + ( 'video' === kind ? 'video/*' : 'image/*' ) + '">' +
 			( node.dataset.name
 				? '<input type="hidden" name="' + esc( node.dataset.name ) + '" data-role="carry">'

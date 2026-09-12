@@ -1299,9 +1299,10 @@
 	/**
 	 * Wake up the fields that are more than markup. Harmless when the screen has none.
 	 *
-	 * Both are done here, where every screen already passes, rather than at each call site: a
-	 * picture field that was drawn and not wired is a dead grey rectangle, and a date field is a
-	 * box an Iranian organiser has to convert in their head.
+	 * All three are done here, where every screen already passes, rather than at each call site: a
+	 * picture field that was drawn and not wired is a dead grey rectangle, a date field is a box an
+	 * Iranian organiser has to convert in their head, and a field that should have waited its turn
+	 * is a question about something the reader has not decided yet.
 	 */
 	function richFields() {
 		if ( window.SeatmapMedia ) {
@@ -1311,7 +1312,138 @@
 		if ( window.SeatmapCalendar ) {
 			window.SeatmapCalendar.wire( App );
 		}
+
+		App.applyWhen();
+		App.markRequired();
 	}
+
+	/**
+	 * A field that has to be answered says so, before it is answered.
+	 *
+	 * The `required` attribute was already on the controls that need it — the browser enforces it
+	 * and a screen reader announces it — and none of that reaches somebody looking at the form and
+	 * deciding how much work it is. Marking it in the markup of forty forms is forty chances to
+	 * forget; marking it from the attribute is one rule that cannot drift from what is enforced.
+	 *
+	 * The star is hidden from screen readers because they have already said "required" from the
+	 * attribute, and twice is worse than once.
+	 */
+	App.markRequired = function ( scope ) {
+		var root = scope || document;
+
+		root.querySelectorAll( '[required]' ).forEach( function ( control ) {
+			var label = ( control.id && root.querySelector( 'label[for="' + CSS.escape( control.id ) + '"]' ) ) ||
+				control.closest( 'label' );
+
+			if ( ! label || label.querySelector( '.req' ) ) {
+				return;
+			}
+
+			var star = document.createElement( 'span' );
+
+			star.className = 'req';
+			star.setAttribute( 'aria-hidden', 'true' );
+			star.textContent = ' *';
+			label.appendChild( star );
+		} );
+	};
+
+	/* ----------------------------------------------------------------------- form structure */
+
+	/**
+	 * A named part of a form.
+	 *
+	 * Long forms were the thing people could not work out, and the reason was structural rather
+	 * than verbal: twenty-eight fields in one column, in no stated order, with nothing to say which
+	 * of them had to be answered now and which were policies that could wait. No amount of help
+	 * text fixes that — the shape of the form is what is being read.
+	 *
+	 * So a form is a handful of named parts, each one a question somebody can already answer:
+	 * *the night*, *when it goes on sale*, *if a buyer cannot come*. The first is open; the rest
+	 * are closed, and each says on its own line what it currently holds — so a part can be skipped
+	 * without wondering what was skipped.
+	 *
+	 * `<details>` rather than a scripted accordion: it opens with a keyboard, it is found by the
+	 * browser's own page search when it is closed, and it needs no JavaScript to work at all.
+	 *
+	 * @param {object} options
+	 *   - title  what this part of the form is about
+	 *   - state  one line saying what it holds at the moment, shown beside the title
+	 *   - body   the fields themselves
+	 *   - open   true for the part that must be answered now
+	 *   - when   show the whole part only when a control says so — see App.applyWhen
+	 */
+	App.group = function ( options ) {
+		var settings = options || {};
+
+		return '<details class="form-group"' + ( settings.open ? ' open' : '' ) +
+			( settings.when ? ' data-when="' + esc( settings.when ) + '"' : '' ) + '>' +
+			'<summary class="form-group__head">' +
+				'<span class="form-group__title">' + esc( settings.title ) + '</span>' +
+				( settings.state
+					? '<span class="form-group__state">' + esc( settings.state ) + '</span>'
+					: '' ) +
+				icon( 'chevronDown', { size: 16, className: 'form-group__mark' } ) +
+			'</summary>' +
+			'<div class="stack form-group__body">' + ( settings.body || '' ) + '</div>' +
+		'</details>';
+	};
+
+	/**
+	 * Fields that appear when they apply, and not before.
+	 *
+	 * Mark anything — a field, a pair of fields, a whole group — with `data-when`:
+	 *
+	 *   data-when="waiting_room"          shown while that checkbox is ticked
+	 *   data-when="refunds=until"         shown while that control holds that value
+	 *   data-when="exchanges=until|always"  … or any of these values
+	 *
+	 * The word before the `=` is a control's `name`, or its `id` where a screen has no form to
+	 * serialise.
+	 *
+	 * One rule, wired once, for every screen and every dialog in the panel. It replaces the thing
+	 * that made these forms unreadable: *How many people may choose at once* sitting in plain view
+	 * on a night with no queue, *Hours before* under a refund policy of never. A control whose
+	 * answer cannot matter yet is not a control, it is a puzzle.
+	 *
+	 * Hidden fields keep their values and still submit them — hiding is about what is being asked,
+	 * not about throwing away what was already decided.
+	 */
+	App.applyWhen = function ( scope ) {
+		var root = scope || document;
+
+		root.querySelectorAll( '[data-when]' ).forEach( function ( node ) {
+			var rule = String( node.dataset.when || '' ).split( '=' );
+			var name = rule[ 0 ];
+			var wanted = rule.slice( 1 ).join( '=' );
+			// From the parent, so a node that *is* the form — a whole settings form that waits on a
+			// switch beside it — looks outside itself for what governs it rather than within.
+			var from = node.parentElement || root;
+			var host = from.closest( 'form' ) || from.closest( '.modal' ) || root;
+			// By name, which is what a form is made of — or by id, for the screens whose controls
+			// are read back one by one rather than serialised.
+			var control = host.querySelector( '[name="' + name + '"]' ) ||
+				host.querySelector( '#' + CSS.escape( name ) );
+
+			if ( ! control ) {
+				return;
+			}
+
+			if ( ! control.dataset.governs ) {
+				control.dataset.governs = '1';
+				// Both, because a select answers to change and a text box to input, and a rule may
+				// hang off either.
+				control.addEventListener( 'change', function () { App.applyWhen( host ); } );
+				control.addEventListener( 'input', function () { App.applyWhen( host ); } );
+			}
+
+			var value = 'checkbox' === control.type ? ( control.checked ? 'on' : 'off' ) : control.value;
+
+			node.hidden = wanted
+				? wanted.split( '|' ).indexOf( value ) === -1
+				: 'on' !== value;
+		} );
+	};
 
 	// Shared with the website and ticket screens, which build the same furniture.
 	App.table = function ( headings, rows, emptyMarkup ) {
@@ -1511,6 +1643,21 @@
 		} );
 
 		if ( isForm ) {
+			/*
+			 * A part that is closed over an unanswered question opens itself.
+			 *
+			 * The browser refuses to submit while a required field is empty, and a required field
+			 * inside a closed `<details>` is a refusal with nothing on screen to act on. `invalid`
+			 * fires on the control itself and does not bubble, so it is caught on the way down.
+			 */
+			host.querySelector( 'form' ).addEventListener( 'invalid', function ( event ) {
+				var part = event.target.closest( 'details' );
+
+				if ( part ) {
+					part.open = true;
+				}
+			}, true );
+
 			host.querySelector( 'form' ).addEventListener( 'submit', function ( event ) {
 				event.preventDefault();
 
@@ -2296,50 +2443,56 @@
 	 *
 	 * One list, so a field added for the website cannot quietly exist on only one of the two — the
 	 * failure that leaves an organiser able to set a poster but never change it.
+	 *
+	 * It is five named parts rather than twenty-eight boxes in a column, and that is the whole of
+	 * the change: the old form asked for the name of the night and the terms of a ticket exchange
+	 * with the same weight, in no order anybody could see, and the reader had no way to tell which
+	 * answers were needed to get a night on sale. Now the night itself is open and everything else
+	 * is a closed line that says what it currently holds — and inside each part, a field that
+	 * cannot matter yet is not shown at all. *Hours before* under a refund policy of never was a
+	 * question about nothing.
 	 */
 	function eventFields( event, maps ) {
 		var zone = ( event && event.timezone ) || hereZone();
+		var t = function ( key, replace ) { return App.t( key, replace ); };
 
-		return '<div class="stack">' +
+		/* ---------------------------------------------------------------- the night itself */
+
+		var night =
 			'<div class="field"><label class="field__label" for="e-name">' +
-			esc( App.t( 'panel.common.name' ) ) + '</label>' +
+			esc( t( 'panel.common.name' ) ) + '</label>' +
 			'<input class="input" id="e-name" name="name" required maxlength="200" ' +
-			'placeholder="' + esc( App.t( 'panel.events.namePlaceholder' ) ) + '" value="' +
+			'placeholder="' + esc( t( 'panel.events.namePlaceholder' ) ) + '" value="' +
 			esc( event ? event.name : '' ) + '"></div>' +
-
-			'<div class="field"><label class="field__label" for="e-category">' +
-			esc( App.t( 'panel.events.category' ) ) + '</label>' +
-			'<input class="input" id="e-category" name="category" maxlength="40" ' +
-			'placeholder="' + esc( App.t( 'panel.events.categoryPlaceholder' ) ) + '" value="' +
-			esc( ( event && event.category ) || '' ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.categoryHint' ) ) + '</span></div>' +
 
 			( maps
 				? '<div class="field"><label class="field__label" for="e-map">' +
-					esc( App.t( 'panel.events.seatMap' ) ) + '</label>' +
+					esc( t( 'panel.events.seatMap' ) ) + '</label>' +
 					'<select class="select" id="e-map" name="seat_map_id" required>' +
 					maps.map( function ( map ) {
 						return '<option value="' + esc( map.id ) + '">' + esc( map.name ) +
 							' — v' + map.published_version.version + '</option>';
 					} ).join( '' ) +
-					'</select><span class="field__hint">' + esc( App.t( 'panel.events.seatMapHint' ) ) +
+					'</select><span class="field__hint">' + esc( t( 'panel.events.seatMapHint' ) ) +
 					'</span></div>'
 				: '' ) +
 
+			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-starts">' +
-			esc( App.t( 'panel.events.starts' ) ) + '</label>' +
+			esc( t( 'panel.events.starts' ) ) + '</label>' +
 			'<input class="input" id="e-starts" name="starts_at" type="datetime-local" required value="' +
 			esc( event ? wallClock( event.starts_at, zone ) : '' ) + '"></div>' +
-
 			'<div class="field"><label class="field__label" for="e-timezone">' +
-			esc( App.t( 'panel.events.timezone' ) ) + '</label>' +
+			esc( t( 'panel.events.timezone' ) ) + '</label>' +
 			'<input class="input" id="e-timezone" name="timezone" list="e-timezones" required value="' +
 			esc( zone ) + '">' +
 			'<datalist id="e-timezones">' + timezoneOptions() + '</datalist>' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.timezoneHint' ) ) + '</span></div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.timezoneHint' ) ) + '</span></div>' +
+			'</div>' +
 
+			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-currency">' +
-			esc( App.t( 'pricing.currency' ) ) + '</label>' +
+			esc( t( 'pricing.currency' ) ) + '</label>' +
 			'<input class="input input--code" id="e-currency" name="currency" list="e-currencies" ' +
 			'maxlength="3" required value="' +
 			esc( ( event && event.currency ) || window.SeatmapPricing.CURRENCIES[ 0 ] ) + '">' +
@@ -2348,164 +2501,201 @@
 				return '<option value="' + code + '">';
 			} ).join( '' ) +
 			'</datalist>' +
-			'<span class="field__hint">' + esc( App.t( 'pricing.currencyHint' ) ) + '</span></div>' +
-
+			'<span class="field__hint">' + esc( t( 'pricing.currencyHint' ) ) + '</span></div>' +
 			'<div class="field"><label class="field__label" for="e-status">' +
-			esc( App.t( 'panel.common.status' ) ) + '</label>' +
+			esc( t( 'panel.common.status' ) ) + '</label>' +
 			'<select class="select" id="e-status" name="status">' +
 			[ 'draft', 'published', 'closed', 'cancelled' ].map( function ( status ) {
 				return '<option value="' + status + '"' +
 					( event && event.status === status ? ' selected' : '' ) + '>' +
-					esc( App.t( 'panel.eventStatus.' + status ) ) + '</option>';
+					esc( t( 'panel.eventStatus.' + status ) ) + '</option>';
 			} ).join( '' ) +
 			'</select></div>' +
+			'</div>' +
+
+			'<div class="field"><label class="field__label" for="e-category">' +
+			esc( t( 'panel.events.category' ) ) + '</label>' +
+			'<input class="input" id="e-category" name="category" maxlength="40" ' +
+			'placeholder="' + esc( t( 'panel.events.categoryPlaceholder' ) ) + '" value="' +
+			esc( ( event && event.category ) || '' ) + '">' +
+			'<span class="field__hint">' + esc( t( 'panel.events.categoryHint' ) ) + '</span></div>' +
 
 			'<div class="field"><label class="field__label" for="e-image">' +
-			esc( App.t( 'panel.events.artwork' ) ) + '</label>' +
+			esc( t( 'panel.events.artwork' ) ) + '</label>' +
 			window.SeatmapMedia.field( {
 				id: 'e-image',
 				name: 'image_url',
 				kind: 'image',
 				value: ( event && event.image_url ) || '',
 			} ) +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.artworkHint' ) ) + '</span></div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.artworkHint' ) ) + '</span></div>' +
 
-			/*
-			 * When the sale opens, and to whom.
-			 *
-			 * Two instants rather than a status, because a status has to be flipped by somebody at
-			 * midnight and nobody is awake at midnight. Both empty is what every night that has
-			 * never heard of a presale carries, and it means on sale as soon as it is published.
-			 */
+			'<div class="field"><label class="field__label" for="e-about">' +
+			esc( t( 'panel.events.about' ) ) + '</label>' +
+			'<textarea class="input" id="e-about" name="description" rows="4" maxlength="5000">' +
+			esc( ( event && event.description ) || '' ) + '</textarea>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.aboutHint' ) ) + '</span></div>';
+
+		/* ------------------------------------------------------------- when it goes on sale */
+
+		/*
+		 * Two instants rather than a status, because a status has to be flipped by somebody at
+		 * midnight and nobody is awake at midnight. Both empty is what every night that has never
+		 * heard of a presale carries, and it means on sale as soon as it is published.
+		 */
+		var sale =
 			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-presale">' +
-			esc( App.t( 'panel.events.presaleFrom' ) ) + '</label>' +
+			esc( t( 'panel.events.presaleFrom' ) ) + '</label>' +
 			'<input class="input" id="e-presale" name="presale_starts_at" type="datetime-local" value="' +
 			esc( localStamp( event && event.presale_starts_at ) ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.presaleFromHint' ) ) + '</span></div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.presaleFromHint' ) ) + '</span></div>' +
 			'<div class="field"><label class="field__label" for="e-onsale">' +
-			esc( App.t( 'panel.events.onSaleFrom' ) ) + '</label>' +
+			esc( t( 'panel.events.onSaleFrom' ) ) + '</label>' +
 			'<input class="input" id="e-onsale" name="on_sale_at" type="datetime-local" value="' +
 			esc( localStamp( event && event.on_sale_at ) ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.onSaleFromHint' ) ) + '</span></div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.onSaleFromHint' ) ) + '</span></div>' +
 			'</div>' +
 
 			/*
-			 * The door, for a sale that needs one.
-			 *
-			 * Off for almost every night, and rightly: a queue in front of a sale nobody is
-			 * queueing for is a page between a buyer and their ticket for no reason at all.
+			 * The door, for a sale that needs one. Off for almost every night, and rightly: a queue
+			 * in front of a sale nobody is queueing for is a page between a buyer and their ticket
+			 * for no reason at all — which is why the two numbers that shape it wait until it is on.
 			 */
 			'<label class="switch switch--row"><input type="checkbox" id="e-room" name="waiting_room"' +
 			( event && event.waiting_room ? ' checked' : '' ) + '>' +
 			'<span class="switch__track"><span class="switch__thumb"></span></span>' +
-			'<span>' + esc( App.t( 'panel.events.waitingRoom' ) ) + '</span></label>' +
-			'<p class="field__hint">' + esc( App.t( 'panel.events.waitingRoomHint' ) ) + '</p>' +
+			'<span>' + esc( t( 'panel.events.waitingRoom' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( t( 'panel.events.waitingRoomHint' ) ) + '</p>' +
 
-			'<div class="field-duo">' +
+			'<div class="field-duo" data-when="waiting_room">' +
 			'<div class="field"><label class="field__label" for="e-room-capacity">' +
-			esc( App.t( 'panel.events.roomCapacity' ) ) + '</label>' +
+			esc( t( 'panel.events.roomCapacity' ) ) + '</label>' +
 			'<input class="input tnum" id="e-room-capacity" name="waiting_room_capacity" ' +
 			'type="number" min="1" max="100000" value="' +
 			esc( ( event && event.waiting_room_capacity ) || 100 ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.roomCapacityHint' ) ) + '</span></div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.roomCapacityHint' ) ) + '</span></div>' +
 			'<div class="field"><label class="field__label" for="e-room-minutes">' +
-			esc( App.t( 'panel.events.roomMinutes' ) ) + '</label>' +
+			esc( t( 'panel.events.roomMinutes' ) ) + '</label>' +
 			'<input class="input tnum" id="e-room-minutes" name="waiting_room_minutes" ' +
 			'type="number" min="1" max="120" value="' +
 			esc( ( event && event.waiting_room_minutes ) || 10 ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.roomMinutesHint' ) ) + '</span></div>' +
-			'</div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.roomMinutesHint' ) ) + '</span></div>' +
+			'</div>';
 
-			/*
-			 * How many one person may have, and how fast is too fast.
-			 *
-			 * The first is the limit that means anything: a cap per basket stops nothing, because
-			 * four at a time six times over is twenty-four. The second is the whole of the bot
-			 * defence — a checkout form takes a person fifteen seconds and a script none — and it
-			 * is off by default, because a night that did not need it should not refuse a fast
-			 * typist for nothing.
-			 */
+		/* ------------------------------------------------------------ limits at the checkout */
+
+		/*
+		 * How many one person may have, and how fast is too fast. The first is the limit that means
+		 * anything: a cap per basket stops nothing, because four at a time six times over is
+		 * twenty-four. The second is the whole of the bot defence — a checkout form takes a person
+		 * fifteen seconds and a script none.
+		 */
+		var limits =
 			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-per-buyer">' +
-			esc( App.t( 'panel.events.perBuyer' ) ) + '</label>' +
+			esc( t( 'panel.events.perBuyer' ) ) + '</label>' +
 			'<input class="input tnum" id="e-per-buyer" name="max_per_buyer" ' +
 			'type="number" min="1" max="1000" placeholder="' +
-			esc( App.t( 'panel.events.perBuyerNone' ) ) + '" value="' +
+			esc( t( 'panel.events.perBuyerNone' ) ) + '" value="' +
 			esc( ( event && event.max_per_buyer ) || '' ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.perBuyerHint' ) ) + '</span></div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.perBuyerHint' ) ) + '</span></div>' +
 			'<div class="field"><label class="field__label" for="e-min-seconds">' +
-			esc( App.t( 'panel.events.checkoutSeconds' ) ) + '</label>' +
+			esc( t( 'panel.events.checkoutSeconds' ) ) + '</label>' +
 			'<input class="input tnum" id="e-min-seconds" name="checkout_min_seconds" ' +
 			'type="number" min="0" max="120" value="' +
 			esc( ( event && event.checkout_min_seconds ) || 0 ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.checkoutSecondsHint' ) ) + '</span></div>' +
-			'</div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.checkoutSecondsHint' ) ) + '</span></div>' +
+			'</div>';
 
-			/*
-			 * The two other things a buyer may do with a ticket they cannot use.
-			 *
-			 * Moving to another night is what most people actually want when they ask for their
-			 * money back, and offering the seat to somebody else is how a venue gets a full house
-			 * instead of an empty seat and a refund. Both off by default.
-			 */
+		/* ------------------------------------------------------- if a buyer cannot come */
+
+		/*
+		 * Three answers to one situation, in the order a venue thinks about them: money back,
+		 * another night, or somebody else's money. Each brings its own terms into view only once it
+		 * has been offered at all.
+		 */
+		var changes =
+			'<div class="field-duo">' +
+			'<div class="field"><label class="field__label" for="e-refunds">' +
+			esc( t( 'panel.events.refunds' ) ) + '</label>' +
+			'<select class="select" id="e-refunds" name="refunds">' +
+			[ 'never', 'until', 'always' ].map( function ( kind ) {
+				return '<option value="' + kind + '"' +
+					( event && event.refunds === kind ? ' selected' : '' ) + '>' +
+					esc( t( 'panel.events.refundKinds.' + kind ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>' +
+			'<div class="field" data-when="refunds=until"><label class="field__label" for="e-refund-hours">' +
+			esc( t( 'panel.events.refundHours' ) ) + '</label>' +
+			'<input class="input tnum" id="e-refund-hours" name="refund_window_hours" type="number" ' +
+			'min="0" max="8760" value="' +
+			esc( event && null != event.refund_window_hours ? event.refund_window_hours : 48 ) + '">' +
+			'</div>' +
+			'</div>' +
+			'<label class="perms__row" data-when="refunds=until|always"><input type="checkbox" class="checkbox" ' +
+			'id="e-refund-fee" name="refund_keeps_fee"' +
+			( ! event || event.refund_keeps_fee ? ' checked' : '' ) + '>' +
+			'<span>' + esc( t( 'panel.events.refundKeepsFee' ) ) + '</span></label>' +
+
 			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-exchanges">' +
-			esc( App.t( 'panel.events.exchanges' ) ) + '</label>' +
+			esc( t( 'panel.events.exchanges' ) ) + '</label>' +
 			'<select class="select" id="e-exchanges" name="exchanges">' +
 			[ 'never', 'until', 'always' ].map( function ( kind ) {
 				return '<option value="' + kind + '"' +
 					( event && event.exchanges === kind ? ' selected' : '' ) + '>' +
-					esc( App.t( 'panel.events.refundKinds.' + kind ) ) + '</option>';
+					esc( t( 'panel.events.refundKinds.' + kind ) ) + '</option>';
 			} ).join( '' ) +
 			'</select></div>' +
-			'<div class="field"><label class="field__label" for="e-exchange-hours">' +
-			esc( App.t( 'panel.events.exchangeHours' ) ) + '</label>' +
+			'<div class="field" data-when="exchanges=until"><label class="field__label" for="e-exchange-hours">' +
+			esc( t( 'panel.events.exchangeHours' ) ) + '</label>' +
 			'<input class="input tnum" id="e-exchange-hours" name="exchange_window_hours" ' +
 			'type="number" min="0" max="8760" value="' +
 			esc( ( event && event.exchange_window_hours ) || 48 ) + '"></div>' +
 			'</div>' +
-
-			'<div class="field-duo">' +
-			'<div class="field"><label class="field__label" for="e-exchange-fee">' +
-			esc( App.t( 'panel.events.exchangeFee' ) ) + '</label>' +
+			'<div class="field" data-when="exchanges=until|always">' +
+			'<label class="field__label" for="e-exchange-fee">' +
+			esc( t( 'panel.events.exchangeFee' ) ) + '</label>' +
 			'<input class="input tnum" id="e-exchange-fee" name="exchange_fee_amount" ' +
 			'type="number" min="0" value="' +
 			esc( ( event && event.exchange_fee_amount ) || 0 ) + '">' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.exchangeFeeHint' ) ) +
-			'</span></div>' +
-			'<div class="field"><label class="field__label" for="e-resale-pays">' +
-			esc( App.t( 'panel.events.resalePays' ) ) + '</label>' +
-			'<select class="select" id="e-resale-pays" name="resale_pays">' +
-			[ 'credit', 'refund' ].map( function ( kind ) {
-				return '<option value="' + kind + '"' +
-					( event && event.resale_pays === kind ? ' selected' : '' ) + '>' +
-					esc( App.t( 'panel.events.resalePayKinds.' + kind ) ) + '</option>';
-			} ).join( '' ) +
-			'</select></div>' +
-			'</div>' +
+			'<span class="field__hint">' + esc( t( 'panel.events.exchangeFeeHint' ) ) + '</span></div>' +
 
 			'<label class="switch switch--row"><input type="checkbox" id="e-resale" name="resale"' +
 			( event && event.resale ? ' checked' : '' ) + '>' +
 			'<span class="switch__track"><span class="switch__thumb"></span></span>' +
-			'<span>' + esc( App.t( 'panel.events.resale' ) ) + '</span></label>' +
-			'<p class="field__hint">' + esc( App.t( 'panel.events.resaleHint' ) ) + '</p>' +
+			'<span>' + esc( t( 'panel.events.resale' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( t( 'panel.events.resaleHint' ) ) + '</p>' +
+			'<div class="field" data-when="resale"><label class="field__label" for="e-resale-pays">' +
+			esc( t( 'panel.events.resalePays' ) ) + '</label>' +
+			'<select class="select" id="e-resale-pays" name="resale_pays">' +
+			[ 'credit', 'refund' ].map( function ( kind ) {
+				return '<option value="' + kind + '"' +
+					( event && event.resale_pays === kind ? ' selected' : '' ) + '>' +
+					esc( t( 'panel.events.resalePayKinds.' + kind ) ) + '</option>';
+			} ).join( '' ) +
+			'</select></div>';
 
-			// Who may buy the wheelchair spaces, and when. Held back means off the public plan and
-			// still sellable at the window, which is the only version of "held back" that helps
-			// the person it is being held for.
+		/* ------------------------------------------------------------------ getting in */
+
+		// Who may buy the wheelchair spaces, and when. Held back means off the public plan and
+		// still sellable at the window, which is the only version of "held back" that helps the
+		// person it is being held for.
+		var access =
 			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-accessible-sale">' +
-			esc( App.t( 'panel.events.accessibleSale' ) ) + '</label>' +
+			esc( t( 'panel.events.accessibleSale' ) ) + '</label>' +
 			'<select class="select" id="e-accessible-sale" name="accessible_sale">' +
 			[ 'always', 'until', 'counter' ].map( function ( kind ) {
 				return '<option value="' + kind + '"' +
 					( event && event.accessible_sale === kind ? ' selected' : '' ) + '>' +
-					esc( App.t( 'panel.events.accessibleSaleKinds.' + kind ) ) + '</option>';
+					esc( t( 'panel.events.accessibleSaleKinds.' + kind ) ) + '</option>';
 			} ).join( '' ) +
 			'</select></div>' +
-			'<div class="field"><label class="field__label" for="e-accessible-hours">' +
-			esc( App.t( 'panel.events.accessibleHours' ) ) + '</label>' +
+			'<div class="field" data-when="accessible_sale=until">' +
+			'<label class="field__label" for="e-accessible-hours">' +
+			esc( t( 'panel.events.accessibleHours' ) ) + '</label>' +
 			'<input class="input tnum" id="e-accessible-hours" name="accessible_release_hours" ' +
 			'type="number" min="0" max="8760" value="' +
 			esc( event && null != event.accessible_release_hours ? event.accessible_release_hours : 0 ) + '">' +
@@ -2514,39 +2704,91 @@
 			'<label class="perms__row"><input type="checkbox" class="checkbox" ' +
 			'id="e-access-needs" name="ask_access_needs"' +
 			( event && event.ask_access_needs ? ' checked' : '' ) + '>' +
-			'<span>' + esc( App.t( 'panel.events.askAccessNeeds' ) ) + '</span></label>' +
-			'<p class="field__hint">' + esc( App.t( 'panel.events.askAccessNeedsHint' ) ) + '</p>' +
+			'<span>' + esc( t( 'panel.events.askAccessNeeds' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( t( 'panel.events.askAccessNeedsHint' ) ) + '</p>';
 
-			// The refund terms. Written here rather than in a settings screen because they belong
-			// to this night: a matinee for schools and a sold-out final are not the same promise.
-			'<div class="field-duo">' +
-			'<div class="field"><label class="field__label" for="e-refunds">' +
-			esc( App.t( 'panel.events.refunds' ) ) + '</label>' +
-			'<select class="select" id="e-refunds" name="refunds">' +
-			[ 'never', 'until', 'always' ].map( function ( kind ) {
-				return '<option value="' + kind + '"' +
-					( event && event.refunds === kind ? ' selected' : '' ) + '>' +
-					esc( App.t( 'panel.events.refundKinds.' + kind ) ) + '</option>';
-			} ).join( '' ) +
-			'</select></div>' +
-			'<div class="field"><label class="field__label" for="e-refund-hours">' +
-			esc( App.t( 'panel.events.refundHours' ) ) + '</label>' +
-			'<input class="input tnum" id="e-refund-hours" name="refund_window_hours" type="number" ' +
-			'min="0" max="8760" value="' +
-			esc( event && null != event.refund_window_hours ? event.refund_window_hours : 48 ) + '">' +
-			'</div>' +
-			'</div>' +
-			'<label class="perms__row"><input type="checkbox" class="checkbox" ' +
-			'id="e-refund-fee" name="refund_keeps_fee"' +
-			( ! event || event.refund_keeps_fee ? ' checked' : '' ) + '>' +
-			'<span>' + esc( App.t( 'panel.events.refundKeepsFee' ) ) + '</span></label>' +
-
-			'<div class="field"><label class="field__label" for="e-about">' +
-			esc( App.t( 'panel.events.about' ) ) + '</label>' +
-			'<textarea class="input" id="e-about" name="description" rows="4" maxlength="5000">' +
-			esc( ( event && event.description ) || '' ) + '</textarea>' +
-			'<span class="field__hint">' + esc( App.t( 'panel.events.aboutHint' ) ) + '</span></div>' +
+		return '<div class="stack">' +
+			App.group( { title: t( 'panel.events.groups.night' ), open: true, body: night } ) +
+			App.group( {
+				title: t( 'panel.events.groups.sale' ),
+				state: saleState( event ),
+				body: sale,
+			} ) +
+			App.group( {
+				title: t( 'panel.events.groups.limits' ),
+				state: limitState( event ),
+				body: limits,
+			} ) +
+			App.group( {
+				title: t( 'panel.events.groups.changes' ),
+				state: changeState( event ),
+				body: changes,
+			} ) +
+			App.group( {
+				title: t( 'panel.events.groups.access' ),
+				state: accessState( event ),
+				body: access,
+			} ) +
 			'</div>';
+	}
+
+	/**
+	 * What a closed part of the event form is holding, in one line.
+	 *
+	 * Composed from the labels and the option names the fields themselves use, so a line cannot
+	 * describe a setting the form no longer has — and so it is already translated.
+	 */
+	function stateLine( pairs ) {
+		return pairs
+			.filter( function ( pair ) { return pair[ 1 ]; } )
+			.map( function ( pair ) { return pair[ 0 ] + ': ' + pair[ 1 ]; } )
+			.join( ' · ' );
+	}
+
+	function saleState( event ) {
+		var t = function ( key ) { return App.t( key ); };
+		var when = function ( stamp ) {
+			return stamp ? App.date( stamp ) : t( 'panel.common.notSet' );
+		};
+
+		return stateLine( [
+			[ t( 'panel.events.presaleFrom' ), when( event && event.presale_starts_at ) ],
+			[ t( 'panel.events.onSaleFrom' ), when( event && event.on_sale_at ) ],
+			[ t( 'panel.events.waitingRoom' ),
+				t( event && event.waiting_room ? 'panel.common.on' : 'panel.common.off' ) ],
+		] );
+	}
+
+	function limitState( event ) {
+		var t = function ( key ) { return App.t( key ); };
+
+		return stateLine( [
+			[ t( 'panel.events.perBuyer' ), event && event.max_per_buyer
+				? App.number( event.max_per_buyer )
+				: t( 'panel.events.perBuyerNone' ) ],
+			[ t( 'panel.events.checkoutSeconds' ),
+				App.number( ( event && event.checkout_min_seconds ) || 0 ) ],
+		] );
+	}
+
+	function changeState( event ) {
+		var t = function ( key ) { return App.t( key ); };
+
+		return stateLine( [
+			[ t( 'panel.events.refunds' ),
+				t( 'panel.events.refundKinds.' + ( ( event && event.refunds ) || 'never' ) ) ],
+			[ t( 'panel.events.exchanges' ),
+				t( 'panel.events.refundKinds.' + ( ( event && event.exchanges ) || 'never' ) ) ],
+		] );
+	}
+
+	function accessState( event ) {
+		var t = function ( key ) { return App.t( key ); };
+
+		return stateLine( [
+			[ t( 'panel.events.accessibleSale' ), t( 'panel.events.accessibleSaleKinds.' +
+				( ( event && event.accessible_sale ) || 'always' ) ) ],
+		] );
 	}
 
 	/** A local wall-clock string from a datetime-local input, as the instant the API is told. */
@@ -3388,9 +3630,13 @@
 					: '<p class="notice notice--warn">' +
 						esc( this.t( 'panel.connections.originsEmpty' ) ) + '</p>' ) +
 				'<div class="filters spaced">' +
-					'<input class="input" id="origin-host" type="text" placeholder="' +
+					// A placeholder is not a name: it disappears the moment somebody types, which is
+					// exactly when they are most likely to want to know which box is which.
+					'<input class="input" id="origin-host" type="text" aria-label="' +
+						esc( this.t( 'panel.connections.originPlaceholder' ) ) + '" placeholder="' +
 						esc( this.t( 'panel.connections.originPlaceholder' ) ) + '">' +
-					'<input class="input" id="origin-label" type="text" placeholder="' +
+					'<input class="input" id="origin-label" type="text" aria-label="' +
+						esc( this.t( 'panel.connections.originLabel' ) ) + '" placeholder="' +
 						esc( this.t( 'panel.connections.originLabel' ) ) + '">' +
 					'<button class="btn btn--primary" id="origin-add">' +
 						esc( this.t( 'panel.connections.originAdd' ) ) + '</button>' +

@@ -104,6 +104,7 @@ return [
     'subject' => 'Objet',
     'body' => 'Message',
     'locale' => 'Langue',
+    'channel' => 'Canal',
     'usingDefault' => 'Notre formulation s’applique. Écrivez la vôtre pour la remplacer.',
     'placeholders' => 'Disponible : :list',
     'save' => 'Enregistrer',

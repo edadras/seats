@@ -41,6 +41,7 @@ return [
     'noActivity' => 'Bisher ist nichts passiert.',
     'anyAction' => 'Beliebige Aktion',
     'anyone' => 'Alle',
+    'roleOf' => 'Was :name darf',
     'changedFrom' => 'war :from',
     'changedTo' => 'jetzt :to',
     'system' => 'System',

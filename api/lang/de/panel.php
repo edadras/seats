@@ -295,6 +295,9 @@ return [
         'previous' => 'Zurück',
         'next' => 'Weiter',
         'never' => 'Nie',
+        'notSet' => 'Nicht gesetzt',
+        'on' => 'An',
+        'off' => 'Aus',
         'failed' => 'Anfrage fehlgeschlagen',
     ],
 
@@ -353,6 +356,13 @@ return [
     'events' => [
         'description' => 'Fügen Sie die öffentliche ID einer Veranstaltung als <code>[seatmap_event id="evt_…"]</code> in WordPress ein — oder in den Saalplan-Block.',
         'new' => 'Neue Veranstaltung',
+        'groups' => [
+            'night' => 'Der Abend selbst',
+            'sale' => 'Wann der Verkauf beginnt',
+            'limits' => 'Grenzen an der Kasse',
+            'changes' => 'Wenn jemand nicht kommen kann',
+            'access' => 'Hineinkommen',
+        ],
         'create' => 'Veranstaltung anlegen',
         'starts' => 'Beginn',
         'publicId' => 'Öffentliche ID',

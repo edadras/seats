@@ -61,7 +61,8 @@
 				'</div>' +
 
 				'<label class="switch">' +
-					'<input type="checkbox" data-toggle="' + esc( module.key ) + '"' + ( on ? ' checked' : '' ) + '>' +
+					'<input type="checkbox" id="' + toggleId( module ) + '"' +
+						' data-toggle="' + esc( module.key ) + '"' + ( on ? ' checked' : '' ) + '>' +
 					'<span class="switch__track"><span class="switch__thumb"></span></span>' +
 					'<span class="switch__label">' +
 						esc( App.t( on ? 'modules.enabled' : 'modules.disabled' ) ) +
@@ -80,8 +81,16 @@
 		'</article>';
 	};
 
+	/*
+	 * What a module needs to work, shown once it is working.
+	 *
+	 * A switched-off module used to print its whole settings form anyway — an API key and a
+	 * merchant id for something that is not running, which reads as a job somebody has to do. The
+	 * form follows the switch beside it; see App.applyWhen.
+	 */
 	Modules.settings = function ( App, module ) {
-		return '<form class="module__settings" data-settings="' + esc( module.key ) + '">' +
+		return '<form class="module__settings" data-settings="' + esc( module.key ) + '"' +
+			' data-when="' + toggleId( module ) + '">' +
 			module.settings.map( function ( setting ) {
 				return Modules.field( App, module, setting );
 			} ).join( '' ) +
@@ -92,6 +101,11 @@
 			'</div>' +
 		'</form>';
 	};
+
+	/** One id for a module's switch, used by the switch and by the form that waits on it. */
+	function toggleId( module ) {
+		return 'm-on-' + module.key.replace( /[^a-z0-9]/gi, '-' );
+	}
 
 	Modules.field = function ( App, module, setting ) {
 		var value = module.values[ setting.key ];

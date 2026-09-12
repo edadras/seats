@@ -53,7 +53,13 @@ await page.waitForSelector( '.sidebar' );
 await page.click( 'nav button[data-view=events]' );
 await page.waitForSelector( '[data-event-edit]' );
 await page.locator( '[data-event-edit="' + night.id + '"]' ).click();
-await page.waitForSelector( '#e-room' );
+// Attached rather than visible: the part it lives in is closed until somebody opens it.
+await page.waitForSelector( '#e-room', { state: 'attached' } );
+
+// The door is part of when a night goes on sale, which is one of the form's named parts.
+await page.locator( '.modal .form-group', { has: page.locator( '#e-room' ) } )
+	.locator( 'summary' ).click();
+await page.waitForTimeout( 200 );
 
 check( 'the event form offers a door', await page.locator( '#e-room' ).isVisible() );
 

@@ -41,6 +41,7 @@ return [
     'noActivity' => 'لم يحدث شيء بعد.',
     'anyAction' => 'أي إجراء',
     'anyone' => 'أي شخص',
+    'roleOf' => 'صلاحيات :name',
     'changedFrom' => 'كان :from',
     'changedTo' => 'الآن :to',
     'system' => 'النظام',
