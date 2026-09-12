@@ -4269,6 +4269,132 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /events/{event}/ticket-design:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: showTicketDesign
+      tags: [Events]
+      summary: The ticket this night prints
+      description: |
+        Requires `events.view`. `design` is null for a night that prints the platform's own ticket,
+        which is most of them — it is a state rather than something to fix.
+
+        The other three are what a screen needs to offer the choice without keeping its own copy of
+        it: `fields` is every field that may be placed, `pages` the paper sizes, and `starter` a
+        layout to begin from. All three come from the renderer, so a field added to the document
+        appears on the screen without anybody editing the screen.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  design:
+                    oneOf:
+                      - { $ref: "#/components/schemas/TicketDesign" }
+                      - { type: "null" }
+                  fields:
+                    type: array
+                    items: { type: string }
+                    description: "Every field that may be placed, in the order the panel offers them."
+                  pages:
+                    type: array
+                    description: >-
+                      Each paper the document can be printed on, with its millimetres — portrait,
+                      so a landscape design is these two the other way round. The measurements come
+                      with the name because a screen that draws the page has to know its shape, and
+                      A4, A5 and A6 are within half a per cent of one another while letter is not.
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        width: { type: number }
+                        height: { type: number }
+                  starter:
+                    type: array
+                    items: { $ref: "#/components/schemas/TicketDesignField" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: saveTicketDesign
+      tags: [Events]
+      summary: Lay out the ticket for one night
+      description: |
+        Requires `events.manage`. Saved as a whole design rather than a field at a time: a ticket is
+        one layout, and the screen that edits it has the whole of it in hand.
+
+        Nothing here is refused for being out of range — it is clamped. A field dragged two pixels
+        past the edge comes back at the edge, a size of four hundred points comes back at
+        seventy-two, a colour that is not a colour comes back as near-black, and a key nobody
+        declared is dropped rather than printed. What comes back is what will print, which is the
+        only answer a drag-and-drop surface can act on.
+
+        Positions are percentages of the page, not millimetres. That is what lets the board on the
+        screen and the document on the paper agree at any size.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketDesignWrite" }
+      responses:
+        "200":
+          description: The design, as saved and as it will print
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  design: { $ref: "#/components/schemas/TicketDesign" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: clearTicketDesign
+      tags: [Events]
+      summary: Go back to the standard ticket
+      description: |
+        Requires `events.manage`. The design is deleted rather than emptied, so "no design" stays
+        one state: a stored design with no fields and no picture would print a blank page, which is
+        not what anybody asking for the standard ticket means. Tickets already sent are untouched —
+        they are files a buyer holds.
+      responses:
+        "200":
+          description: Cleared. `design` is null.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  design: { type: "null" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /events/{event}/ticket-design/preview:
+    parameters: [ { $ref: "#/components/parameters/EventId" } ]
+    get:
+      operationId: previewTicketDesign
+      tags: [Events]
+      summary: The document itself, from a booking that was never made
+      description: |
+        Requires `events.view`. Rendered by the renderer that makes the real ticket, from a specimen
+        booking built in memory and never saved — one seat, a made-up name, a code of nothing but
+        `S`. A mock-up drawn by the screen would agree with itself and disagree with the file a
+        buyer opens, and the night four hundred were printed is when anybody would find out.
+
+        Never a real booking, even when one is to hand: a ticket code is a credential, and a preview
+        is something an organiser shows a colleague.
+      responses:
+        "200":
+          description: A PDF, to look at rather than to keep
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: "`no_site` — there is no site to name on a ticket yet."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /admin/login:
     post:
       operationId: consoleLogin
@@ -13155,6 +13281,59 @@ components:
         max_per_order: { type: [integer, "null"], minimum: 1 }
         proof_note: { type: [string, "null"], maxLength: 160 }
         status: { type: string, enum: [active, hidden] }
+
+    TicketDesign:
+      type: object
+      properties:
+        background_url:
+          type: [string, "null"]
+          description: >-
+            The picture the ticket is printed on, drawn to fill the page. An `http(s)` URL or
+            nothing; anything else is stored as nothing rather than fetched. A background that
+            cannot be had at print time is left out and the ticket prints on plain paper — a buyer
+            at a door with no ticket is a worse outcome than a plain one.
+        page_size: { type: string, enum: [A4, A5, A6, letter] }
+        orientation: { type: string, enum: [landscape, portrait] }
+        fields:
+          type: array
+          items: { $ref: "#/components/schemas/TicketDesignField" }
+
+    TicketDesignField:
+      type: object
+      properties:
+        key:
+          type: string
+          description: >-
+            Which of the ticket's facts this prints. A closed list — `GET` returns it as `fields` —
+            because a key nobody declared would set its own name on a document somebody hands over
+            at a door.
+        x:
+          type: number
+          description: "Distance from the leading edge, as a percentage of the page's width."
+        y:
+          type: number
+          description: "Distance from the top, as a percentage of the page's height."
+        width:
+          type: number
+          description: "How wide the text box is, as a percentage of the page. A QR is drawn square at this width."
+        size: { type: number, description: "Points, between 6 and 72." }
+        weight: { type: string, enum: [normal, bold] }
+        align: { type: string, enum: [start, center, end] }
+        colour: { type: string, pattern: "^#[0-9a-f]{6}$" }
+
+    TicketDesignWrite:
+      type: object
+      properties:
+        background_url: { type: [string, "null"], maxLength: 1024 }
+        page_size: { type: string, enum: [A4, A5, A6, letter] }
+        orientation: { type: string, enum: [landscape, portrait] }
+        fields:
+          type: array
+          maxItems: 40
+          items: { $ref: "#/components/schemas/TicketDesignField" }
+          description: >-
+            The whole layout. A field may be placed once; a second copy of the same key is dropped
+            rather than printed twice.
 
     DoorListRow:
       type: object

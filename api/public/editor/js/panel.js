@@ -1936,6 +1936,12 @@
 							actionButton( 'event-edit', event.id, self.t( 'panel.events.edit' ), 'settings' ) ) +
 						only( 'pricing.manage',
 							actionButton( 'prices', event.id, App.t( 'pricing.openPrices' ), 'tag' ) ) +
+						// What this night's ticket looks like. Beside the prices because both are
+						// decisions about the night rather than about the account, and an organiser
+						// setting one up usually does the other in the same sitting.
+						only( 'events.view',
+							actionButton( 'ticket-design', event.id,
+								self.t( 'panel.ticketDesign.title' ), 'ticket' ) ) +
 						only( 'reports.attendance.view',
 							actionButton( 'stats', event.id, self.t( 'panel.events.inventory' ), 'layers' ) ) +
 						// Only where there is a door to watch. On every other night the button
@@ -2021,6 +2027,12 @@
 				self.main().querySelectorAll( '[data-prices]' ).forEach( function ( button ) {
 					button.addEventListener( 'click', function () {
 						window.SeatmapPricing.open( self, button.dataset.prices );
+					} );
+				} );
+
+				self.main().querySelectorAll( '[data-ticket-design]' ).forEach( function ( button ) {
+					button.addEventListener( 'click', function () {
+						window.SeatmapTicketDesign.open( self, button.dataset.ticketDesign );
 					} );
 				} );
 

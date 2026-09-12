@@ -65,6 +65,7 @@ use App\Http\Controllers\Api\V1\Management\WebhookController;
 use App\Http\Controllers\Api\V1\Management\SiteThemeController;
 use App\Http\Controllers\Api\V1\Management\TeamController;
 use App\Http\Controllers\Api\V1\Management\TicketController;
+use App\Http\Controllers\Api\V1\Management\TicketDesignController;
 use App\Http\Controllers\Api\V1\Management\TicketTypeController;
 use App\Http\Controllers\Api\V1\Management\TwoFactorController;
 use App\Http\Controllers\Api\V1\Management\WaitingListController as ManagementWaitingList;
@@ -222,6 +223,17 @@ Route::prefix('v1')->group(function () {
         Route::post('events/{event}/entry-slots/generate', [EntrySlotController::class, 'generate']);
         Route::get('events/{event}/ticket-types', [TicketTypeController::class, 'index']);
         Route::put('events/{event}/ticket-types', [TicketTypeController::class, 'replace']);
+        /*
+         * What the ticket for this night looks like: a picture, and fields placed on it.
+         *
+         * The preview renders the real document through the real renderer, from a booking that was
+         * never made — a preview that prints somebody's name and their ticket code would put a
+         * credential on a screen an organiser is showing to a colleague.
+         */
+        Route::get('events/{event}/ticket-design', [TicketDesignController::class, 'show']);
+        Route::put('events/{event}/ticket-design', [TicketDesignController::class, 'update']);
+        Route::delete('events/{event}/ticket-design', [TicketDesignController::class, 'destroy']);
+        Route::get('events/{event}/ticket-design/preview', [TicketDesignController::class, 'preview']);
         // What is sold beside the tickets, and whether this night asks for a donation. One screen,
         // because "what else can somebody give you money for" is one question to an organiser.
         Route::get('events/{event}/addons', [AddonController::class, 'index']);

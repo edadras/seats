@@ -879,6 +879,40 @@ endpoints is a programme and a chart the venue already shows the world. What it 
 venue's brand on a page they did not choose, and their inventory's rate limits. `THREAT_MODEL.md`
 T9 says so in those words.
 
+## The ticket the venue designed
+
+Every ticket this platform printed used to look the same: a bordered box, the event, the seat, a QR.
+That is a correct document and it is nobody's. A theatre with a poster, a festival with a sponsor
+along the foot, a club whose whole brand is one photograph — each wants the ticket to look like the
+night, and none of them can say so in a layout somebody else chose.
+
+So the organiser gets a picture and eleven fields to drag onto it, per event, on the **Ticket**
+button in the events table. A background, a paper size, landscape or portrait, and for each field a
+place, a width, a size, a weight, an alignment and a colour.
+
+Three decisions hold the feature up.
+
+**Positions are percentages, not millimetres.** The board in the panel is as wide as the browser
+makes it; the PDF is a fixed number of millimetres. A percentage is the only number that means the
+same thing to both, which is what makes where somebody drops a field where it prints.
+
+**The preview is the real document.** It is rendered by the server, through the renderer that makes
+the real ticket, from a specimen booking built in memory and never saved — one seat, a made-up name,
+a code of nothing but `S`. A mock-up drawn by the screen would agree with itself and disagree with
+the file a buyer opens, and the night four hundred were printed is when anybody would find out. A
+real booking is never used for it either: a ticket code is a credential, and a preview is something
+an organiser shows a colleague.
+
+**A field nobody declared is not printed.** `TicketFields` is a closed list, the panel reads it from
+the server rather than keeping its own copy, and everything out of range is clamped rather than
+refused — a field dragged two pixels past the edge comes back at the edge, a colour that is not a
+colour comes back as near-black. A form that says "invalid, try again" to somebody dragging words
+around a photograph is a form they give up on, and the clamped answer is what they meant.
+
+A night with no design prints the platform's ticket, which is a state rather than something to fix,
+and **Back to the standard ticket** returns to it. Tickets already sent are files a buyer holds and
+are untouched by either.
+
 ## The door
 
 `checkin-app/` is a Flutter web app. Staff open a URL, type a single-use pairing code once, and
@@ -993,7 +1027,7 @@ cd api
 php artisan serve --port=8123 &
 (cd ../wordpress-plugin && python3 -m http.server 8200 --bind 127.0.0.1 &)
 
-./smoke.sh                    # all sixty-six, in order
+./smoke.sh                    # all sixty-seven, in order
 ./smoke.sh editor_smoke       # or just the one you are working on
 
 php ../wordpress-plugin/tools/roundtrip-check.php KEY SECRET EVENT   # the plugin's signing code
@@ -1320,6 +1354,16 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A link is worth one membership and no more | `TeamInvitationTest`, `invite_smoke` |
 | An address that already has an account proves it is them | `TeamInvitationTest` |
 | A role deleted since the invitation went out is refused rather than guessed at | `TeamInvitationTest` |
+| A night with no design of its own prints the platform's ticket | `TicketDesignTest` |
+| A designed ticket is one page per seat, on the paper it was designed for | `TicketDesignTest` |
+| A field nobody declared is dropped rather than printed | `TicketDesignTest` |
+| A position off the page and a colour that is not a colour are clamped, not refused | `TicketDesignTest` |
+| Every field the panel offers has a value on a real booking | `TicketDesignTest` |
+| The papers offered carry the millimetres the renderer measures with | `TicketDesignTest`, `ticket_design_smoke` |
+| The preview is a document and carries nobody's ticket code | `TicketDesignTest`, `ticket_design_smoke` |
+| Designing a ticket is not a door volunteer's job | `TicketDesignTest` |
+| A field lands where it was dropped, and the board is the shape of the paper | `ticket_design_smoke` |
+| The night can go back to the standard ticket | `TicketDesignTest`, `ticket_design_smoke` |
 
 ## Installing the plugin
 

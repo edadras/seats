@@ -42,6 +42,7 @@
     <script src="{{ asset('editor/js/seat-views.js') }}"></script>
     <script src="{{ asset('editor/js/scanners.js') }}"></script>
     <script src="{{ asset('editor/js/webapp.js') }}"></script>
+    <script src="{{ asset('editor/js/ticket-design.js') }}"></script>
     <script src="{{ asset('editor/js/bank.js') }}"></script>
     <script src="{{ asset('editor/js/questions.js') }}"></script>
     <script src="{{ asset('editor/js/entry-slots.js') }}"></script>

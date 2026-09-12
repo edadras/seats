@@ -2995,3 +2995,65 @@
 	color: var(--text);
 	text-align: center;
 }
+
+/*
+ * The ticket designer: a page, and fields placed on it.
+ *
+ * Sized by `aspect-ratio` from the page the organiser chose rather than by a fixed height, because
+ * a landscape A5 and a portrait A4 are different documents — a board that is always the same
+ * rectangle would put every field in the wrong place on one of them.
+ *
+ * Everything inside is positioned in percentages, which is also how it is stored and how the PDF
+ * renderer reads it. That is the whole reason what somebody drags here is where it prints.
+ */
+.ticket-board {
+	position: relative;
+	inline-size: 100%;
+	margin-block: var(--s-3);
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: var(--r-sm);
+	/* A chequerboard, so a field placed on an unset background is still visible and it is obvious
+	   the white is the paper rather than a picture that failed to load. */
+	background:
+		linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%) 0 0 / 16px 16px,
+		linear-gradient(-45deg, var(--surface-sunken) 25%, transparent 25%) 0 8px / 16px 16px,
+		linear-gradient(45deg, transparent 75%, var(--surface-sunken) 75%) 8px -8px / 16px 16px,
+		linear-gradient(-45deg, transparent 75%, var(--surface-sunken) 75%) -8px 0 / 16px 16px,
+		var(--surface);
+}
+
+.ticket-board__art {
+	position: absolute;
+	inset: 0;
+	inline-size: 100%;
+	block-size: 100%;
+	object-fit: cover;
+}
+
+.ticket-field {
+	position: absolute;
+	padding: 1px 2px;
+	border: 1px dashed transparent;
+	border-radius: 2px;
+	background: none;
+	font-family: inherit;
+	line-height: 1.2;
+	cursor: grab;
+	touch-action: none;
+	overflow-wrap: anywhere;
+}
+
+/* The outline appears on approach rather than always: a page with nine dashed boxes on it is a
+   wireframe, and the organiser is trying to see a ticket. */
+.ticket-field:hover { border-color: var(--accent-border); }
+
+.ticket-field.is-picked {
+	border-color: var(--accent);
+	border-style: solid;
+	box-shadow: var(--ring);
+}
+
+.ticket-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ticket-field:active { cursor: grabbing; }

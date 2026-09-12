@@ -21,10 +21,14 @@ class PdfEngine
      * @param  bool  $rtl  the page's own direction; text inside it still decides for itself,
      *                     which is how an English event name sits correctly in a Persian document
      * @param  int  $margin  millimetres, the same on all four sides
+     * @param  array<string, mixed>  $overrides  mPDF settings this document needs and the others do
+     *                                           not — a designed ticket sets its own page size and
+     *                                           orientation, because the picture behind it was made
+     *                                           for one shape of paper
      *
      * @throws MpdfException
      */
-    public function make(bool $rtl, int $margin = 18): Mpdf
+    public function make(bool $rtl, int $margin = 18, array $overrides = []): Mpdf
     {
         $temp = storage_path('app/mpdf');
 
@@ -32,7 +36,7 @@ class PdfEngine
             mkdir($temp, 0775, true);
         }
 
-        $pdf = new Mpdf([
+        $pdf = new Mpdf(array_merge([
             'tempDir' => $temp,
             'mode' => 'utf-8',
             'format' => 'A4',
@@ -55,7 +59,10 @@ class PdfEngine
                 ],
             ],
             'default_font' => 'vazirmatn',
-        ]);
+            // `array_merge`, not `+`: with the union operator the left-hand array wins every
+            // duplicate key, so the overrides would have been silently ignored and a designed
+            // ticket would have come out A4 portrait whatever the organiser chose.
+        ], $overrides));
 
         $pdf->SetDirectionality($rtl ? 'rtl' : 'ltr');
 

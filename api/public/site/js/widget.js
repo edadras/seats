@@ -89,6 +89,8 @@
 		 */
 		this.together = 0;
 		this.cursor = null;
+		// The chair under the pointer, by key. Drawn a shade larger and haloed; null for none.
+		this.hoveredSeat = null;
 		this.view = { scale: 1, x: 0, y: 0 };
 		this.maxSeats = config.event.max_seats_per_order || 10;
 		/*
@@ -2429,12 +2431,36 @@
 				seat.x >= view.x && seat.x <= view.x + view.width &&
 				seat.y >= view.y && seat.y <= view.y + view.height;
 		} ).forEach( function ( seat ) {
+			/*
+			 * The chair under the pointer, drawn as one you could click.
+			 *
+			 * A halo outside the seat rather than a colour change inside it: the fill is the price
+			 * zone and the buyer is reading it, so the highlight has to be legible without taking
+			 * that away. Only on a chair that can actually be bought — inviting somebody to press
+			 * a seat that is already sold is a worse answer than no highlight at all.
+			 */
+			var hovered = seat.key === self.hoveredSeat && 'available' === seat.state;
+
+			if ( hovered ) {
+				ctx.save();
+				ctx.beginPath();
+				ctx.fillStyle = self.seatColour( seat );
+				ctx.globalAlpha = 0.28;
+				ctx.arc( seat.x, seat.y, SEAT_RADIUS + 3.5, 0, Math.PI * 2 );
+				ctx.fill();
+				ctx.restore();
+			}
+
 			ctx.beginPath();
 			ctx.fillStyle = self.seatColour( seat );
-			ctx.strokeStyle = 'selected' === seat.state ? colours.ink : colours.seatEdge;
-			ctx.lineWidth = 'selected' === seat.state ? 2.5 / scale : 1 / scale;
+			ctx.strokeStyle = 'selected' === seat.state ? colours.ink
+				: ( hovered ? colours.ink : colours.seatEdge );
+			ctx.lineWidth = 'selected' === seat.state ? 2.5 / scale
+				: ( hovered ? 2 / scale : 1 / scale );
 
-			ctx.arc( seat.x, seat.y, SEAT_RADIUS, 0, Math.PI * 2 );
+			// A shade larger under the pointer. Small enough that a row does not jump when the
+			// pointer crosses it, large enough that the eye lands on the right chair.
+			ctx.arc( seat.x, seat.y, hovered ? SEAT_RADIUS + 1 : SEAT_RADIUS, 0, Math.PI * 2 );
 			ctx.fill();
 			ctx.stroke();
 
@@ -2698,10 +2724,7 @@
 		} );
 
 		this.canvas.addEventListener( 'pointerleave', function () {
-			if ( self.tipEl ) {
-				self.tipEl.hidden = true;
-			}
-
+			self.unhover();
 			self.canvas.style.cursor = '';
 		} );
 
@@ -2896,6 +2919,18 @@
 		}
 	};
 
+	/** The pointer has left the plan: no chair is under it any more. */
+	SeatmapWidget.prototype.unhover = function () {
+		if ( this.tipEl ) {
+			this.tipEl.hidden = true;
+		}
+
+		if ( null != this.hoveredSeat ) {
+			this.hoveredSeat = null;
+			this.paint();
+		}
+	};
+
 	/**
 	 * What is under the pointer, said in words.
 	 *
@@ -2918,6 +2953,28 @@
 			var block = this.blockAt( point );
 
 			text = block ? block.name + ' — ' + this.blockSummary( block ) : '';
+		}
+
+		/*
+		 * The chair under the pointer answers, not only the cursor.
+		 *
+		 * A tooltip says *what* is under the pointer; it does not say *which* of forty chairs the
+		 * click is about. In a row drawn eight pixels apart that is the difference between buying
+		 * seat 12 and buying seat 13, and the tooltip is the wrong place to find out — it is
+		 * beside the pointer rather than on the seat.
+		 *
+		 * Repainted only when the chair changes, never on every pixel of a mousemove: a hall of
+		 * four thousand redraws whole, and a highlight that costs a frame per pixel is a highlight
+		 * that makes the plan feel broken.
+		 */
+		var key = seat ? seat.key : null;
+
+		if ( key !== this.hoveredSeat ) {
+			this.hoveredSeat = key;
+
+			if ( ! this.threeD ) {
+				this.paint();
+			}
 		}
 
 		this.canvas.style.cursor = text ? 'pointer' : '';

@@ -93,6 +93,28 @@ was designed against is a design that breaks on its first real customer.
 or Arabic, one item, thirty items, and a sold-out state. A page that needs a photograph to look
 finished will not look finished, because on the first afternoon there is never a photograph.
 
+## 9. A canvas still has to answer the pointer
+
+A seat map is drawn on a `<canvas>`, and a canvas has no `:hover`. So the whole vocabulary the rest
+of the page gets for free — a cursor change, a lift, a tint — is absent exactly where the buyer is
+making the decision the page exists for, unless it is drawn deliberately.
+
+**The rule.** Whatever is under the pointer is drawn differently from its neighbours, and the
+difference is visible at the size a seat actually is. Measured: a seat in the stalls is **9.3 CSS
+pixels across at 390px wide**, drawn about eight pixels from the next one. A one-pixel border and a
+five per cent tint are not feedback at that size.
+
+**What it is here.** An available seat under the pointer takes the ink-coloured ring at twice the
+normal weight, grows by a pixel, and gains a soft halo of its own colour just beyond its edge, drawn
+before the seat so the seat stays crisp. At 9.3 pixels the ring is what carries it; the halo is what
+keeps the ring from closing up against the neighbour eight pixels away, which is what would make a
+dense row read as a smudge rather than as one chair. Only available seats answer: a pointer moving
+across a sold block should not suggest that any of it can be had.
+
+**The corollary.** A hover is not a selection and must not be drawn like one. It is redrawn in the
+2D renderer only; in 3D the pointer already moves a camera, and a room where everything glows as the
+eye passes is a room nobody can read.
+
 ---
 
 ## How this is enforced
@@ -100,7 +122,7 @@ finished will not look finished, because on the first afternoon there is never a
 | | |
 | --- | --- |
 | Contrast, focus order, keyboard reach | `api/a11y_check.mjs`, both themes, every run |
-| That a page still renders and sells | `api/site_smoke.mjs` and the other 65 browser checks |
+| That a page still renders and sells | `api/site_smoke.mjs` and the other 66 browser checks |
 | That the six languages still fit | `tools/i18n-check.mjs`, and the RTL pass in `languages_smoke` |
 | Everything above that a machine cannot judge | Look at the rendered page. Screenshot it at 1440 and at 390. Measure the gaps before claiming they are right. |
 
