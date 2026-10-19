@@ -48,6 +48,11 @@ class PickerEvent
                 'city' => $event->venue?->city,
             ],
             'seat_map_version_id' => $event->seat_map_version_id,
+            // The chart decides whether a room *can* be shown — the heights are part of the
+            // geometry, and without them there is nothing to lift. The night decides whether it
+            // *is* shown first, because the same hall is a cinema on Friday and a conference on
+            // Monday. Both have to agree before a buyer lands inside the room.
+            'hall_in_3d' => (bool) $event->hall_in_3d,
             'hold_ttl_seconds' => $event->hold_ttl_seconds,
             'max_seats_per_order' => $event->max_seats_per_order,
             'areas' => $this->availability->capacityForEvent($event),

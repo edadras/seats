@@ -124,14 +124,18 @@ await page.waitForSelector( '.sidebar', { timeout: 20000 } );
 await page.click( 'nav button[data-view=events]' );
 await page.waitForSelector( 'tbody tr', { timeout: 20000 } );
 
-check( 'the events screen says which night is behind its own chart',
-	await page.locator( '[data-rechart]' ).count() > 0,
-	( await page.locator( '[data-rechart]' ).count() ) + ' offered' );
+// By id rather than by position: the seed has more than one night, and the one this check is
+// about is the one whose page the buyer opens below.
+const rechart = page.locator( `[data-rechart="${ night.id }"]` );
 
-await page.locator( '[data-rechart]' ).first().click();
+check( 'the events screen says which night is behind its own chart',
+	1 === await rechart.count(),
+	( await page.locator( '[data-rechart]' ).count() ) + ' offered in all' );
+
+await rechart.click();
 await page.waitForTimeout( 2500 );
 
-check( 'and takes it up when asked', 0 === await page.locator( '[data-rechart]' ).count() );
+check( 'and takes it up when asked', 0 === await rechart.count() );
 
 console.log( 'And a buyer stands in it' );
 await page.goto( `${ SITE }/events/${ night.public_id }`, { waitUntil: 'networkidle' } );
@@ -162,33 +166,132 @@ const room = await page.evaluate( () => {
 	};
 } );
 
+/*
+ * A point on the room, in the coordinates a mouse works in.
+ *
+ * The picker sits most of the way down a long page, so a fraction of the canvas's height can be a
+ * point below the fold — and a wheel turned there reaches nothing. Playwright also scrolls a button
+ * into view before pressing it, which moves the canvas out from under any box measured earlier. So
+ * every point is asked for fresh, from the page itself, and kept inside the window.
+ */
+const spotOnTheRoom = ( across, down ) => page.evaluate( ( fractions ) => {
+	const widget = [ ...document.querySelectorAll( '*' ) ]
+		.map( ( node ) => node.seatmapWidget ).filter( Boolean )[ 0 ];
+	const rect = widget.canvas.getBoundingClientRect();
+	const top = Math.max( rect.top, 8 );
+	const bottom = Math.min( rect.bottom, window.innerHeight - 8 );
+
+	return {
+		x: rect.left + rect.width * fractions[ 0 ],
+		y: top + ( bottom - top ) * fractions[ 1 ],
+	};
+}, [ across, down ] );
+
 check( 'the buyer’s room is the room the designer set up',
 	room && room.seats > 0 && room.stage && room.climb > 0, JSON.stringify( room ) );
 
 await page.locator( '.seatmap-widget' ).screenshot( { path: `${ SHOTS }/02-buyer.png` } );
 
-// A chair chosen from inside the room reaches the basket like any other.
-const box = await page.locator( '.seatmap-widget canvas' ).boundingBox();
+/*
+ * Walking about it, which is the part a plan cannot do.
+ *
+ * Touring circles the hall from outside; walking stands in it at eye height and answers the only
+ * question anybody actually has — what will I see from there. The keys are written on the screen
+ * because nobody guesses them, and the readout says where somebody is standing in the two numbers
+ * anybody can picture.
+ */
+const eyeOf = () => page.evaluate( () => {
+	const widget = [ ...document.querySelectorAll( '*' ) ]
+		.map( ( n ) => n.seatmapWidget ).filter( Boolean )[ 0 ];
+	const eye = widget.camera.eye();
+
+	return {
+		mode: widget.camera.mode,
+		x: Math.round( eye.x ), y: Math.round( eye.y ), z: Math.round( eye.z ),
+		where: ( document.querySelector( '.seatmap-widget__hall-where' ) || {} ).textContent || '',
+	};
+} );
+
+await page.locator( '.seatmap-widget__hall-button', { hasText: 'Walk about' } ).click();
+await page.waitForTimeout( 700 );
+
+const standing = await eyeOf();
+
+check( 'walking puts the buyer inside the hall at eye height',
+	'flight' === standing.mode && standing.z > 0, JSON.stringify( standing ) );
+check( 'and says where they are standing in metres',
+	/\d+\s*m/.test( standing.where ) &&
+	await page.locator( '.seatmap-widget__hall-keys' ).isVisible(), standing.where );
+
+// No click first, deliberately: the keys are bound on the document, so walking works from
+// wherever somebody's hands already are. A click to "focus the room" would also be a click on a
+// chair, which is a different thing entirely.
+await page.keyboard.press( 'w' );
+await page.keyboard.press( 'w' );
+await page.waitForTimeout( 400 );
+
+const walked = await eyeOf();
+
+check( 'a key takes a step through the room',
+	Math.hypot( walked.x - standing.x, walked.y - standing.y ) > 20,
+	`${ standing.x },${ standing.y } → ${ walked.x },${ walked.y }` );
+
+await page.keyboard.press( 'e' );
+await page.waitForTimeout( 300 );
+
+const lifted = await eyeOf();
+
+check( 'and a key rises off the floor', lifted.z > walked.z, `${ walked.z } → ${ lifted.z }` );
+
+const middle = await spotOnTheRoom( 0.5, 0.5 );
+
+await page.mouse.move( middle.x, middle.y );
+await page.mouse.wheel( 0, -240 );
+await page.waitForTimeout( 400 );
+
+const rolled = await eyeOf();
+
+check( 'and the wheel walks rather than zooms while inside the room',
+	Math.hypot( rolled.x - lifted.x, rolled.y - lifted.y ) > 10,
+	`${ lifted.x },${ lifted.y } → ${ rolled.x },${ rolled.y }` );
+
+await page.locator( '.seatmap-widget' ).screenshot( { path: `${ SHOTS }/04-walking.png` } );
+
+await page.locator( '.seatmap-widget__hall-button', { hasText: 'Tour the hall' } ).click();
+await page.waitForTimeout( 500 );
+
+check( 'and touring goes back to circling it from outside',
+	'tour' === ( await eyeOf() ).mode );
 
 /*
- * Aimed at a chair the room actually drew, rather than at a spot on the canvas.
+ * A chair chosen from inside the room reaches the basket like any other — and it is aimed at a
+ * chair the room actually drew, rather than at a spot on the canvas.
  *
- * The last frame left every chair's screen position on it — which is also how the picker answers a
- * click — so this asks where one is and clicks there. Guessing a fraction of the canvas is how a
- * check like this passes in one hall and fails in the next.
+ * The last frame left every chair's screen position on it, which is also how the picker answers a
+ * click, so this asks where one is and clicks there. Guessing a fraction of the canvas is how a
+ * check like this passes in one hall and fails in the next; a chair scrolled off the bottom of the
+ * window is how it fails in the same hall on a smaller screen.
  */
 const target = await page.evaluate( () => {
 	const widget = [ ...document.querySelectorAll( '*' ) ].map( ( n ) => n.seatmapWidget ).filter( Boolean )[ 0 ];
+	const rect = widget.canvas.getBoundingClientRect();
 	const chair = widget.hall.seats.filter( ( seat ) => seat.screen &&
-		'available' === seat.seat.record.state )[ 0 ];
+		'available' === seat.seat.record.state &&
+		rect.top + seat.screen.y > 8 && rect.top + seat.screen.y < window.innerHeight - 8 )[ 0 ];
 
-	return chair ? { x: chair.screen.x, y: chair.screen.y, label: chair.seat.record.label } : null;
+	return chair
+		? {
+			x: rect.left + chair.screen.x,
+			y: rect.top + chair.screen.y,
+			label: chair.seat.record.label,
+		}
+		: null;
 } );
 
 check( 'the room knows where its chairs are on screen', !! target,
 	target ? `seat ${ target.label } at ${ Math.round( target.x ) }, ${ Math.round( target.y ) }` : 'none' );
 
-await page.mouse.click( box.x + target.x, box.y + target.y );
+await page.mouse.click( target.x, target.y );
 await page.waitForTimeout( 900 );
 
 const basket = await page.locator( '.seatmap-widget__summary' ).innerText().catch( () => '' );
@@ -199,12 +302,119 @@ check( 'a chair clicked in the room lands in the basket', /\d/.test( basket ) &&
 
 await page.locator( '.seatmap-widget' ).screenshot( { path: `${ SHOTS }/03-chosen.png` } );
 
+/*
+ * And the thing the room was built for: sitting in the seat and looking at the stage.
+ *
+ * Offered only once a seat has been chosen, because until then there is no chair to sit in — and
+ * aimed at that chair rather than asking somebody to name a seat they are already pointing at.
+ */
+check( 'sitting is offered once a seat is chosen',
+	await page.locator( '.seatmap-widget__hall-button', { hasText: 'Sit in this seat' } ).isVisible() );
+
+await page.locator( '.seatmap-widget__hall-button', { hasText: 'Sit in this seat' } ).click();
+await page.waitForTimeout( 700 );
+
+const seated = await page.evaluate( () => {
+	const widget = [ ...document.querySelectorAll( '*' ) ]
+		.map( ( n ) => n.seatmapWidget ).filter( Boolean )[ 0 ];
+	const chair = window.SeatmapHall3D.chairOf( widget.hall, widget.selected[ 0 ] );
+	const eye = widget.camera.eye();
+	const canvas = widget.container.querySelector( 'canvas' );
+	// What somebody in that chair is looking at — and whether it is in front of them, which is the
+	// one thing sitting down has to get right.
+	const looking = window.SeatmapHall3D.lookingAt( widget.hall );
+	const stage = widget.camera.project(
+		looking.x, looking.y, looking.z, canvas.width, canvas.height
+	);
+
+	return {
+		mode: widget.camera.mode,
+		// How far the eye is from the chair it is meant to be sitting in, on the floor.
+		off: Math.round( Math.hypot( eye.x - chair.x, eye.y - chair.y ) ),
+		above: Math.round( eye.z - chair.z ),
+		stageOnScreen: !! stage && stage.x > 0 && stage.x < canvas.width,
+	};
+} );
+
+check( 'and it puts the buyer in that chair, looking at the stage',
+	'flight' === seated.mode && seated.off < 20 && seated.above > 0 && seated.stageOnScreen,
+	JSON.stringify( seated ) );
+
+await page.locator( '.seatmap-widget' ).screenshot( { path: `${ SHOTS }/05-seated.png` } );
+
+// Back out of the chair before leaving the room, so the last frame is the one the plan replaces.
+await page.locator( '.seatmap-widget__hall-button', { hasText: 'Tour the hall' } ).click();
+await page.waitForTimeout( 500 );
+
 // And back to the plan, which is still the plan.
 await page.locator( '.seatmap-widget__zoom button[aria-label="Back to the plan"]' ).click();
 await page.waitForTimeout( 900 );
 
 check( 'and the plan is still there to go back to',
 	1 === await page.locator( '.seatmap-widget__zoom button[aria-label="See the hall in 3D"]' ).count() );
+
+/*
+ * One tick, on the night rather than on the chart.
+ *
+ * Everything above is a buyer who pressed a button. The tick is for the nights where the room is
+ * the thing — a cinema, where nobody wants a diagram — and it decides which of the two somebody is
+ * shown without pressing anything. It lives on the event because the same building is a cinema on
+ * Friday and a conference on Monday, and it is offered on exactly the charts that have a room.
+ */
+console.log( 'And one tick decides which of the two a buyer arrives on' );
+await page.goto( BASE, { waitUntil: 'networkidle' } );
+
+// The panel is on another origin from the site, so the session may or may not still be here.
+if ( await page.locator( 'input[name=email]' ).count() ) {
+	await page.fill( 'input[name=email]', 'owner@northgate.test' );
+	await page.fill( 'input[name=password]', 'password' );
+	await page.click( '#login button[type=submit]' );
+}
+
+await page.waitForSelector( '.sidebar', { timeout: 20000 } );
+await page.click( 'nav button[data-view=events]' );
+await page.waitForSelector( 'tbody tr', { timeout: 20000 } );
+await page.locator( `[data-event-edit="${ night.id }"]` ).click();
+await page.waitForSelector( '#e-hall-3d', { timeout: 20000 } );
+
+check( 'the event form offers the room on a chart that has one',
+	await page.locator( '#e-hall-3d' ).isVisible() &&
+	! await page.locator( '#e-hall-3d' ).isChecked() );
+
+// Pressed the way a person does: the switch's own track, not the checkbox underneath it.
+await page.locator( '.modal label:has(#e-hall-3d) .switch__track' ).click();
+await page.click( '.modal button[type=submit]' );
+await page.waitForTimeout( 3000 );
+
+// Asked the way an organiser would ask it: open the night again and look at the switch.
+await page.waitForSelector( 'tbody tr', { timeout: 20000 } );
+await page.locator( `[data-event-edit="${ night.id }"]` ).click();
+await page.waitForSelector( '#e-hall-3d', { timeout: 20000 } );
+
+check( 'and remembers the answer', await page.locator( '#e-hall-3d' ).isChecked() );
+
+await page.keyboard.press( 'Escape' );
+
+await page.goto( `${ SITE }/events/${ night.public_id }`, { waitUntil: 'networkidle' } );
+await page.waitForSelector( '.seatmap-widget canvas', { timeout: 60000 } );
+await page.waitForTimeout( 2500 );
+
+check( 'a ticked night opens inside the hall without being asked',
+	await page.evaluate( () => {
+		const widget = [ ...document.querySelectorAll( '*' ) ]
+			.map( ( n ) => n.seatmapWidget ).filter( Boolean )[ 0 ];
+
+		return !! ( widget && widget.threeD && widget.hall );
+	} ) );
+check( 'and says so in its own bar',
+	await page.locator( '.seatmap-widget__hall' ).isVisible() &&
+	await page.locator( '.seatmap-widget__hall-button', { hasText: 'Walk about' } ).count() > 0 );
+check( 'and the plan is still one press away',
+	1 === await page.locator(
+		'.seatmap-widget__zoom button[aria-label="Back to the plan"]'
+	).count() );
+
+await page.locator( '.seatmap-widget' ).screenshot( { path: `${ SHOTS }/06-ticked.png` } );
 
 check( 'no console errors', 0 === errors.length, errors.join( ' / ' ) );
 

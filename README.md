@@ -125,6 +125,19 @@ A seat is the start of it, not the end. Around the map:
   the row in front is the one that finds out. Because publishing a chart deliberately moves no event
   onto it, an event whose chart has been republished says so and takes the new one up on request —
   refused outright if it would leave a sold seat pointing at a chair that no longer exists.
+- **A night that sells from inside the hall** — one tick on the event, beside the chart it depends
+  on, and a buyer arrives *in* the room rather than on the plan: standing in the stalls at eye
+  height, looking at the stage, walking about with the keys written on the screen, and sitting in a
+  chair to see what that seat actually sees before paying for it. The readout says where they are
+  standing in the two numbers anybody can picture — *nineteen metres from the stage, four metres up*
+  — because a coordinate is nothing and a row number is not an answer either. The decision is on the
+  night and not on the chart because the same building is a cinema on Friday, where every chair is
+  the same chair and the only question is how far back it is, and a conference on Monday, where
+  opening a 3D auditorium would answer a question nobody asked. And it is offered only where it can
+  be granted: a chart with no heights set has no room to show, so the form says what is missing in
+  the place the tick would have been rather than holding out a switch that would quietly do nothing.
+  The plan is one press away throughout, and a chair chosen from inside the room reaches the basket
+  exactly like one chosen from above — it is the same seat, seen from where somebody will sit in it.
 - **Productions: one show across many venues** — a run in one building was always a list of dates; a
   tour is a list of places. The production carries what an audience recognises — the name, the
   poster and the sentence that says what this is — and every night that says nothing of its own
@@ -1578,6 +1591,13 @@ Every acceptance criterion has a test that would fail if the behaviour regressed
 | A night stays on its own chart until somebody says otherwise | `HallInThreeDimensionsTest`, `hall3d_smoke` |
 | A chart that has lost a sold seat is refused | `HallInThreeDimensionsTest` |
 | A chair clicked in the room lands in the basket | `hall3d_smoke` |
+| One tick on the night decides whether a buyer arrives on the plan or inside the room | `HallInThreeDimensionsTest`, `hall3d_smoke` |
+| The tick reaches the buyer's browser and the box office window through one presenter | `HallInThreeDimensionsTest` |
+| A chart with no room set up is not offered the tick, and says why instead | `HallInThreeDimensionsTest`, `hall3d_smoke` |
+| Walking stands the buyer in the hall at eye height, and says where in metres | `tools/hall3d-check.mjs`, `hall3d_smoke` |
+| The keys and the wheel walk through the room rather than orbit it | `hall3d_smoke` |
+| Nobody walks under the floor, through the roof or out of the building | `tools/hall3d-check.mjs` |
+| Sitting in a chosen seat puts the eye in that chair, facing the stage | `tools/hall3d-check.mjs`, `hall3d_smoke` |
 | An agent sells what they were given and nothing else | `SalesAgentTest`, `agents_smoke` |
 | An agent cannot sell more than they have paid for | `SalesAgentTest`, `agents_smoke` |
 | What they owe is counted from the seats, so a refund returns the credit | `SalesAgentTest` |

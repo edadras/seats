@@ -1454,9 +1454,16 @@
 	 *   data-when="waiting_room"          shown while that checkbox is ticked
 	 *   data-when="refunds=until"         shown while that control holds that value
 	 *   data-when="exchanges=until|always"  … or any of these values
+	 *   data-when="seat_map_id~room"      shown while the *chosen option* carries `data-room`
+	 *   data-when="!seat_map_id~room"     … and this is the same rule, the other way round
 	 *
 	 * The word before the `=` is a control's `name`, or its `id` where a screen has no form to
 	 * serialise.
+	 *
+	 * The `~` form asks the chosen option rather than the control, because some answers are
+	 * properties of the thing picked and not of the picking: whether a chart has a room set up is
+	 * known by the chart. It is what lets a form offer a setting for the charts it works on and say
+	 * why for the ones it does not, from one list, without the screen having to re-render itself.
 	 *
 	 * One rule, wired once, for every screen and every dialog in the panel. It replaces the thing
 	 * that made these forms unreadable: *How many people may choose at once* sitting in plain view
@@ -1470,9 +1477,15 @@
 		var root = scope || document;
 
 		root.querySelectorAll( '[data-when]' ).forEach( function ( node ) {
-			var rule = String( node.dataset.when || '' ).split( '=' );
+			var text = String( node.dataset.when || '' );
+			// A leading `!` reads the rule and then turns it over, so the two halves of an
+			// either-or are written as one rule rather than as two that could disagree.
+			var inverted = 0 === text.indexOf( '!' );
+			var flagged = ( inverted ? text.slice( 1 ) : text ).split( '~' );
+			var rule = flagged[ 0 ].split( '=' );
 			var name = rule[ 0 ];
 			var wanted = rule.slice( 1 ).join( '=' );
+			var flag = flagged.length > 1 ? flagged[ 1 ] : null;
 			// From the parent, so a node that *is* the form — a whole settings form that waits on a
 			// switch beside it — looks outside itself for what governs it rather than within.
 			var from = node.parentElement || root;
@@ -1496,9 +1509,17 @@
 
 			var value = 'checkbox' === control.type ? ( control.checked ? 'on' : 'off' ) : control.value;
 
-			node.hidden = wanted
-				? wanted.split( '|' ).indexOf( value ) === -1
-				: 'on' !== value;
+			if ( flag ) {
+				var picked = control.options ? control.options[ control.selectedIndex ] : null;
+
+				value = picked && picked.dataset[ flag ] ? 'on' : 'off';
+			}
+
+			var showing = wanted
+				? wanted.split( '|' ).indexOf( value ) !== -1
+				: 'on' === value;
+
+			node.hidden = inverted ? showing : ! showing;
 		} );
 	};
 
@@ -2611,6 +2632,48 @@
 		var zone = ( event && event.timezone ) || hereZone();
 		var t = function ( key, replace ) { return App.t( key, replace ); };
 
+		/* -------------------------------------------------------- the plan, or the room itself */
+
+		/*
+		 * One tick, next to the chart it depends on: whether a buyer arrives on the plan or inside
+		 * the hall.
+		 *
+		 * It sits here and not in the designer because it is a decision about the night. The same
+		 * building is a cinema on Friday — where every chair is the same chair and the only
+		 * question anybody has is how far back it is — and a conference on Monday, where opening a
+		 * 3D auditorium would be answering a question nobody asked. The room is drawn once, in the
+		 * chart; which of the two somebody is shown first is settled once, here.
+		 *
+		 * And it is offered only where it can be granted. A chart with no heights set has no room
+		 * to show, so for those the same place says what is missing instead of holding out a switch
+		 * that would quietly do nothing — which is the failure this whole form was rebuilt to stop.
+		 */
+		var tick =
+			'<label class="switch switch--row"><input type="checkbox" id="e-hall-3d" name="hall_in_3d"' +
+			( event && event.hall_in_3d ? ' checked' : '' ) + '>' +
+			'<span class="switch__track"><span class="switch__thumb"></span></span>' +
+			'<span>' + esc( t( 'panel.events.hallInThreeD' ) ) + '</span></label>' +
+			'<p class="field__hint">' + esc( t( 'panel.events.hallInThreeDHint' ) ) + '</p>';
+
+		/*
+		 * And where the tick is not offered, an answer already given is kept rather than quietly
+		 * dropped: a chart whose heights come off for an afternoon should not take the night's
+		 * decision with it, and nobody editing a start time has said anything about the room.
+		 */
+		var noRoom = '<p class="field__hint">' + esc( t( 'panel.events.hallNeedsRoom' ) ) + '</p>' +
+			( event && event.hall_in_3d ? '<input type="hidden" name="hall_in_3d" value="on">' : '' );
+
+		/*
+		 * Two shapes, because the two forms know the chart in two different ways: the new-event
+		 * dialog has it on a list that is still being chosen from, and the edit dialog has it
+		 * already settled and off the form altogether — an event keeps selling against the chart it
+		 * was created on.
+		 */
+		var room = maps
+			? '<div data-when="seat_map_id~room">' + tick + '</div>' +
+				'<div data-when="!seat_map_id~room">' + noRoom + '</div>'
+			: ( event && event.hall_ready ? tick : noRoom );
+
 		/* ---------------------------------------------------------------- the night itself */
 
 		var night =
@@ -2625,12 +2688,17 @@
 					esc( t( 'panel.events.seatMap' ) ) + '</label>' +
 					'<select class="select" id="e-map" name="seat_map_id" required>' +
 					maps.map( function ( map ) {
-						return '<option value="' + esc( map.id ) + '">' + esc( map.name ) +
-							' — v' + map.published_version.version + '</option>';
+						// Whether this chart has a room set up travels on the option, because the
+						// tick underneath is offered for the charts it works on and not the rest.
+						return '<option value="' + esc( map.id ) + '"' +
+							( map.published_version.has_room ? ' data-room="1"' : '' ) + '>' +
+							esc( map.name ) + ' — v' + map.published_version.version + '</option>';
 					} ).join( '' ) +
 					'</select><span class="field__hint">' + esc( t( 'panel.events.seatMapHint' ) ) +
 					'</span></div>'
 				: '' ) +
+
+			room +
 
 			'<div class="field-duo">' +
 			'<div class="field"><label class="field__label" for="e-starts">' +
@@ -2995,6 +3063,9 @@
 			accessible_sale: data.get( 'accessible_sale' ),
 			accessible_release_hours: Number( data.get( 'accessible_release_hours' ) ) || 0,
 			ask_access_needs: null !== data.get( 'ask_access_needs' ),
+			// Absent for a chart with no room, where the form shows no switch at all — and absent
+			// is false, which is the right answer for a night that cannot be sold from inside one.
+			hall_in_3d: null !== data.get( 'hall_in_3d' ),
 		};
 	}
 
@@ -3016,6 +3087,25 @@
 				} );
 			},
 		} );
+
+		/*
+		 * A hidden field keeps what it was given, which is right everywhere else on this form and
+		 * wrong for exactly this one: a night moved onto a chart with no room must not go away
+		 * carrying a wish to open inside it. So the tick is cleared when the chart cannot grant it,
+		 * rather than submitted out of sight.
+		 */
+		var chart = document.getElementById( 'e-map' );
+
+		if ( chart ) {
+			chart.addEventListener( 'change', function () {
+				var picked = chart.options[ chart.selectedIndex ];
+				var wish = document.getElementById( 'e-hall-3d' );
+
+				if ( wish && ! ( picked && picked.dataset.room ) ) {
+					wish.checked = false;
+				}
+			} );
+		}
 	};
 
 	/**

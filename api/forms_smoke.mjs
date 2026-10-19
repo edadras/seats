@@ -78,8 +78,11 @@ const READ = ( root ) => {
 			open: part.open,
 		} ) ),
 		// A rule pointing at nothing: the field it guards is hidden for ever and nobody is told.
+		// A rule is `name`, `name=value`, `name~flag` for a property of the chosen option, and any
+		// of those behind a `!`; the control it names is whatever is left after all of that.
 		danglingRules: [ ...root.querySelectorAll( '[data-when]' ) ]
-			.map( ( node ) => String( node.dataset.when || '' ).split( '=' )[ 0 ] )
+			.map( ( node ) => String( node.dataset.when || '' )
+				.replace( /^!/, '' ).split( '~' )[ 0 ].split( '=' )[ 0 ] )
 			.filter( ( name, index, all ) => all.indexOf( name ) === index )
 			.filter( ( name ) => {
 				const scope = root.closest( 'form' ) || root;
@@ -261,13 +264,34 @@ const asked = await page.evaluate( () => {
 
 check( 'what it asks for at first is a night, not a policy', asked <= 12, `${ asked } questions on screen` );
 
-/* A field whose answer cannot matter yet is not shown at all. */
+/*
+ * A field whose answer cannot matter yet is not shown at all.
+ *
+ * A rule written with a leading `!` is the other half of an either-or — *the tick, or the sentence
+ * saying why there is no tick* — so one of those two is always on screen by design, and it is the
+ * pair that is held up rather than the sentence.
+ */
 const state = () => page.evaluate( () => [ ...document.querySelectorAll( '.modal [data-when]' ) ]
-	.map( ( node ) => node.dataset.when + ( node.hidden ? '' : ' SHOWN' ) )
-	.filter( ( entry ) => / SHOWN$/.test( entry ) ) );
+	.filter( ( node ) => ! node.hidden && 0 !== node.dataset.when.indexOf( '!' ) )
+	.map( ( node ) => node.dataset.when + ' SHOWN' ) );
 
 check( 'nothing conditional is shown before it applies', 0 === ( await state() ).length,
 	( await state() ).join( ', ' ) );
+
+const pairs = await page.evaluate( () => {
+	const rules = [ ...document.querySelectorAll( '.modal [data-when]' ) ];
+
+	return rules.filter( ( node ) => 0 === node.dataset.when.indexOf( '!' ) ).map( ( node ) => {
+		const twin = rules.filter( ( other ) =>
+			other.dataset.when === node.dataset.when.slice( 1 ) )[ 0 ];
+
+		return { rule: node.dataset.when, answered: !! twin && twin.hidden !== node.hidden };
+	} );
+} );
+
+check( 'an either-or shows exactly one of its two sides',
+	pairs.length > 0 && pairs.every( ( pair ) => pair.answered ),
+	pairs.map( ( pair ) => pair.rule + ( pair.answered ? '' : ' BROKEN' ) ).join( ', ' ) );
 
 await page.locator( '.modal .form-group' ).nth( 3 ).locator( 'summary' ).click();
 await page.waitForTimeout( 200 );
@@ -334,13 +358,25 @@ let leadless = [];
 for ( const view of views ) {
 	await page.click( `nav button[data-view=${ view }]` );
 
+	/*
+	 * Waited out properly rather than slept at.
+	 *
+	 * A screen still fetching shows its title above *Loading…* and has no line saying what it is —
+	 * which is exactly what this section judges. Several of these ask for half a dozen things at
+	 * once, so the wait is for the line itself to arrive, and running out of patience is the
+	 * finding rather than a reason to pass over the screen.
+	 */
 	try {
 		await page.waitForFunction( () => {
 			const heading = document.querySelector( '.page-head h1' );
+			const lead = document.querySelector( '.page-head__desc' );
 
-			return heading && heading.textContent.trim().length > 0;
-		}, null, { timeout: 8000 } );
+			return heading && heading.textContent.trim().length > 0 &&
+				lead && lead.textContent.trim().length > 0;
+		}, null, { timeout: 15000 } );
 	} catch ( error ) {
+		leadless.push( view );
+
 		continue;
 	}
 

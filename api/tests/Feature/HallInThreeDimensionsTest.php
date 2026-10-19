@@ -168,6 +168,94 @@ class HallInThreeDimensionsTest extends TestCase
     }
 
     #[Test]
+    public function one_tick_decides_whether_a_buyer_arrives_on_the_plan_or_inside_the_room(): void
+    {
+        $night = $this->makeSellableEvent(rows: 3, perRow: 5);
+        $manager = $this->makeUser($night['tenant'], 'manager');
+
+        app(TenantContext::class)->runAs($night['tenant'], function () use ($night) {
+            $geometry = $night['map']->publishedVersion->geometry;
+            $geometry['view3d'] = $this->room();
+
+            $version = SeatMapVersion::create([
+                'seat_map_id' => $night['map']->id,
+                'version' => 2,
+                'status' => 'draft',
+                'geometry' => $geometry,
+            ]);
+
+            app(SeatMapPublisher::class)->publish($night['map'], $version);
+
+            $night['event']->forceFill(['seat_map_version_id' => $version->id])->save();
+        });
+
+        // Off until somebody says so: an organiser who has never heard of the room gets the plan.
+        $this->asMember($manager)->getJson('/v1/events/'.$night['event']->id)
+            ->assertOk()
+            ->assertJsonPath('hall_in_3d', false)
+            // And the form is told the chart could grant it, which is what decides whether the
+            // tick is offered at all.
+            ->assertJsonPath('hall_ready', true);
+
+        $this->getJson('/v1/embed/events/'.$night['event']->public_id)
+            ->assertOk()
+            ->assertJsonPath('hall_in_3d', false);
+
+        $this->asMember($manager)
+            ->patchJson('/v1/events/'.$night['event']->id, ['hall_in_3d' => true])
+            ->assertOk()
+            ->assertJsonPath('hall_in_3d', true);
+
+        // The one thing the tick has to do: reach the buyer's browser, because that is the only
+        // place it means anything. The picker opens in the room on this and nothing else.
+        $this->getJson('/v1/embed/events/'.$night['event']->public_id)
+            ->assertOk()
+            ->assertJsonPath('hall_in_3d', true);
+
+        // The box office window reads the same event through the same presenter, so a clerk is
+        // never looking at a different hall from the buyer on the phone to them.
+        $this->asMember($manager)->getJson('/v1/events/'.$night['event']->id.'/hall')
+            ->assertOk()
+            ->assertJsonPath('event.hall_in_3d', true);
+    }
+
+    #[Test]
+    public function a_chart_with_no_room_set_up_is_not_offered_the_tick(): void
+    {
+        $night = $this->makeSellableEvent(rows: 2, perRow: 4);
+        $manager = $this->makeUser($night['tenant'], 'manager');
+
+        // Nothing has been measured, so there is nothing to walk about in — and the panel shows
+        // the reason in place of the switch rather than a switch that would do nothing.
+        $this->asMember($manager)->getJson('/v1/events/'.$night['event']->id)
+            ->assertOk()
+            ->assertJsonPath('hall_ready', false);
+
+        $this->asMember($manager)->getJson('/v1/seat-maps')
+            ->assertOk()
+            ->assertJsonPath('data.0.published_version.has_room', false);
+
+        app(TenantContext::class)->runAs($night['tenant'], function () use ($night) {
+            $geometry = $night['map']->publishedVersion->geometry;
+            $geometry['view3d'] = $this->room();
+
+            app(SeatMapPublisher::class)->publish($night['map'], SeatMapVersion::create([
+                'seat_map_id' => $night['map']->id,
+                'version' => 2,
+                'status' => 'draft',
+                'geometry' => $geometry,
+            ]));
+        });
+
+        // The listing leaves the geometry out, so the flag is the only way a screen can know —
+        // which is why it is sent whether or not the heights are.
+        $this->asMember($manager)->getJson('/v1/seat-maps')
+            ->assertOk()
+            ->assertJsonPath('data.0.published_version.has_room', true)
+            ->assertJsonMissingPath('data.0.published_version.geometry');
+    }
+
+    #[Test]
     public function a_chart_that_says_nothing_about_a_room_is_flat_and_says_so(): void
     {
         $night = $this->makeSellableEvent(rows: 2, perRow: 4);

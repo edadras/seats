@@ -664,6 +664,10 @@ class SitePageController extends Controller
                     'color' => $zone->color,
                 ])->values()->all(),
                 'max_seats_per_order' => $event->max_seats_per_order,
+                // Whether this night opens inside the hall rather than on the plan. The chart
+                // decides whether there is a room to show at all — the heights travel with the
+                // geometry below — and this decides which of the two a buyer lands on.
+                'hall_in_3d' => (bool) $event->hall_in_3d,
                 // Empty on an event that sells one kind of ticket, and the picker then shows no
                 // chooser at all rather than a chooser with one option in it.
                 'ticket_types' => \App\Domain\Events\TicketTypes::forEvent($event),

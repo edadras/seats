@@ -46,6 +46,22 @@
 	var SEAT_D = 13;
 	var SEAT_BACK = 11;
 
+	/*
+	 * A chart carries no scale, and a camera that walks about a room needs one.
+	 *
+	 * The chair is the anchor, and it is the only honest one there is: this model draws every seat
+	 * eighteen units across, and a cinema seat is about 0.52 m wide — so a metre is about
+	 * thirty-five units. That is a statement about the chart model rather than about any one
+	 * venue, which is the only reason it can be made at all. Every height below is written in
+	 * metres and converted, so that somebody reading this can check a standing eye at 1.6 m
+	 * against their own hall rather than against a number that means nothing.
+	 */
+	var SEAT_PITCH = 18;
+	var METRE = Math.round( SEAT_PITCH / 0.52 );
+	var EYE_SEATED = 1.15 * METRE;
+	var EYE_STANDING = 1.6 * METRE;
+	var STOREY = 3 * METRE;
+
 	/** The 3D settings of a chart, with every gap filled in. Never mutates what it is given. */
 	Hall3D.settings = function ( chart ) {
 		var raw = ( chart && chart.view3d ) || {};
@@ -150,6 +166,11 @@
 			platforms: platforms,
 			seats: chairs,
 			stage: Hall3D.stage( input, settings, focal ),
+			// How high the room goes: the back of a raked balcony. A camera walking about has to
+			// be kept under its own ceiling, and this is the only number that knows where that is.
+			ceiling: chairs.reduce( function ( high, chair ) {
+				return Math.max( high, chair.z );
+			}, 0 ) + STOREY,
 		};
 	};
 
@@ -209,6 +230,20 @@
 		var bounds = scene.bounds;
 		var opts = options || {};
 
+		/*
+		 * Two ways of being in a room, because they answer two different questions.
+		 *
+		 * `tour` circles the hall from outside it: how it is shaped, where the balcony sits, what
+		 * the rake looks like. `flight` stands you inside it and lets you walk: what *this* seat
+		 * sees, whether the row in front is in the way, how far back row N really is. The second
+		 * is the one somebody buying a ticket actually wants, and neither replaces the other.
+		 *
+		 * One camera rather than two, because the projection must stay identical: a room that
+		 * looked subtly different depending on how you got there would not be the same room.
+		 */
+		this.mode = 'flight' === opts.mode ? 'flight' : 'tour';
+		this.scene = scene;
+
 		this.target = {
 			x: bounds.x + bounds.width / 2,
 			y: bounds.y + bounds.height / 2,
@@ -234,9 +269,149 @@
 		this.focal = 1.15;
 	}
 
+	/**
+	 * Keep the camera somewhere a camera can be.
+	 *
+	 * Touring, that means outside the room looking in, from above the floor and below straight
+	 * down. Flying, it means inside the room: the eye above knee height and under the ceiling, and
+	 * within half a hall of the seats — far enough to stand at the back wall, not far enough to
+	 * end up in a field looking at the outside of a box.
+	 */
 	Camera.prototype.clamp = function () {
+		if ( 'flight' === this.mode ) {
+			this.pitch = Math.max( -0.95, Math.min( 1.35, this.pitch ) );
+			this.keepInside();
+
+			return;
+		}
+
 		this.pitch = Math.max( 0.08, Math.min( 1.45, this.pitch ) );
 		this.distance = Math.max( this.span * 0.35, Math.min( this.span * 4, this.distance ) );
+	};
+
+	/* ------------------------------------------------------------------------- moving about */
+
+	/**
+	 * Where the camera itself is standing.
+	 *
+	 * Derived rather than stored: a camera here is defined by what it is looking at and from how
+	 * far, so the eye is that point pushed back along the view. Keeping both and trusting them to
+	 * agree is how a camera ends up in two places at once.
+	 */
+	Camera.prototype.eye = function () {
+		var cp = Math.cos( this.pitch );
+		var sp = Math.sin( this.pitch );
+
+		return {
+			x: this.target.x - this.distance * cp * Math.sin( this.yaw ),
+			y: this.target.y - this.distance * cp * Math.cos( this.yaw ),
+			z: this.target.z + this.distance * sp,
+		};
+	};
+
+	/** Stand there, still looking the way you were looking. */
+	Camera.prototype.standAt = function ( point ) {
+		var cp = Math.cos( this.pitch );
+		var sp = Math.sin( this.pitch );
+
+		this.target.x = point.x + this.distance * cp * Math.sin( this.yaw );
+		this.target.y = point.y + this.distance * cp * Math.cos( this.yaw );
+		this.target.z = point.z - this.distance * sp;
+	};
+
+	/**
+	 * Look around from where you are, rather than circling what you are looking at.
+	 *
+	 * The difference between the two is the whole difference between the two modes, and it is one
+	 * line: the eye is taken first and put back afterwards, so turning your head does not walk you
+	 * around the room.
+	 */
+	Camera.prototype.look = function ( dx, dy ) {
+		var here = this.eye();
+
+		this.yaw += dx;
+		this.pitch += dy;
+		this.clampAngles();
+		this.standAt( here );
+		this.clamp();
+	};
+
+	/** The pitch alone, so `look` can turn the head before deciding where the head is. */
+	Camera.prototype.clampAngles = function () {
+		this.pitch = 'flight' === this.mode
+			? Math.max( -0.95, Math.min( 1.35, this.pitch ) )
+			: Math.max( 0.08, Math.min( 1.45, this.pitch ) );
+	};
+
+	/**
+	 * Walk: forward is where you are looking, flattened onto the floor.
+	 *
+	 * Flattened deliberately. Looking at your feet and stepping forward is a step across the room,
+	 * not a step into it, and a camera that burrows when you look down is one nobody can steer.
+	 */
+	Camera.prototype.move = function ( forward, strafe, lift ) {
+		var sin = Math.sin( this.yaw );
+		var cos = Math.cos( this.yaw );
+
+		this.target.x += forward * sin + strafe * cos;
+		this.target.y += forward * cos - strafe * sin;
+		this.target.z += lift;
+		this.clamp();
+	};
+
+	/** Stand here and look at that — the whole of what "the view from this seat" means. */
+	Camera.prototype.aim = function ( eye, point ) {
+		var dx = point.x - eye.x;
+		var dy = point.y - eye.y;
+		var dz = ( point.z || 0 ) - eye.z;
+		var flat = Math.max( 1, Math.sqrt( dx * dx + dy * dy ) );
+
+		this.yaw = Math.atan2( dx, dy );
+		this.pitch = Math.atan2( -dz, flat );
+		this.clampAngles();
+
+		/*
+		 * Looking *at* the stage rather than past it.
+		 *
+		 * The middle of the picture is whatever the lens is focused on, and the lens is focused
+		 * `distance` ahead — so a distance left over from circling the hall from outside puts the
+		 * focus somewhere beyond the back wall and leaves the stage up in a corner with half the
+		 * frame empty above it. Facing something means the distance to it.
+		 */
+		this.distance = Math.max( METRE, Math.sqrt( flat * flat + dz * dz ) );
+		this.standAt( eye );
+	};
+
+	/**
+	 * Inside the room, and the right way up.
+	 *
+	 * A camera that can be flown under the floor shows an audience the underside of a hall, and
+	 * one that can be flown a mile away shows them a model of a box. Both are answers to a question
+	 * nobody asked, so the eye is kept between knee height and the ceiling the scene reported, and
+	 * within half a hall of the seats.
+	 */
+	Camera.prototype.keepInside = function () {
+		var scene = this.scene;
+
+		if ( ! scene || ! scene.bounds ) {
+			return;
+		}
+
+		var here = this.eye();
+		var bounds = scene.bounds;
+		var reach = Math.max( bounds.width, bounds.height ) * 0.5;
+		// `build` already put a storey of air above the highest chair; adding another here would
+		// be a ceiling two floors up, which is a camera outside the building again.
+		var ceiling = scene.ceiling || STOREY;
+		var inside = {
+			x: Math.max( bounds.x - reach, Math.min( bounds.x + bounds.width + reach, here.x ) ),
+			y: Math.max( bounds.y - reach, Math.min( bounds.y + bounds.height + reach, here.y ) ),
+			z: Math.max( 0.5 * METRE, Math.min( ceiling, here.z ) ),
+		};
+
+		if ( inside.x !== here.x || inside.y !== here.y || inside.z !== here.z ) {
+			this.standAt( inside );
+		}
 	};
 
 	Camera.prototype.orbit = function ( dx, dy ) {
@@ -299,6 +474,109 @@
 
 	Hall3D.camera = function ( scene, options ) {
 		return new Camera( scene, options );
+	};
+
+	/* ------------------------------------------------------------------ standing in the room */
+
+	/**
+	 * What somebody in the hall is looking at: the middle of the stage, at its own height.
+	 *
+	 * The chart's focal point is where the hall is aimed and is a point on the floor; a person
+	 * looks at what is *on* the stage, which is a little above it. Falling back to the focal point
+	 * matters for a hall with no stage drawn at all — a conference floor, a club.
+	 */
+	Hall3D.lookingAt = function ( scene ) {
+		var stage = scene.stage;
+
+		if ( ! stage || ! stage.points || ! stage.points.length ) {
+			return { x: scene.focal.x, y: scene.focal.y, z: EYE_SEATED };
+		}
+
+		// centroid3 answers in the engine's own [x, y, z] form, which is what every other piece of
+		// geometry in here is written in.
+		var middle = centroid3( stage.points );
+
+		return { x: middle[ 0 ], y: middle[ 1 ], z: stage.height + EYE_SEATED };
+	};
+
+	/** The eye of somebody sitting in a chair: its own height, plus a person. */
+	Hall3D.seatEye = function ( scene, seat ) {
+		var chair = Hall3D.chairOf( scene, seat );
+
+		return chair ? { x: chair.x, y: chair.y, z: chair.z + EYE_SEATED } : null;
+	};
+
+	/** The chair in the room that a picker's own seat record belongs to. */
+	Hall3D.chairOf = function ( scene, seat ) {
+		for ( var i = 0; i < scene.seats.length; i++ ) {
+			var chair = scene.seats[ i ];
+
+			if ( chair.seat === seat || ( chair.seat && seat && chair.seat.record === seat ) ) {
+				return chair;
+			}
+		}
+
+		return null;
+	};
+
+	/**
+	 * Sit in that seat and look at the stage.
+	 *
+	 * The one thing a room is for. A photograph of the view from a block answers it for a block; a
+	 * chair answers it for the chair somebody is about to pay for.
+	 */
+	Hall3D.sit = function ( scene, camera, seat ) {
+		var eye = Hall3D.seatEye( scene, seat );
+
+		if ( ! eye ) {
+			return false;
+		}
+
+		camera.mode = 'flight';
+		camera.aim( eye, Hall3D.lookingAt( scene ) );
+
+		return true;
+	};
+
+	/**
+	 * Stand up at the back of the hall, facing the stage — where somebody walking in starts.
+	 *
+	 * Behind the last row rather than in the middle of the seats: a camera that opens inside the
+	 * audience is a camera looking at the back of somebody's head.
+	 */
+	Hall3D.standUp = function ( scene, camera ) {
+		var bounds = scene.bounds;
+		var middle = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+		var away = Math.max( bounds.width, bounds.height ) * 0.08;
+		var dx = middle.x - scene.focal.x;
+		var dy = middle.y - scene.focal.y;
+		var length = Math.max( 1, Math.sqrt( dx * dx + dy * dy ) );
+		var furthest = scene.seats.reduce( function ( high, chair ) {
+			return Math.max( high, chair.z );
+		}, 0 );
+
+		camera.mode = 'flight';
+		camera.aim( {
+			x: middle.x + ( dx / length ) * ( Math.max( bounds.width, bounds.height ) / 2 + away ),
+			y: middle.y + ( dy / length ) * ( Math.max( bounds.width, bounds.height ) / 2 + away ),
+			z: furthest + EYE_STANDING,
+		}, Hall3D.lookingAt( scene ) );
+	};
+
+	/**
+	 * Where the camera is, in metres: how far from the stage, and how high.
+	 *
+	 * Two numbers rather than a position, because those are the two a person can picture. "Nineteen
+	 * metres from the screen" is a row in a cinema; a coordinate is nothing.
+	 */
+	Hall3D.readout = function ( scene, camera ) {
+		var eye = camera.eye();
+		var stage = Hall3D.lookingAt( scene );
+
+		return {
+			toStage: distance( eye.x, eye.y, stage.x, stage.y ) / METRE,
+			height: eye.z / METRE,
+		};
 	};
 
 	/**

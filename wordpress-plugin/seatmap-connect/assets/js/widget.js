@@ -195,6 +195,20 @@
 
 		this.buildBlocks();
 		this.render();
+
+		/*
+		 * Some nights are sold from inside the hall.
+		 *
+		 * The organiser ticks it on the event, and then the first thing a buyer sees is the room
+		 * rather than the plan — which is the right opening for a cinema, where every seat is the
+		 * same chair and the only question is where in the room it is, and the wrong one for a
+		 * festival with four hundred unnamed places. The plan is one press away either way; what
+		 * the tick decides is which of the two somebody is shown without asking for it.
+		 */
+		if ( this.config.event.hall_in_3d && this.hallAvailable() ) {
+			this.toggleThreeD();
+		}
+
 		this.renderAreaList();
 		this.fetchAvailability();
 		this.startPolling();
@@ -715,6 +729,27 @@
 			ICONS[ name ] + '</svg>';
 	}
 
+	/** A named control in the room's own bar: a word rather than a symbol, because it is a choice. */
+	function hallButton( label, onClick ) {
+		var button = document.createElement( 'button' );
+
+		button.type = 'button';
+		button.className = 'seatmap-widget__hall-button';
+		button.textContent = label;
+		button.setAttribute( 'aria-pressed', 'false' );
+		button.addEventListener( 'click', onClick );
+
+		return button;
+	}
+
+	/*
+	 * One pace, in the chart's own units.
+	 *
+	 * A seat is eighteen units across, so a stride of forty is a little over a metre — about what
+	 * one press of a key or one notch of a wheel should move somebody walking through a hall.
+	 */
+	var STRIDE = 40;
+
 	/** A round icon button: zoom, reset and the quantity steppers are all the same control. */
 	function iconButton( name, label, onClick ) {
 		var button = document.createElement( 'button' );
@@ -776,6 +811,7 @@
 		stage.appendChild( this.canvas );
 		stage.appendChild( this.buildZoomControls() );
 		stage.appendChild( this.buildBackControl() );
+		stage.appendChild( this.buildHallControls() );
 
 		// Decorative: everything it says is already on the seat's own button, which is what a
 		// screen reader reads. Announcing it twice would be worse than not announcing it.
@@ -849,6 +885,8 @@
 				self.container.classList.contains( 'seatmap-widget--filling' ) ) {
 				self.setFilling( false );
 			}
+
+			self.walkKey( event );
 		} );
 
 		// The plan is drawn, not styled, so a change of system theme has to be repainted by hand.
@@ -857,6 +895,53 @@
 		if ( scheme && scheme.addEventListener ) {
 			scheme.addEventListener( 'change', function () { self.paint(); } );
 		}
+	};
+
+	/*
+	 * Walking the hall from the keyboard.
+	 *
+	 * The keys everybody already has in their fingers: W A S D or the arrows to move, Q and E for
+	 * height. Ignored unless the room is on and somebody is standing in it — and ignored while a
+	 * form field has the focus, because a buyer typing their name into the checkout is not steering
+	 * anything.
+	 */
+	var WALK_KEYS = {
+		w: [ 1, 0, 0 ], arrowup: [ 1, 0, 0 ],
+		s: [ -1, 0, 0 ], arrowdown: [ -1, 0, 0 ],
+		a: [ 0, -1, 0 ], arrowleft: [ 0, -1, 0 ],
+		d: [ 0, 1, 0 ], arrowright: [ 0, 1, 0 ],
+		q: [ 0, 0, -1 ],
+		e: [ 0, 0, 1 ],
+	};
+
+	SeatmapWidget.prototype.walkKey = function ( event ) {
+		if ( ! this.threeD || ! this.camera || 'flight' !== this.camera.mode ) {
+			return;
+		}
+
+		if ( event.metaKey || event.ctrlKey || event.altKey ) {
+			return;
+		}
+
+		var target = event.target;
+
+		if ( target && /^(INPUT|TEXTAREA|SELECT)$/.test( target.tagName ) ) {
+			return;
+		}
+
+		var step = WALK_KEYS[ String( event.key || '' ).toLowerCase() ];
+
+		if ( ! step ) {
+			return;
+		}
+
+		event.preventDefault();
+
+		var stride = event.shiftKey ? STRIDE * 2.5 : STRIDE;
+
+		this.camera.move( step[ 0 ] * stride, step[ 1 ] * stride, step[ 2 ] * stride );
+		this.syncHallControls();
+		this.paint();
 	};
 
 	SeatmapWidget.prototype.buildLegend = function () {
@@ -919,6 +1004,58 @@
 		} );
 
 		this.syncStageControls();
+
+		return wrap;
+	};
+
+	/**
+	 * The controls for being in the room: how you are in it, and where you are.
+	 *
+	 * Drawn once and hidden until the room is on, rather than built when it is: a bar that appears
+	 * from nowhere the first time somebody presses the cube is a bar they have to find twice.
+	 *
+	 * The keys are written on the screen because nobody guesses them. A room that can be walked
+	 * through and does not say so is a room everybody orbits once and leaves — the whole feature,
+	 * lost to an unmarked gesture.
+	 */
+	SeatmapWidget.prototype.buildHallControls = function () {
+		var self = this;
+		var wrap = document.createElement( 'div' );
+
+		wrap.className = 'seatmap-widget__float seatmap-widget__hall';
+		wrap.hidden = true;
+
+		if ( ! this.hallAvailable() ) {
+			this.hallEl = wrap;
+
+			return wrap;
+		}
+
+		var modes = document.createElement( 'div' );
+		modes.className = 'seatmap-widget__hall-modes';
+
+		this.hallTourEl = hallButton( this.i18n.hallTour, function () { self.hallMode( 'tour' ); } );
+		this.hallWalkEl = hallButton( this.i18n.hallWalk, function () { self.hallMode( 'walk' ); } );
+		this.hallSitEl = hallButton( this.i18n.hallSit, function () { self.sitInSeat(); } );
+		this.hallSitEl.hidden = true;
+
+		modes.appendChild( this.hallTourEl );
+		modes.appendChild( this.hallWalkEl );
+		modes.appendChild( this.hallSitEl );
+		wrap.appendChild( modes );
+
+		this.hallWhereEl = document.createElement( 'p' );
+		this.hallWhereEl.className = 'seatmap-widget__hall-where';
+		this.hallWhereEl.hidden = true;
+		wrap.appendChild( this.hallWhereEl );
+
+		this.hallKeysEl = document.createElement( 'p' );
+		this.hallKeysEl.className = 'seatmap-widget__hall-keys';
+		this.hallKeysEl.textContent = this.i18n.hallKeys;
+		this.hallKeysEl.hidden = true;
+		wrap.appendChild( this.hallKeysEl );
+
+		this.hallEl = wrap;
 
 		return wrap;
 	};
@@ -990,7 +1127,101 @@
 		}
 
 		this.syncDimension();
+		this.syncHallControls();
 		this.paint();
+	};
+
+	/**
+	 * Two ways of being in the room, and the one a buyer wants is the second.
+	 *
+	 * *Touring* circles the hall from outside: its shape, where the balcony sits, how steep the
+	 * rake is. *Walking* puts them inside it at eye height, where the only question that matters
+	 * can be answered — what will I see from there. Sitting in a chair is the same thing aimed at
+	 * one seat, and it is what the whole room exists for, so it is offered the moment a seat is
+	 * chosen rather than buried in a menu.
+	 */
+	SeatmapWidget.prototype.hallMode = function ( mode ) {
+		if ( ! this.threeD || ! this.hall ) {
+			return;
+		}
+
+		if ( 'walk' === mode ) {
+			window.SeatmapHall3D.standUp( this.hall, this.camera );
+		} else {
+			this.camera = window.SeatmapHall3D.camera( this.hall, {} );
+		}
+
+		this.syncHallControls();
+		this.paint();
+	};
+
+	/**
+	 * Sit in a seat and look at the stage.
+	 *
+	 * The seat is the one that was last chosen or is under the pointer — asking which seat in a
+	 * dialog would be asking somebody to name a chair they are pointing at.
+	 */
+	SeatmapWidget.prototype.sitInSeat = function ( seat ) {
+		// The last seat taken, or the one under the pointer. `hoveredSeat` is a key rather than a
+		// chair, because what the painter needs is something to compare cheaply on every mousemove.
+		var chair = seat ||
+			( this.selected.length ? this.selected[ this.selected.length - 1 ] : null ) ||
+			this.seatByKey( this.hoveredSeat );
+
+		if ( ! this.threeD || ! this.hall || ! chair ) {
+			return;
+		}
+
+		window.SeatmapHall3D.sit( this.hall, this.camera, chair );
+		this.syncHallControls();
+		this.paint();
+	};
+
+	/**
+	 * Where the camera is, said in the two numbers anybody can picture.
+	 *
+	 * "Nineteen metres from the screen, four metres up" is a row in a cinema; a coordinate is
+	 * nothing. Only shown while walking, because while touring the camera is outside the room and
+	 * its distance from the stage is an answer to nothing.
+	 */
+	SeatmapWidget.prototype.syncHallControls = function () {
+		if ( ! this.hallEl ) {
+			return;
+		}
+
+		var walking = this.threeD && this.camera && 'flight' === this.camera.mode;
+
+		this.hallEl.hidden = ! this.threeD;
+
+		if ( this.hallWalkEl ) {
+			this.hallWalkEl.setAttribute( 'aria-pressed', walking ? 'true' : 'false' );
+			this.hallWalkEl.classList.toggle( 'is-on', walking );
+		}
+
+		if ( this.hallTourEl ) {
+			this.hallTourEl.setAttribute( 'aria-pressed', walking ? 'false' : 'true' );
+			this.hallTourEl.classList.toggle( 'is-on', ! walking );
+		}
+
+		if ( this.hallSitEl ) {
+			this.hallSitEl.hidden = ! this.selected.length && ! this.hoveredSeat;
+		}
+
+		if ( this.hallWhereEl ) {
+			this.hallWhereEl.hidden = ! walking;
+
+			if ( walking ) {
+				var where = window.SeatmapHall3D.readout( this.hall, this.camera );
+
+				this.hallWhereEl.textContent = this.i18n.hallWhere
+					.replace( ':metres', Math.round( where.toStage ) )
+					.replace( ':height', where.height.toFixed( 1 ) );
+			}
+		}
+
+		if ( this.hallKeysEl ) {
+			this.hallKeysEl.hidden = ! walking;
+		}
 	};
 
 	/**
@@ -2757,6 +2988,21 @@
 			 * instead, for somebody who wants to look at the other end of a long hall.
 			 */
 			if ( self.threeD ) {
+				if ( 'flight' === self.camera.mode ) {
+					// Standing in the room, dragging turns your head. Shift walks sideways, for
+					// somebody who wants the same view from one seat along.
+					if ( event.shiftKey ) {
+						self.camera.move( 0, -dx * 1.2, dy * 1.2 );
+					} else {
+						self.camera.look( -dx * 0.004, dy * 0.004 );
+					}
+
+					self.syncHallControls();
+					self.paint();
+
+					return;
+				}
+
 				if ( event.shiftKey ) {
 					var reach = self.camera.distance / 600;
 
@@ -2792,7 +3038,15 @@
 				event.preventDefault();
 
 				if ( self.threeD ) {
-					self.camera.zoom( event.deltaY < 0 ? 0.9 : 1.1 );
+					// Touring, the wheel is a zoom. Walking, it is a pace forward or back — which
+					// is what a wheel means to anybody who has ever walked through a room.
+					if ( 'flight' === self.camera.mode ) {
+						self.camera.move( event.deltaY < 0 ? STRIDE : -STRIDE, 0, 0 );
+						self.syncHallControls();
+					} else {
+						self.camera.zoom( event.deltaY < 0 ? 0.9 : 1.1 );
+					}
+
 					self.paint();
 
 					return;
@@ -2917,6 +3171,21 @@
 				this.enterBlock( block.id );
 			}
 		}
+	};
+
+	/** One chair, by the key the painter knows it as. */
+	SeatmapWidget.prototype.seatByKey = function ( key ) {
+		if ( ! key ) {
+			return null;
+		}
+
+		for ( var i = 0; i < this.seats.length; i++ ) {
+			if ( this.seats[ i ].key === key ) {
+				return this.seats[ i ];
+			}
+		}
+
+		return null;
 	};
 
 	/** The pointer has left the plan: no chair is under it any more. */
@@ -3566,6 +3835,10 @@
 
 	SeatmapWidget.prototype.renderSelection = function () {
 		var self = this;
+
+		// Taking a seat is what makes "sit in it" mean something, so the room's own bar follows
+		// the selection rather than being painted once and left.
+		this.syncHallControls();
 
 		this.selectionEl.innerHTML = '';
 

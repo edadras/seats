@@ -244,6 +244,11 @@ class SeatMapController extends Controller
             'status' => $version->status,
             'seat_count' => $version->seat_count,
             'published_at' => $version->published_at?->toIso8601String(),
+            // Whether this chart has a room set up — a stage height and a rake — and so can be
+            // shown as one rather than as a plan. Sent as its own flag because the listing leaves
+            // the geometry out, and a screen offering "open this night inside the hall" has to
+            // know the answer before it offers it.
+            'has_room' => (bool) ($version->geometry['view3d']['enabled'] ?? false),
             'geometry' => $withGeometry ? $version->geometry : null,
         ], fn ($v) => $v !== null);
     }

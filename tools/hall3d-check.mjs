@@ -181,6 +181,124 @@ check( 'the pointer finds the chair it is over', aimedAt && 'stalls-back' === ai
 check( 'and finds nothing where there is nothing',
 	null === Hall3D.seatAt( scene, { x: 5, y: 5 }, 12 ) );
 
+/*
+ * Walking about in it.
+ *
+ * The camera is defined by what it looks at and from how far, so where it is *standing* is
+ * arithmetic rather than a stored number — and every one of these moves has to agree with that
+ * one derivation. Checked on paper because none of it can be eyeballed: a camera that drifts a
+ * metre each time you turn your head still looks like a camera, and the seat somebody chose
+ * because the view from it looked clear is the one that finds out.
+ */
+console.log( 'Standing in the room, and walking about it' );
+
+const walker = Hall3D.camera( scene, { mode: 'flight' } );
+
+check( 'a point at the eye itself is behind the lens rather than drawn',
+	null === walker.project( walker.eye().x, walker.eye().y, walker.eye().z, 800, 600 ) );
+
+const standing = { x: 0, y: 650, z: 60 };
+
+walker.standAt( standing );
+
+const planted = walker.eye();
+
+check( 'standing somewhere puts the eye exactly there',
+	near( planted.x, standing.x, 0.001 ) && near( planted.y, standing.y, 0.001 ) &&
+	near( planted.z, standing.z, 0.001 ),
+	`${ planted.x.toFixed( 2 ) }, ${ planted.y.toFixed( 2 ) }, ${ planted.z.toFixed( 2 ) }` );
+
+walker.look( 0.4, -0.2 );
+
+const afterLooking = walker.eye();
+
+check( 'turning your head does not walk you across the room',
+	near( afterLooking.x, standing.x, 0.001 ) && near( afterLooking.y, standing.y, 0.001 ) &&
+	near( afterLooking.z, standing.z, 0.001 ),
+	`${ afterLooking.x.toFixed( 2 ) }, ${ afterLooking.y.toFixed( 2 ) }, ${ afterLooking.z.toFixed( 2 ) }` );
+
+/* Facing the stage — yaw 0 means +y is forward — a step forward is a step towards it. */
+walker.yaw = Math.PI;
+walker.pitch = 0.4;
+walker.standAt( standing );
+walker.move( 40, 0, 0 );
+
+const stepped = walker.eye();
+
+check( 'a step forward is a step the way you are looking, however you are tilted',
+	near( stepped.y, standing.y - 40, 0.5 ) && near( stepped.x, standing.x, 0.5 ) &&
+	near( stepped.z, standing.z, 0.5 ),
+	`${ stepped.x.toFixed( 1 ) }, ${ stepped.y.toFixed( 1 ) }, ${ stepped.z.toFixed( 1 ) }` );
+
+walker.standAt( standing );
+walker.move( 0, 30, 0 );
+
+const sidestep = walker.eye();
+
+check( 'and a sidestep is sideways, not forwards',
+	near( sidestep.x, standing.x - 30, 0.5 ) && near( sidestep.y, standing.y, 0.5 ),
+	`${ sidestep.x.toFixed( 1 ) }, ${ sidestep.y.toFixed( 1 ) }` );
+
+/* The floor and the ceiling are not suggestions. */
+walker.standAt( { x: 0, y: 650, z: 5 } );
+walker.move( 0, 0, -500 );
+
+check( 'nobody is flown under the floor', walker.eye().z > 0, walker.eye().z.toFixed( 1 ) );
+
+walker.standAt( { x: 0, y: 650, z: 5 } );
+walker.move( 0, 0, 5000 );
+
+check( 'nor up through the roof', walker.eye().z <= scene.ceiling + 110,
+	`${ walker.eye().z.toFixed( 0 ) } with a ceiling of ${ scene.ceiling.toFixed( 0 ) }` );
+
+walker.standAt( { x: 0, y: 650, z: 60 } );
+walker.move( 100000, 0, 0 );
+
+check( 'and nobody ends up in the car park looking at the outside of a box',
+	walker.eye().y < scene.bounds.y + scene.bounds.height + scene.bounds.height,
+	walker.eye().y.toFixed( 0 ) );
+
+/*
+ * The view from a seat: the eye in the chair, looking at the stage. The front stalls chair is on
+ * the floor at (0, 100), so a person sitting in it has their eye a little over a metre up and is
+ * looking back along -y at a stage 100 away.
+ */
+const seated = Hall3D.camera( scene, { mode: 'flight' } );
+
+check( 'sitting in a seat works', true === Hall3D.sit( scene, seated, seats[ 0 ] ) );
+
+const inTheChair = seated.eye();
+
+check( 'the eye is in the chair, a person above its own floor',
+	near( inTheChair.x, 0, 0.5 ) && near( inTheChair.y, 100, 0.5 ) &&
+	inTheChair.z > 30 && inTheChair.z < 50,
+	`${ inTheChair.x.toFixed( 1 ) }, ${ inTheChair.y.toFixed( 1 ) }, ${ inTheChair.z.toFixed( 1 ) }` );
+
+check( 'and it is looking at the stage rather than away from it',
+	near( Math.abs( seated.yaw ), Math.PI, 0.01 ), seated.yaw.toFixed( 3 ) );
+
+const onScreen = seated.project( 0, 0, 24, 800, 600 );
+
+check( 'so the stage is in front of the camera, on the screen', !! onScreen &&
+	onScreen.x > 0 && onScreen.x < 800,
+	onScreen ? `${ onScreen.x.toFixed( 0 ) }, ${ onScreen.y.toFixed( 0 ) }` : 'behind the camera' );
+
+/* Two numbers a person can picture, rather than a coordinate. */
+const where = Hall3D.readout( scene, seated );
+
+check( 'the readout is in metres from the stage and metres up',
+	where.toStage > 2 && where.toStage < 4 && where.height > 1 && where.height < 1.5,
+	`${ where.toStage.toFixed( 1 ) } m from the stage, ${ where.height.toFixed( 2 ) } m up` );
+
+/* Touring is unchanged: the camera still circles what it is looking at. */
+const tour = Hall3D.camera( scene, {} );
+const before = tour.target.x + ',' + tour.target.y;
+
+tour.orbit( 0.3, 0 );
+
+check( 'touring still circles the room rather than turning on the spot',
+	before === tour.target.x + ',' + tour.target.y );
+
 /* A hall nobody has set up is flat, and says so rather than guessing. */
 const flat = Hall3D.settings( {} );
 

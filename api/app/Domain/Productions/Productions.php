@@ -76,7 +76,7 @@ class Productions
                 'hold_ttl_seconds', 'max_extends', 'max_seats_per_order', 'max_per_buyer',
                 'refund_policy', 'refunds', 'refund_window_hours', 'refund_keeps_fee',
                 'booking_fee_kind', 'booking_fee_amount', 'booking_fee_percent', 'booking_fee_label',
-                'tax_rate', 'tax_included', 'tax_label', 'settings',
+                'tax_rate', 'tax_included', 'tax_label', 'settings', 'hall_in_3d',
             ]) + [
                 'series_id' => $production->id,
                 'venue_id' => $venue->id,

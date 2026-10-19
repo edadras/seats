@@ -546,6 +546,14 @@ class EventController extends Controller
             'accessible_release_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
             // Whether the checkout asks what a buyer needs in order to get in and sit down.
             'ask_access_needs' => ['sometimes', 'boolean'],
+            /*
+             * Whether this night opens in the room rather than on the plan.
+             *
+             * Accepted whatever the chart is: a hall with no room set up simply has nothing to
+             * show, and the picker falls back to the plan. Refusing it here would mean an organiser
+             * could not tick it before setting the room up, which is the order most people work in.
+             */
+            'hall_in_3d' => ['sometimes', 'boolean'],
             'exchanges' => ['sometimes', 'in:never,until,always'],
             'exchange_window_hours' => ['sometimes', 'integer', 'min:0', 'max:8760'],
             'exchange_fee_amount' => ['sometimes', 'integer', 'min:0'],
@@ -692,6 +700,11 @@ class EventController extends Controller
             'accessible_sale' => $event->accessible_sale,
             'accessible_release_hours' => (int) $event->accessible_release_hours,
             'ask_access_needs' => (bool) $event->ask_access_needs,
+            'hall_in_3d' => (bool) $event->hall_in_3d,
+            // Whether the chart this night sells against has a room set up at all. The tick above
+            // is a wish; this is whether it can be granted, and the form shows one or says the
+            // other rather than offering a switch that would do nothing.
+            'hall_ready' => (bool) ($event->seatMapVersion?->geometry['view3d']['enabled'] ?? false),
             // When the wheelchair spaces go on general sale, so a screen can say so rather than
             // making somebody work it out from an hour count and a start time.
             'accessible_releases_at' => app(\App\Domain\Access\AccessibleSeats::class)

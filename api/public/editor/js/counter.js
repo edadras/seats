@@ -243,7 +243,15 @@
 		global.seatmapBoot.push( {
 			containerId: 'counter-picker',
 			eventPublicId: hall.event.public_id,
-			event: hall.event,
+			/*
+			 * The same event, with one decision taken back.
+			 *
+			 * Opening inside the room is about what a *buyer* is shown first, on a page they came
+			 * to look around. A clerk has somebody waiting at the window and wants the plan, where
+			 * a seat is one click away — and still has the room one press away, the same button the
+			 * website has, for the question that is actually worth asking it: what will I see.
+			 */
+			event: Object.assign( {}, hall.event, { hall_in_3d: false } ),
 			geometry: hall.geometry,
 			// The counter's own availability: it sees a house seat the website may not sell, and
 			// carries the name each one is being kept under.

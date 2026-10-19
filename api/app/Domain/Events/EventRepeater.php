@@ -53,7 +53,7 @@ class EventRepeater
                     'name', 'description', 'image_url', 'category', 'timezone', 'currency',
                     'hold_ttl_seconds', 'max_extends', 'max_seats_per_order', 'refund_policy',
                     'settings', 'booking_fee_kind', 'booking_fee_amount', 'booking_fee_percent',
-                    'booking_fee_label', 'tax_rate', 'tax_included', 'tax_label',
+                    'booking_fee_label', 'tax_rate', 'tax_included', 'tax_label', 'hall_in_3d',
                 ]) + [
                     'series_id' => $series->id,
                     'public_id' => 'evt_'.Str::lower(Str::random(20)),

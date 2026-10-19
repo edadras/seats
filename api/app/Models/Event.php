@@ -27,6 +27,7 @@ class Event extends Model
         'exchanges', 'exchange_window_hours', 'exchange_fee_amount', 'resale', 'resale_pays',
         'presale_starts_at', 'on_sale_at',
         'accessible_sale', 'accessible_release_hours', 'ask_access_needs',
+        'hall_in_3d',
         'demand_pricing', 'price_floor', 'price_ceiling',
         'tier_presale', 'member_presale',
     ];
@@ -40,6 +41,8 @@ class Event extends Model
         'settings' => 'array',
         'translations' => 'array',
         'ask_access_needs' => 'boolean',
+        // Whether this night opens in the room rather than on the plan.
+        'hall_in_3d' => 'boolean',
         // Whether a Friend books before the general sale on this night.
         'member_presale' => 'boolean',
         'accessible_release_hours' => 'integer',

@@ -337,6 +337,77 @@ body.seatmap-widget-filling {
 	padding: 2px;
 }
 
+/*
+ * The room's own bar: how you are in the hall, where you are, and the keys that move you.
+ *
+ * Bottom-left, over the plan, because the right-hand side already carries the zoom column and the
+ * middle is the room itself. Not a pill like the others: it holds a line of text and a line of
+ * keys, and a rounded box is what two lines of reading want.
+ */
+.seatmap-widget__hall {
+	inset-block-end: 0.6rem;
+	inset-inline-start: 0.6rem;
+	max-inline-size: min(22rem, calc(100% - 1.2rem));
+	padding: 0.5rem 0.6rem;
+	border-radius: 0.9rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.seatmap-widget__hall-modes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.seatmap-widget__hall-button {
+	padding: 0.25rem 0.6rem;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--seatmap-muted);
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.seatmap-widget__hall-button:hover {
+	background: var(--seatmap-surface-hover);
+	color: var(--seatmap-text);
+}
+
+.seatmap-widget__hall-button.is-on {
+	background: var(--seatmap-accent);
+	color: var(--seatmap-on-accent);
+}
+
+.seatmap-widget__hall-button:focus-visible {
+	outline: 2px solid var(--seatmap-accent);
+	outline-offset: 2px;
+}
+
+/* Two numbers anybody can picture: how far from the stage, and how high. */
+.seatmap-widget__hall-where {
+	margin: 0;
+	color: var(--seatmap-text);
+	font-size: 0.8125rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.seatmap-widget__hall-keys {
+	margin: 0;
+	color: var(--seatmap-muted);
+	font-size: 0.75rem;
+	line-height: 1.35;
+}
+
+/* A hall walked on a phone is walked by dragging; the keys are not a lie, just not reachable. */
+@media (hover: none) {
+	.seatmap-widget__hall-keys { display: none; }
+}
+
 /* The floor switcher only exists on a chart with more than one, so it is never dead furniture. */
 .seatmap-widget__floors {
 	inset-block-end: 0.6rem;
