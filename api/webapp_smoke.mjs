@@ -155,13 +155,30 @@ check( 'the tickets are on the confirmation', seatsWithSignal.length >= 2, seats
 console.log( 'And then arrives at a door with no signal' );
 
 /*
- * Aborted at the route, not with `setOffline`.
+ * No signal, on both sides of the worker.
  *
- * `setOffline` is applied to the page's own network stack, and a request a service worker makes is
- * not the page's — so the worker went on fetching happily and the check passed for the wrong
- * reason. Refusing every request in the context is the state this feature exists for.
+ * Neither `setOffline` nor refusing every request in the context reaches a service worker: both
+ * are applied to the page's own network stack, and a request the worker makes is not the page's.
+ * A worker left with a working connection answers every check in here from the network, which is
+ * how this section passes for the wrong reason — or, when the server happens to have an answer,
+ * fails for one: a 404 page served to somebody standing at a door with no signal.
+ *
+ * So the page is cut off at the route, and the worker is cut off where it can be — inside itself.
+ * `fetch` in the worker's own scope is replaced with one that always fails, which is exactly what
+ * every path in `sw.js` is written to catch.
  */
 await shop.route( '**/*', ( route ) => route.abort( 'internetdisconnected' ) );
+
+const [ running ] = shop.serviceWorkers();
+
+check( 'a worker is there to be cut off', !! running, running ? running.url() : 'none' );
+
+await running.evaluate( () => {
+	self.fetch = function () {
+		return Promise.reject( new TypeError( 'Failed to fetch' ) );
+	};
+} );
+
 await buyer.reload( { waitUntil: 'domcontentloaded' } );
 
 const seatsWithout = await buyer.locator( '.ticket__seat' ).allInnerTexts();
